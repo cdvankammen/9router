@@ -108,7 +108,8 @@ function setSticky(messages, comboName) {
  * @param {string} modelStr - The model string from the request
  * @param {object} body - The original request body (untranslated)
  * @param {object} settings - Current settings from DB
- * @returns {Promise<string|null>} Resolved combo name, or null if not a smart router request
+ * @returns {Promise<{comboName: string, taskType: string}|null>} Resolved combo
+ *   name + classified task type, or null if not a smart router request
  */
 export async function resolveSmartRouter(modelStr, body, settings) {
   const config = settings.smartRouter;
@@ -124,7 +125,7 @@ export async function resolveSmartRouter(modelStr, body, settings) {
   const sticky = getSticky(messages);
   if (sticky) {
     log.debug("SMART", `Sticky session hit: ${modelStr} → ${sticky}`);
-    return sticky;
+    return { comboName: sticky, taskType: classifyTask(messages) };
   }
 
   // 2. Classify task from prompt content
@@ -188,5 +189,5 @@ export async function resolveSmartRouter(modelStr, body, settings) {
       `candidates: ${topCandidates.length})`
   );
 
-  return comboName;
+  return { comboName, taskType };
 }
