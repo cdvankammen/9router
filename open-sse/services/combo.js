@@ -275,9 +275,14 @@ export function getComboModelsFromData(modelStr, combosData) {
  * @param {string} [options.comboName] - Name of the combo (for round-robin tracking)
  * @param {string} [options.comboStrategy] - Strategy: "fallback" or "round-robin"
  * @param {number|string} [options.comboStickyLimit=1] - Requests per combo model before switching
+ * @param {boolean} [options.autoSwitch=true] - Reorder models by required capabilities
+ * @param {Function} [options.onFallbackEvent] - Per-attempt callback (attempt) => void for observability
  * @returns {Promise<Response>}
  */
-export async function handleComboChat({ body, models, handleSingleModel, log, comboName, comboStrategy, comboStickyLimit = 1, autoSwitch = true }) {
+export async function handleComboChat({ body, models, handleSingleModel, log, comboName, comboStrategy, comboStickyLimit = 1, autoSwitch = true, onFallbackEvent = null }) {
+  // Fallback chain observability: one entry per attempted model, oldest first.
+  const fallbackChain = [];
+
   // Apply rotation strategy if enabled
   let rotatedModels = getRotatedModels(models, comboName, comboStrategy, comboStickyLimit);
 
@@ -299,14 +304,26 @@ export async function handleComboChat({ body, models, handleSingleModel, log, co
 
   for (let i = 0; i < rotatedModels.length; i++) {
     const modelStr = rotatedModels[i];
+    const attemptStart = Date.now();
     log.info("COMBO", `Trying model ${i + 1}/${rotatedModels.length}: ${modelStr}`);
 
     try {
       const result = await handleSingleModel(body, modelStr);
-      
+      const latencyMs = Date.now() - attemptStart;
+
+      // Record attempt for the fallback chain (success or failure)
+      const attempt = { model: modelStr, ok: !!result.ok, status: result.status, latencyMs };
+      fallbackChain.push(attempt);
+      if (onFallbackEvent) {
+        try { onFallbackEvent(attempt); } catch { /* observability must never break routing */ }
+      }
+
       // Success (2xx) - return response
       if (result.ok) {
         log.info("COMBO", `Model ${modelStr} succeeded`);
+        if (fallbackChain.length > 1 && result.headers && typeof result.headers.append === "function") {
+          try { result.headers.append("x-9r-fallback-chain", JSON.stringify(fallbackChain)); } catch { /* ignore */ }
+        }
         return result;
       }
 
@@ -354,6 +371,12 @@ export async function handleComboChat({ body, models, handleSingleModel, log, co
       log.warn("COMBO", `Model ${modelStr} failed, trying next`, { status: result.status });
     } catch (error) {
       // Catch unexpected exceptions to ensure fallback continues
+      const latencyMs = Date.now() - attemptStart;
+      const attempt = { model: modelStr, ok: false, status: 500, error: error.message || String(error), latencyMs };
+      fallbackChain.push(attempt);
+      if (onFallbackEvent) {
+        try { onFallbackEvent(attempt); } catch { /* observability must never break routing */ }
+      }
       lastError = error.message || String(error);
       if (!lastStatus) lastStatus = 500;
       log.warn("COMBO", `Model ${modelStr} threw error, trying next`, { error: lastError });
@@ -376,7 +399,7 @@ export async function handleComboChat({ body, models, handleSingleModel, log, co
 
   log.warn("COMBO", `All models failed | ${msg}`);
   return new Response(
-    JSON.stringify({ error: { message: msg } }),
+    JSON.stringify({ error: { message: msg }, fallbackChain }),
     { status, headers: { "Content-Type": "application/json" } }
   );
 }

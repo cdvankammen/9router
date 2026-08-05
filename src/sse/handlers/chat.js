@@ -145,7 +145,8 @@ export async function handleChat(request, clientRawRequest = null) {
       log,
       comboName: modelStr,
       comboStrategy,
-      comboStickyLimit
+      comboStickyLimit,
+      onFallbackEvent: (a) => log.debug("FALLBACK", `${modelStr} → ${a.model} ${a.ok ? "ok" : `failed ${a.status}`} (${a.latencyMs}ms)`),
     });
   }
 
@@ -164,7 +165,8 @@ export async function handleChat(request, clientRawRequest = null) {
       ),
       log,
       comboName: modelStr,
-      comboStrategy: getActiveAdapterStrategy(requiredCapabilities, settings)
+      comboStrategy: getActiveAdapterStrategy(requiredCapabilities, settings),
+      onFallbackEvent: (a) => log.debug("FALLBACK", `${modelStr} → ${a.model} ${a.ok ? "ok" : `failed ${a.status}`} (${a.latencyMs}ms)`),
     });
   }
 
@@ -222,7 +224,8 @@ async function handleSingleModelChat(body, modelStr, clientRawRequest = null, re
         log,
         comboName: modelStr,
         comboStrategy,
-        comboStickyLimit
+        comboStickyLimit,
+        onFallbackEvent: (a) => log.debug("FALLBACK", `${modelStr} → ${a.model} ${a.ok ? "ok" : `failed ${a.status}`} (${a.latencyMs}ms)`),
       });
     }
     log.warn("CHAT", "Invalid model format", { model: modelStr });
