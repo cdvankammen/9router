@@ -24,6 +24,7 @@ const DEFAULT_SETTINGS = {
     costQualityTradeoff: 5,
     maxCandidates: 3,
   },
+  analyzeErrorModel: "oc/mimo-v2.5-free",
   capacityAdapter: {
     vision: { enabled: true, roundRobin: false, models: [] },
     pdf: { enabled: false, roundRobin: false, models: [] },

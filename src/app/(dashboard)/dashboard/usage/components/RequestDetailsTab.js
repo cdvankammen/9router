@@ -110,6 +110,7 @@ export default function RequestDetailsTab() {
   const [loading, setLoading] = useState(false);
   const [selectedDetail, setSelectedDetail] = useState(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [analysisState, setAnalysisState] = useState({ loading: false, analysis: null, error: null, model: null });
   const [providers, setProviders] = useState([]);
   const [providerNameCache, setProviderNameCache] = useState(null);
   const [filters, setFilters] = useState({
@@ -167,6 +168,27 @@ export default function RequestDetailsTab() {
   const handleViewDetail = (detail) => {
     setSelectedDetail(detail);
     setIsDrawerOpen(true);
+    setAnalysisState({ loading: false, analysis: null, error: null, model: null });
+  };
+
+  const handleAnalyzeError = async () => {
+    if (!selectedDetail?.id || analysisState.loading) return;
+    setAnalysisState({ loading: true, analysis: null, error: null, model: null });
+    try {
+      const res = await fetch("/api/analyze-error", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ detailId: selectedDetail.id }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setAnalysisState({ loading: false, analysis: null, error: data.error || "Analysis failed", model: null });
+        return;
+      }
+      setAnalysisState({ loading: false, analysis: data.analysis, error: null, model: data.model });
+    } catch (err) {
+      setAnalysisState({ loading: false, analysis: null, error: err.message || "Analysis failed", model: null });
+    }
   };
 
   const handlePageChange = (newPage) => {
@@ -434,6 +456,45 @@ export default function RequestDetailsTab() {
               </div>
             </div>
 
+            {selectedDetail.status !== "success" && (
+              <div className="rounded-lg border border-black/5 dark:border-white/5 p-4">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="material-symbols-outlined text-[18px] text-amber-500">support_agent</span>
+                    <span className="font-semibold text-sm text-text-main">AI Error Analysis</span>
+                    {analysisState.model && (
+                      <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-primary/10 text-primary">
+                        {analysisState.model}
+                      </span>
+                    )}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleAnalyzeError}
+                    disabled={analysisState.loading}
+                  >
+                    {analysisState.loading ? (
+                      <span className="flex items-center gap-1.5">
+                        <span className="material-symbols-outlined animate-spin text-[16px]">progress_activity</span>
+                        Analyzing…
+                      </span>
+                    ) : (
+                      "Analyze error with AI"
+                    )}
+                  </Button>
+                </div>
+                {analysisState.error && (
+                  <p className="mt-2 text-xs text-red-500">{analysisState.error}</p>
+                )}
+                {analysisState.analysis && (
+                  <pre className="mt-3 max-h-[300px] max-w-full overflow-auto whitespace-pre-wrap rounded-lg border border-black/5 bg-black/5 p-3 font-mono text-xs text-text-main dark:border-white/5 dark:bg-white/5 sm:p-4">
+                    {analysisState.analysis}
+                  </pre>
+                )}
+              </div>
+            )}
+
             {selectedDetail.pxpipe && (
               <div className="rounded-lg border border-black/5 dark:border-white/5 p-4">
                 <div className="flex items-center gap-2 mb-2">
@@ -477,8 +538,7 @@ export default function RequestDetailsTab() {
             )}
 
             <div className="space-y-4">
-              <CollapsibleSection title="1. Client Request (Input)" defaultOpen={true} icon="input">
-                <pre className="max-h-[300px] max-w-full overflow-auto rounded-lg border border-black/5 bg-black/5 p-3 font-mono text-xs text-text-main dark:border-white/5 dark:bg-white/5 sm:p-4">
+              <CollapsibleSection title="1. Client Request (Input)" defaultOpen={true} icon="input">                <pre className="max-h-[300px] max-w-full overflow-auto rounded-lg border border-black/5 bg-black/5 p-3 font-mono text-xs text-text-main dark:border-white/5 dark:bg-white/5 sm:p-4">
                   {JSON.stringify(selectedDetail.request, null, 2)}
                 </pre>
               </CollapsibleSection>
