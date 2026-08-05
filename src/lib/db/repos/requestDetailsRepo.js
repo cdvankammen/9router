@@ -116,11 +116,12 @@ async function flushToDatabase() {
             providerResponse: truncateField(item.providerResponse, config.maxJsonSize),
             response: truncateField(item.response, config.maxJsonSize),
             pxpipe: item.pxpipe || undefined,
+            conversationId: item.conversationId || null,
           };
 
           db.run(
-            `INSERT INTO requestDetails(id, timestamp, provider, model, connectionId, status, data) VALUES(?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET timestamp = excluded.timestamp, provider = excluded.provider, model = excluded.model, connectionId = excluded.connectionId, status = excluded.status, data = excluded.data`,
-            [record.id, record.timestamp, record.provider, record.model, record.connectionId, record.status, stringifyJson(record)]
+            `INSERT INTO requestDetails(id, timestamp, provider, model, connectionId, status, data, conversationId) VALUES(?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET timestamp = excluded.timestamp, provider = excluded.provider, model = excluded.model, connectionId = excluded.connectionId, status = excluded.status, data = excluded.data, conversationId = excluded.conversationId`,
+            [record.id, record.timestamp, record.provider, record.model, record.connectionId, record.status, stringifyJson(record), record.conversationId]
           );
         }
 

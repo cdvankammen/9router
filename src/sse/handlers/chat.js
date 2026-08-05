@@ -274,10 +274,21 @@ async function handleSingleModelChat(body, modelStr, clientRawRequest = null, re
     // Use shared chatCore
     const chatSettings = await getSettings();
     const providerThinking = (chatSettings.providerThinking || {})[provider] || null;
+
+    // Resolve conversationId for per-chat observability grouping:
+    // 1. explicit header (OpenRouter-style x-conversation-id)
+    // 2. extra_body.conversation_id (client can't set headers)
+    // 3. null → caller falls back to message-hash fingerprint
+    const conversationId =
+      request?.headers?.get("x-conversation-id") ||
+      body?.extra_body?.conversation_id ||
+      null;
+
     const result = await handleChatCore({
       body: { ...body, model: `${provider}/${model}` },
       modelInfo: { provider, model },
       credentials: refreshedCredentials,
+      conversationId,
       log,
       clientRawRequest,
       connectionId: credentials.connectionId,
