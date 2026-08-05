@@ -115,7 +115,8 @@ export default function RequestDetailsTab() {
   const [filters, setFilters] = useState({
     provider: "",
     startDate: "",
-    endDate: ""
+    endDate: "",
+    conversationId: ""
   });
 
   const fetchProviders = useCallback(async () => {
@@ -141,6 +142,7 @@ export default function RequestDetailsTab() {
       if (filters.provider) params.append("provider", filters.provider);
       if (filters.startDate) params.append("startDate", filters.startDate);
       if (filters.endDate) params.append("endDate", filters.endDate);
+      if (filters.conversationId) params.append("conversationId", filters.conversationId);
 
       const res = await fetch(`/api/usage/request-details?${params}`);
       const data = await res.json();
@@ -176,7 +178,7 @@ export default function RequestDetailsTab() {
   };
 
   const handleClearFilters = () => {
-    setFilters({ provider: "", startDate: "", endDate: "" });
+    setFilters({ provider: "", startDate: "", endDate: "", conversationId: "" });
   };
 
   return (
@@ -232,13 +234,28 @@ export default function RequestDetailsTab() {
               )}
             />
           </div>
+
+          <div className="flex min-w-0 flex-col gap-2">
+            <label htmlFor="conversation-filter" className="text-sm font-medium text-text-main">Conversation ID</label>
+            <input
+              id="conversation-filter"
+              type="text"
+              value={filters.conversationId}
+              onChange={(e) => setFilters({ ...filters, conversationId: e.target.value })}
+              placeholder="conv-abc123…"
+              className={cn(
+                "h-9 px-3 rounded-lg border border-black/10 dark:border-white/10 bg-surface",
+                "w-full min-w-0 text-sm text-text-main focus:outline-none focus:ring-2 focus:ring-primary/20"
+              )}
+            />
+          </div>
           
           <div className="flex min-w-0 flex-col gap-2 sm:col-span-2 lg:col-span-1">
             <span className="hidden text-sm font-medium text-text-main opacity-0 lg:block" aria-hidden="true">Clear</span>
             <Button 
               variant="ghost" 
               onClick={handleClearFilters}
-              disabled={!filters.provider && !filters.startDate && !filters.endDate}
+              disabled={!filters.provider && !filters.startDate && !filters.endDate && !filters.conversationId}
               className="w-full"
             >
               Clear Filters
@@ -255,6 +272,7 @@ export default function RequestDetailsTab() {
                 <th className="text-left p-4 text-sm font-semibold text-text-main">Timestamp</th>
                 <th className="text-left p-4 text-sm font-semibold text-text-main">Model</th>
                 <th className="text-left p-4 text-sm font-semibold text-text-main">Provider</th>
+                <th className="text-left p-4 text-sm font-semibold text-text-main">Conversation</th>
                 <th className="text-right p-4 text-sm font-semibold text-text-main">Input Tokens</th>
                 <th className="text-right p-4 text-sm font-semibold text-text-main">Cached</th>
                 <th className="text-right p-4 text-sm font-semibold text-text-main">Cache Creation</th>
@@ -266,7 +284,7 @@ export default function RequestDetailsTab() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan="7" className="p-8 text-center text-text-muted">
+                  <td colSpan="8" className="p-8 text-center text-text-muted">
                     <div className="flex items-center justify-center gap-2">
                       <span className="material-symbols-outlined animate-spin text-[20px]">progress_activity</span>
                       Loading...
@@ -275,7 +293,7 @@ export default function RequestDetailsTab() {
                 </tr>
               ) : details.length === 0 ? (
                 <tr>
-                  <td colSpan="7" className="p-8 text-center text-text-muted">
+                  <td colSpan="8" className="p-8 text-center text-text-muted">
                     No request details found
                   </td>
                 </tr>
@@ -296,6 +314,9 @@ export default function RequestDetailsTab() {
                          {getProviderName(detail.provider, providerNameCache)}
                        </span>
                      </td>
+                    <td className="max-w-[160px] truncate p-4 font-mono text-xs text-text-muted" title={detail.conversationId || ""}>
+                      {detail.conversationId || "—"}
+                    </td>
                     <td className="p-4 text-sm text-text-main text-right font-mono">
                       {getInputTokens(detail.tokens).toLocaleString()}
                     </td>
