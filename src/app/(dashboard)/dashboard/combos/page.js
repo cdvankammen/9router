@@ -60,6 +60,7 @@ export default function CombosPage() {
   const [activeProviders, setActiveProviders] = useState([]);
   const [comboStrategies, setComboStrategies] = useState({});
   const [capacityAdapter, setCapacityAdapter] = useState(EMPTY_CAPACITY_ADAPTER);
+  const [smartRouter, setSmartRouter] = useState({ enabled: false, names: ["modelRouter"], allowedProviders: [], costQualityTradeoff: 5, maxCandidates: 3 });
   const { getCaps } = useModelCaps();
   const [confirmState, setConfirmState] = useState(null);
   const [presetLoading, setPresetLoading] = useState(null); // "cursor" | "claude" | null
@@ -176,6 +177,13 @@ export default function CombosPage() {
         normalized[cap.key] = normalizeCapEntry(rawAdapter[cap.key]);
       }
       setCapacityAdapter(normalized);
+      setSmartRouter({
+        enabled: !!settingsData.smartRouter?.enabled,
+        names: settingsData.smartRouter?.names?.length ? settingsData.smartRouter.names : ["modelRouter"],
+        allowedProviders: settingsData.smartRouter?.allowedProviders || [],
+        costQualityTradeoff: settingsData.smartRouter?.costQualityTradeoff ?? 5,
+        maxCandidates: settingsData.smartRouter?.maxCandidates ?? 3,
+      });
     } catch (error) {
       console.log("Error fetching data:", error);
     } finally {
@@ -193,6 +201,19 @@ export default function CombosPage() {
       });
     } catch (error) {
       console.log("Error updating capacity adapter:", error);
+    }
+  };
+
+  const handleSetSmartRouter = async (next) => {
+    setSmartRouter(next);
+    try {
+      await fetch("/api/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ smartRouter: next }),
+      });
+    } catch (error) {
+      console.log("Error updating smart router:", error);
     }
   };
 
@@ -515,6 +536,12 @@ export default function CombosPage() {
         onChange={handleSetCapacityAdapter}
         activeProviders={activeProviders}
         getCaps={getCaps}
+      />
+
+      {/* Smart Router */}
+      <SmartRouterSection
+        smartRouter={smartRouter}
+        onChange={handleSetSmartRouter}
       />
 
       {/* Create Modal - Use key to force remount and reset state */}
@@ -903,6 +930,112 @@ function CapacityAdapterCap({ cap, entry, onChange, activeProviders, getCaps }) 
           capFilter={cap.key}
           closeOnSelect={false}
         />
+      )}
+    </Card>
+  );
+}
+
+function SmartRouterSection({ smartRouter, onChange }) {
+  const { enabled, names, allowedProviders, costQualityTradeoff, maxCandidates } = smartRouter;
+
+  const patch = (p) => onChange({ ...smartRouter, ...p });
+
+  return (
+    <Card padding="md" className={!enabled ? "opacity-80" : ""}>
+      <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="material-symbols-outlined text-primary text-lg">route</span>
+            <p className="text-sm font-medium">Smart Router</p>
+          </div>
+          <p className="text-xs text-text-muted mt-0.5">
+            Virtual model that analyzes each request and picks the best model from your configured providers.
+          </p>
+          <ul className="mt-1.5 text-[11px] text-text-muted flex flex-col gap-0.5">
+            <li><span className="font-medium text-text-main">How it works</span> — classify task (code, math, chat, …) → score your providers&apos; models → build a fallback combo → existing combo engine retries on failure</li>
+            <li><span className="font-medium text-text-main">Use it as</span> — any model name listed below (e.g. <code className="font-mono">modelRouter</code>) in any OpenAI/Claude-compatible client</li>
+            <li><span className="font-medium text-text-main">Fail-safe</span> — if no model scores, the request passes through unchanged to normal resolution</li>
+          </ul>
+        </div>
+        <div className="shrink-0">
+          <Toggle
+            checked={enabled}
+            onChange={(v) => patch({ enabled: v })}
+            label={enabled ? "Enabled" : "Disabled"}
+            size="md"
+          />
+        </div>
+      </div>
+
+      {enabled && (
+        <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {/* Trigger names */}
+          <div>
+            <label className="text-xs font-medium text-text-main mb-1 block">Trigger model names</label>
+            <Input
+              value={names.join(", ")}
+              onChange={(e) =>
+                patch({ names: e.target.value.split(",").map((s) => s.trim()).filter(Boolean) })
+              }
+              placeholder="modelRouter, auto"
+            />
+            <p className="text-[10px] text-text-muted mt-0.5">
+              Comma-separated. Use any of these as your model string.
+            </p>
+          </div>
+
+          {/* Allowed providers */}
+          <div>
+            <label className="text-xs font-medium text-text-main mb-1 block">Allowed providers (optional)</label>
+            <Input
+              value={allowedProviders.join(", ")}
+              onChange={(e) =>
+                patch({ allowedProviders: e.target.value.split(",").map((s) => s.trim()).filter(Boolean) })
+              }
+              placeholder="openai, anthropic, deepseek (empty = all)"
+            />
+            <p className="text-[10px] text-text-muted mt-0.5">
+              Provider IDs to consider. Empty = all configured providers.
+            </p>
+          </div>
+
+          {/* Cost/quality tradeoff */}
+          <div className="sm:col-span-2">
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-xs font-medium text-text-main">Cost / Quality tradeoff</label>
+              <span className="text-xs font-mono text-primary">{costQualityTradeoff}</span>
+            </div>
+            <input
+              type="range"
+              min={0}
+              max={10}
+              step={1}
+              value={costQualityTradeoff}
+              onChange={(e) => patch({ costQualityTradeoff: Number(e.target.value) })}
+              className="w-full accent-[var(--primary,#6C5CE7)]"
+            />
+            <div className="flex justify-between text-[10px] text-text-muted mt-0.5">
+              <span>0 = best quality</span>
+              <span>5 = balanced</span>
+              <span>10 = cheapest</span>
+            </div>
+          </div>
+
+          {/* Max candidates */}
+          <div className="sm:col-span-2">
+            <label className="text-xs font-medium text-text-main mb-1 block">Fallback chain size</label>
+            <Input
+              type="number"
+              min={1}
+              max={10}
+              value={String(maxCandidates)}
+              onChange={(e) => patch({ maxCandidates: Math.max(1, Math.min(10, Number(e.target.value) || 1)) })}
+            />
+            <p className="text-[10px] text-text-muted mt-0.5">
+              How many top models to include in the automatic fallback combo (tried in score order).
+            </p>
+          </div>
+        </div>
       )}
     </Card>
   );
