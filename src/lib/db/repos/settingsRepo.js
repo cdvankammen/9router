@@ -17,6 +17,13 @@ const DEFAULT_SETTINGS = {
   comboStrategy: "fallback",
   comboStickyRoundRobinLimit: 1,
   comboStrategies: {},
+  smartRouter: {
+    enabled: false,
+    names: ["modelRouter"],
+    allowedProviders: [],
+    costQualityTradeoff: 5,
+    maxCandidates: 3,
+  },
   capacityAdapter: {
     vision: { enabled: true, roundRobin: false, models: [] },
     pdf: { enabled: false, roundRobin: false, models: [] },

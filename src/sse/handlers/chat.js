@@ -25,6 +25,7 @@ import * as log from "../utils/logger.js";
 import { updateProviderCredentials, checkAndRefreshToken } from "../services/tokenRefresh.js";
 import { getProjectIdForConnection } from "open-sse/services/projectId.js";
 import { stripModelContextMarker } from "open-sse/utils/modelMarkers.js";
+import { resolveSmartRouter, trackRequestStart, trackRequestEnd } from "../services/smartRouter.js";
 
 /**
  * Handle chat completion request
@@ -92,6 +93,12 @@ export async function handleChat(request, clientRawRequest = null) {
   if (bypassResponse) return bypassResponse.response || bypassResponse;
 
   const requiredCapabilities = detectRequiredCapabilities(body);
+
+  // ── SMART ROUTER: resolve virtual model to dynamic combo BEFORE translation ──
+  const smartRouterResult = await resolveSmartRouter(modelStr, body, settings);
+  if (smartRouterResult) {
+    modelStr = smartRouterResult;
+  }
 
   // Check if model is a combo (has multiple models with fallback)
   const comboModels = await getComboModels(modelStr);
