@@ -18,7 +18,14 @@ import {
   setStickySession as _setStickySession,
 } from "open-sse/services/smartRouter.js";
 import { PROVIDERS } from "open-sse/config/providers.js";
+import { PROVIDER_MODELS, PROVIDER_ID_TO_ALIAS } from "open-sse/config/providerModels.js";
 import * as log from "../utils/logger.js";
+
+// PROVIDER_MODELS is keyed by ALIAS (or id when no alias). Map alias → provider
+// id so combo model strings use canonical ids (e.g. "kr" → "kiro").
+const ALIAS_TO_PROVIDER_ID = new Map(
+  Object.entries(PROVIDER_ID_TO_ALIAS).map(([id, alias]) => [alias, id])
+);
 
 // ── Concurrency Tracking ────────────────────────────────────────────────────
 
@@ -57,8 +64,11 @@ async function getOrCreateSmartCombo(candidates, taskType, virtualModel) {
   const candidateModels = candidates.map((c) => `${c.provider}/${c.model}`);
 
   if (existing) {
-    // Update if model list changed
-    const existingModels = JSON.parse(existing.models || "[]");
+    // Update if model list changed. combosRepo returns models as a parsed
+    // array (rowToCombo) — tolerate a raw JSON string for robustness.
+    const existingModels = Array.isArray(existing.models)
+      ? existing.models
+      : (() => { try { return JSON.parse(existing.models || "[]"); } catch { return []; } })();
     const modelsMatch =
       existingModels.length === candidateModels.length &&
       existingModels.every((m, i) => m === candidateModels[i]);
@@ -89,14 +99,17 @@ async function getOrCreateSmartCombo(candidates, taskType, virtualModel) {
   return safeName;
 }
 
-// ── Session Stickiness (wraps open-sse version with combo awareness) ────────
+// ── Session Stickiness ──────────────────────────────────────────────────────
+// The open-sse session API stores {provider, model} — we store the combo name
+// in the provider slot and read it back. Same TTL/eviction, no double cache.
 
 function getSticky(messages) {
-  return _getStickySession(messages);
+  const entry = _getStickySession(messages);
+  return entry?.provider || null;
 }
 
 function setSticky(messages, comboName) {
-  _setStickySession(messages, comboName);
+  _setStickySession(messages, comboName, null);
 }
 
 // ── Main Entry Point ────────────────────────────────────────────────────────
@@ -131,24 +144,27 @@ export async function resolveSmartRouter(modelStr, body, settings) {
   // 2. Classify task from prompt content
   const taskType = classifyTask(messages);
 
-  // 3. Determine allowed providers
+  // 3. Determine allowed providers (by canonical provider id)
   const allowedProviders =
     config.allowedProviders?.length > 0
       ? config.allowedProviders
-      : Object.keys(PROVIDERS).filter(
-          (id) => id !== "9router" && id !== "9r"
-        );
+      : [...ALIAS_TO_PROVIDER_ID.values()].filter((id) => id !== "9router" && id !== "9r");
+  const allowedSet = new Set(allowedProviders);
 
   const costQualityTradeoff = config.costQualityTradeoff ?? 5;
   const maxCandidates = config.maxCandidates ?? 3;
 
-  // 4. Score all candidate models
+  // 4. Score all candidate models. PROVIDER_MODELS is keyed by ALIAS — the
+  //    transport-only PROVIDERS map has no models, so iterate PROVIDER_MODELS
+  //    and map each alias back to its canonical provider id.
   const candidates = [];
-  for (const providerId of allowedProviders) {
-    const providerDef = PROVIDERS[providerId];
-    if (!providerDef?.models) continue;
+  for (const [alias, models] of Object.entries(PROVIDER_MODELS)) {
+    if (!Array.isArray(models) || models.length === 0) continue;
+    const providerId = ALIAS_TO_PROVIDER_ID.get(alias) || alias;
+    if (providerId === "9router" || providerId === "9r") continue;
+    if (!allowedSet.has(providerId)) continue;
 
-    for (const model of providerDef.models) {
+    for (const model of models) {
       const modelId = model.id || model;
       let score = scoreModel(providerId, modelId, taskType, costQualityTradeoff);
 

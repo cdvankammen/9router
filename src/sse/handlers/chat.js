@@ -50,11 +50,15 @@ export async function handleChat(request, clientRawRequest = null) {
       headers: Object.fromEntries(request.headers.entries())
     };
   }
+<<<<<<< HEAD
   // Claude Code marks a 1M-context request as `<model>[1m]`; the marker matches
   // no combo, alias or provider/model pair, so it must not reach resolution.
   // The capability travels in the anthropic-beta header, forwarded as-is.
   const { model: modelStr, contextMarker } = stripModelContextMarker(body.model);
   if (contextMarker) body.model = modelStr;
+=======
+  let modelStr = body.model;
+>>>>>>> 4627a299 (fix(smart-router): 4 real bugs caught by production E2E testing)
   let smartRouterTaskType = null; // set by smart router interception; used for usage analytics
 
   // Request summary is emitted as the unified "▶" line in chatCore (has fmt/thinking/account)
