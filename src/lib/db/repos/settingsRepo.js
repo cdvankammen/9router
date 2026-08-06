@@ -25,6 +25,8 @@ const DEFAULT_SETTINGS = {
     maxCandidates: 3,
   },
   analyzeErrorModel: "oc/mimo-v2.5-free",
+  markdownLogEnabled: false,
+  markdownLogFlushIntervalMin: 5,
   capacityAdapter: {
     vision: { enabled: true, roundRobin: false, models: [] },
     pdf: { enabled: false, roundRobin: false, models: [] },

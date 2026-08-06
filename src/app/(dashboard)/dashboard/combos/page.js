@@ -61,6 +61,7 @@ export default function CombosPage() {
   const [comboStrategies, setComboStrategies] = useState({});
   const [capacityAdapter, setCapacityAdapter] = useState(EMPTY_CAPACITY_ADAPTER);
   const [smartRouter, setSmartRouter] = useState({ enabled: false, names: ["modelRouter"], allowedProviders: [], costQualityTradeoff: 5, maxCandidates: 3 });
+  const [markdownLog, setMarkdownLog] = useState({ enabled: false, intervalMin: 5 });
   const { getCaps } = useModelCaps();
   const [confirmState, setConfirmState] = useState(null);
   const [presetLoading, setPresetLoading] = useState(null); // "cursor" | "claude" | null
@@ -184,6 +185,10 @@ export default function CombosPage() {
         costQualityTradeoff: settingsData.smartRouter?.costQualityTradeoff ?? 5,
         maxCandidates: settingsData.smartRouter?.maxCandidates ?? 3,
       });
+      setMarkdownLog({
+        enabled: !!settingsData.markdownLogEnabled,
+        intervalMin: settingsData.markdownLogFlushIntervalMin ?? 5,
+      });
     } catch (error) {
       console.log("Error fetching data:", error);
     } finally {
@@ -214,6 +219,19 @@ export default function CombosPage() {
       });
     } catch (error) {
       console.log("Error updating smart router:", error);
+    }
+  };
+
+  const handleSetMarkdownLog = async (next) => {
+    setMarkdownLog(next);
+    try {
+      await fetch("/api/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ markdownLogEnabled: next.enabled, markdownLogFlushIntervalMin: next.intervalMin }),
+      });
+    } catch (error) {
+      console.log("Error updating markdown log:", error);
     }
   };
 
@@ -542,6 +560,12 @@ export default function CombosPage() {
       <SmartRouterSection
         smartRouter={smartRouter}
         onChange={handleSetSmartRouter}
+      />
+
+      {/* Markdown Log */}
+      <MarkdownLogSection
+        markdownLog={markdownLog}
+        onChange={handleSetMarkdownLog}
       />
 
       {/* Create Modal - Use key to force remount and reset state */}
@@ -1035,6 +1059,55 @@ function SmartRouterSection({ smartRouter, onChange }) {
               How many top models to include in the automatic fallback combo (tried in score order).
             </p>
           </div>
+        </div>
+      )}
+    </Card>
+  );
+}
+
+function MarkdownLogSection({ markdownLog, onChange }) {
+  const { enabled, intervalMin } = markdownLog;
+  const patch = (p) => onChange({ ...markdownLog, ...p });
+
+  return (
+    <Card padding="md" className={!enabled ? "opacity-80" : ""}>
+      <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="material-symbols-outlined text-primary text-lg">description</span>
+            <p className="text-sm font-medium">Markdown Request Log</p>
+          </div>
+          <p className="text-xs text-text-muted mt-0.5">
+            Periodically writes captured request details to a per-day markdown report grouped by conversation.
+          </p>
+          <ul className="mt-1.5 text-[11px] text-text-muted flex flex-col gap-0.5">
+            <li><span className="font-medium text-text-main">Location</span> — <code className="font-mono">~/.9router/logs/YYYY-MM-DD.md</code></li>
+            <li><span className="font-medium text-text-main">Requires</span> — request detail capture (Settings → Observability) to have data</li>
+          </ul>
+        </div>
+        <div className="shrink-0">
+          <Toggle
+            checked={enabled}
+            onChange={(v) => patch({ enabled: v })}
+            label={enabled ? "Enabled" : "Disabled"}
+            size="md"
+          />
+        </div>
+      </div>
+
+      {enabled && (
+        <div className="mt-4 max-w-[220px]">
+          <label className="text-xs font-medium text-text-main mb-1 block">Flush interval (minutes)</label>
+          <Input
+            type="number"
+            min={1}
+            max={1440}
+            value={String(intervalMin)}
+            onChange={(e) => patch({ intervalMin: Math.max(1, Math.min(1440, Number(e.target.value) || 5)) })}
+          />
+          <p className="text-[10px] text-text-muted mt-0.5">
+            How often the daily markdown file is rewritten.
+          </p>
         </div>
       )}
     </Card>

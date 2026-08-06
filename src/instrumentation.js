@@ -10,5 +10,9 @@ export async function register() {
 
     const { startModelCatalogSync } = await import("@/lib/modelCatalog/sync.js");
     startModelCatalogSync();
+
+    // Markdown log auto-flush (fail-open; enabled via settings)
+    const { startMarkdownLogFlusher } = await import("@/lib/markdownLog");
+    startMarkdownLogFlusher();
   }
 }
