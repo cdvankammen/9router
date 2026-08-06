@@ -19,6 +19,7 @@ import { buildRequestDetail, extractRequestConfig } from "./chatCore/requestDeta
 import { handleForcedSSEToJson } from "./chatCore/sseToJsonHandler.js";
 import { handleNonStreamingResponse } from "./chatCore/nonStreamingHandler.js";
 import { handleStreamingResponse, buildOnStreamComplete } from "./chatCore/streamingHandler.js";
+import { categorizeError } from "../utils/errorCategorizer.js";
 import { detectClientTool, isNativePassthrough } from "../utils/clientDetector.js";
 import { dedupeTools } from "../utils/toolDeduper.js";
 import { takeRenamedToolNames } from "../utils/opencodeFingerprint.js";
@@ -401,6 +402,7 @@ export async function handleChatCore({ body, modelInfo, credentials, log, onCred
     saveRequestDetail(buildRequestDetail({
       provider, model, connectionId,
       conversationId,
+      errorCategory: categorizeError(error?.status || error?.statusCode || 502, error.message),
       latency: { ttft: 0, total: Date.now() - requestStartTime },
       tokens: { prompt_tokens: 0, completion_tokens: 0 },
       request: extractRequestConfig(body, stream),
@@ -477,6 +479,7 @@ export async function handleChatCore({ body, modelInfo, credentials, log, onCred
     saveRequestDetail(buildRequestDetail({
       provider, model, connectionId,
       conversationId,
+      errorCategory: categorizeError(statusCode, message),
       latency: { ttft: 0, total: Date.now() - requestStartTime },
       tokens: { prompt_tokens: 0, completion_tokens: 0 },
       request: extractRequestConfig(body, stream),

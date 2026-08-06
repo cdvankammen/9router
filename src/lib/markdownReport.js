@@ -46,6 +46,7 @@ export function renderRequestsMarkdown(details) {
       lines.push(`- ${latency}`);
       lines.push(`- ${tokens}`);
       if (row.connectionId) lines.push(`- account: \`${row.connectionId}\``);
+      if (row.errorCategory) lines.push(`- category: \`${row.errorCategory}\``);
 
       const error = row.response?.error;
       if (error) {
