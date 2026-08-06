@@ -49,6 +49,10 @@ describe("errorCategory end-to-end through request details", () => {
     const { saveRequestDetail } = await import("@/lib/db/index.js");
     const { getRequestDetails } = await import("@/lib/db/repos/requestDetailsRepo.js");
 
+    // Unique id per run — robust to module-cached DB driver sharing the
+    // process with other test files (full-suite isolation).
+    const convId = `conv-err-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+
     // Mimic the chatCore error path exactly: categorize → buildRequestDetail → save
     const status = 429;
     const message = "Rate limit exceeded, retry later";
@@ -56,7 +60,7 @@ describe("errorCategory end-to-end through request details", () => {
       provider: "openai",
       model: "gpt-4o",
       connectionId: "conn-1",
-      conversationId: "conv-err",
+      conversationId: convId,
       errorCategory: categorizeError(status, message),
       latency: { ttft: 0, total: 12 },
       tokens: { prompt_tokens: 0, completion_tokens: 0 },
@@ -70,11 +74,14 @@ describe("errorCategory end-to-end through request details", () => {
     await saveRequestDetail(detail);
     await new Promise((r) => setTimeout(r, 200)); // allow flush (batchSize 1)
 
-    const { details } = await getRequestDetails({ conversationId: "conv-err", pageSize: 10 });
-    expect(details.length).toBe(1);
+    const { details } = await getRequestDetails({ conversationId: convId, pageSize: 10 });
+    // Assert on the exact record we wrote (count may include other files' rows
+    // when the DB driver is shared in-process).
+    const mine = details.find((d) => d.conversationId === convId);
+    expect(mine).toBeDefined();
     // THE regression assertion: category survives storage
-    expect(details[0].errorCategory).toBe("rate_limit");
-    expect(details[0].status).toBe("error");
-    expect(details[0].response.status).toBe(429);
+    expect(mine.errorCategory).toBe("rate_limit");
+    expect(mine.status).toBe("error");
+    expect(mine.response.status).toBe(429);
   });
 });
