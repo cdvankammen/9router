@@ -89,6 +89,33 @@ describe("resolveSmartRouter", () => {
     expect(await resolveSmartRouter("some-other-model", body, makeSettings())).toBeNull();
   });
 
+  it("allowedModels wildcard narrows the pool to that specific subset", async () => {
+    const body4 = { messages: [{ role: "user", content: "Translate this paragraph to French please" }] };
+    const result = await resolveSmartRouter(
+      "modelRouter",
+      body4,
+      makeSettings({ allowedModels: ["openai/*"] })
+    );
+    expect(result).not.toBeNull();
+    const { getComboByName } = await import("@/lib/db/repos/combosRepo.js");
+    const combo = await getComboByName(result.comboName);
+    expect(combo.models.length).toBeGreaterThan(0);
+    // Every candidate must match the openai/* pattern
+    for (const m of combo.models) {
+      expect(m.startsWith("openai/")).toBe(true);
+    }
+  });
+
+  it("allowedModels with a model that doesn't exist → null (no candidates)", async () => {
+    const body5 = { messages: [{ role: "user", content: "Write a haiku about the ocean" }] };
+    const result = await resolveSmartRouter(
+      "modelRouter",
+      body5,
+      makeSettings({ allowedModels: ["nonexistent-provider/definitely-not-a-model"] })
+    );
+    expect(result).toBeNull();
+  });
+
   it("concurrency tracking decrements cleanly", () => {
     trackRequestStart("openai/gpt-4o");
     trackRequestStart("openai/gpt-4o");

@@ -50,15 +50,11 @@ export async function handleChat(request, clientRawRequest = null) {
       headers: Object.fromEntries(request.headers.entries())
     };
   }
-<<<<<<< HEAD
   // Claude Code marks a 1M-context request as `<model>[1m]`; the marker matches
   // no combo, alias or provider/model pair, so it must not reach resolution.
   // The capability travels in the anthropic-beta header, forwarded as-is.
-  const { model: modelStr, contextMarker } = stripModelContextMarker(body.model);
+  let { model: modelStr, contextMarker } = stripModelContextMarker(body.model);
   if (contextMarker) body.model = modelStr;
-=======
-  let modelStr = body.model;
->>>>>>> 4627a299 (fix(smart-router): 4 real bugs caught by production E2E testing)
   let smartRouterTaskType = null; // set by smart router interception; used for usage analytics
 
   // Request summary is emitted as the unified "▶" line in chatCore (has fmt/thinking/account)
@@ -179,8 +175,11 @@ export async function handleChat(request, clientRawRequest = null) {
 
 /**
  * Handle single model chat request
+ * @param {boolean} [skipModelFallback] - Internal guard: when true, don't
+ *   re-apply settings.modelFallbacks (prevents infinite recursion from the
+ *   fallback chain's own handleSingleModel callback).
  */
-async function handleSingleModelChat(body, modelStr, clientRawRequest = null, request = null, apiKey = null, requestedModel = null, taskType = null) {
+async function handleSingleModelChat(body, modelStr, clientRawRequest = null, request = null, apiKey = null, requestedModel = null, taskType = null, skipModelFallback = false) {
   const modelInfo = await getModelInfo(modelStr);
 
   // If provider is null, this might be a combo name - check and handle
@@ -237,6 +236,37 @@ async function handleSingleModelChat(body, modelStr, clientRawRequest = null, re
   }
 
   const { provider, model } = modelInfo;
+
+  // ── PER-MODEL / PER-PROVIDER FALLBACK CHAINS ─────────────────────────────
+  // settings.modelFallbacks lets users attach an ordered fallback list to an
+  // exact model ("openai/gpt-4o") or an entire provider ("openai"). When
+  // configured, the single-model request becomes a fallback chain through the
+  // combo engine — automatic retry on failure, same semantics as combos, but
+  // configured directly on the model/provider the client actually requested.
+  if (!skipModelFallback) {
+    const fbSettings = await getSettings();
+    const fbMap = fbSettings.modelFallbacks || {};
+    const fallbacks = fbMap[modelStr] || fbMap[provider];
+    if (Array.isArray(fallbacks) && fallbacks.length > 0) {
+      const chain = [modelStr, ...fallbacks.filter((f) => typeof f === "string" && f && f !== modelStr)];
+      const requiredCapabilities = detectRequiredCapabilities(body);
+      const augmented = augmentModelsWithCapacityAdapter(chain, requiredCapabilities, fbSettings);
+      const adapterAdded = augmented.filter((m) => !chain.includes(m));
+      log.info("CHAT", `Model fallback "${modelStr}" → [${chain.join(" → ")}]`);
+      return handleComboChat({
+        body,
+        models: augmented,
+        handleSingleModel: withCapacityAdapterStripping(
+          (b, m) => handleSingleModelChat(b, m, clientRawRequest, request, apiKey, taskType, true),
+          adapterAdded
+        ),
+        log,
+        comboName: `${modelStr}-fallback`,
+        comboStrategy: "fallback",
+        onFallbackEvent: (a) => log.debug("FALLBACK", `${modelStr} → ${a.model} ${a.ok ? "ok" : `failed ${a.status}`} (${a.latencyMs}ms)`),
+      });
+    }
+  }
 
   // Routing shown in the unified "▶" line (client model → provider/model)
 

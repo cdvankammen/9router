@@ -60,8 +60,9 @@ export default function CombosPage() {
   const [activeProviders, setActiveProviders] = useState([]);
   const [comboStrategies, setComboStrategies] = useState({});
   const [capacityAdapter, setCapacityAdapter] = useState(EMPTY_CAPACITY_ADAPTER);
-  const [smartRouter, setSmartRouter] = useState({ enabled: false, names: ["modelRouter"], allowedProviders: [], costQualityTradeoff: 5, maxCandidates: 3 });
+  const [smartRouter, setSmartRouter] = useState({ enabled: false, names: ["modelRouter"], allowedProviders: [], allowedModels: [], costQualityTradeoff: 5, maxCandidates: 3 });
   const [markdownLog, setMarkdownLog] = useState({ enabled: false, intervalMin: 5 });
+  const [modelFallbacks, setModelFallbacks] = useState({});
   const { getCaps } = useModelCaps();
   const [confirmState, setConfirmState] = useState(null);
   const [presetLoading, setPresetLoading] = useState(null); // "cursor" | "claude" | null
@@ -182,6 +183,7 @@ export default function CombosPage() {
         enabled: !!settingsData.smartRouter?.enabled,
         names: settingsData.smartRouter?.names?.length ? settingsData.smartRouter.names : ["modelRouter"],
         allowedProviders: settingsData.smartRouter?.allowedProviders || [],
+        allowedModels: settingsData.smartRouter?.allowedModels || [],
         costQualityTradeoff: settingsData.smartRouter?.costQualityTradeoff ?? 5,
         maxCandidates: settingsData.smartRouter?.maxCandidates ?? 3,
       });
@@ -189,6 +191,7 @@ export default function CombosPage() {
         enabled: !!settingsData.markdownLogEnabled,
         intervalMin: settingsData.markdownLogFlushIntervalMin ?? 5,
       });
+      setModelFallbacks(settingsData.modelFallbacks || {});
     } catch (error) {
       console.log("Error fetching data:", error);
     } finally {
@@ -232,6 +235,19 @@ export default function CombosPage() {
       });
     } catch (error) {
       console.log("Error updating markdown log:", error);
+    }
+  };
+
+  const handleSetModelFallbacks = async (next) => {
+    setModelFallbacks(next);
+    try {
+      await fetch("/api/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ modelFallbacks: next }),
+      });
+    } catch (error) {
+      console.log("Error updating model fallbacks:", error);
     }
   };
 
@@ -566,6 +582,12 @@ export default function CombosPage() {
       <MarkdownLogSection
         markdownLog={markdownLog}
         onChange={handleSetMarkdownLog}
+      />
+
+      {/* Per-Model / Per-Provider Fallbacks */}
+      <ModelFallbacksSection
+        modelFallbacks={modelFallbacks}
+        onChange={handleSetModelFallbacks}
       />
 
       {/* Create Modal - Use key to force remount and reset state */}
@@ -960,7 +982,7 @@ function CapacityAdapterCap({ cap, entry, onChange, activeProviders, getCaps }) 
 }
 
 function SmartRouterSection({ smartRouter, onChange }) {
-  const { enabled, names, allowedProviders, costQualityTradeoff, maxCandidates } = smartRouter;
+  const { enabled, names, allowedProviders, allowedModels, costQualityTradeoff, maxCandidates } = smartRouter;
 
   const patch = (p) => onChange({ ...smartRouter, ...p });
 
@@ -1020,6 +1042,23 @@ function SmartRouterSection({ smartRouter, onChange }) {
             />
             <p className="text-[10px] text-text-muted mt-0.5">
               Provider IDs to consider. Empty = all configured providers.
+            </p>
+          </div>
+
+          {/* Allowed models — specific subset */}
+          <div className="sm:col-span-2">
+            <label className="text-xs font-medium text-text-main mb-1 block">Allowed models (optional — exact or wildcard)</label>
+            <Input
+              value={allowedModels.join(", ")}
+              onChange={(e) =>
+                patch({ allowedModels: e.target.value.split(",").map((s) => s.trim()).filter(Boolean) })
+              }
+              placeholder="openai/gpt-4o, anthropic/claude-*, */*-thinking"
+            />
+            <p className="text-[10px] text-text-muted mt-0.5">
+              Restrict the router to a specific subset of models. Supports wildcards:{" "}
+              <code className="font-mono">openai/*</code> (all OpenAI), <code className="font-mono">*/claude-*</code>{" "}
+              (any claude model). Empty = all models from allowed providers.
             </p>
           </div>
 
@@ -1112,6 +1151,90 @@ function MarkdownLogSection({ markdownLog, onChange }) {
       )}
     </Card>
   );
+}
+
+function ModelFallbacksSection({ modelFallbacks, onChange }) {
+  // Textarea format: one rule per line, "target:fallback1,fallback2"
+  // target can be "provider/model" (exact) or "provider" (all its models)
+  const [draft, setDraft] = useState(() => toDraftText(modelFallbacks));
+
+  const handleSave = () => {
+    onChange(parseDraftText(draft));
+  };
+
+  return (
+    <Card padding="md">
+      <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="material-symbols-outlined text-primary text-lg">swap_horiz</span>
+            <p className="text-sm font-medium">Per-Model / Per-Provider Fallbacks</p>
+          </div>
+          <p className="text-xs text-text-muted mt-0.5">
+            Attach an ordered fallback chain directly to any model or provider — no combo needed. When the requested model fails, 9Router retries down the chain automatically.
+          </p>
+          <ul className="mt-1.5 text-[11px] text-text-muted flex flex-col gap-0.5">
+            <li>
+              <span className="font-medium text-text-main">Exact model</span> —{" "}
+              <code className="font-mono">openai/gpt-4o:anthropic/claude-sonnet-4.6,deepseek/chat</code>
+            </li>
+            <li>
+              <span className="font-medium text-text-main">Whole provider</span> —{" "}
+              <code className="font-mono">openai:anthropic/claude-sonnet-4.6,deepseek/chat</code>{" "}
+              (applies to every openai/* model)
+            </li>
+            <li><span className="font-medium text-text-main">Composes with combos</span> — combos still work exactly as before; this adds fallbacks to plain model requests</li>
+          </ul>
+        </div>
+      </div>
+
+      <div className="mt-4">
+        <label className="text-xs font-medium text-text-main mb-1 block">Fallback rules (one per line)</label>
+        <textarea
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          rows={6}
+          spellCheck={false}
+          className="w-full rounded-lg border border-black/10 dark:border-white/10 bg-surface p-3 font-mono text-xs text-text-main focus:outline-none focus:ring-2 focus:ring-primary/20"
+          placeholder={"openai/gpt-4o:anthropic/claude-sonnet-4.6,deepseek/chat\nanthropic:deepseek/chat"}
+        />
+        <div className="mt-2 flex items-center justify-between gap-2">
+          <p className="text-[10px] text-text-muted">
+            Format: <code className="font-mono">target:fallback1,fallback2</code> — target is a model (<code className="font-mono">provider/model</code>) or a provider (<code className="font-mono">provider</code>). Saved rules apply immediately to new requests.
+          </p>
+          <Button size="sm" onClick={handleSave} disabled={draft === toDraftText(modelFallbacks)}>
+            Save Fallbacks
+          </Button>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+/** Convert the settings map {target: [fallbacks]} into editable text lines. */
+function toDraftText(map) {
+  return Object.entries(map || {})
+    .map(([target, fbs]) => `${target}:${(fbs || []).join(",")}`)
+    .join("\n");
+}
+
+/** Parse textarea lines into the settings map {target: [fallbacks]}. */
+function parseDraftText(text) {
+  const out = {};
+  for (const rawLine of String(text || "").split("\n")) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith("#")) continue;
+    const sep = line.indexOf(":");
+    if (sep <= 0) continue;
+    const target = line.slice(0, sep).trim();
+    const fallbacks = line
+      .slice(sep + 1)
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (target && fallbacks.length > 0) out[target] = fallbacks;
+  }
+  return out;
 }
 
 function ModelItem({ id, index, model, isFirst, isLast, onEdit, onMoveUp, onMoveDown, onRemove }) {

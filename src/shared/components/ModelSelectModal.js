@@ -216,9 +216,15 @@ export default function ModelSelectModal({
       ? NO_AUTH_PROVIDER_IDS.filter((id) => (AI_PROVIDERS[id]?.serviceKinds || ["llm"]).includes(kindFilter))
       : NO_AUTH_PROVIDER_IDS;
 
-    // Only show connected providers (including both standard and custom)
+    // Show the FULL 9Router model catalog — every registered provider with
+    // models, connected or not — so users can pick any model for combos,
+    // capacity adapters, etc. before connecting that provider. Groups with
+    // zero models are skipped downstream. Connected/custom providers are
+    // always included on top of the static catalog.
+    const catalogIds = PROVIDER_ORDER.filter((id) => !allProviders[id]?.hidden);
     const providerIdsToShow = new Set([
-      ...activeConnectionIds,  // Only connected providers
+      ...catalogIds,           // Full static catalog (all registered providers)
+      ...activeConnectionIds,  // Connected providers (incl. custom compatible nodes)
       ...noAuthIds,            // No-auth providers (kind-filtered)
     ]);
 
@@ -560,7 +566,9 @@ export default function ModelSelectModal({
         )}
 
         {/* Provider models */}
-        {Object.entries(filteredGroups).map(([providerId, group]) => (
+        {Object.entries(filteredGroups).map(([providerId, group]) => {
+          const isConnected = filteredActiveProviders.some((p) => p.provider === providerId);
+          return (
           <div key={providerId}>
             {/* Provider header */}
             <div className="flex items-center gap-1.5 mb-1.5 sticky top-0 bg-surface py-0.5">
@@ -577,6 +585,14 @@ export default function ModelSelectModal({
               <span className="text-[10px] text-text-muted">
                 ({group.models.length})
               </span>
+              {!isConnected && (
+                <span
+                  className="text-[9px] px-1 py-px rounded bg-amber-500/10 text-amber-600 font-medium"
+                  title="No credentials connected — you must connect this provider before requests will succeed"
+                >
+                  not connected
+                </span>
+              )}
             </div>
 
             <div className="flex flex-wrap gap-1.5">
@@ -627,7 +643,8 @@ export default function ModelSelectModal({
               })}
             </div>
           </div>
-        ))}
+          );
+        })}
 
         {Object.keys(filteredGroups).length === 0 && filteredCombos.length === 0 && (
           <div className="text-center py-4 text-text-muted">

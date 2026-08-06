@@ -27,6 +27,11 @@ const ALIAS_TO_PROVIDER_ID = new Map(
   Object.entries(PROVIDER_ID_TO_ALIAS).map(([id, alias]) => [alias, id])
 );
 
+/** Escape regex metacharacters for wildcard-pattern matching. */
+function escapeRegExp(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 // ── Concurrency Tracking ────────────────────────────────────────────────────
 
 const activeRequests = new Map(); // modelStr → count
@@ -157,6 +162,24 @@ export async function resolveSmartRouter(modelStr, body, settings) {
   // 4. Score all candidate models. PROVIDER_MODELS is keyed by ALIAS — the
   //    transport-only PROVIDERS map has no models, so iterate PROVIDER_MODELS
   //    and map each alias back to its canonical provider id.
+  //
+  //    allowedModels (optional) narrows the pool to explicit "provider/model"
+  //    strings or wildcard patterns ("openai/*", "*/claude-*") — this is how
+  //    users pick a SPECIFIC subset of models the smart router may use.
+  const modelPatterns = (config.allowedModels || []).map((p) => {
+    const lower = p.trim().toLowerCase();
+    if (!lower) return null;
+    const parts = lower.split("/");
+    const providerPart = parts[0] || "*";
+    const modelPart = parts.slice(1).join("/") || "*";
+    const toRe = (s) => "^" + s.split("*").map(escapeRegExp).join(".*") + "$";
+    return {
+      providerRe: new RegExp(toRe(providerPart)),
+      modelRe: new RegExp(toRe(modelPart)),
+    };
+  }).filter(Boolean);
+  const hasModelFilter = modelPatterns.length > 0;
+
   const candidates = [];
   for (const [alias, models] of Object.entries(PROVIDER_MODELS)) {
     if (!Array.isArray(models) || models.length === 0) continue;
@@ -166,6 +189,14 @@ export async function resolveSmartRouter(modelStr, body, settings) {
 
     for (const model of models) {
       const modelId = model.id || model;
+
+      // Narrow to the user's explicit model subset (if configured)
+      if (hasModelFilter) {
+        const fullLower = `${providerId}/${modelId}`.toLowerCase();
+        const matched = modelPatterns.some((p) => p.providerRe.test(fullLower.split("/")[0]) && p.modelRe.test(fullLower.split("/").slice(1).join("/")));
+        if (!matched) continue;
+      }
+
       let score = scoreModel(providerId, modelId, taskType, costQualityTradeoff);
 
       // Apply concurrency penalty: prefer less-loaded models
