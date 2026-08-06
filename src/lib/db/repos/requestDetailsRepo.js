@@ -117,6 +117,7 @@ async function flushToDatabase() {
             response: truncateField(item.response, config.maxJsonSize),
             pxpipe: item.pxpipe || undefined,
             conversationId: item.conversationId || null,
+            errorCategory: item.errorCategory || null,
           };
 
           db.run(
