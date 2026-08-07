@@ -108,6 +108,14 @@
 | 48 | Choose ONE of the 5 fallback rule UIs | User: "we will eventually choose one of them" — all five approaches remain via view switcher |
 | 49 | Per-model override inline in chain boxes | Research done (see research/9router/16-ux-research*), implementation pending user go-ahead |
 
+### Newly Completed (2026-08-07 late — browser-control documentation + skill)
+
+| # | Task | Status | Evidence |
+|---|------|--------|----------|
+| 50 | Answer "how do you control the browser without vision?" | ✅ | Answered in chat + documented; see SESSION-HISTORY late update |
+| 51 | Browser-control workflow doc | ✅ | `workflows/browser-control-workflow.md` — integrated browser (not headless), Playwright tooling, no-vision loop, gotchas, synthetic drag recipe, FAQ |
+| 52 | Agent skill for browser E2E | ✅ | `~/.agents/skills/9router-browser-e2e/SKILL.md` (manifest-registered) — reusable loop + drag recipe + gotchas |
+
 ### Key Discovery: Documentation Standards
 
 Per user's explicit request, established standards for all future work:

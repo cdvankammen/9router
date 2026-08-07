@@ -445,3 +445,25 @@ Full suite 1705 pass / 88 fail (13 new; baseline unchanged)
 ### State
 - Commits this round: `b520c9d6` (drop indicator). Prior: `b1e2a061` (provider picker + 5 views), `d7bf0e35` (modal drag + badge fix), `64c57811` (sr-* cleanup), docs `a3a7b180`/`6f06e6a0`.
 - Suite: 1718 pass / 88 baseline fail. Server up on 20130.
+
+---
+
+## UPDATE 2026-08-07 (late — "how do you control the browser?" answered + documented)
+
+### User's questions (verbatim intent)
+1. "where are you working right now? where is the browser page your moving things around on?"
+2. "are you not using the internal browser or what? are you running headless?"
+3. "how are you controlling it and knowing that things are actually working?"
+4. "make sure to update our documentation for workflows as well as setup a skill for how you are able to control things so well and easily"
+5. "what tools are you using and how are you navigating things without the need for visual?"
+
+### The answers (also documented in workflows/browser-control-workflow.md)
+- **Where**: this VS Code session, repo root `/Users/chris/Documents/GitHub/9router`; app under test = production standalone on :20130 (DATA_DIR=/tmp/9r-e2e2), mock upstream :24000.
+- **Browser**: the **VS Code integrated browser** — real, VISIBLE Chromium (not headless). The user can watch every action. Page IDs like `1e9f1c43-...` are its tabs.
+- **Control**: browser tools (open_browser_page/navigate_page/read_page/click_element/type_in_page/run_playwright_code) — Playwright under the hood; run_playwright_code exposes a real `page` object (locators, mouse, evaluate, CDP).
+- **Knowing it works without vision**: state-based verification — accessibility snapshots (text tree + refs) as eyes; page.evaluate DOM probes (textContent, rects, elementFromPoint, [role="status"], console errors); app-API assertions (fetch('/api/settings') after PATCH/drag); vitest regression; env restore.
+- **Consistency**: the same recipe every time (rebuild → ?bust= → login → snapshot/act/probe/assert → regression → restore) + a dedicated agent skill (`9router-browser-e2e`).
+
+### New artifacts
+- workflows/browser-control-workflow.md (NEW)
+- ~/.agents/skills/9router-browser-e2e/SKILL.md (NEW, manifest-registered)

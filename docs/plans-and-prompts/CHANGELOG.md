@@ -257,3 +257,19 @@ Full suite 1718 pass / 88 baseline fail (exact baseline). Lint clean on changed 
 - NEW plans/fallback-rules-ux-plan.md (5-view roadmap + pending items)
 - NEW meetings/2026-08-07-session-summary.md
 - workflows/ui-testing-workflow.md extended with synthetic pointer-event drag testing technique
+
+---
+
+## UPDATE 2026-08-07 (late — browser-control workflow doc + agent skill)
+
+### User questions answered (see SESSION-HISTORY)
+"Where are you working? which browser? headless? how do you control it and know things work without seeing? set up a skill for this and update workflow docs"
+
+### What was created
+- **`workflows/browser-control-workflow.md`** (NEW) — canonical doc answering the questions:
+  - Workspace = this VS Code session; app = production standalone on :20130, mock upstream :24000
+  - Browser = **VS Code integrated browser** (real visible Chromium, NOT headless), driven via Playwright through the browser tools
+  - No-vision loop: accessibility snapshots (read_page text tree + refs) → page.evaluate DOM probes → app-API assertions (fetch('/api/settings')) → vitest regression → env restore
+  - Gotchas: stale chunks after rebuild (?bust=), off-viewport elements eat no events (scrollIntoView + elementFromPoint), page.mouse.down() flakiness → synthetic PointerEvent recipe, dnd-kit coordinate spaces, :has-text() invalid in evaluate, volatile refs, page-id death
+- **`~/.agents/skills/9router-browser-e2e/SKILL.md`** (NEW, registered in manifest) — agent skill capturing the exact loop, drag recipe, and gotchas for future sessions
+- CHANGELOG/SESSION-HISTORY/TASK-LOG updated
