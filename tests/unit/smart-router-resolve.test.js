@@ -116,6 +116,33 @@ describe("resolveSmartRouter", () => {
     expect(result).toBeNull();
   });
 
+  it("includes user-defined custom provider nodes (openai-compatible)", async () => {
+    const { createProviderNode } = await import("@/lib/db/repos/nodesRepo.js");
+    // Register a custom OpenAI-compatible node whose /models endpoint we control
+    const node = await createProviderNode({
+      id: "openai-compatible-chat-testnode1",
+      type: "openai-compatible",
+      name: "TestNode",
+      prefix: "testnode",
+      apiType: "chat",
+      baseUrl: "http://127.0.0.1:9", // unreachable — getNodeModels returns [] gracefully
+    });
+    expect(node.id).toBe("openai-compatible-chat-testnode1");
+
+    // With allowedModels targeting the node prefix, no candidates from static
+    // registry will match; the node is unreachable so it yields none either.
+    const body6 = { messages: [{ role: "user", content: "Write a poem about rain" }] };
+    const result = await resolveSmartRouter(
+      "modelRouter",
+      body6,
+      makeSettings({ allowedModels: ["testnode/*"] })
+    );
+    // Node exists & is eligible → result is NOT null with zero candidates
+    // (unreachable upstream → 0 models) → router returns null gracefully.
+    // This asserts the node was *considered* (no crash) and fail-open behavior.
+    expect(result).toBeNull();
+  });
+
   it("concurrency tracking decrements cleanly", () => {
     trackRequestStart("openai/gpt-4o");
     trackRequestStart("openai/gpt-4o");

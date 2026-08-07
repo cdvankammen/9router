@@ -9,7 +9,7 @@
  * NOT an executor — avoids double-translation flaw.
  */
 
-import { getSettings } from "@/lib/localDb";
+import { getSettings, getProviderNodes } from "@/lib/localDb";
 import { createCombo, getComboByName, updateCombo } from "@/lib/db/repos/combosRepo.js";
 import {
   classifyTask,
@@ -26,6 +26,43 @@ import * as log from "../utils/logger.js";
 const ALIAS_TO_PROVIDER_ID = new Map(
   Object.entries(PROVIDER_ID_TO_ALIAS).map(([id, alias]) => [alias, id])
 );
+
+// ── Custom provider node models (short-TTL cache) ───────────────────────────
+// User-defined OpenAI/Anthropic-compatible nodes aren't in the static registry,
+// so the router fetches their /models endpoint once per TTL window.
+const NODE_MODELS_TTL_MS = 5 * 60 * 1000;
+const nodeModelsCache = new Map(); // nodeId -> { models: [{id,name}], ts }
+
+async function getNodeModels(node) {
+  const cached = nodeModelsCache.get(node.id);
+  if (cached && Date.now() - cached.ts < NODE_MODELS_TTL_MS) return cached.models;
+  try {
+    let baseUrl = String(node.baseUrl || "").replace(/\/+$/, "");
+    if (baseUrl.endsWith("/messages")) baseUrl = baseUrl.slice(0, -"/messages".length);
+    if (!baseUrl) return [];
+    const url = `${baseUrl}/models`;
+    const controller = new AbortController();
+    const t = setTimeout(() => controller.abort(), 5000);
+    let res;
+    try {
+      res = await fetch(url, {
+        headers: { "Content-Type": "application/json" },
+        signal: controller.signal,
+      });
+    } finally {
+      clearTimeout(t);
+    }
+    if (!res.ok) return [];
+    const data = await res.json();
+    const models = (data.data || data.models || [])
+      .map((m) => ({ id: m.id || m, name: m.name || m.id || m }))
+      .filter((m) => typeof m.id === "string" && m.id.length > 0);
+    nodeModelsCache.set(node.id, { models, ts: Date.now() });
+    return models;
+  } catch {
+    return [];
+  }
+}
 
 /** Escape regex metacharacters for wildcard-pattern matching. */
 function escapeRegExp(s) {
@@ -208,6 +245,44 @@ export async function resolveSmartRouter(modelStr, body, settings) {
 
       if (score > 0) {
         candidates.push({ provider: providerId, model: modelId, score, taskType });
+      }
+    }
+  }
+
+  // 4b. Score user-defined provider nodes (custom OpenAI/Anthropic-compatible).
+  //     Their models come from the live /models endpoint (short-TTL cached).
+  //     Eligible when: allowedProviders is empty (allow all) OR the node id or
+  //     its prefix matches the allowed list. Model strings use the node PREFIX
+  //     ("mockreal/gpt-4o-mini") so combos read like what clients type.
+  const explicitProvidersConfigured = (config.allowedProviders || []).length > 0;
+  const nodes = await getProviderNodes();
+  for (const node of nodes) {
+    if (node.type !== "openai-compatible" && node.type !== "anthropic-compatible") continue;
+    const nodeId = node.id;
+    const prefix = node.prefix || nodeId;
+    if (nodeId === "9router" || prefix === "9router" || prefix === "9r") continue;
+    if (explicitProvidersConfigured && !allowedSet.has(nodeId) && !allowedSet.has(prefix)) continue;
+
+    const nodeModels = await getNodeModels(node);
+    for (const model of nodeModels) {
+      const modelId = model.id;
+
+      // allowedModels matching: try both the prefix and the internal node id
+      if (hasModelFilter) {
+        const matched = modelPatterns.some((p) => {
+          const pTest = (prov) => p.providerRe.test(prov) && p.modelRe.test(modelId);
+          return pTest(prefix) || pTest(nodeId);
+        });
+        if (!matched) continue;
+      }
+
+      let score = scoreModel(prefix, modelId, taskType, costQualityTradeoff);
+      const fullModelStr = `${prefix}/${modelId}`;
+      const activeCount = getActiveCount(fullModelStr);
+      if (activeCount > 0) score -= activeCount * 2;
+
+      if (score > 0) {
+        candidates.push({ provider: prefix, model: modelId, score, taskType });
       }
     }
   }

@@ -243,16 +243,33 @@ async function handleSingleModelChat(body, modelStr, clientRawRequest = null, re
   // configured, the single-model request becomes a fallback chain through the
   // combo engine — automatic retry on failure, same semantics as combos, but
   // configured directly on the model/provider the client actually requested.
+  //
+  // Two storage shapes (backward compatible):
+  //   Simple:  { target: ["fallback1", "fallback2"] }
+  //   Advanced:{ target: { models: [...], retries: N, perModelRetries: {...} } }
   if (!skipModelFallback) {
     const fbSettings = await getSettings();
     const fbMap = fbSettings.modelFallbacks || {};
-    const fallbacks = fbMap[modelStr] || fbMap[provider];
-    if (Array.isArray(fallbacks) && fallbacks.length > 0) {
-      const chain = [modelStr, ...fallbacks.filter((f) => typeof f === "string" && f && f !== modelStr)];
+    const raw = fbMap[modelStr] || fbMap[provider];
+
+    // Normalize either shape into { models: string[], retries, perModelRetries }
+    let fbConfig = null;
+    if (Array.isArray(raw)) {
+      fbConfig = { models: raw, retries: null, perModelRetries: null };
+    } else if (raw && typeof raw === "object" && Array.isArray(raw.models)) {
+      fbConfig = {
+        models: raw.models,
+        retries: Number.isFinite(Number(raw.retries)) ? Math.max(1, Number(raw.retries)) : null,
+        perModelRetries: raw.perModelRetries && typeof raw.perModelRetries === "object" ? raw.perModelRetries : null,
+      };
+    }
+
+    if (fbConfig && fbConfig.models.length > 0) {
+      const chain = [modelStr, ...fbConfig.models.filter((f) => typeof f === "string" && f && f !== modelStr)];
       const requiredCapabilities = detectRequiredCapabilities(body);
       const augmented = augmentModelsWithCapacityAdapter(chain, requiredCapabilities, fbSettings);
       const adapterAdded = augmented.filter((m) => !chain.includes(m));
-      log.info("CHAT", `Model fallback "${modelStr}" → [${chain.join(" → ")}]`);
+      log.info("CHAT", `Model fallback "${modelStr}" → [${chain.join(" → ")}]${fbConfig.retries ? ` (retries: ${fbConfig.retries})` : ""}`);
       return handleComboChat({
         body,
         models: augmented,
@@ -263,6 +280,8 @@ async function handleSingleModelChat(body, modelStr, clientRawRequest = null, re
         log,
         comboName: `${modelStr}-fallback`,
         comboStrategy: "fallback",
+        retriesPerModel: fbConfig.retries || 1,
+        perModelRetries: fbConfig.perModelRetries || null,
         onFallbackEvent: (a) => log.debug("FALLBACK", `${modelStr} → ${a.model} ${a.ok ? "ok" : `failed ${a.status}`} (${a.latencyMs}ms)`),
       });
     }

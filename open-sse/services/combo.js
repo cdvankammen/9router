@@ -277,9 +277,11 @@ export function getComboModelsFromData(modelStr, combosData) {
  * @param {number|string} [options.comboStickyLimit=1] - Requests per combo model before switching
  * @param {boolean} [options.autoSwitch=true] - Reorder models by required capabilities
  * @param {Function} [options.onFallbackEvent] - Per-attempt callback (attempt) => void for observability
+ * @param {number} [options.retriesPerModel=1] - How many times to retry a model on retryable errors before moving to the next. 1 = current behavior (try once).
+ * @param {Object} [options.perModelRetries=null] - Optional per-model override map: { "provider/model": retries }
  * @returns {Promise<Response>}
  */
-export async function handleComboChat({ body, models, handleSingleModel, log, comboName, comboStrategy, comboStickyLimit = 1, autoSwitch = true, onFallbackEvent = null }) {
+export async function handleComboChat({ body, models, handleSingleModel, log, comboName, comboStrategy, comboStickyLimit = 1, autoSwitch = true, onFallbackEvent = null, retriesPerModel = 1, perModelRetries = null }) {
   // Fallback chain observability: one entry per attempted model, oldest first.
   const fallbackChain = [];
 
@@ -304,82 +306,96 @@ export async function handleComboChat({ body, models, handleSingleModel, log, co
 
   for (let i = 0; i < rotatedModels.length; i++) {
     const modelStr = rotatedModels[i];
-    const attemptStart = Date.now();
-    log.info("COMBO", `Trying model ${i + 1}/${rotatedModels.length}: ${modelStr}`);
+    // Retry count for this model: per-model override wins, else universal default
+    const modelRetries = (perModelRetries && typeof perModelRetries[modelStr] === "number")
+      ? Math.max(1, perModelRetries[modelStr])
+      : Math.max(1, retriesPerModel || 1);
 
-    try {
-      const result = await handleSingleModel(body, modelStr);
-      const latencyMs = Date.now() - attemptStart;
+    for (let attemptNum = 0; attemptNum < modelRetries; attemptNum++) {
+      const attemptStart = Date.now();
+      const attemptLabel = modelRetries > 1 ? ` (attempt ${attemptNum + 1}/${modelRetries})` : "";
+      log.info("COMBO", `Trying model ${i + 1}/${rotatedModels.length}: ${modelStr}${attemptLabel}`);
 
-      // Record attempt for the fallback chain (success or failure)
-      const attempt = { model: modelStr, ok: !!result.ok, status: result.status, latencyMs };
-      fallbackChain.push(attempt);
-      if (onFallbackEvent) {
-        try { onFallbackEvent(attempt); } catch { /* observability must never break routing */ }
-      }
-
-      // Success (2xx) - return response
-      if (result.ok) {
-        log.info("COMBO", `Model ${modelStr} succeeded`);
-        if (fallbackChain.length > 1 && result.headers && typeof result.headers.append === "function") {
-          try { result.headers.append("x-9r-fallback-chain", JSON.stringify(fallbackChain)); } catch { /* ignore */ }
-        }
-        return result;
-      }
-
-      // Extract error info from response
-      let errorText = result.statusText || "";
-      let retryAfter = null;
       try {
-        const errorBody = await result.clone().json();
-        errorText = errorBody?.error?.message || errorBody?.error || errorBody?.message || errorText;
-        retryAfter = errorBody?.retryAfter || null;
-      } catch {
-        // Ignore JSON parse errors
-      }
+        const result = await handleSingleModel(body, modelStr);
+        const latencyMs = Date.now() - attemptStart;
 
-      // Track earliest retryAfter across all combo models
-      if (retryAfter && (!earliestRetryAfter || new Date(retryAfter) < new Date(earliestRetryAfter))) {
-        earliestRetryAfter = retryAfter;
-      }
+        // Record attempt for the fallback chain (success or failure)
+        const attempt = { model: modelStr, ok: !!result.ok, status: result.status, latencyMs, attempt: attemptNum + 1 };
+        fallbackChain.push(attempt);
+        if (onFallbackEvent) {
+          try { onFallbackEvent(attempt); } catch { /* observability must never break routing */ }
+        }
 
-      // Normalize error text to string (Worker-safe)
-      if (typeof errorText !== "string") {
-        try { errorText = JSON.stringify(errorText); } catch { errorText = String(errorText); }
-      }
+        // Success (2xx) - return response
+        if (result.ok) {
+          log.info("COMBO", `Model ${modelStr} succeeded`);
+          if (fallbackChain.length > 1 && result.headers && typeof result.headers.append === "function") {
+            try { result.headers.append("x-9r-fallback-chain", JSON.stringify(fallbackChain)); } catch { /* ignore */ }
+          }
+          return result;
+        }
 
-      // Check if should fallback to next model
-      const { shouldFallback, cooldownMs } = checkFallbackError(result.status, errorText);
+        // Extract error info from response
+        let errorText = result.statusText || "";
+        let retryAfter = null;
+        try {
+          const errorBody = await result.clone().json();
+          errorText = errorBody?.error?.message || errorBody?.error || errorBody?.message || errorText;
+          retryAfter = errorBody?.retryAfter || null;
+        } catch {
+          // Ignore JSON parse errors
+        }
 
-      if (!shouldFallback) {
-        log.warn("COMBO", `Model ${modelStr} failed (no fallback)`, { status: result.status });
-        return result;
-      }
+        // Track earliest retryAfter across all combo models
+        if (retryAfter && (!earliestRetryAfter || new Date(retryAfter) < new Date(earliestRetryAfter))) {
+          earliestRetryAfter = retryAfter;
+        }
 
-      // For transient errors (503/502/504), wait for cooldown before falling through
-      // so a briefly-overloaded provider gets a chance to recover rather than being
-      // skipped immediately (fixes: combo falls through on transient 503)
-      if (cooldownMs && cooldownMs > 0 && cooldownMs <= 5000 &&
-          (result.status === 503 || result.status === 502 || result.status === 504)) {
-        log.info("COMBO", `Model ${modelStr} transient ${result.status}, waiting ${cooldownMs}ms before next`);
-        await new Promise(r => setTimeout(r, cooldownMs));
-      }
+        // Normalize error text to string (Worker-safe)
+        if (typeof errorText !== "string") {
+          try { errorText = JSON.stringify(errorText); } catch { errorText = String(errorText); }
+        }
 
-      // Fallback to next model
-      lastError = errorText || String(result.status);
-      if (!lastStatus) lastStatus = result.status;
-      log.warn("COMBO", `Model ${modelStr} failed, trying next`, { status: result.status });
-    } catch (error) {
-      // Catch unexpected exceptions to ensure fallback continues
-      const latencyMs = Date.now() - attemptStart;
-      const attempt = { model: modelStr, ok: false, status: 500, error: error.message || String(error), latencyMs };
-      fallbackChain.push(attempt);
-      if (onFallbackEvent) {
-        try { onFallbackEvent(attempt); } catch { /* observability must never break routing */ }
+        // Check if should fallback to next model
+        const { shouldFallback, cooldownMs } = checkFallbackError(result.status, errorText);
+
+        if (!shouldFallback) {
+          log.warn("COMBO", `Model ${modelStr} failed (no fallback)`, { status: result.status });
+          return result;
+        }
+
+        // For transient errors (503/502/504), wait for cooldown before retrying
+        // so a briefly-overloaded provider gets a chance to recover
+        if (cooldownMs && cooldownMs > 0 && cooldownMs <= 5000 &&
+            (result.status === 503 || result.status === 502 || result.status === 504)) {
+          log.info("COMBO", `Model ${modelStr} transient ${result.status}, waiting ${cooldownMs}ms before retry`);
+          await new Promise(r => setTimeout(r, cooldownMs));
+        }
+
+        // If we have retry attempts left, retry the SAME model
+        if (attemptNum < modelRetries - 1) {
+          log.warn("COMBO", `Model ${modelStr} failed (${result.status}), retrying ${attemptNum + 2}/${modelRetries}`);
+          continue;
+        }
+
+        // Fallback to next model after all retries exhausted
+        lastError = errorText || String(result.status);
+        if (!lastStatus) lastStatus = result.status;
+        log.warn("COMBO", `Model ${modelStr} failed after ${modelRetries} attempts, trying next`, { status: result.status });
+      } catch (error) {
+        // Catch unexpected exceptions to ensure fallback continues
+        const latencyMs = Date.now() - attemptStart;
+        const attempt = { model: modelStr, ok: false, status: 500, error: error.message || String(error), latencyMs, attempt: attemptNum + 1 };
+        fallbackChain.push(attempt);
+        if (onFallbackEvent) {
+          try { onFallbackEvent(attempt); } catch { /* observability must never break routing */ }
+        }
+        lastError = error.message || String(error);
+        if (!lastStatus) lastStatus = 500;
+        log.warn("COMBO", `Model ${modelStr} threw error, trying next`, { error: lastError });
+        break; // Exceptions don't retry — move to next model
       }
-      lastError = error.message || String(error);
-      if (!lastStatus) lastStatus = 500;
-      log.warn("COMBO", `Model ${modelStr} threw error, trying next`, { error: lastError });
     }
   }
 
