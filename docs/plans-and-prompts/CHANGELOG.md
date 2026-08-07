@@ -320,3 +320,18 @@ Full suite 1718 pass / 88 baseline fail (exact baseline). Lint clean on changed 
 
 ### Regression
 1718 pass / 88 baseline fail (one flaky run showed 89 skips; re-run = baseline). No code changed.
+
+---
+
+## UPDATE 2026-08-07 (deep research v4 — no-limits pass: subagents + retries)
+
+### research only, no code changed
+- **`research/message-capture-v4-deep-pass.md`** — the "no limits" pass per user directive
+- Method: 5 subagents spawned; first batch hit provider rate-limits/network errors (3 rate-limited, 2 network) — all 5 areas completed via one-at-a-time retries + lightweight fallbacks. Validates user's recovery point: subagent failures are recoverable.
+- New content (on top of v1/v2/v3):
+  1. **~90 NEW projects**: LLM observability deep-pagination (30+ incl. latitude-llm 4.5k★ error-monitoring, agent-prism MIT React trace components, langfuse-mcp/opik-mcp MCP-over-trace-store, Axon OTel CLI viewer, kitaru record-replay, smithers time-travel); gateway long-tail catalog (40+ from cuihuan/howardpen9 awesome-lists incl. ccglass 665★ per-message token/cost viewer, gpt-load 6.3k★ log UI, CPA-Manager-Plus account-health panel, CrossLink routing-stats API, aiproxy audit trails, RelayPlane runaway-loop audit, OrcaRouter-Lite savings analytics, TokenHub cost attribution)
+  2. **43 academic papers/studies** (arXiv + Semantic Scholar, live-verified): AIOps surveys, ContinuityBench (CPR/CLO fallback metrics), SEAR (SQL-queryable log schema blueprint), GateScope (billed-vs-served model), TAMO/RCA studies, "When AIOps Become AI Oops" (security: log content = untrusted input for analyzer), StuGPTViz (transcript viz), CHI LLM-observability design principles, Microsoft multi-agent debugging study
+  3. **Community landscape**: HN themes (LiteLLM frustration loudest; "Sentry for LLM requests" demand), GitHub issue demand signals (open-webui analytics 81 comments, new-api stream-error classification, litellm payload-capture complaints, one-api detailed-logs request), Discords/blogs; Reddit IP-blocked (links provided)
+  4. **Agent-framework storage synthesis** (LangGraph/Dify/Open WebUI/LibreChat/Cherry Studio/Mastra/Vercel AI SDK/Pydantic AI): recommended `messages` table schema (session_id, request_id FK, parent_message_id tree, status/done) + fat bodies in requestDetails — the definitive conversation-schema recommendation
+  5. **Top-copy synthesis** (10 ranked picks incl. ccglass UX, latitude-llm error platform, agent-prism components, CrossLink routing-stats, MCP-over-trace-store)
+- Flags: Helicone maintenance-mode (acquired Mintlify 2026-03 — copy ideas only); avoid GPL/AGPL (octopus, Helicone ai-gateway, nullsink); TensorZero archived confirms gateway-observability consolidation

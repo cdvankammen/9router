@@ -149,3 +149,14 @@ Per user's explicit request, established standards for all future work:
 |---|------|--------|----------|
 | 56 | Research v3: OBSCURE/low-star projects pass | ✅ | `research/message-capture-obscure-projects-v3.md` — 50+ hidden-gem projects (7–4,400★) across chat viewers, log tools, error analysis, tiny proxies; 10 synthesized copy-ideas; confirmed market gap |
 | 57 | Document v3 in tracking docs | ✅ | CHANGELOG + TASK-LOG + SESSION-HISTORY reference v3 |
+
+### Newly Completed (2026-08-07 deep research v4 — no-limits subagent pass)
+
+| # | Task | Status | Evidence |
+|---|------|--------|----------|
+| 58 | Research v4: no-limits pass (5 subagents w/ retries) | ✅ | `research/message-capture-v4-deep-pass.md` — ~90 new projects, 43 papers, community landscape, framework storage synthesis, top-copy list |
+| 59 | Deep pagination of GitHub search (llm observability, gateways) | ✅ | ~200 repos reviewed across 7+ API queries + both awesome-gateway lists (long-tail catalog 40+) |
+| 60 | Academic/study landscape | ✅ | 43 live-verified papers (arXiv/Semantic Scholar) incl. routing reliability, log/RCA analysis, privacy, HCI |
+| 61 | Community landscape | ✅ | HN Algolia themes, GitHub issue demand signals (7 repos), Discords/blogs; Reddit IP-blocked (search links provided) |
+| 62 | Agent-framework storage-pattern synthesis | ✅ | LangGraph/CrewAI/AG2/Pydantic/Vercel/Mastra/SemanticKernel/LlamaIndex/Dify/OpenWebUI/LibreChat/CherryStudio/NextChat → recommended messages-table schema |
+| 63 | Subagent failure recovery exercised | ✅ | 5/5 areas completed despite provider rate-limits/network errors via one-at-a-time retries (validates user's recovery rationale) |

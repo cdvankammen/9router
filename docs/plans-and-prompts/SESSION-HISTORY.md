@@ -516,3 +516,61 @@ All 6 user-feature areas verified working. 2 environment issues found (xAI
 token invalid, OpenRouter guardrails) — both handled correctly by the code, both
 actionable by the user. 2 minor refactor notes recorded. New doc:
 research/9router/17-code-review-user-commits.md. No code changed during review.
+
+---
+
+## UPDATE 2026-08-07 (Mac tray app rebuild + full verification)
+
+### The Ask
+User repeatedly asked: "I don't see any of the 9Router mac apps actually running" —
+the Next.js server was running on port 20130 from manual `node server.js`, but the
+CLI/tray launcher (the actual Mac desktop app with menu bar icon) was NOT running.
+
+### What Was Found
+- `cli/` is the Mac app launcher: `node cli.js --tray` spawns the server + menu bar icon
+- `cli/node_modules` was EMPTY → `npm run build` failed with "Cannot find module 'esbuild'"
+- The stale `cli/app/` build (from Aug 7 12:42) lacked the [DONE] fix from `429ddc56`
+- Real `~/.9router` config had Dialagram node with WRONG apiType (`responses` instead of `chat`)
+
+### Fixes Applied
+1. `cd cli && npm install` → installed esbuild + 39 packages
+2. `cd cli && npm run build` → full CLI build (61M) including MITM server + fresh app bundle
+3. Relaunched: `node cli.js --tray --port 20130 --skip-update`
+   - Tray icon: `/Users/chris/.cache/node-systray/2.1.4/tray_darwin_release` running
+   - CLI launcher: `node cli.js --tray` running
+   - Server: `next-server` on port 20130 running
+4. Created chat-type Dialagram node (`openai-compatible-chat-b89680f0...`, prefix `dialagram`)
+   + API key connection → streaming now emits exactly 1 [DONE]
+5. Updated smart router `allowedModels` to `["dialagram/*"]`
+
+### Final Verification (on the running Mac tray app)
+| Test | Result |
+|------|--------|
+| Tray icon process | running ✅ |
+| CLI launcher process | running ✅ |
+| Server on port 20130 | running ✅ |
+| Dialagram direct (chat node) | PASS: qwen-3.5-plus ✅ |
+| Streaming [DONE] count | 1 ✅ |
+| Smart router modelRouter | PASS: nexum-router ✅ |
+| Models registry | 104 models ✅ |
+
+### Key Learning
+**Node apiType matters for streaming termination.** A custom OpenAI-compatible node
+created as `responses` type speaks Responses-API framing; if the upstream actually
+speaks OpenAI chat format, the Responses path skips the [DONE] sentinel emission.
+Use `apiType: "chat"` for OpenAI-chat-speaking endpoints (Dialagram, etc.).
+
+---
+
+## UPDATE 2026-08-07 (deep research v4 — no-limits subagent pass)
+
+User: "use subagents again to actually do better job… read all of the options (no limit)… frameworks, studies, categories… forums and other repositories… also a good reason to use subagents is… when something fails from the provider we are able to recover easier."
+
+- Spawned 5 subagents; first batch: 3 rate-limited + 2 network errors → retried one-at-a-time → all 5 areas completed. Recovery rationale validated.
+- Produced `research/message-capture-v4-deep-pass.md`:
+  - ~90 NEW projects (observability deep-pagination + gateway long-tail from both awesome-gateway lists)
+  - 43 academic papers (AIOps surveys, ContinuityBench CPR/CLO, SEAR schema blueprint, RCA/log-anomaly studies, privacy, HCI)
+  - Community: HN themes, GitHub issue demand (7 gateway repos), Discords/blogs; Reddit blocked
+  - Agent-framework conversation-storage synthesis → recommended messages-table schema for 9Router
+  - Top-10 copy list (ccglass, latitude-llm, agent-prism, CrossLink, MCP-over-trace-store, …)
+- Key strategic findings: (a) ContinuityBench proves naive failover drops conversation history — our combo/account fallback needs CPR/CLO metrics in the viewer; (b) SEAR gives a published SQL schema blueprint; (c) "AI Oops" paper: analyzer must treat log content as untrusted input; (d) nobody owns "Sentry for self-hosted LLM gateways" — gap confirmed across HN + GitHub issues.
