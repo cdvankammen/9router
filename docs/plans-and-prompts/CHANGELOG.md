@@ -273,3 +273,14 @@ Full suite 1718 pass / 88 baseline fail (exact baseline). Lint clean on changed 
   - Gotchas: stale chunks after rebuild (?bust=), off-viewport elements eat no events (scrollIntoView + elementFromPoint), page.mouse.down() flakiness → synthetic PointerEvent recipe, dnd-kit coordinate spaces, :has-text() invalid in evaluate, volatile refs, page-id death
 - **`~/.agents/skills/9router-browser-e2e/SKILL.md`** (NEW, registered in manifest) — agent skill capturing the exact loop, drag recipe, and gotchas for future sessions
 - CHANGELOG/SESSION-HISTORY/TASK-LOG updated
+
+---
+
+## UPDATE 2026-08-07 (deep research — message capture & log viewing)
+
+### research only, no code changed
+- **`research/message-capture-log-viewing.md`** (v1 survey) + **`research/message-capture-deep-research-v2.md`** (v2 EXHAUSTIVE — 3 parallel research agents + direct repo deep-dives, all stars/licenses verified live)
+- Landscape covered: LLM observability platforms (Langfuse 32.7k★ MIT, Helicone 6k★ Apache, Phoenix 10.9k★ **ELv2 not-OSS**, Weave 1.1k★ Apache, AgentOps 5.8k★ MIT, OpenLIT 2.7k★ Apache, Opik 14.8k★ Apache, Langtrace, LangWatch **ELv2**, TruLens, OpenLLMetry, LangKit, promptfoo, DeepEval); AI gateways w/ log viewers (**one-api 36.3k★ MIT, new-api 44.6k★ AGPL — closest competitors with built-in per-request log pages**, LiteLLM 55.8k★, Portkey, Bifrost, Kong, Higress, TensorZero **archived**); log mgmt (OpenObserve 20.6k★ AGPL, SigNoz 31.8k★, Loki 28.7k★, VictoriaLogs, Quickwit, Graylog **SSPL-avoid**, HyperDX MIT, Highlight, Logdy, lnav, Dozzle); error tracking (Sentry **FSL-1.1+heavy**, GlitchTip **MIT single-container, Sentry-protocol-compatible**, Exceptionless, Errbit); notifications (ntfy 33.2k★, Gotify, Apprise **one-URL-per-channel**, Novu, Bark, UptimeKuma channel-picker, Alertmanager semantics); request-capture UX (Bruno 46.2k★ MIT, Hoppscotch 80k★ MIT self-hostable, **mitmweb master-detail inspector**, Hurl `--curl`, HTTP Toolkit, Insomnia, mockbin); ProxmoxVE repo enumerated exhaustively (**no error-tracker, no langfuse/phoenix scripts; litellm script added-then-removed**); awesome-lists read live (tensorchord/Awesome-LLMOps 5.9k★ canonical, **cuihuan/awesome-ai-gateway tracks 9router itself**, ContextJet awesome-llm-observability, awesome-selfhosted GenAI section)
+- **Recommendation (unchanged, now heavily evidenced)**: BUILD in-app Messages page + error inbox + format viewers + batch AI analysis + optional webhook notifications, reusing existing `requestDetails` SQLite capture; keep Langfuse/OpenLIT as optional ship-out targets; avoid AGPL/SSPL/ELv2/FSL components in-app
+- License-purity notes recorded: prefer MIT/Apache-2.0 for vendored code; AGPL ok only as separate sidecar service
+- Full details + per-project copy-ideas: `research/message-capture-deep-research-v2.md`

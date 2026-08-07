@@ -467,3 +467,18 @@ Full suite 1705 pass / 88 fail (13 new; baseline unchanged)
 ### New artifacts
 - workflows/browser-control-workflow.md (NEW)
 - ~/.agents/skills/9router-browser-e2e/SKILL.md (NEW, manifest-registered)
+
+---
+
+## UPDATE 2026-08-07 (deep research — message capture & log viewing)
+
+User asked for EXHAUSTIVE research (twice — v1 survey was judged not deep enough; v2 pass ran 3 parallel research subagents + direct repo deep-dives). All findings live in:
+- `research/message-capture-log-viewing.md` (v1)
+- `research/message-capture-deep-research-v2.md` (v2 exhaustive — the authoritative doc)
+
+Key conclusions (documented, research-only, NO code changed):
+1. We already capture everything (requestDetails SQLite: client req → translated req → raw resp → final resp, latency, tokens, errorCategory, conversationId, fallbackChain) — the gap is VIEWING/ORGANIZING.
+2. Closest competitors with built-in log viewers: one-api (MIT) / new-api (AGPL) — routers with per-request log pages; Helicone is architecturally identical to 9Router (gateway+fallbacks+observability).
+3. UX blueprints to copy: Bruno/Hoppscotch format tabs (Pretty/Raw/Preview/Headers/cURL), mitmweb master-detail, OpenObserve histogram+facets, HyperDX property search, Sentry error workflow (via GlitchTip MIT reference), Apprise URL-notifications.
+4. License landmines: Phoenix ELv2, Sentry FSL-1.1+20 containers, Graylog SSPL, LangWatch ELv2, TensorZero archived, Axiom self-host discontinued.
+5. Recommendation: BUILD in-app Messages page + error inbox + batch AI + optional webhooks; ship-out to Langfuse/OpenLIT later if wanted.

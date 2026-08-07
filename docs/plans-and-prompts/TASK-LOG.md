@@ -122,3 +122,11 @@ Per user's explicit request, established standards for all future work:
 - Every commit must include: full root cause, links to related commits/PRs, attribution (who wrote original, who found bug, who fixed), external references (URLs, docs)
 - All tracking docs in `docs/plans-and-prompts/` must be updated BEFORE committing, not after
 - Must note whether changes come from: user requests, PR imports, agent-discovered issues, or E2E testing
+
+### Newly Completed (2026-08-07 deep research — message capture & log viewing)
+
+| # | Task | Status | Evidence |
+|---|------|--------|----------|
+| 53 | Research v1: message-capture survey | ✅ | `research/message-capture-log-viewing.md` — what we have (requestDetails capture + Usage tab), gaps vs wishlist, first landscape pass |
+| 54 | Research v2: EXHAUSTIVE pass | ✅ | `research/message-capture-deep-research-v2.md` — 3 parallel agents + direct deep-dives; 60+ projects verified live (stars/licenses); license landmines (Phoenix ELv2, Sentry FSL, Graylog SSPL, Axiom discontinued, TensorZero archived); ProxmoxVE enumerated; awesome-lists read; recommendation = build in-app + Langfuse/OpenLIT ship-out |
+| 55 | Document research in tracking docs | ✅ | CHANGELOG + TASK-LOG + SESSION-HISTORY now reference both research files |
