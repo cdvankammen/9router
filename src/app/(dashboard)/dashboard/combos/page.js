@@ -5,7 +5,8 @@ import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, us
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { restrictToVerticalAxis, restrictToParentElement } from "@dnd-kit/modifiers";
-import { Card, Button, Modal, Input, CardSkeleton, ModelSelectModal, ConfirmModal, CapacityBadges, Select, Toggle } from "@/shared/components";
+import { Card, Button, Modal, Input, CardSkeleton, ModelSelectModal, ProviderSelectModal, ConfirmModal, CapacityBadges, Select, Toggle } from "@/shared/components";
+import { toDraftText, parseDraftText } from "@/lib/fallbackTextFormat";
 import { useCopyToClipboard } from "@/shared/hooks/useCopyToClipboard";
 import { useModelCaps } from "@/shared/hooks/useModelCaps";
 import { aggregateComboCapabilities } from "open-sse/providers/capabilities.js";
@@ -1267,6 +1268,8 @@ function ModelFallbacksSection({ modelFallbacks, onChange, activeProviders }) {
     { key: "table", label: "Table", icon: "table" },
     { key: "chains", label: "Chain Flow", icon: "account_tree" },
     { key: "cards", label: "Simple + Advanced", icon: "dashboard_customize" },
+    { key: "wizard", label: "Guided Wizard", icon: "rocket_launch" },
+    { key: "text", label: "Expert Text", icon: "code" },
   ];
 
   return (
@@ -1281,7 +1284,7 @@ function ModelFallbacksSection({ modelFallbacks, onChange, activeProviders }) {
             Attach an ordered fallback chain directly to any model or provider — no combo needed. When the requested model fails, 9Router retries down the chain automatically.
           </p>
           <p className="text-[10px] text-text-muted mt-1">
-            Three ways to manage rules — pick the one that fits how you think. All three edit the same underlying rules.
+            Five ways to manage rules — pick the one that fits how you think. All five edit the same underlying rules.
           </p>
         </div>
         <div className="shrink-0">
@@ -1317,6 +1320,18 @@ function ModelFallbacksSection({ modelFallbacks, onChange, activeProviders }) {
       )}
       {view === "cards" && (
         <FallbackRuleCards rules={rules} onChange={handleUpsertRule} onDelete={handleDeleteRule} activeProviders={activeProviders} />
+      )}
+      {view === "wizard" && (
+        <FallbackWizard rules={rules} onUpsert={handleUpsertRule} onDelete={handleDeleteRule} activeProviders={activeProviders} />
+      )}
+      {view === "text" && (
+        <FallbackTextEditor
+          key={JSON.stringify(modelFallbacks)}
+          modelFallbacks={modelFallbacks}
+          onChange={onChange}
+          rules={rules}
+          onDelete={handleDeleteRule}
+        />
       )}
 
       {showBuilder && (
@@ -1690,6 +1705,22 @@ function FallbackRuleModal({ onClose, onSave, activeProviders }) {
   const [perModelRetries, setPerModelRetries] = useState({}); // per-model overrides
   const [showModelSelect, setShowModelSelect] = useState(false);
   const [showTargetSelect, setShowTargetSelect] = useState(false);
+  const [showProviderSelect, setShowProviderSelect] = useState(false);
+
+  // Switching between "specific model" and "whole provider" swaps the target
+  // box to match. Deliberately simple:
+  //   model → provider: keep the provider part of "openai/gpt-4o" → "openai"
+  //   provider → model: clear the box (you'll pick a model anyway)
+  const handleTargetModeChange = (providerMode) => {
+    if (providerMode === targetIsProvider) return;
+    setTargetIsProvider(providerMode);
+    if (providerMode) {
+      // Strip any "/model" suffix so the box shows just the provider id.
+      setTarget((t) => (t.includes("/") ? t.split("/")[0] : t));
+    } else {
+      setTarget("");
+    }
+  };
 
   const handleAddFallback = (model) => {
     if (!fallbacks.includes(model.value)) setFallbacks([...fallbacks, model.value]);
@@ -1713,20 +1744,24 @@ function FallbackRuleModal({ onClose, onSave, activeProviders }) {
           <label className="text-sm font-medium mb-1.5 block">Target</label>
           <div className="flex items-center gap-2 mb-1.5">
             <label className="flex items-center gap-1.5 text-xs text-text-muted cursor-pointer select-none">
-              <Toggle checked={!targetIsProvider} onChange={(v) => setTargetIsProvider(!v)} size="sm" aria-label="Target is a specific model" />
+              <Toggle checked={!targetIsProvider} onChange={() => handleTargetModeChange(false)} size="sm" aria-label="Target is a specific model" />
               <span>Specific model</span>
             </label>
             <label className="flex items-center gap-1.5 text-xs text-text-muted cursor-pointer select-none">
-              <Toggle checked={targetIsProvider} onChange={(v) => setTargetIsProvider(v)} size="sm" aria-label="Target is a whole provider" />
+              <Toggle checked={targetIsProvider} onChange={() => handleTargetModeChange(true)} size="sm" aria-label="Target is a whole provider" />
               <span>Whole provider</span>
             </label>
           </div>
           {targetIsProvider ? (
-            <Input
-              value={target}
-              onChange={(e) => setTarget(e.target.value)}
-              placeholder="openai, anthropic, deepseek (provider id)"
-            />
+            <div className="flex gap-2">
+              <Input
+                value={target}
+                onChange={(e) => setTarget(e.target.value)}
+                placeholder="openai, anthropic, deepseek (provider id)"
+                className="flex-1"
+              />
+              <Button variant="outline" size="sm" onClick={() => setShowProviderSelect(true)}>Pick provider…</Button>
+            </div>
           ) : (
             <div className="flex gap-2">
               <Input
@@ -1740,7 +1775,7 @@ function FallbackRuleModal({ onClose, onSave, activeProviders }) {
           )}
           <p className="text-[10px] text-text-muted mt-0.5">
             {targetIsProvider
-              ? "Provider-level: applies to every model from this provider."
+              ? "Provider-level: applies to every model from this provider. Use Pick provider… to browse by name."
               : "Model-level: applies only to this exact model."}
           </p>
         </div>
@@ -1848,34 +1883,372 @@ function FallbackRuleModal({ onClose, onSave, activeProviders }) {
           closeOnSelect={true}
         />
       )}
+      {showProviderSelect && (
+        <ProviderSelectModal
+          isOpen={showProviderSelect}
+          onClose={() => setShowProviderSelect(false)}
+          onSelect={(p) => { setTarget(p.value); setShowProviderSelect(false); }}
+          activeProviders={activeProviders}
+          title="Pick Target Provider"
+          selectedProvider={targetIsProvider ? target : undefined}
+          closeOnSelect={true}
+        />
+      )}
     </Modal>
   );
 }
 
-/** Convert the settings map {target: [fallbacks]} into editable text lines. */
-function toDraftText(map) {
-  return Object.entries(map || {})
-    .map(([target, fbs]) => `${target}:${(fbs || []).join(",")}`)
-    .join("\n");
+/** Approach 4: guided wizard — one step at a time, picks not typing. */
+function FallbackWizard({ rules, onUpsert, onDelete, activeProviders }) {
+  const [step, setStep] = useState(1); // 1 target, 2 chain, 3 retries
+  const [targetIsProvider, setTargetIsProvider] = useState(false);
+  const [target, setTarget] = useState("");
+  const [fallbacks, setFallbacks] = useState([]);
+  const [retries, setRetries] = useState(1);
+  const [perModelRetries, setPerModelRetries] = useState({});
+  const [showModelSelect, setShowModelSelect] = useState(false);
+  const [showProviderSelect, setShowProviderSelect] = useState(false);
+  const [showTargetSelect, setShowTargetSelect] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  const reset = () => {
+    setStep(1);
+    setTargetIsProvider(false);
+    setTarget("");
+    setFallbacks([]);
+    setRetries(1);
+    setPerModelRetries({});
+    setSaved(false);
+  };
+
+  const handleSave = () => {
+    if (!target.trim() || fallbacks.length === 0) return;
+    onUpsert({ target: target.trim(), models: fallbacks, retries, perModelRetries });
+    setSaved(true);
+    setTimeout(reset, 1200);
+  };
+
+  const steps = [
+    { n: 1, label: "Who fails?" },
+    { n: 2, label: "What tries next?" },
+    { n: 3, label: "How many retries?" },
+  ];
+
+  return (
+    <div className="mt-4 flex flex-col gap-4">
+      {/* Step indicator */}
+      <div className="flex items-center gap-2">
+        {steps.map((s, i) => (
+          <div key={s.n} className="flex items-center gap-2">
+            <div
+              className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${
+                step === s.n ? "bg-primary/10 text-primary" : step > s.n ? "bg-emerald-500/10 text-emerald-600" : "text-text-muted bg-black/5 dark:bg-white/5"
+              }`}
+            >
+              <span className="material-symbols-outlined text-[13px]">{step > s.n ? "check" : String(s.n)}</span>
+              {s.label}
+            </div>
+            {i < steps.length - 1 && <span className="text-text-muted/40 text-[10px]">→</span>}
+          </div>
+        ))}
+        <span className="ml-auto text-[10px] text-text-muted">{rules.length} rule{rules.length === 1 ? "" : "s"} saved</span>
+      </div>
+
+      {saved && (
+        <div className="rounded-lg bg-emerald-500/10 px-3 py-2 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+          ✓ Rule saved — it will apply on the next request.
+        </div>
+      )}
+
+      {/* Step 1: target */}
+      {step === 1 && (
+        <div className="flex flex-col gap-3">
+          <p className="text-xs text-text-muted">Which model or provider should get the fallback chain?</p>
+          <div className="flex items-center gap-2">
+            <label className="flex items-center gap-1.5 text-xs text-text-muted cursor-pointer select-none">
+              <Toggle checked={!targetIsProvider} onChange={() => { setTargetIsProvider(false); setTarget(""); }} size="sm" />
+              <span>Specific model</span>
+            </label>
+            <label className="flex items-center gap-1.5 text-xs text-text-muted cursor-pointer select-none">
+              <Toggle checked={targetIsProvider} onChange={() => { setTargetIsProvider(true); setTarget(""); }} size="sm" />
+              <span>Whole provider</span>
+            </label>
+          </div>
+          {targetIsProvider ? (
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={() => setShowProviderSelect(true)} className="w-full">
+                <span className="material-symbols-outlined text-[16px]">dns</span>
+                Pick a provider…
+              </Button>
+              <Input
+                value={target}
+                onChange={(e) => setTarget(e.target.value)}
+                placeholder="or type provider id (openai, anthropic…)"
+                className="flex-1"
+              />
+            </div>
+          ) : (
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={() => setShowTargetSelect(true)} className="w-full">
+                <span className="material-symbols-outlined text-[16px]">smart_toy</span>
+                Pick a model…
+              </Button>
+              <Input
+                value={target}
+                onChange={(e) => setTarget(e.target.value)}
+                placeholder="or type provider/model"
+                className="flex-1"
+              />
+            </div>
+          )}
+          <div className="flex justify-end">
+            <Button size="sm" disabled={!target.trim()} onClick={() => setStep(2)}>Next →</Button>
+          </div>
+        </div>
+      )}
+
+      {/* Step 2: chain */}
+      {step === 2 && (
+        <div className="flex flex-col gap-3">
+          <p className="text-xs text-text-muted">
+            If <code className="font-mono">{target}</code> fails, try these in order:
+          </p>
+          {fallbacks.length === 0 ? (
+            <div className="text-center py-3 border border-dashed border-black/10 dark:border-white/10 rounded-lg text-xs text-text-muted">
+              No fallbacks yet
+            </div>
+          ) : (
+            <div className="flex flex-col gap-1">
+              {fallbacks.map((m, idx) => (
+                <div key={m} className="flex items-center gap-1.5 rounded-md px-2 py-1 bg-black/[0.02] dark:bg-white/[0.02]">
+                  <span className="text-[10px] font-medium text-text-muted w-4 text-center">{idx + 1}</span>
+                  <code className="min-w-0 flex-1 truncate font-mono text-xs">{m}</code>
+                  <button onClick={() => setFallbacks(fallbacks.filter((_, i) => i !== idx))} className="p-0.5 rounded text-text-muted hover:text-red-500">
+                    <span className="material-symbols-outlined text-[14px]">close</span>
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          <Button variant="outline" size="sm" onClick={() => setShowModelSelect(true)} className="w-full">
+            <span className="material-symbols-outlined text-[16px]">add</span>
+            Add fallback model
+          </Button>
+          <div className="flex justify-between">
+            <Button variant="ghost" size="sm" onClick={() => setStep(1)}>← Back</Button>
+            <Button size="sm" disabled={fallbacks.length === 0} onClick={() => setStep(3)}>Next →</Button>
+          </div>
+        </div>
+      )}
+
+      {/* Step 3: retries */}
+      {step === 3 && (
+        <div className="flex flex-col gap-3">
+          <p className="text-xs text-text-muted">How many times should each model retry on transient errors before moving down the chain?</p>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div>
+              <label className="text-xs font-medium text-text-main mb-1 block">Retries (universal)</label>
+              <Input
+                type="number" min={1} max={10}
+                value={String(retries)}
+                onChange={(e) => setRetries(Math.max(1, Math.min(10, Number(e.target.value) || 1)))}
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-text-main mb-1 block">Per-model overrides (optional)</label>
+              {fallbacks.length === 0 ? (
+                <p className="text-[10px] text-text-muted italic pt-2">Add fallbacks first.</p>
+              ) : (
+                <div className="flex flex-col gap-1">
+                  {fallbacks.map((m) => (
+                    <div key={m} className="flex items-center gap-2">
+                      <code className="min-w-0 flex-1 truncate font-mono text-[11px] text-text-muted">{m}</code>
+                      <Input
+                        type="number" min={1} max={10}
+                        value={perModelRetries[m] !== undefined ? String(perModelRetries[m]) : ""}
+                        placeholder="inherit"
+                        className="w-20"
+                        onChange={(e) => {
+                          const v = e.target.value === "" ? undefined : Math.max(1, Math.min(10, Number(e.target.value) || 1));
+                          const next = { ...perModelRetries };
+                          if (v === undefined) delete next[m]; else next[m] = v;
+                          setPerModelRetries(next);
+                        }}
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+          <div className="flex justify-between">
+            <Button variant="ghost" size="sm" onClick={() => setStep(2)}>← Back</Button>
+            <Button size="sm" onClick={handleSave}>
+              <span className="material-symbols-outlined text-[16px]">save</span>
+              Save Rule
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Existing rules summary */}
+      {rules.length > 0 && (
+        <div className="border-t border-black/5 dark:border-white/5 pt-3">
+          <p className="text-[11px] font-medium text-text-muted mb-1.5">Current rules</p>
+          <div className="flex flex-col gap-1">
+            {rules.map((rule) => (
+              <div key={rule.target} className="flex items-center gap-2 rounded-md px-2 py-1 bg-black/[0.02] dark:bg-white/[0.02]">
+                <code className="min-w-0 flex-1 truncate font-mono text-[11px]">{rule.target}</code>
+                <span className="text-[10px] text-text-muted shrink-0">→ {rule.models.length} fallback{rule.models.length === 1 ? "" : "s"} ×{rule.retries}</span>
+                <button onClick={() => onDelete(rule.target)} className="p-0.5 rounded text-text-muted hover:text-red-500 shrink-0">
+                  <span className="material-symbols-outlined text-[13px]">delete</span>
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {showModelSelect && (
+        <ModelSelectModal
+          isOpen={showModelSelect}
+          onClose={() => setShowModelSelect(false)}
+          onSelect={(m) => { if (!fallbacks.includes(m.value)) setFallbacks([...fallbacks, m.value]); setShowModelSelect(false); }}
+          activeProviders={activeProviders}
+          title="Add Fallback Model"
+          addedModelValues={fallbacks}
+          closeOnSelect={true}
+        />
+      )}
+      {showProviderSelect && (
+        <ProviderSelectModal
+          isOpen={showProviderSelect}
+          onClose={() => setShowProviderSelect(false)}
+          onSelect={(p) => { setTarget(p.value); setShowProviderSelect(false); }}
+          activeProviders={activeProviders}
+          title="Pick Target Provider"
+          closeOnSelect={true}
+        />
+      )}
+      {showTargetSelect && (
+        <ModelSelectModal
+          isOpen={showTargetSelect}
+          onClose={() => setShowTargetSelect(false)}
+          onSelect={(m) => { setTarget(m.value); setShowTargetSelect(false); }}
+          activeProviders={activeProviders}
+          title="Pick Target Model"
+          closeOnSelect={true}
+        />
+      )}
+    </div>
+  );
 }
 
-/** Parse textarea lines into the settings map {target: [fallbacks]}. */
-function parseDraftText(text) {
-  const out = {};
-  for (const rawLine of String(text || "").split("\n")) {
-    const line = rawLine.trim();
-    if (!line || line.startsWith("#")) continue;
-    const sep = line.indexOf(":");
-    if (sep <= 0) continue;
-    const target = line.slice(0, sep).trim();
-    const fallbacks = line
-      .slice(sep + 1)
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean);
-    if (target && fallbacks.length > 0) out[target] = fallbacks;
-  }
-  return out;
+/** Approach 5: expert text — edit rules as lines: target:model1,model2 */
+function FallbackTextEditor({ modelFallbacks, onChange, rules, onDelete }) {
+  // Draft initializes from current rules. The parent remounts us with a
+  // `key={JSON.stringify(modelFallbacks)}` when saved rules change, so the
+  // draft refreshes without a prop-sync effect.
+  const [draft, setDraft] = useState(() => toDraftText(modelFallbacks));
+  const [error, setError] = useState("");
+  const [savedFlash, setSavedFlash] = useState(false);
+
+  const parsed = useMemo(() => parseDraftText(draft, modelFallbacks), [draft, modelFallbacks]);
+
+  const handleApply = () => {
+    setError("");
+    onChange(parsed);
+    setSavedFlash(true);
+    setTimeout(() => setSavedFlash(false), 1200);
+  };
+
+  const handleExample = () => {
+    setDraft([
+      "# Format: target:model1,model2  (target = provider/model or just provider)",
+      "# Lines starting with # are ignored.",
+      "openai/gpt-4o:openai/gpt-4o-mini,anthropic/claude-sonnet-4.6",
+      "anthropic:openai/gpt-4o,deepseek/deepseek-chat",
+    ].join("\n"));
+  };
+
+  return (
+    <div className="mt-4 flex flex-col gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-[11px] text-text-muted">
+          One rule per line: <code className="font-mono">target:fallback1,fallback2</code>. The target is a
+          provider/model pair or a whole provider id.
+        </p>
+        <div className="flex gap-2">
+          <Button variant="ghost" size="sm" onClick={handleExample}>Load example</Button>
+          <Button size="sm" onClick={handleApply}>
+            <span className="material-symbols-outlined text-[15px]">check</span>
+            Apply text
+          </Button>
+        </div>
+      </div>
+
+      <textarea
+        value={draft}
+        onChange={(e) => { setDraft(e.target.value); setError(""); }}
+        spellCheck={false}
+        rows={8}
+        placeholder={"# openai/gpt-4o:openai/gpt-4o-mini,anthropic/claude-sonnet-4.6\n# anthropic:openai/gpt-4o"}
+        className="w-full rounded-lg border border-black/10 dark:border-white/10 bg-surface p-3 font-mono text-xs leading-relaxed focus:outline-none focus:ring-1 focus:ring-primary/30"
+      />
+
+      {savedFlash && (
+        <div className="rounded-lg bg-emerald-500/10 px-3 py-2 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+          ✓ Applied {Object.keys(parsed).length} rule{Object.keys(parsed).length === 1 ? "" : "s"}.
+        </div>
+      )}
+      {error && <p className="text-xs text-red-500">{error}</p>}
+
+      <div className="rounded-lg border border-black/5 dark:border-white/5 p-3">
+        <p className="text-[11px] font-medium text-text-muted mb-1.5">Parsed preview ({Object.keys(parsed).length} rules)</p>
+        {Object.keys(parsed).length === 0 ? (
+          <p className="text-xs text-text-muted italic">Nothing to apply yet.</p>
+        ) : (
+          <div className="flex flex-col gap-1">
+            {Object.entries(parsed).map(([target, models]) => (
+              <div key={target} className="flex items-center gap-2 rounded-md px-2 py-1 bg-black/[0.02] dark:bg-white/[0.02]">
+                <code className="min-w-0 flex-1 truncate font-mono text-[11px]">{target}</code>
+                <span className="text-[10px] text-text-muted shrink-0">→ {models.length} fallback{models.length === 1 ? "" : "s"}</span>
+                <button
+                  onClick={() => {
+                    const next = { ...parsed };
+                    delete next[target];
+                    setDraft(toDraftText(next));
+                  }}
+                  className="p-0.5 rounded text-text-muted hover:text-red-500 shrink-0"
+                >
+                  <span className="material-symbols-outlined text-[13px]">delete</span>
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="border-t border-black/5 dark:border-white/5 pt-3">
+        <p className="text-[11px] font-medium text-text-muted mb-1.5">Saved rules ({rules.length})</p>
+        {rules.length === 0 ? (
+          <p className="text-xs text-text-muted italic">No saved rules.</p>
+        ) : (
+          <div className="flex flex-col gap-1">
+            {rules.map((rule) => (
+              <div key={rule.target} className="flex items-center gap-2 rounded-md px-2 py-1 bg-black/[0.02] dark:bg-white/[0.02]">
+                <code className="min-w-0 flex-1 truncate font-mono text-[11px]">{rule.target}</code>
+                <span className="text-[10px] text-text-muted shrink-0">→ {rule.models.join(", ")}</span>
+                <button onClick={() => onDelete(rule.target)} className="p-0.5 rounded text-text-muted hover:text-red-500 shrink-0">
+                  <span className="material-symbols-outlined text-[13px]">delete</span>
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
 }
 
 function ModelItem({ id, index, model, isFirst, isLast, onEdit, onMoveUp, onMoveDown, onRemove }) {
