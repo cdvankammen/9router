@@ -321,3 +321,42 @@ A view switcher (Table / Chain Flow / Simple + Advanced) sits at the top of the 
 
 ### Decision deferred (user's choice)
 All three approaches stay available. The user will pick one later; no code needs removing — the view switcher already isolates them.
+
+---
+
+## FINAL CHAPTER 2 (2026-08-07 night): The drop indicator — and the coordinate-space rabbit hole
+
+### The ask
+> "for the chain flow option... its hard to know where it will land is there a way that we can have like a vertical bar that will move around in the list showing us where it goes? ... some kind of vertical bar indicator showing where in the list if i were to let go the card i am holding would land and it would move around as i move the card around"
+
+Also: sweep ALL tracking docs, include errors, make new folders/files as needed.
+
+### The design (explained to the user first, then built)
+The standard **drop indicator** pattern (Trello/Notion/VS Code style): while holding a chip, a thin vertical accent bar slides between the other chips showing the exact landing slot. Built with three pieces:
+1. Compute the insertion slot on EVERY pointer move (`onDragMove`) — pointer vs sibling chip centers in reading order (handles flex-wrap rows)
+2. Render a 3px accent bar at the gap between the chips around that slot, using their live rects (dnd-kit shifts siblings aside, so the gap is where the bar goes)
+3. Reuse the computed index on drop so the final order matches the bar
+
+### The debugging story (the real meat)
+The bar initially rendered but was FROZEN (never moved). Three things fought us:
+1. **Embedded-browser mouse flakiness** — `page.mouse.down()` stopped emitting pointer events mid-session. Switched to synthetic `PointerEvent` dispatch, which dnd-kit's PointerSensor accepts and which exercises the real handler pipeline.
+2. **Off-viewport drag targets** — chips below the inner scroller's visible area eat no events; `boundingBox()` lies about visibility. Fix: scrollIntoView + `elementFromPoint` check.
+3. **THE bug** — dnd-kit's `active.rect.current.translated` is **content-relative** in scrolled containers. The dashboard uses an inner `overflow-y-auto` scroller; `window.scrollY` is 0 while `translated.top` was 2228 (content coords). Comparing that against viewport-relative chip rects put the pointer "below" every chip → insert index pinned at the end. First fix (`window.scrollY` normalization) FAILED because the scroll container isn't the window. Working fix: dragged chip's live viewport rect = `initial rect + event.delta` — apples-to-apples with `getBoundingClientRect()`.
+
+### Proof
+Synthetic drag sweep across a sibling chip: bar tracked `left: 378.663px → 181.45px` live; release at the far-left → chain reordered to `[kc/deepseek/deepseek-chat, mockreal/model-id]` and persisted in settings. Env restored.
+
+### The docs sweep (what the user asked for)
+Every folder in docs/plans-and-prompts was checked and filled:
+- Updated: CHANGELOG, SESSION-HISTORY, SESSION-NARRATIVE, TASK-LOG, workflows/ui-testing-workflow.md
+- NEW: learnings/2026-08-07-drop-indicator-dnd-kit-coordinates.md
+- NEW: research/9router/16-ux-research-drop-indicator-and-override-placement.md
+- NEW: decisions/ADR-006-drop-indicator-approach.md
+- NEW: plans/fallback-rules-ux-plan.md
+- NEW: meetings/2026-08-07-session-summary.md
+- architecture/smart-router-observability.md and prompts/session-prompts.md reviewed (no changes needed); temp/ unused.
+
+### Cumulative session state (what everything looks like now)
+- Fallback rules UI: 5 views (Table / Chain Flow / Simple + Advanced / Guided Wizard / Expert Text), all editing `settings.modelFallbacks`, with provider picker, smart toggle switching, drag everywhere (chains + modal), drop indicator, sr-* cleanup toggle.
+- Smart router + observability suite from earlier chapters all still green.
+- 1718 pass / 88 baseline fail. HEAD `b520c9d6`.

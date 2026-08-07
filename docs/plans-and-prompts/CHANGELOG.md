@@ -219,3 +219,41 @@ Full suite: **1718 pass / 88 fail** (13 new tests; one run showed 89 = flaky tim
 
 ### Regression
 Full suite 1718 pass / 88 baseline fail (exact baseline). Lint clean on changed file.
+
+---
+
+## UPDATE 2026-08-07 (night — drop indicator + full doc sweep) — `b520c9d6`
+
+### User request
+"for the chain flow option, i like that i can click and drag the models but its hard to know where it will land is there a way that we can have like a vertical bar that will move around in the list showing us where it goes?"
+Also: "make sure that you are updating all things from everything we have been previously working on in the chat in our promptsANDplans folder as well as any tracking documentation... including the errors... make new folder or files if needed"
+
+### What was built — live drop indicator (Chain Flow)
+- While dragging a chain chip, a thin vertical accent bar (3px, primary purple, glow, 70ms slide transition) shows the EXACT slot where the chip will land if released.
+- The bar recomputes on every pointer move from the LIVE viewport rects of sibling chips (dnd-kit shifts them aside during drag), so it tracks correctly even when chips wrap onto multiple rows (reading-order comparison).
+- The drop reuses the indicator-computed insert index → the final order matches where the bar was, not a guess.
+- `rectSortingStrategy` replaces `verticalListSortingStrategy` (correct math for wrapped flex lists).
+
+### E2E verification (production build, port 20130)
+- Synthetic pointer-event drag sweep: bar tracked `left: 378.663px → 181.45px` live as the chip crossed the sibling's center.
+- Dropped at the far-left position → order flipped to `[kc/deepseek/deepseek-chat, mockreal/model-id]` and PERSISTED in settings — exactly where the bar had been.
+- Test env restored afterwards.
+
+### Errors & problems encountered (full detail — see learnings/2026-08-07-drop-indicator-dnd-kit-coordinates.md)
+1. **Embedded-browser mouse flakiness**: `page.mouse.down()` intermittently produces NO pointer events at all (worked once after page load, then died). Worked around with synthetic `PointerEvent` dispatch (isPrimary + button 0) — dnd-kit accepts them and they exercise the real handlers.
+2. **Off-viewport drag targets**: chips below the visible viewport receive no events; `boundingBox()` returns coordinates regardless of visibility. Fixed test technique: `scrollIntoView` + verify `elementFromPoint` before dragging.
+3. **REAL BUG — frozen insert index**: the bar rendered but never moved. Root cause: dnd-kit's `active.rect.current.translated` is **content-relative** inside scrolled containers (the dashboard uses an inner `overflow-y-auto` scroller; `window.scrollY` is 0 while translated.top = 2228). Mixing it with viewport-relative `getBoundingClientRect()` chip rects put the pointer "below" everything → insertIndex pinned at max.
+   - First attempted fix (add `window.scrollY`) FAILED for the same reason (scroll container isn't window).
+   - Working fix: `initial rect (viewport) + event.delta` → dragged chip's live viewport rect, apples-to-apples with chip rects. Verified bar tracks and drop honors it.
+
+### Regression
+Full suite 1718 pass / 88 baseline fail (exact baseline). Lint clean on changed file.
+
+### Docs swept this round (per user request)
+- CHANGELOG.md, SESSION-HISTORY.md, SESSION-NARRATIVE.md, TASK-LOG.md updated
+- NEW learnings/2026-08-07-drop-indicator-dnd-kit-coordinates.md
+- NEW research/9router/16-ux-research-drop-indicator-and-override-placement.md
+- NEW decisions/ADR-006-drop-indicator-approach.md (+ per-model override placement recorded as pending)
+- NEW plans/fallback-rules-ux-plan.md (5-view roadmap + pending items)
+- NEW meetings/2026-08-07-session-summary.md
+- workflows/ui-testing-workflow.md extended with synthetic pointer-event drag testing technique

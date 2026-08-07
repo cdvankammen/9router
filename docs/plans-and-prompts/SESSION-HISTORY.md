@@ -413,3 +413,35 @@ Full suite 1705 pass / 88 fail (13 new; baseline unchanged)
 
 ### Regression
 1718 pass / 88 baseline fail (13 new tests; 89th on one run was a flaky pre-existing timing test, re-run = 88).
+
+---
+
+## UPDATE 2026-08-07 (night — drop indicator + full tracking sweep)
+
+### User asked (exact)
+1. "for the chain flow option, i like that i can click and drag the models but its hard to know where it will land is there a way that we can have like a vertical bar that will move around in the list showing us where it goes? ... some kind of vertical bar indicator showing where in the list if i were to let go the card i am holding would land and it would move around as i move the card around (as i am clicking and holding the card that is)"
+2. "make sure that you are updating all things from everything we have been previously working on in the chat in our promptsANDplans folder as well as any tracking documentation... including the errors... make new folder or files in promptsANDplans folders if needed... filling out all documents/folders"
+
+### Drop indicator — built, root-caused, verified
+- Implementation: `SortableChain` (Chain Flow) now computes the insertion slot on EVERY pointer move (`onDragMove`) from the dragged chip's live viewport rect (initial rect + `event.delta`) vs sibling chips' live `getBoundingClientRect()` (reading-order comparison for wrapped rows). A 3px accent bar renders at that slot with a 70ms slide transition. The drop handler reuses the computed insert index, so the release lands exactly where the bar was. `rectSortingStrategy` replaces `verticalListSortingStrategy`.
+- E2E (production, port 20130): synthetic-pointer drag sweep → bar tracked 378.663px → 181.45px; drop at far-left reordered the chain to `[kc/deepseek/deepseek-chat, mockreal/model-id]` and persisted; env restored.
+- Commit `b520c9d6`.
+
+### Errors and problems this round (full detail)
+1. Playwright `page.mouse.down()` flaky in the embedded browser (zero pointer events after first interaction) → switched to synthetic `PointerEvent` dispatch (isPrimary, button 0) which dnd-kit accepts and which exercises the REAL handlers.
+2. Off-viewport targets: chips below the inner scroller's visible area receive no events; `boundingBox()` reports coordinates regardless of visibility. Fix: scrollIntoView + `elementFromPoint` sanity check.
+3. **Real bug (frozen indicator)**: bar rendered but never moved. Root cause: dnd-kit `active.rect.current.translated` is content-relative in scrolled containers (dashboard uses an inner overflow scroller — `window.scrollY` = 0, translated.top = 2228). First fix attempt (`window.scrollY` normalization) FAILED — scroll container is not the window. Working fix: `initial + delta` in viewport space. Documented in learnings/2026-08-07-drop-indicator-dnd-kit-coordinates.md.
+
+### Full tracking sweep (this turn)
+- TASK-LOG: tasks 33–49 recorded (all completed + 2 in-progress), including every bug found by E2E.
+- CHANGELOG + SESSION-HISTORY + SESSION-NARRATIVE: updated.
+- NEW learnings/2026-08-07-drop-indicator-dnd-kit-coordinates.md — coordinate-space root cause + how to detect.
+- NEW research/9router/16-ux-research-drop-indicator-and-override-placement.md — drop indicator pattern sources (IxDF Gestalt, NN/g progressive disclosure) + per-model override placement recommendation (proximity/common region → move into the model box; universal retries stays separate; don't keep two editors).
+- NEW decisions/ADR-006-drop-indicator-approach.md — chosen approach (computed insert index + live rect bar) vs alternatives (DragOverlay, transform-only); per-model override placement recorded as pending decision.
+- NEW plans/fallback-rules-ux-plan.md — the 5-view fallback rules UI roadmap + pending items (pick one view; inline per-model retries).
+- NEW meetings/2026-08-07-session-summary.md — today's user asks → what shipped.
+- workflows/ui-testing-workflow.md — extended with the synthetic pointer-event drag technique + coordinate-space gotcha.
+
+### State
+- Commits this round: `b520c9d6` (drop indicator). Prior: `b1e2a061` (provider picker + 5 views), `d7bf0e35` (modal drag + badge fix), `64c57811` (sr-* cleanup), docs `a3a7b180`/`6f06e6a0`.
+- Suite: 1718 pass / 88 baseline fail. Server up on 20130.

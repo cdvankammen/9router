@@ -76,7 +76,7 @@
 |---|------|-------|
 | 32 | Choose one of the 3 fallback rule UIs | User: "we will eventually choose one of them but for now just keep what is already there" — all three approaches remain available via view switcher |
 
-### Newly Completed (2026-08-07 afternoon)
+### Newly Completed (2026-08-07 afternoon — sr-* cleanup + fallback verification)
 
 | # | Task | Status | Evidence |
 |---|------|--------|----------|
@@ -84,6 +84,29 @@
 | 34 | Mocked unit tests for cleanup | ✅ | `tests/unit/sr-combo-cleanup.test.js` — 13 tests (pure selection, DI'd fail-open tick, scheduler gate, integration-style real-DB tick) |
 | 35 | E2E proof cleanup actually works | ✅ | Planted stale/fresh/user combos in E2E DB → tick deleted ONLY stale sr-* (`Deleted stale smart combo "sr-modelRouter-e2e-test"`), fresh + user combos survived; disabled path = scheduler never starts |
 | 36 | Verify per-model/provider fallback state (user question) | ✅ | Confirmed COMPLETE: `settings.modelFallbacks` + chat.js interception + combo.js retriesPerModel/perModelRetries + 3-view UI; 7/7 fallback tests pass; found original request in session d4294fc8 |
+
+### Newly Completed (2026-08-07 evening — fallback rules UX v2)
+
+| # | Task | Status | Evidence |
+|---|------|--------|----------|
+| 37 | ProviderSelectModal (visual provider picker) | ✅ | `b1e2a061` — icons, names, ids, connected/custom badges, search; used in FallbackRuleModal + Wizard |
+| 38 | FallbackRuleModal provider picker button | ✅ | `b1e2a061` — "Pick provider…" in whole-provider mode |
+| 39 | Toggle model↔provider switching fix | ✅ | `b1e2a061` — model→provider strips to provider part; provider→model clears (deliberately simple per user) |
+| 40 | 2 new rule views (5 total) | ✅ | `b1e2a061` — Guided Wizard (3-step) + Expert Text (DSL editor) |
+| 41 | Extract fallbackTextFormat lib + tests | ✅ | `b1e2a061` — `src/lib/fallbackTextFormat.js`, 13 tests (both shapes, round-trip, retries preserved) |
+| 42 | **E2E crash fix: toDraftText advanced shape** | ✅ | `b1e2a061` — `(t||[]).join is not a function` when opening Expert Text with advanced rule; fixed in extracted lib |
+| 43 | Drag-and-drop in FallbackRuleModal chain | ✅ | `d7bf0e35` — sortable rows (dnd-kit), arrows kept |
+| 44 | **E2E bug: stale number badges after drag** | ✅ | `d7bf0e35` — React text-node reuse; fix `key={idx}` on badge span |
+| 45 | Live drop indicator bar (Chain Flow) | ✅ | `b520c9d6` — vertical accent bar tracks insertion slot during drag; drop honors bar position |
+| 46 | **Debug root-cause: dnd-kit coordinate spaces** | ✅ | `b520c9d6` — `translated` rect is content-relative in scrolled containers; fixed with `initial rect + event.delta` (viewport) |
+| 47 | UX research: per-model override placement | 📋 researched | Recommendation: move per-model retries INTO each model's chain box (Gestalt proximity + NN/g progressive disclosure); awaiting user approval to implement |
+
+### Still In Progress
+
+| # | Task | Notes |
+|---|------|-------|
+| 48 | Choose ONE of the 5 fallback rule UIs | User: "we will eventually choose one of them" — all five approaches remain via view switcher |
+| 49 | Per-model override inline in chain boxes | Research done (see research/9router/16-ux-research*), implementation pending user go-ahead |
 
 ### Key Discovery: Documentation Standards
 
