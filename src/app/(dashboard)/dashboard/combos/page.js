@@ -1707,6 +1707,21 @@ function FallbackRuleModal({ onClose, onSave, activeProviders }) {
   const [showTargetSelect, setShowTargetSelect] = useState(false);
   const [showProviderSelect, setShowProviderSelect] = useState(false);
 
+  const chainSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
+
+  // Drag to reorder the fallback chain (same as the Chain Flow view).
+  const handleChainDragEnd = (event) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = fallbacks.findIndex((m) => m === active.id);
+    const newIndex = fallbacks.findIndex((m) => m === over.id);
+    if (oldIndex < 0 || newIndex < 0) return;
+    setFallbacks(arrayMove(fallbacks, oldIndex, newIndex));
+  };
+
   // Switching between "specific model" and "whole provider" swaps the target
   // box to match. Deliberately simple:
   //   model → provider: keep the provider part of "openai/gpt-4o" → "openai"
@@ -1788,23 +1803,27 @@ function FallbackRuleModal({ onClose, onSave, activeProviders }) {
               No fallbacks yet — add at least one model
             </div>
           ) : (
-            <div className="flex flex-col gap-1">
-              {fallbacks.map((m, idx) => (
-                <div key={m} className="flex items-center gap-1.5 rounded-md px-2 py-1 bg-black/[0.02] dark:bg-white/[0.02]">
-                  <span className="text-[10px] font-medium text-text-muted w-4 text-center">{idx + 1}</span>
-                  <code className="min-w-0 flex-1 truncate font-mono text-xs">{m}</code>
-                  <button onClick={() => handleMove(idx, -1)} disabled={idx === 0} className={`p-0.5 rounded ${idx === 0 ? "text-text-muted/20" : "text-text-muted hover:text-primary"}`}>
-                    <span className="material-symbols-outlined text-[14px]">arrow_upward</span>
-                  </button>
-                  <button onClick={() => handleMove(idx, 1)} disabled={idx === fallbacks.length - 1} className={`p-0.5 rounded ${idx === fallbacks.length - 1 ? "text-text-muted/20" : "text-text-muted hover:text-primary"}`}>
-                    <span className="material-symbols-outlined text-[14px]">arrow_downward</span>
-                  </button>
-                  <button onClick={() => setFallbacks(fallbacks.filter((_, i) => i !== idx))} className="p-0.5 rounded text-text-muted hover:text-red-500">
-                    <span className="material-symbols-outlined text-[14px]">close</span>
-                  </button>
+            <DndContext
+              sensors={chainSensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleChainDragEnd}
+            >
+              <SortableContext items={fallbacks} strategy={verticalListSortingStrategy}>
+                <div className="flex flex-col gap-1">
+                  {fallbacks.map((m, idx) => (
+                    <SortableFallbackChainItem
+                      key={m}
+                      model={m}
+                      idx={idx}
+                      isFirst={idx === 0}
+                      isLast={idx === fallbacks.length - 1}
+                      onMove={handleMove}
+                      onRemove={() => setFallbacks(fallbacks.filter((_, i) => i !== idx))}
+                    />
+                  ))}
                 </div>
-              ))}
-            </div>
+              </SortableContext>
+            </DndContext>
           )}
           <button
             onClick={() => setShowModelSelect(true)}
@@ -1895,6 +1914,53 @@ function FallbackRuleModal({ onClose, onSave, activeProviders }) {
         />
       )}
     </Modal>
+  );
+}
+
+/** Sortable fallback-chain row inside the FallbackRuleModal. Drag the handle
+ * (or the row itself) to reorder; arrow buttons remain as an exact alternative. */
+function SortableFallbackChainItem({ model, idx, isFirst, isLast, onMove, onRemove }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: model });
+  return (
+    <div
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition, zIndex: isDragging ? 50 : undefined }}
+      className={`flex items-center gap-1.5 rounded-md px-2 py-1 ${
+        isDragging
+          ? "bg-primary/10 ring-1 ring-primary/40 shadow-lg"
+          : "bg-black/[0.02] dark:bg-white/[0.02] cursor-grab active:cursor-grabbing"
+      }`}
+      {...attributes}
+      {...listeners}
+      title="Drag to reorder, or use the arrows"
+    >
+      <span className="material-symbols-outlined text-[14px] text-text-muted/50 shrink-0">drag_indicator</span>
+      {/* key={idx}: force a fresh text node when the row moves — without it,
+          the number can stay stale after a drag reorder (React reuses the old
+          text node while dnd-kit's transform is still being committed) */}
+      <span key={idx} className="text-[10px] font-medium text-text-muted w-4 text-center shrink-0">{idx + 1}</span>
+      <code className="min-w-0 flex-1 truncate font-mono text-xs">{model}</code>
+      <button
+        onClick={(e) => { e.stopPropagation(); onMove(idx, -1); }}
+        disabled={isFirst}
+        className={`p-0.5 rounded shrink-0 ${isFirst ? "text-text-muted/20" : "text-text-muted hover:text-primary"}`}
+      >
+        <span className="material-symbols-outlined text-[14px]">arrow_upward</span>
+      </button>
+      <button
+        onClick={(e) => { e.stopPropagation(); onMove(idx, 1); }}
+        disabled={isLast}
+        className={`p-0.5 rounded shrink-0 ${isLast ? "text-text-muted/20" : "text-text-muted hover:text-primary"}`}
+      >
+        <span className="material-symbols-outlined text-[14px]">arrow_downward</span>
+      </button>
+      <button
+        onClick={(e) => { e.stopPropagation(); onRemove(); }}
+        className="p-0.5 rounded text-text-muted hover:text-red-500 shrink-0"
+      >
+        <span className="material-symbols-outlined text-[14px]">close</span>
+      </button>
+    </div>
   );
 }
 
