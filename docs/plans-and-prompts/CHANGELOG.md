@@ -166,3 +166,36 @@ User request: *"for optional clean up yes we can have an option for that that we
 
 **Regression:** full suite 1705 pass / 88 fail (13 new tests added; still exactly the documented 88 baseline failures)
 
+
+---
+
+## UPDATE 2026-08-07 (evening — provider picker + 2 new rule views) — `b1e2a061`
+
+### User requests
+1. "add a few more options utilize different theories for how we could handle these kinds of rules and ideas"
+2. Provider target picker: "if i switch to whole provider then it still shows the model but I dont have the ability to choose just a provider... I would like a way that i dont have to try and remember the name of the provider"
+3. Toggle switching bug: "a problem may occur when i choose a model then decide i want to have a provider instead to where the model would stay in the box"
+4. "let me know how we can make sure that we dont have complicated functions in the background for this... if just having it clear the box is the easiest method... that is fine"
+
+### What was built
+- **`ProviderSelectModal`** (new shared component) — visual provider picker: icon + display name + provider id + connected/not-connected badge + custom-node badge + search. Mirrors the model picker feel. Used by FallbackRuleModal AND the new Guided Wizard.
+- **FallbackRuleModal fixes**:
+  - Provider mode now has a "Pick provider…" button (was text-input only)
+  - Toggle switching is deliberately SIMPLE (per user request): model→provider keeps only the provider part (`mockreal/gpt-4o-mini` → `mockreal`); provider→model CLEARS the box. No hidden state-keeping.
+- **2 new rule-management views** (total 5 approaches now):
+  - **Guided Wizard** — 3-step flow (Who fails? → What tries next? → How many retries?) with step indicator, pick-buttons, live "current rules" list
+  - **Expert Text** — `target:model1,model2` per-line DSL with comments, Load example, Apply text, live parsed preview, saved-rules list
+- **`src/lib/fallbackTextFormat.js`** (new) — extracted `toDraftText`/`parseDraftText` + `ruleModels`/`isAdvancedRule` helpers, advanced-shape safe (retries preserved on re-parse)
+- **13 new unit tests** (`fallback-text-format.test.js`): both shapes, comments, malformed lines, advanced-preservation, round-trip
+
+### E2E verification (production build, port 20130)
+- Provider picker: search "mockreal" → MockReal (custom node) found → click → target box filled with provider id ✅
+- Toggle: model `mockreal/gpt-4o-mini` → Whole provider → box = `mockreal`; back to model → box cleared ✅
+- Wizard: all 3 steps render; Pick a provider/model buttons appear per mode ✅
+- Expert Text: existing advanced rule serialized correctly; Load example + Apply text → settings updated; test env restored ✅
+
+### Bug caught by E2E (real crash)
+- `toDraftText` assumed legacy array shape → `(t || []).join is not a function` crash when opening Expert Text with an advanced-shape rule. Fixed in the extracted lib (handles both shapes).
+
+### Regression
+Full suite: **1718 pass / 88 fail** (13 new tests; one run showed 89 = flaky timing-sensitive pre-existing test, re-run confirmed 88). Lint: no new errors on changed files.

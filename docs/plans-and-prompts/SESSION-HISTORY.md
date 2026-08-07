@@ -385,3 +385,31 @@ Found the original request in session d4294fc8 ("Also some thoughts on combos an
 
 ### Regression
 Full suite 1705 pass / 88 fail (13 new; baseline unchanged)
+
+---
+
+## UPDATE 2026-08-07 (evening — provider picker + 5 rule views) — `b1e2a061`
+
+### User asked (exact)
+1. "can you add a few more options utilize different theories for how we could handle these kinds of rules and ideas"
+2. "if i switch to whole provider then it still shows the model but I dont have the ability to choose just a provider. I would like a way that i dont have to try and remember the name of the provider. I would like to be able to choose the provider similar... to how I can choose a specific model"
+3. "a problem may occur when i choose a model then decide i want to have a provider instead to where the model would stay in the box, lets make sure that if i choose whole provider toggle that it will switch the box to the provider option"
+4. "let me know how we can make sure that we dont have complicated functions in the background for this... if just having it clear the box is the easiest method for when switching between specific model toggle and whole provider that is fine"
+
+### What was built
+- **ProviderSelectModal** (shared): visual provider picker — icons, display names, provider ids, connected/not-connected badges, custom-node badges, search. No more memorizing provider ids.
+- **FallbackRuleModal**: "Pick provider…" button in whole-provider mode. Toggle switching is deliberately dead-simple per user request: model→provider strips to provider part; provider→model clears the box.
+- **2 new views** (5 total): **Guided Wizard** (3 steps: target → chain → retries, pick buttons, step indicator) and **Expert Text** (`target:model1,model2` DSL, example/apply/preview).
+- **`src/lib/fallbackTextFormat.js`**: extracted text-format helpers, both-shapes safe (advanced retries preserved on re-parse).
+
+### E2E verified
+- Provider picker search + select fills target box with provider id ✅
+- Toggle switching: strip on → provider, clear on → model ✅
+- Wizard steps + pick buttons ✅
+- Expert Text: advanced rule serializes, example applied, settings updated, env restored ✅
+
+### Bug caught by E2E
+- Expert Text crashed with `(t || []).join is not a function` — `toDraftText` only handled legacy array shape. Fixed in extracted lib (handles both).
+
+### Regression
+1718 pass / 88 baseline fail (13 new tests; 89th on one run was a flaky pre-existing timing test, re-run = 88).
