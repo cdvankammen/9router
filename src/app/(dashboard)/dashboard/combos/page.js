@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
-import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy, rectSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { restrictToVerticalAxis, restrictToParentElement } from "@dnd-kit/modifiers";
 import { Card, Button, Modal, Input, CardSkeleton, ModelSelectModal, ProviderSelectModal, ConfirmModal, CapacityBadges, Select, Toggle } from "@/shared/components";
@@ -1404,14 +1404,24 @@ function FallbackRulesTable({ rules, onDelete }) {
 function FallbackChainFlow({ rules, onChange, onDelete, activeProviders }) {
   const [pickerFor, setPickerFor] = useState(null); // { target, index } — add at index
 
-  const handleDragEnd = (target, event) => {
+  // insertIndex is computed live during the drag (see SortableChain) so the
+  // drop lands EXACTLY where the indicator bar is showing.
+  const handleDragEnd = (target, event, insertIndex) => {
     const { active, over } = event;
-    if (!over || active.id === over.id) return;
+    if (!active) return;
     const rule = rules.find((r) => r.target === target);
     if (!rule) return;
     const oldIndex = rule.models.findIndex((m) => m === active.id);
-    const newIndex = rule.models.findIndex((m) => m === over.id);
-    if (oldIndex < 0 || newIndex < 0) return;
+    if (oldIndex < 0) return;
+    // Prefer the indicator-computed slot; fall back to the droppable under
+    // the pointer (dnd-kit's `over`) when no live computation happened.
+    let newIndex = insertIndex;
+    if (typeof newIndex !== "number" || newIndex < 0) {
+      if (!over || over.id === active.id) return;
+      newIndex = rule.models.findIndex((m) => m === over.id);
+      if (newIndex < 0) return;
+    }
+    if (newIndex === oldIndex) return;
     const models = arrayMove(rule.models, oldIndex, newIndex);
     onChange({ target, models, retries: rule.retries, perModelRetries: rule.perModelRetries });
   };
@@ -1497,21 +1507,128 @@ function FallbackChainFlow({ rules, onChange, onDelete, activeProviders }) {
   );
 }
 
-/** Sortable chain row for one rule (own hook scope per rule). */
+/**
+ * Sortable chain row for one rule (own hook scope per rule).
+ *
+ * Drop indicator: while dragging, a vertical accent bar shows the exact slot
+ * where the held chip will land if released. The bar position is computed on
+ * every pointer move from the LIVE on-screen rects of the sibling chips
+ * (which dnd-kit shifts aside), so it tracks correctly even when the chips
+ * wrap onto multiple rows. The computed insert index is reused on drop so the
+ * final order matches where the bar was.
+ */
 function SortableChain({ target, models, onDragEnd, onRemove, onAdd }) {
+  const containerRef = useRef(null);
+  const insertIndexRef = useRef(null);
+  const [bar, setBar] = useState(null); // { left, top, height } container-relative
+  const [draggingId, setDraggingId] = useState(null);
+
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
+  /** Compute insert index + bar geometry from the dragged chip's translated rect. */
+  const computeInsertion = (event) => {
+    const containerEl = containerRef.current;
+    if (!containerEl) return null;
+    const activeId = event.active?.id;
+    if (typeof activeId !== "string") return null;
+
+    // The dragged chip's CURRENT viewport rect = initial rect + drag delta.
+    // (dnd-kit's `translated` rect is content-relative inside scrolled
+    // containers, while getBoundingClientRect() is viewport-relative — mixing
+    // them breaks the comparison when the dashboard's inner scroller is used.)
+    const initial = event.active?.rect?.current?.initial;
+    const delta = event.delta || { x: 0, y: 0 };
+    if (!initial) return null;
+    const pointerX = initial.left + delta.x + initial.width / 2;
+    const pointerY = initial.top + delta.y + initial.height / 2;
+
+    // Live rects of the OTHER chips (dragged chip excluded). dnd-kit applies
+    // transforms to siblings during the drag, so getBoundingClientRect() gives
+    // their current visual slot — exactly where the gap is.
+    const nodes = Array.from(containerEl.querySelectorAll("[data-chain-node]"))
+      .filter((el) => el.getAttribute("data-model") !== activeId)
+      .map((el) => ({ id: el.getAttribute("data-model"), rect: el.getBoundingClientRect() }));
+
+    if (nodes.length === 0) return null;
+
+    // Reading-order comparison handles flex-wrap rows: a chip counts as
+    // "before the pointer" when it sits above the pointer's row, or on the
+    // same row with its center left of the pointer.
+    let insertIndex = 0;
+    for (const { rect } of nodes) {
+      const cy = rect.top + rect.height / 2;
+      const cx = rect.left + rect.width / 2;
+      const sameRow = Math.abs(cy - pointerY) <= rect.height / 2;
+      if (cy < pointerY - rect.height / 4 || (sameRow && cx < pointerX)) insertIndex += 1;
+    }
+
+    // Bar geometry: before the first chip, or just after the previous chip.
+    let left, top, height;
+    if (insertIndex === 0) {
+      const r = nodes[0].rect;
+      left = r.left - 1;
+      top = r.top;
+      height = r.height;
+    } else {
+      const r = nodes[insertIndex - 1].rect;
+      left = r.right + 1;
+      top = r.top;
+      height = r.height;
+    }
+
+    const containerRect = containerEl.getBoundingClientRect();
+    return {
+      insertIndex,
+      left: left - containerRect.left,
+      top: top - containerRect.top,
+      height,
+    };
+  };
+
+  const handleDragStart = (event) => {
+    setDraggingId(event.active?.id ?? null);
+    setBar(null);
+  };
+
+  const handleDragMove = (event) => {
+    let info = null;
+    try {
+      info = computeInsertion(event);
+    } catch {
+      return;
+    }
+    if (!info) return;
+    insertIndexRef.current = info.insertIndex;
+    setBar({ left: info.left, top: info.top, height: info.height });
+  };
+
+  const handleDragEnd = (event) => {
+    onDragEnd(target, event, insertIndexRef.current);
+    setDraggingId(null);
+    setBar(null);
+    insertIndexRef.current = null;
+  };
+
+  const handleDragCancel = () => {
+    setDraggingId(null);
+    setBar(null);
+    insertIndexRef.current = null;
+  };
+
   return (
     <DndContext
       sensors={sensors}
       collisionDetection={closestCenter}
-      onDragEnd={(e) => onDragEnd(target, e)}
+      onDragStart={handleDragStart}
+      onDragMove={handleDragMove}
+      onDragEnd={handleDragEnd}
+      onDragCancel={handleDragCancel}
     >
-      <SortableContext items={models} strategy={verticalListSortingStrategy}>
-        <div className="flex flex-wrap items-center gap-1.5">
+      <SortableContext items={models} strategy={rectSortingStrategy}>
+        <div ref={containerRef} className="relative flex flex-wrap items-center gap-1.5">
           <span className="inline-flex items-center gap-1 rounded-lg bg-primary/10 px-2 py-1 font-mono text-[11px] text-primary">
             {target}
             <span className="material-symbols-outlined text-[12px]">arrow_forward</span>
@@ -1531,6 +1648,22 @@ function SortableChain({ target, models, onDragEnd, onRemove, onAdd }) {
             <span className="material-symbols-outlined text-[12px]">add</span>
             Add
           </button>
+
+          {/* Drop indicator: vertical accent bar at the insertion slot */}
+          {bar && (
+            <div
+              className="pointer-events-none absolute z-40 rounded-full"
+              style={{
+                left: bar.left,
+                top: bar.top,
+                height: bar.height,
+                width: 3,
+                background: "var(--primary, #6C5CE7)",
+                boxShadow: "0 0 8px rgba(108,92,231,0.7)",
+                transition: "left 70ms ease-out, top 70ms ease-out",
+              }}
+            />
+          )}
         </div>
       </SortableContext>
     </DndContext>
@@ -1543,6 +1676,8 @@ function SortableChainNode({ model, isLast, onRemove }) {
   return (
     <span
       ref={setNodeRef}
+      data-chain-node
+      data-model={model}
       style={{ transform: CSS.Transform.toString(transform), transition, zIndex: isDragging ? 50 : undefined }}
       className={`inline-flex items-center gap-1 rounded-lg px-2 py-1 font-mono text-[11px] ${
         isDragging
