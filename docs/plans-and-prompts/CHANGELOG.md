@@ -199,3 +199,23 @@ User request: *"for optional clean up yes we can have an option for that that we
 
 ### Regression
 Full suite: **1718 pass / 88 fail** (13 new tests; one run showed 89 = flaky timing-sensitive pre-existing test, re-run confirmed 88). Lint: no new errors on changed files.
+
+---
+
+## UPDATE 2026-08-07 (late — drag-and-drop in Add Fallback Rule modal) — `d7bf0e35`
+
+### User request
+"for the fallback rules form component 'add fallback rule' when we choose a fallback chain order... can we make it so that it is also possible to click and hold the card and move them up and down if we want? changing the order in the list that way too?"
+
+### What was built
+- **FallbackRuleModal chain rows are now sortable** (dnd-kit, same as Chain Flow view): click-and-hold any row (drag handle or the row itself) and move it up/down to reorder. Arrow up/down buttons remain as an exact alternative.
+- New `SortableFallbackChainItem` component (drag handle + number badge + arrows + remove).
+
+### Bug caught by E2E (real, subtle)
+- After a drag reorder, the **number badges stayed stale** (e.g. `1:mockreal, 1:dialagram`) even though the order, arrow disabled-states, and state were all correct.
+- Root cause: React reused the old text node of the number badge on the moved row while dnd-kit committed the DOM move — `idx` props updated (isFirst/isLast were correct) but the rendered text didn't.
+- Fix: `key={idx}` on the badge span forces a fresh text node on reorder.
+- Verified: after fix, drag → `1:dialagram, 2:mockreal` correct; Save persisted the dragged order in settings.
+
+### Regression
+Full suite 1718 pass / 88 baseline fail (exact baseline). Lint clean on changed file.
