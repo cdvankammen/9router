@@ -36,5 +36,5 @@
   "chat.agent.thinking.generateTitles": true,
   "github.copilot.chat.inlineChat.enableThinking": true,
   "chat.agent.thinking.collapsedTools": "off",
-  "python.languageServer": "None"
+  "python.languageServer": "Default"
 }
