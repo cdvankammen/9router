@@ -168,3 +168,11 @@ Per user's explicit request, established standards for all future work:
 | 64 | Master research synthesis (all v1–v4) | ✅ | `learnings/2026-08-07-research-synthesis.md` — 3,498 words, 20 ranked copy items, 15-feature roadmap, 10 security obligations |
 | 65 | Messages page feature spec | ✅ | `plans/messages-page-feature-spec.md` — DDL + list/detail/inbox/tree/export + P1–P4 rollout, all cited |
 | 66 | Gaps & risks + decision log | ✅ | `research/message-capture-gaps-and-risks.md` — 10 risks, 7 decisions (none block P1), effort table |
+
+### Newly Completed (2026-08-07 feature-gap + upstream-risk reviews)
+
+| # | Task | Status | Evidence |
+|---|------|--------|----------|
+| 67 | Feature-gap review (all v1 features vs original) | ✅ | `research/9router/18-feature-gap-review.md` — per-feature lacks, cross-cutting (shallow merge confirmed), 10-item action table |
+| 68 | Upstream provider risk review | ✅ | `research/9router/19-upstream-provider-risks.md` — 12 risks w/ observed evidence, 3 open questions |
+| 69 | Subagent spawn attempted (as requested) | ⚠️ rate-limited | All spawns failed (`rate_limit_exceeded`, `net::ERR_FAILED`); main-session agent completed reviews; recovery rationale documented |

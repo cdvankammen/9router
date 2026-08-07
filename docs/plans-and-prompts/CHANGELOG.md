@@ -345,3 +345,25 @@ Full suite 1718 pass / 88 baseline fail (exact baseline). Lint clean on changed 
 - **`plans/messages-page-feature-spec.md`** — concrete buildable spec for Messages page + Error Inbox (2,069 words): SQLite `messages` DDL sketch + indexes, list/detail/conversation-tree/export features, error-inbox workflow, phased rollout P1–P4, every feature citing research source
 - **`research/message-capture-gaps-and-risks.md`** — blind spots (Reddit blocked w/ manual URLs, OTel churn, maintenance risks, license traps), 10 implementation risks w/ mitigations, 7-question decision log (D1–D7, none block P1), effort table (P1–P4 ≈ 4.8k–6.8k LOC)
 - Method: 2 subagent batches; 1 network failure recovered by retry (validates subagent-recovery rationale)
+
+---
+
+## UPDATE 2026-08-07 (late — feature-gap review + upstream-provider risks)
+
+### User request
+"review if there are any other problems with the way that things have been set up in this app. review all the changes we have made, features that have been added from the original code base, what are those features lacking, what scrutinizing do we need to do to currently update the actual usefulness of what we are doing use subagents to deal with upstream problems that could occur from the provider. as before"
+
+### Method
+- Subagent spawns attempted for both reviews (as user requested) but the model API was rate-limited (`rate_limit_exceeded`) then network-failed (`net::ERR_FAILED`) on all attempts — the same failure mode documented in earlier sessions. Both reviews were completed by the main session agent instead, using session context + live evidence. (Recovery rationale: retry later / fall back to main-session execution.)
+
+### New docs
+- **`research/9router/18-feature-gap-review.md`** — per-feature gaps for all v1 features (smart router, observability, fallbacks, 5-view UI, sr-* cleanup, custom nodes) + cross-cutting (shallow settings merge confirmed: 4 UI PATCH callers send full objects so UI is safe; external API partial PATCH can shadow defaults) + 10-item prioritized action table.
+- **`research/9router/19-upstream-provider-risks.md`** — 12-item risk table grounded in observed logs (xAI invalid_grant, OpenRouter guardrail 404) with current handling + recommended actions + 3 open questions for user.
+
+### Key findings (top of each list)
+- Deep-merge nested settings in updateSettings (prevents silent default-shadowing)
+- UI warning when provider+model fallback rules both match
+- Provider health dashboard (/api/health/providers) to catch auth failure spikes
+- Smart router score breakdown UI (why did it pick this model?)
+- Surface dropped observability records when 1000-cap exceeded
+- Auto-disable provider after N consecutive refresh failures (with UI re-enable)
