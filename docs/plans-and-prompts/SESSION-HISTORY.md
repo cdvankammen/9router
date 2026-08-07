@@ -492,3 +492,27 @@ User: "I would like to find even obscure options not just the ones with a lot of
 - Produced `research/message-capture-obscure-projects-v3.md` (50+ projects, 7–4,400★).
 - Key new finds vs v2: cc-viewer (per-conversation dirs + body-diff), tokentap (Markdown+JSON dual save), CliRelay (mini-9Router), claude-code-trace (3-panel + SSE tail), token-dashboard (turn-by-turn spec), chatgpt-json-tree-viewer (branching tree), recensa/claudex (FTS5 search), cloud-sre-agent (AI log-scan agent), llm-proxy/Spanlens/SectorFlux (tiny proxy-with-logs), logfire (Pydantic), RagaAI-Catalyst (execution graph), teley (LCS compare), claude-pulse (ntfy alerts).
 - Confirmed market gap: nothing groups raw OpenAI-compatible proxy traffic into conversation trees with wire fidelity → 9Router's moat.
+
+---
+
+## UPDATE 2026-08-07 (late — user-commit code review + live verification)
+
+User asked for proof that all their personal commits work, attention to
+background logs/UI/code, and a full code review + refactor review with docs
+updated.
+
+### How verification was done
+- Live E2E through the REAL app on :20130 (user's ~/.9router data): vision
+  adapter test with real providers, reading the in-app Console Log page as the
+  ground truth for routing behavior.
+- Unit-level verification of TokenRouter pricing/cost math and Codex detection
+  against the real exported functions.
+- Code review of auto-provision + Antigravity scoping (can't live-test OAuth
+  flows without sessions).
+- Full vitest regression: 1718 pass / 88 baseline fail, zero regressions.
+
+### Result
+All 6 user-feature areas verified working. 2 environment issues found (xAI
+token invalid, OpenRouter guardrails) — both handled correctly by the code, both
+actionable by the user. 2 minor refactor notes recorded. New doc:
+research/9router/17-code-review-user-commits.md. No code changed during review.

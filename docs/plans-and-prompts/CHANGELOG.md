@@ -295,3 +295,28 @@ Full suite 1718 pass / 88 baseline fail (exact baseline). Lint clean on changed 
 - Highlights: **cc-viewer** (1,058★, per-conversation dirs + request body-diff), **tokentap** (811★, Markdown+JSON dual save), **CliRelay** (893★, mini-9Router with request logs + quotas), **claude-code-trace** (362★, 3-panel layout + SSE live tail), **token-dashboard** (654★, turn-by-turn Sessions spec), **chatgpt-json-tree-viewer** (56★, branching conversation tree), **recensa** (69★, SQLite FTS5 search), **claudex** (92★, MCP-exposable history API), **cloud-sre-agent** (49★, AI log-anomaly agent = the synthetic-scan idea), **llm-proxy** (27★) & **Spanlens** (11★) & **SectorFlux** (7★) — tiny proxy-with-logs baselines, **logfire** (4,416★, Pydantic), **RagaAI-Catalyst** (16,142★, execution-graph view), **teley** (61★, LCS side-by-side trace compare), **claude-pulse** (243★, ntfy budget alerts)
 - Synthesized: 10 copy-ideas incl. the confirmed market gap — *no existing project groups raw OpenAI-compatible proxy traffic into conversation trees with wire fidelity*; 9Router (being the proxy) is uniquely positioned
 - Top-3 actionable: (1) per-conversation dir grouping + raw bodies, (2) 3-panel Messages layout, (3) request body-diff collapsing
+
+---
+
+## UPDATE 2026-08-07 (late — code review + live verification of user's personal commits)
+
+### User request
+"prove to me that all the functions that have been added by me (my personal commits to this repository) all work as intended and even that you are paying attention to the background logs, the ui changes and what the code does as you go in testing this. do a code review and refactor review (share with me the details and update all documentation)"
+
+### What was verified (full detail: research/9router/17-code-review-user-commits.md)
+1. **Capacity Adapter** (8e59093d, 6498b312) — LIVE verified against real providers: vision request → text-only deepseek-chat → log showed `Capacity adapter for [vision] → trying gpt-4o-mini, mimo, deepseek` → pool 404 (OpenRouter account guardrail, not code) → clean fallback → mimo succeeded. Settings restored after.
+2. **TokenRouter** (b4808929, 41588bea) — pricing exact (opus-4.6 $5/$25 verified), cost math correct ($0.0175 for 1K+500), thinking enum passthrough correct.
+3. **Self-hosted STT/TTS/Embeddings** (fe547f4d) — registered (index imports 117/118/119), 50 related tests pass, fail-visible design, baseUrl tolerance.
+4. **Auto-provision API key** (02c66fe2) — code review: idempotent, client-side, try/catch. ✅
+5. **Codex detection** (cd13d904) — 7/7 cases verified (Desktop UA, codex-tui, codex-cli, originator, claude, gemini, curl).
+6. **Antigravity OAuth scoping** (35f86e58) — diff review: headers scoped to loadCodeAssist/onboardUser only, provider threaded through. ✅
+
+### Findings (non-blocking, all documented)
+- Environment: xAI refresh token invalid (invalid_grant) — needs re-auth; background refresh failed open correctly.
+- Environment: OpenRouter guardrail 404 on gpt-4o-mini — account setting, adapter handled gracefully.
+- Shallow settings merge note (partial capacityAdapter via API shadows defaults; UI always sends full object).
+- Pool flattening note (vision+audio enabled by default → mimo in vision chain; correct behavior).
+- Minor refactor opportunities: calculateCostFromTokens arg order; detectClientTool rules-table not needed.
+
+### Regression
+1718 pass / 88 baseline fail (one flaky run showed 89 skips; re-run = baseline). No code changed.

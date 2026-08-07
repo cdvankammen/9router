@@ -116,6 +116,18 @@
 | 51 | Browser-control workflow doc | ✅ | `workflows/browser-control-workflow.md` — integrated browser (not headless), Playwright tooling, no-vision loop, gotchas, synthetic drag recipe, FAQ |
 | 52 | Agent skill for browser E2E | ✅ | `~/.agents/skills/9router-browser-e2e/SKILL.md` (manifest-registered) — reusable loop + drag recipe + gotchas |
 
+### Newly Completed (2026-08-07 late — user-commit verification + code review)
+
+| # | Task | Status | Evidence |
+|---|------|--------|----------|
+| 53 | Live-verify Capacity Adapter (user commit 8e59093d/6498b312) | ✅ | Vision request → text-only model → log: adapter augmented chain → pool 404 handled → mimo succeeded; settings restored |
+| 54 | Verify TokenRouter (b4808929/41588bea) | ✅ | Pricing exact, cost math correct ($0.0175), thinking enum passthrough |
+| 55 | Verify self-hosted STT/TTS/Embeddings (fe547f4d) | ✅ | Registered (index 117/118/119), 50 tests pass, fail-visible design |
+| 56 | Verify auto-provision key (02c66fe2) | ✅ | Code review: idempotent client-side, try/catch |
+| 57 | Verify Codex detection (cd13d904) | ✅ | 7/7 cases (Desktop UA + originator new paths correct) |
+| 58 | Verify Antigravity OAuth scoping (35f86e58) | ✅ | Diff review sound (headers scoped to loadCodeAssist/onboardUser) |
+| 59 | Code review + refactor review + docs | ✅ | `research/9router/17-code-review-user-commits.md`; findings: xAI token invalid (env), OpenRouter guardrails (env), shallow-merge note, pool-flattening note, 2 minor refactor notes; no code changed |
+
 ### Key Discovery: Documentation Standards
 
 Per user's explicit request, established standards for all future work:
