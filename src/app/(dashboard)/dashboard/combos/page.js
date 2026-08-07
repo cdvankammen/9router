@@ -1157,6 +1157,7 @@ function MarkdownLogSection({ markdownLog, onChange }) {
 
 function ModelFallbacksSection({ modelFallbacks, onChange, activeProviders }) {
   const [showBuilder, setShowBuilder] = useState(false);
+  const [view, setView] = useState("table"); // "table" | "chains" | "cards"
 
   // Normalize each rule value into { models, retries, perModelRetries }
   const rules = useMemo(() => {
@@ -1180,6 +1181,16 @@ function ModelFallbacksSection({ modelFallbacks, onChange, activeProviders }) {
     onChange(next);
   };
 
+  const handleUpsertRule = (rule) => {
+    onChange({ ...modelFallbacks, [rule.target]: { models: rule.models, retries: rule.retries, perModelRetries: rule.perModelRetries } });
+  };
+
+  const viewTabs = [
+    { key: "table", label: "Table", icon: "table" },
+    { key: "chains", label: "Chain Flow", icon: "account_tree" },
+    { key: "cards", label: "Simple + Advanced", icon: "dashboard_customize" },
+  ];
+
   return (
     <Card padding="md">
       <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -1191,6 +1202,9 @@ function ModelFallbacksSection({ modelFallbacks, onChange, activeProviders }) {
           <p className="text-xs text-text-muted mt-0.5">
             Attach an ordered fallback chain directly to any model or provider — no combo needed. When the requested model fails, 9Router retries down the chain automatically.
           </p>
+          <p className="text-[10px] text-text-muted mt-1">
+            Three ways to manage rules — pick the one that fits how you think. All three edit the same underlying rules.
+          </p>
         </div>
         <div className="shrink-0">
           <Button icon="add" onClick={() => setShowBuilder(true)} className="whitespace-nowrap">
@@ -1199,65 +1213,393 @@ function ModelFallbacksSection({ modelFallbacks, onChange, activeProviders }) {
         </div>
       </div>
 
-      {/* Rules table */}
-      <div className="mt-4 overflow-x-auto">
-        <table className="w-full min-w-[640px] text-sm">
-          <thead>
-            <tr className="border-b border-black/5 dark:border-white/5">
-              <th className="text-left p-2 text-xs font-semibold text-text-muted">Target</th>
-              <th className="text-left p-2 text-xs font-semibold text-text-muted">Fallback Chain (in order)</th>
-              <th className="text-center p-2 text-xs font-semibold text-text-muted">Retries</th>
-              <th className="text-center p-2 text-xs font-semibold text-text-muted">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rules.length === 0 ? (
-              <tr>
-                <td colSpan="4" className="p-4 text-center text-xs text-text-muted">
-                  No fallback rules yet. Click "Add Fallback Rule" to create one.
-                </td>
-              </tr>
-            ) : rules.map((rule) => (
-              <tr key={rule.target} className="border-b border-black/5 dark:border-white/5 last:border-b-0 hover:bg-black/[0.02] dark:hover:bg-white/[0.02]">
-                <td className="p-2 font-mono text-xs text-text-main whitespace-nowrap">{rule.target}</td>
-                <td className="p-2">
-                  <div className="flex flex-wrap items-center gap-1">
-                    {rule.models.map((m, i) => (
-                      <span key={m} className="inline-flex items-center gap-0.5 rounded bg-black/5 dark:bg-white/5 px-1.5 py-0.5 font-mono text-[11px] text-text-muted">
-                        {m}
-                        {i < rule.models.length - 1 && <span className="text-primary">→</span>}
-                      </span>
-                    ))}
-                    {rule.perModelRetries && Object.keys(rule.perModelRetries).length > 0 && (
-                      <span className="text-[10px] text-text-muted italic ml-1">
-                        ({Object.entries(rule.perModelRetries).map(([m, r]) => `${m}:${r}`).join(", ")})
-                      </span>
-                    )}
-                  </div>
-                </td>
-                <td className="p-2 text-center font-mono text-xs">{rule.retries}</td>
-                <td className="p-2 text-center">
-                  <Button variant="ghost" size="sm" onClick={() => handleDeleteRule(rule.target)} title="Delete rule">
-                    <span className="material-symbols-outlined text-[16px] text-red-500">delete</span>
-                  </Button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      {/* View switcher */}
+      <div className="mt-3 flex flex-wrap gap-1.5">
+        {viewTabs.map((t) => (
+          <button
+            key={t.key}
+            onClick={() => setView(t.key)}
+            className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-medium transition-colors ${
+              view === t.key
+                ? "bg-primary/10 text-primary"
+                : "text-text-muted hover:bg-black/5 dark:hover:bg-white/5"
+            }`}
+          >
+            <span className="material-symbols-outlined text-[14px]">{t.icon}</span>
+            {t.label}
+          </button>
+        ))}
       </div>
+
+      {view === "table" && (
+        <FallbackRulesTable rules={rules} onDelete={handleDeleteRule} />
+      )}
+      {view === "chains" && (
+        <FallbackChainFlow rules={rules} onChange={handleUpsertRule} onDelete={handleDeleteRule} activeProviders={activeProviders} />
+      )}
+      {view === "cards" && (
+        <FallbackRuleCards rules={rules} onChange={handleUpsertRule} onDelete={handleDeleteRule} activeProviders={activeProviders} />
+      )}
 
       {showBuilder && (
         <FallbackRuleModal
           onClose={() => setShowBuilder(false)}
           onSave={(rule) => {
-            onChange({ ...modelFallbacks, [rule.target]: { models: rule.models, retries: rule.retries, perModelRetries: rule.perModelRetries } });
+            handleUpsertRule(rule);
             setShowBuilder(false);
           }}
           activeProviders={activeProviders}
         />
       )}
     </Card>
+  );
+}
+
+/** Approach 1: table view (the original modal + table). */
+function FallbackRulesTable({ rules, onDelete }) {
+  return (
+    <div className="mt-4 overflow-x-auto">
+      <table className="w-full min-w-[640px] text-sm">
+        <thead>
+          <tr className="border-b border-black/5 dark:border-white/5">
+            <th className="text-left p-2 text-xs font-semibold text-text-muted">Target</th>
+            <th className="text-left p-2 text-xs font-semibold text-text-muted">Fallback Chain (in order)</th>
+            <th className="text-center p-2 text-xs font-semibold text-text-muted">Retries</th>
+            <th className="text-center p-2 text-xs font-semibold text-text-muted">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rules.length === 0 ? (
+            <tr>
+              <td colSpan="4" className="p-4 text-center text-xs text-text-muted">
+                No fallback rules yet. Click &quot;Add Fallback Rule&quot; to create one.
+              </td>
+            </tr>
+          ) : rules.map((rule) => (
+            <tr key={rule.target} className="border-b border-black/5 dark:border-white/5 last:border-b-0 hover:bg-black/[0.02] dark:hover:bg-white/[0.02]">
+              <td className="p-2 font-mono text-xs text-text-main whitespace-nowrap">{rule.target}</td>
+              <td className="p-2">
+                <div className="flex flex-wrap items-center gap-1">
+                  {rule.models.map((m, i) => (
+                    <span key={m} className="inline-flex items-center gap-0.5 rounded bg-black/5 dark:bg-white/5 px-1.5 py-0.5 font-mono text-[11px] text-text-muted">
+                      {m}
+                      {i < rule.models.length - 1 && <span className="text-primary">→</span>}
+                    </span>
+                  ))}
+                  {rule.perModelRetries && Object.keys(rule.perModelRetries).length > 0 && (
+                    <span className="text-[10px] text-text-muted italic ml-1">
+                      ({Object.entries(rule.perModelRetries).map(([m, r]) => `${m}:${r}`).join(", ")})
+                    </span>
+                  )}
+                </div>
+              </td>
+              <td className="p-2 text-center font-mono text-xs">{rule.retries}</td>
+              <td className="p-2 text-center">
+                <Button variant="ghost" size="sm" onClick={() => onDelete(rule.target)} title="Delete rule">
+                  <span className="material-symbols-outlined text-[16px] text-red-500">delete</span>
+                </Button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+/** Approach 2: fluid drag-and-drop chain flow — rules as connected nodes. */
+function FallbackChainFlow({ rules, onChange, onDelete, activeProviders }) {
+  const [pickerFor, setPickerFor] = useState(null); // { target, index } — add at index
+
+  const handleDragEnd = (target, event) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const rule = rules.find((r) => r.target === target);
+    if (!rule) return;
+    const oldIndex = rule.models.findIndex((m) => m === active.id);
+    const newIndex = rule.models.findIndex((m) => m === over.id);
+    if (oldIndex < 0 || newIndex < 0) return;
+    const models = arrayMove(rule.models, oldIndex, newIndex);
+    onChange({ target, models, retries: rule.retries, perModelRetries: rule.perModelRetries });
+  };
+
+  const handleRemoveModel = (target, idx) => {
+    const rule = rules.find((r) => r.target === target);
+    if (!rule) return;
+    onChange({ target, models: rule.models.filter((_, i) => i !== idx), retries: rule.retries, perModelRetries: rule.perModelRetries });
+  };
+
+  const handleAddModel = (model) => {
+    const { target } = pickerFor;
+    const rule = rules.find((r) => r.target === target);
+    if (!rule) return;
+    const models = [...rule.models];
+    if (models.includes(model.value)) { setPickerFor(null); return; }
+    models.push(model.value);
+    onChange({ target, models, retries: rule.retries, perModelRetries: rule.perModelRetries });
+    setPickerFor(null);
+  };
+
+  return (
+    <div className="mt-4 flex flex-col gap-4">
+      {rules.length === 0 && (
+        <p className="text-center text-xs text-text-muted py-4">No fallback rules yet. Use &quot;Add Fallback Rule&quot; to create one.</p>
+      )}
+      {rules.map((rule) => (
+        <div key={rule.target} className="rounded-xl border border-black/5 dark:border-white/5 p-3">
+          <div className="flex items-center justify-between mb-2">
+            <code className="font-mono text-xs font-medium">{rule.target}</code>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] text-text-muted">retries ×{rule.retries}</span>
+              <button onClick={() => onDelete(rule.target)} className="p-0.5 rounded text-text-muted hover:text-red-500">
+                <span className="material-symbols-outlined text-[14px]">delete</span>
+              </button>
+            </div>
+          </div>
+          {/* Chain: target node → sortable fallback nodes (drag to reorder) */}
+          <SortableChain
+            target={rule.target}
+            models={rule.models}
+            onDragEnd={handleDragEnd}
+            onRemove={handleRemoveModel}
+            onAdd={() => setPickerFor({ target: rule.target })}
+          />
+          {/* Per-model retry overrides inline */}
+          {rule.models.length > 0 && (
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <span className="text-[10px] text-text-muted">per-model retries:</span>
+              {rule.models.map((m) => (
+                <label key={m} className="flex items-center gap-1">
+                  <code className="text-[10px] font-mono text-text-muted max-w-[120px] truncate">{m.split("/").pop()}</code>
+                  <input
+                    type="number" min={1} max={10}
+                    value={rule.perModelRetries[m] !== undefined ? String(rule.perModelRetries[m]) : ""}
+                    placeholder="inherit"
+                    onChange={(e) => {
+                      const v = e.target.value === "" ? undefined : Math.max(1, Math.min(10, Number(e.target.value) || 1));
+                      const perModelRetries = { ...rule.perModelRetries };
+                      if (v === undefined) delete perModelRetries[m]; else perModelRetries[m] = v;
+                      onChange({ target: rule.target, models: rule.models, retries: rule.retries, perModelRetries });
+                    }}
+                    className="w-14 rounded border border-black/10 dark:border-white/10 bg-surface px-1 py-0.5 text-[10px] font-mono focus:outline-none focus:ring-1 focus:ring-primary/30"
+                  />
+                </label>
+              ))}
+            </div>
+          )}
+        </div>
+      ))}
+
+      {pickerFor && (
+        <ModelSelectModal
+          isOpen={!!pickerFor}
+          onClose={() => setPickerFor(null)}
+          onSelect={handleAddModel}
+          activeProviders={activeProviders}
+          title="Add Fallback Model"
+          closeOnSelect={true}
+        />
+      )}
+    </div>
+  );
+}
+
+/** Sortable chain row for one rule (own hook scope per rule). */
+function SortableChain({ target, models, onDragEnd, onRemove, onAdd }) {
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
+
+  return (
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      onDragEnd={(e) => onDragEnd(target, e)}
+    >
+      <SortableContext items={models} strategy={verticalListSortingStrategy}>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="inline-flex items-center gap-1 rounded-lg bg-primary/10 px-2 py-1 font-mono text-[11px] text-primary">
+            {target}
+            <span className="material-symbols-outlined text-[12px]">arrow_forward</span>
+          </span>
+          {models.map((m, idx) => (
+            <SortableChainNode
+              key={m}
+              model={m}
+              isLast={idx === models.length - 1}
+              onRemove={() => onRemove(target, idx)}
+            />
+          ))}
+          <button
+            onClick={onAdd}
+            className="inline-flex items-center gap-0.5 rounded-lg border border-dashed border-primary/40 px-2 py-1 text-[11px] text-primary hover:border-primary hover:bg-primary/5 transition-colors"
+          >
+            <span className="material-symbols-outlined text-[12px]">add</span>
+            Add
+          </button>
+        </div>
+      </SortableContext>
+    </DndContext>
+  );
+}
+
+/** Sortable node chip inside a chain flow rule. */
+function SortableChainNode({ model, isLast, onRemove }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: model });
+  return (
+    <span
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition, zIndex: isDragging ? 50 : undefined }}
+      className={`inline-flex items-center gap-1 rounded-lg px-2 py-1 font-mono text-[11px] ${
+        isDragging
+          ? "bg-primary/20 text-primary ring-1 ring-primary/40 shadow-lg"
+          : "bg-black/5 dark:bg-white/5 text-text-main cursor-grab active:cursor-grabbing"
+      }`}
+      {...attributes}
+      {...listeners}
+      title="Drag to reorder the chain"
+    >
+      <span className="material-symbols-outlined text-[12px] text-text-muted/60">drag_indicator</span>
+      {model}
+      {!isLast && <span className="text-primary pointer-events-none">→</span>}
+      <button
+        onClick={(e) => { e.stopPropagation(); onRemove(); }}
+        className="leading-none text-text-muted hover:text-red-500 pointer-events-auto"
+      >
+        <span className="material-symbols-outlined text-[12px]">close</span>
+      </button>
+    </span>
+  );
+}
+
+/** Approach 3: simple rule cards with an expandable "advanced" section. */
+function FallbackRuleCards({ rules, onChange, onDelete, activeProviders }) {
+  const [expanded, setExpanded] = useState(null); // target of expanded card
+  const [pickerFor, setPickerFor] = useState(null); // { target }
+
+  const handleAdd = (model) => {
+    const rule = rules.find((r) => r.target === pickerFor.target);
+    if (!rule) return;
+    if (rule.models.includes(model.value)) { setPickerFor(null); return; }
+    onChange({ target: rule.target, models: [...rule.models, model.value], retries: rule.retries, perModelRetries: rule.perModelRetries });
+    setPickerFor(null);
+  };
+
+  return (
+    <div className="mt-4 flex flex-col gap-3">
+      {rules.length === 0 && (
+        <p className="text-center text-xs text-text-muted py-4">No fallback rules yet. Use &quot;Add Fallback Rule&quot; to create one.</p>
+      )}
+      {rules.map((rule) => {
+        const isOpen = expanded === rule.target;
+        return (
+          <div key={rule.target} className="rounded-xl border border-black/5 dark:border-white/5">
+            {/* Simple header */}
+            <div className="flex items-center justify-between p-3">
+              <div className="flex min-w-0 items-center gap-2">
+                <button onClick={() => setExpanded(isOpen ? null : rule.target)} className="material-symbols-outlined text-text-muted transition-transform duration-200" style={{ transform: isOpen ? "rotate(90deg)" : "none" }}>
+                  chevron_right
+                </button>
+                <code className="truncate font-mono text-xs font-medium">{rule.target}</code>
+                <span className="text-[10px] text-text-muted">
+                  → {rule.models.length} fallback{rule.models.length === 1 ? "" : "s"}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] text-text-muted">retries ×{rule.retries}</span>
+                <button onClick={() => onDelete(rule.target)} className="p-0.5 rounded text-text-muted hover:text-red-500">
+                  <span className="material-symbols-outlined text-[14px]">delete</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Simple view: chain chips */}
+            {!isOpen && (
+              <div className="px-3 pb-3 flex flex-wrap items-center gap-1">
+                {rule.models.map((m, i) => (
+                  <span key={m} className="inline-flex items-center gap-0.5 rounded bg-black/5 dark:bg-white/5 px-1.5 py-0.5 font-mono text-[11px] text-text-muted">
+                    {m}
+                    {i < rule.models.length - 1 && <span className="text-primary">→</span>}
+                  </span>
+                ))}
+                <button onClick={() => setPickerFor({ target: rule.target })} className="inline-flex items-center gap-0.5 rounded border border-dashed border-primary/40 px-1.5 py-0.5 text-[11px] text-primary hover:border-primary hover:bg-primary/5 transition-colors">
+                  <span className="material-symbols-outlined text-[12px]">add</span>
+                </button>
+              </div>
+            )}
+
+            {/* Advanced view: reuses combo-style strategy + retries */}
+            {isOpen && (
+              <div className="border-t border-black/5 dark:border-white/5 p-3 flex flex-col gap-3">
+                <div>
+                  <label className="text-xs font-medium text-text-main mb-1 block">Fallback chain (in order)</label>
+                  <div className="flex flex-wrap items-center gap-1">
+                    {rule.models.map((m, idx) => (
+                      <span key={m} className="inline-flex items-center gap-1 rounded bg-black/5 dark:bg-white/5 px-1.5 py-0.5 font-mono text-[11px] text-text-muted">
+                        {m}
+                        <button onClick={() => onChange({ target: rule.target, models: rule.models.filter((_, i) => i !== idx), retries: rule.retries, perModelRetries: rule.perModelRetries })} className="leading-none text-text-muted hover:text-red-500">
+                          <span className="material-symbols-outlined text-[12px]">close</span>
+                        </button>
+                      </span>
+                    ))}
+                    <button onClick={() => setPickerFor({ target: rule.target })} className="inline-flex items-center gap-0.5 rounded border border-dashed border-primary/40 px-1.5 py-0.5 text-[11px] text-primary hover:border-primary hover:bg-primary/5 transition-colors">
+                      <span className="material-symbols-outlined text-[12px]">add</span>
+                    </button>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div>
+                    <label className="text-xs font-medium text-text-main mb-1 block">Retries (universal)</label>
+                    <Input
+                      type="number" min={1} max={10}
+                      value={String(rule.retries)}
+                      onChange={(e) => onChange({ target: rule.target, models: rule.models, retries: Math.max(1, Math.min(10, Number(e.target.value) || 1)), perModelRetries: rule.perModelRetries })}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-text-main mb-1 block">Per-model retries (override)</label>
+                    <div className="flex flex-col gap-1">
+                      {rule.models.map((m) => (
+                        <label key={m} className="flex items-center gap-2">
+                          <code className="min-w-0 flex-1 truncate font-mono text-[11px] text-text-muted">{m}</code>
+                          <Input
+                            type="number" min={1} max={10}
+                            value={rule.perModelRetries[m] !== undefined ? String(rule.perModelRetries[m]) : ""}
+                            placeholder="inherit"
+                            className="w-20"
+                            onChange={(e) => {
+                              const v = e.target.value === "" ? undefined : Math.max(1, Math.min(10, Number(e.target.value) || 1));
+                              const perModelRetries = { ...rule.perModelRetries };
+                              if (v === undefined) delete perModelRetries[m]; else perModelRetries[m] = v;
+                              onChange({ target: rule.target, models: rule.models, retries: rule.retries, perModelRetries });
+                            }}
+                          />
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                <p className="text-[10px] text-text-muted">
+                  Advanced option: this rule runs through the same combo engine as named combos — strategy and cooldown behavior match the existing combo engine.
+                </p>
+              </div>
+            )}
+          </div>
+        );
+      })}
+
+      {pickerFor && (
+        <ModelSelectModal
+          isOpen={!!pickerFor}
+          onClose={() => setPickerFor(null)}
+          onSelect={handleAdd}
+          activeProviders={activeProviders}
+          title="Add Fallback Model"
+          closeOnSelect={true}
+        />
+      )}
+    </div>
   );
 }
 
