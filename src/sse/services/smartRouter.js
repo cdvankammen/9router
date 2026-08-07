@@ -9,7 +9,7 @@
  * NOT an executor — avoids double-translation flaw.
  */
 
-import { getSettings, getProviderNodes } from "@/lib/localDb";
+import { getSettings, getProviderNodes, getProviderConnections } from "@/lib/localDb";
 import { createCombo, getComboByName, updateCombo } from "@/lib/db/repos/combosRepo.js";
 import {
   classifyTask,
@@ -30,8 +30,31 @@ const ALIAS_TO_PROVIDER_ID = new Map(
 // ── Custom provider node models (short-TTL cache) ───────────────────────────
 // User-defined OpenAI/Anthropic-compatible nodes aren't in the static registry,
 // so the router fetches their /models endpoint once per TTL window.
+//
+// Auth: many custom routers (e.g. Dialagram) gate /models behind an API key,
+// so we look up an active connection for the node and forward its apiKey as a
+// Bearer header (OpenAI-compatible) or x-api-key (Anthropic-compatible). This
+// mirrors the same pattern in src/app/api/providers/[id]/models/route.js.
+// Fail-open: if no connection exists or the fetch fails, we return [] — the
+// router just skips that node rather than crashing.
 const NODE_MODELS_TTL_MS = 5 * 60 * 1000;
 const nodeModelsCache = new Map(); // nodeId -> { models: [{id,name}], ts }
+
+/**
+ * Resolve the apiKey for a provider node by looking up the first active
+ * connection whose provider id matches the node id. Returns null if none.
+ */
+async function getNodeApiKey(nodeId) {
+  try {
+    const connections = await getProviderConnections({ provider: nodeId, isActive: true });
+    if (!connections || connections.length === 0) return null;
+    // Prefer the highest-priority (lowest number) connection; the list is
+    // already sorted by priority in getProviderConnections.
+    return connections[0]?.apiKey || null;
+  } catch {
+    return null;
+  }
+}
 
 async function getNodeModels(node) {
   const cached = nodeModelsCache.get(node.id);
@@ -41,18 +64,37 @@ async function getNodeModels(node) {
     if (baseUrl.endsWith("/messages")) baseUrl = baseUrl.slice(0, -"/messages".length);
     if (!baseUrl) return [];
     const url = `${baseUrl}/models`;
+
+    // Build auth headers based on node type (matches dashboard /models route)
+    const apiKey = await getNodeApiKey(node.id);
+    const headers = { "Content-Type": "application/json" };
+    if (apiKey) {
+      if (node.type === "anthropic-compatible") {
+        headers["x-api-key"] = apiKey;
+        headers["Authorization"] = `Bearer ${apiKey}`;
+      } else {
+        // openai-compatible (default)
+        headers["Authorization"] = `Bearer ${apiKey}`;
+      }
+    }
+
     const controller = new AbortController();
     const t = setTimeout(() => controller.abort(), 5000);
     let res;
     try {
       res = await fetch(url, {
-        headers: { "Content-Type": "application/json" },
+        headers,
         signal: controller.signal,
       });
     } finally {
       clearTimeout(t);
     }
-    if (!res.ok) return [];
+    if (!res.ok) {
+      // Auth-gated or unreachable — log once, return empty so the router
+      // silently skips this node rather than poisoning the candidate list.
+      log.debug("SMART", `getNodeModels(${node.id}) → ${res.status}`);
+      return [];
+    }
     const data = await res.json();
     const models = (data.data || data.models || [])
       .map((m) => ({ id: m.id || m, name: m.name || m.id || m }))
