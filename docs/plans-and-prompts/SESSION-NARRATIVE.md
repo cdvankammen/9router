@@ -285,4 +285,39 @@ Commit: ccde7bff. Full suite 1692 pass / 88 pre-existing fail.
 ### The complete commit history (this session, all on v1):
 9f4c1631 → 6f00d23f → a954b88f → acdc7134 → 1c921ce2 → d9415807 → 5932879f
 → d1c1db28 → 57e87729 → 3e7d1c7c → 40168739 → 3f678deb → 4627a299 → 99ac899f
-→ 8990a3b4 → 0d07d82f → d1cc1faa → 3c86d01b → ccde7bff
+→ 8990a3b4 → 0d07d82f → d1cc1faa → 3c86d01b → ccde7bff → d43572ec → 6449b58b
+
+---
+
+## FINAL CHAPTER (2026-08-07): The three fallback rule UX approaches — DONE
+
+### The user's ask (exact words, from the session)
+> "provide (under that same menu) another option... form style popup and then a table... auto-populating... choose the order models will be in as well as number of retries universally... optional per model override"
+> "another option of your making for another way that we could have a really fluid and visually appealing way to make fallback rules"
+> "we will eventually choose one of them but for now just keep what is already there"
+
+### What the user meant by "another option" + "third option"
+Reading the full request, the user wanted **multiple candidate UIs for the same feature** — a menu of approaches they could compare and later pick from. The first build delivered only ONE approach (modal + table). The completion check caught this gap: the 2nd and 3rd approaches were proposed in docs but never built. This final round built them.
+
+### The three approaches (all edit the same `settings.modelFallbacks`)
+1. **Table** — form modal (`FallbackRuleModal`) + rules table. The original, E2E-verified in the prior round.
+2. **Chain Flow** — fluid drag-and-drop node chains. Each rule is a row of chips: the target node (highlighted) → sortable fallback chips with drag handles (dnd-kit `useSortable`). Drag a chip onto another to reorder (persisted instantly via PATCH). Inline per-model retry inputs under each chain. Dashed "Add" buttons open the full-catalog picker.
+3. **Simple + Advanced** — collapsible rule cards. Simple view: target, chain chips, retries badge. Click the chevron → advanced view: ordered chain with remove buttons, universal retries input, per-model override inputs. Notes that rules run through the same combo engine as named combos.
+
+A view switcher (Table / Chain Flow / Simple + Advanced) sits at the top of the Fallbacks card. Because all three edit one data model, switching views never loses data.
+
+### E2E verification (production standalone, port 20130, mock upstream 24000)
+- **Chain Flow drag**: `mockreal/model-id` dragged onto `deepseek` chip → UI order flipped → `PATCH /api/settings` persisted → confirmed via API (`{"models":["mockreal/model-id","kc/deepseek/deepseek-chat"],"retries":1}`) → reload kept the order.
+- **Advanced view**: universal retries 1→3 persisted; per-model override `mockreal/model-id:5` persisted; Table view renders `(mockreal/model-id:5)`.
+- **All 3 views re-verified** on the rebuilt server with persisted data.
+- **vitest**: 1692 pass / 88 fail = exact baseline, zero new regressions.
+- **lint**: 7 → 3 errors on the file (4 pre-existing fixed in the rewrite; remaining 3 pre-existing).
+
+### Gotchas this round
+- Server killed mid-test during rebuild → PATCH failed with `ERR_CONNECTION_REFUSED`, first drag reorder didn't persist. Retested cleanly after restart — the code was fine, the environment wasn't.
+- `tests/translator/__snapshots__/golden-url-header.test.js.snap` regenerates on every vitest run — restore with `git checkout --` before committing.
+- dnd-kit `useSensors` cannot be called inside a `.map()` — extracted a per-rule `SortableChain` component (hooks rules).
+- `:has-text()` is a Playwright-only selector — invalid inside `page.evaluate`.
+
+### Decision deferred (user's choice)
+All three approaches stay available. The user will pick one later; no code needs removing — the view switcher already isolates them.
