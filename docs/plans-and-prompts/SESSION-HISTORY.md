@@ -290,3 +290,98 @@ The Fallbacks card (`/dashboard/combos`) now has a **view switcher** with three 
 - Dialagram provider not configured in test environment — needs user to provide API key/base URL
 - Dynamic sr-* combo TTL cleanup not yet implemented
 - 88 pre-existing test failures (documented in tests/__baseline__/known-fails.txt)
+
+---
+
+## UPDATE 2026-08-07 (Dialagram real-world testing + auth fix)
+
+### Dialagram Provider Configuration
+
+**Credentials (saved to temp/dialagram-credentials.md, gitignored):**
+- Base URL: https://dialagram.me/router/v1
+- API Key: dgr_live_mxjv4glj6n5FQlaB4xR6WlgS0b9MQBmuodUsI1pnMQfYJlrT57
+- Prefix: dialagram
+- Type: OpenAI-compatible router
+
+**15 models discovered:**
+nexum-router, qwen-3.5-plus, qwen-3.5-plus-thinking, qwen-3.6-plus,
+qwen-3.6-plus-thinking, qwen-3.7-plus, qwen-3.7-plus-thinking,
+qwen-3.6-max-preview, qwen-3.7-max, qwen-3.7-max-thinking,
+qwen-3.6-max-preview-thinking, qwen-3.8-max-thinking, qwen-3.5-omni-plus,
+deepseek-v4, xiaomi-mimo-2.5
+
+**Configuration steps:**
+1. POST /api/provider-nodes -> created node openai-compatible-chat-0ec6b86e...
+2. POST /api/providers -> created connection bd841ca8... with API key
+3. PATCH /api/settings -> smartRouter.allowedModels = ["dialagram/*"]
+
+### Bug Found & Fixed: Smart Router Auth for Custom Nodes
+
+**Symptom:** modelRouter -> "No active credentials for provider: openai"
+even though Dialagram was properly configured and direct calls worked.
+
+**Root cause:** getNodeModels() in smartRouter.js called /models without
+auth headers. Dialagram returns 401 without Bearer token. Router got
+empty model list, fell through to built-in openai (not configured).
+
+**Fix:** Added getNodeApiKey() helper + auth header construction matching
+the dashboard /models route pattern. Committed as fix(smart-router).
+
+### Real-World E2E Results (Dialagram live)
+
+| Test | Result |
+|------|--------|
+| dialagram/qwen-3.5-plus (direct) | "4" response |
+| dialagram/nexum-router (Dialagram router) | Haiku about routing |
+| modelRouter -> Dialagram (code task) | nexum-router picked, code response |
+| modelRouter -> Dialagram (math task) | nexum-router picked |
+| modelRouter -> Dialagram (chat task) | nexum-router picked |
+
+### Answer to User Question
+
+"Do we have the model that allows me to use that fakeModel as one that
+will route to other models behind the scenes set up?"
+
+**YES** - two options:
+1. modelRouter (9Router smart router) - classifies task, scores Dialagram
+   models, picks best one, creates dynamic combo with fallback
+2. dialagram/nexum-router - Dialagram's own internal router that picks
+   from its 15 models behind the scenes
+
+Both work end-to-end through 9Router's /v1/chat/completions endpoint.
+
+---
+
+## UPDATE 2026-08-07 (afternoon — optional sr-* combo cleanup + fallback state verification)
+
+### User asked
+1. "for optional clean up yes we can have an option for that that we build in but it can be disabled by default and be an option for someone to turn on if they want. just make sure that it will actually work. make sure to build code tests that will actually mock and test things"
+2. "find the chat that has the work for... multiple per model provider fall back options. did we finish that and what is the state of it"
+
+### Answer to #2 (fallback state) — COMPLETE, verified end-to-end
+Found the original request in session d4294fc8 ("Also some thoughts on combos and vision adapter... is there options for me"). Current state, verified this session:
+- `settings.modelFallbacks` — attach ordered fallback chain to ANY model or provider (settingsRepo.js:31)
+- `src/sse/handlers/chat.js` lines 234-280 — intercepts single-model requests, normalizes simple `[models]` OR advanced `{models, retries, perModelRetries}`, wraps in combo engine with `retriesPerModel`/`perModelRetries`
+- `open-sse/services/combo.js` line 250 — `retriesPerModel` (universal) + `perModelRetries` (per-model override map), lines 276-278 apply override
+- UI: 3-view builder on /dashboard/combos (Table / Chain Flow / Simple + Advanced)
+- Tests: `model-fallbacks.test.js` + `combo-fallback-chain.test.js` — 7/7 pass
+- E2E: 429 → retried 3× → fell through to next model
+
+### What was built for #1 (cleanup)
+- `src/sse/services/srComboCleanup.js` — scheduler (mirrors backgroundTokenRefresh pattern): pure `selectStaleSmartCombos`, DI'd fail-open `runSrComboCleanupTick`, idempotent `startSrComboCleanup` (no-op when disabled), initial tick 60s, then every intervalHours
+- Settings default: `srComboCleanup: {enabled: false, ttlHours: 24, intervalHours: 12}` — OFF by default
+- `initializeApp.js` — starts only when enabled
+- UI: Smart Router card → "Auto-cleanup of temporary combos" toggle + TTL + interval inputs
+
+### Tests (13, all pass)
+- Selection: stale sr-* only; user combos NEVER; unknown age skipped; cutoff boundary; empty input
+- Tick with mocked repos: exact deletion; per-combo error fail-open; load error swallowed; non-array no-op
+- Scheduler: refuses when disabled; idempotent; integration test with REAL temp SQLite DB proves deletion
+
+### E2E proof (production, port 20130)
+- Toggle ON → persisted; restart → `[SR_CLEANUP] Scheduler started {"ttlHours":24,"intervalMs":43200000}`
+- Planted stale sr-* / fresh sr-* / old user combo → tick at 60s → `Deleted stale smart combo "sr-modelRouter-e2e-test"` → DB: only stale row removed, fresh + user combos survived
+- Toggled OFF → persisted (test env left at default)
+
+### Regression
+Full suite 1705 pass / 88 fail (13 new; baseline unchanged)

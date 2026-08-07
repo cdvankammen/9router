@@ -118,6 +118,23 @@ async function runHeavyStartup() {
   import("@/sse/services/backgroundTokenRefresh.js")
     .then(({ startBackgroundTokenRefresh }) => startBackgroundTokenRefresh())
     .catch((e) => console.log("[BackgroundTokenRefresh] scheduler start failed:", e.message));
+
+  // Optional stale smart-router (sr-*) combo sweep — OFF unless the user
+  // enables settings.srComboCleanup.enabled.
+  const srCleanup = settings.srComboCleanup || {};
+  if (srCleanup.enabled) {
+    import("@/sse/services/srComboCleanup.js")
+      .then(({ startSrComboCleanup }) =>
+        startSrComboCleanup({
+          enabled: true,
+          ttlHours: srCleanup.ttlHours,
+          intervalHours: srCleanup.intervalHours,
+        })
+      )
+      .catch((e) => console.log("[SrComboCleanup] scheduler start failed:", e.message));
+  } else {
+    console.log("[SrComboCleanup] disabled (settings.srComboCleanup.enabled=false)");
+  }
 }
 
 function hasQuotaAutoPingEnabled(settings) {

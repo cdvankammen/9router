@@ -61,6 +61,7 @@ export default function CombosPage() {
   const [comboStrategies, setComboStrategies] = useState({});
   const [capacityAdapter, setCapacityAdapter] = useState(EMPTY_CAPACITY_ADAPTER);
   const [smartRouter, setSmartRouter] = useState({ enabled: false, names: ["modelRouter"], allowedProviders: [], allowedModels: [], costQualityTradeoff: 5, maxCandidates: 3 });
+  const [srComboCleanup, setSrComboCleanup] = useState({ enabled: false, ttlHours: 24, intervalHours: 12 });
   const [markdownLog, setMarkdownLog] = useState({ enabled: false, intervalMin: 5 });
   const [modelFallbacks, setModelFallbacks] = useState({});
   const { getCaps } = useModelCaps();
@@ -187,6 +188,11 @@ export default function CombosPage() {
         costQualityTradeoff: settingsData.smartRouter?.costQualityTradeoff ?? 5,
         maxCandidates: settingsData.smartRouter?.maxCandidates ?? 3,
       });
+      setSrComboCleanup({
+        enabled: !!settingsData.srComboCleanup?.enabled,
+        ttlHours: settingsData.srComboCleanup?.ttlHours ?? 24,
+        intervalHours: settingsData.srComboCleanup?.intervalHours ?? 12,
+      });
       setMarkdownLog({
         enabled: !!settingsData.markdownLogEnabled,
         intervalMin: settingsData.markdownLogFlushIntervalMin ?? 5,
@@ -222,6 +228,19 @@ export default function CombosPage() {
       });
     } catch (error) {
       console.log("Error updating smart router:", error);
+    }
+  };
+
+  const handleSetSrComboCleanup = async (next) => {
+    setSrComboCleanup(next);
+    try {
+      await fetch("/api/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ srComboCleanup: next }),
+      });
+    } catch (error) {
+      console.log("Error updating sr combo cleanup:", error);
     }
   };
 
@@ -576,6 +595,8 @@ export default function CombosPage() {
       <SmartRouterSection
         smartRouter={smartRouter}
         onChange={handleSetSmartRouter}
+        srComboCleanup={srComboCleanup}
+        onSrComboCleanupChange={handleSetSrComboCleanup}
       />
 
       {/* Markdown Log */}
@@ -982,8 +1003,10 @@ function CapacityAdapterCap({ cap, entry, onChange, activeProviders, getCaps }) 
   );
 }
 
-function SmartRouterSection({ smartRouter, onChange }) {
+function SmartRouterSection({ smartRouter, onChange, srComboCleanup, onSrComboCleanupChange }) {
   const { enabled, names, allowedProviders, allowedModels, costQualityTradeoff, maxCandidates } = smartRouter;
+  const cleanup = srComboCleanup || { enabled: false, ttlHours: 24, intervalHours: 12 };
+  const patchCleanup = (p) => onSrComboCleanupChange({ ...cleanup, ...p });
 
   const patch = (p) => onChange({ ...smartRouter, ...p });
 
@@ -1098,6 +1121,61 @@ function SmartRouterSection({ smartRouter, onChange }) {
             <p className="text-[10px] text-text-muted mt-0.5">
               How many top models to include in the automatic fallback combo (tried in score order).
             </p>
+          </div>
+
+          {/* Auto-cleanup of sr-* combos (optional, off by default) */}
+          <div className="sm:col-span-2 rounded-xl border border-black/5 dark:border-white/5 p-3">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[16px] text-text-muted">delete_sweep</span>
+                  <p className="text-xs font-medium">Auto-cleanup of temporary combos</p>
+                </div>
+                <p className="text-[11px] text-text-muted mt-0.5">
+                  The router creates temporary <code className="font-mono">sr-*</code> combos as it routes. When enabled, combos
+                  unused for the TTL below are deleted automatically. <span className="font-medium text-text-main">Off by default</span> — opt in.
+                </p>
+              </div>
+              <div className="shrink-0">
+                <Toggle
+                  checked={cleanup.enabled}
+                  onChange={(v) => patchCleanup({ enabled: v })}
+                  label={cleanup.enabled ? "On" : "Off"}
+                  size="sm"
+                />
+              </div>
+            </div>
+
+            {cleanup.enabled && (
+              <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div>
+                  <label className="text-xs font-medium text-text-main mb-1 block">Delete after (hours)</label>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={8760}
+                    value={String(cleanup.ttlHours)}
+                    onChange={(e) => patchCleanup({ ttlHours: Math.max(1, Math.min(8760, Number(e.target.value) || 24)) })}
+                  />
+                  <p className="text-[10px] text-text-muted mt-0.5">
+                    Combos not used for this long get deleted.
+                  </p>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-text-main mb-1 block">Sweep every (hours)</label>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={720}
+                    value={String(cleanup.intervalHours)}
+                    onChange={(e) => patchCleanup({ intervalHours: Math.max(1, Math.min(720, Number(e.target.value) || 12)) })}
+                  />
+                  <p className="text-[10px] text-text-muted mt-0.5">
+                    How often the background sweep runs.
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
