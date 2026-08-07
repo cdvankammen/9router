@@ -130,3 +130,10 @@ Per user's explicit request, established standards for all future work:
 | 53 | Research v1: message-capture survey | ✅ | `research/message-capture-log-viewing.md` — what we have (requestDetails capture + Usage tab), gaps vs wishlist, first landscape pass |
 | 54 | Research v2: EXHAUSTIVE pass | ✅ | `research/message-capture-deep-research-v2.md` — 3 parallel agents + direct deep-dives; 60+ projects verified live (stars/licenses); license landmines (Phoenix ELv2, Sentry FSL, Graylog SSPL, Axiom discontinued, TensorZero archived); ProxmoxVE enumerated; awesome-lists read; recommendation = build in-app + Langfuse/OpenLIT ship-out |
 | 55 | Document research in tracking docs | ✅ | CHANGELOG + TASK-LOG + SESSION-HISTORY now reference both research files |
+
+### Newly Completed (2026-08-07 deep research v3 — obscure projects)
+
+| # | Task | Status | Evidence |
+|---|------|--------|----------|
+| 56 | Research v3: OBSCURE/low-star projects pass | ✅ | `research/message-capture-obscure-projects-v3.md` — 50+ hidden-gem projects (7–4,400★) across chat viewers, log tools, error analysis, tiny proxies; 10 synthesized copy-ideas; confirmed market gap |
+| 57 | Document v3 in tracking docs | ✅ | CHANGELOG + TASK-LOG + SESSION-HISTORY reference v3 |

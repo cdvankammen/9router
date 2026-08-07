@@ -284,3 +284,14 @@ Full suite 1718 pass / 88 baseline fail (exact baseline). Lint clean on changed 
 - **Recommendation (unchanged, now heavily evidenced)**: BUILD in-app Messages page + error inbox + format viewers + batch AI analysis + optional webhook notifications, reusing existing `requestDetails` SQLite capture; keep Langfuse/OpenLIT as optional ship-out targets; avoid AGPL/SSPL/ELv2/FSL components in-app
 - License-purity notes recorded: prefer MIT/Apache-2.0 for vendored code; AGPL ok only as separate sidecar service
 - Full details + per-project copy-ideas: `research/message-capture-deep-research-v2.md`
+
+---
+
+## UPDATE 2026-08-07 (deep research v3 — OBSCURE/low-star projects pass)
+
+### research only, no code changed
+- **`research/message-capture-obscure-projects-v3.md`** — the "hidden gems" pass per user directive ("some projects that only have a hundred stars could be really good baselines")
+- 50+ obscure projects (7–4,400★) verified live via 1 subagent + direct GitHub API searches (2026-08-07)
+- Highlights: **cc-viewer** (1,058★, per-conversation dirs + request body-diff), **tokentap** (811★, Markdown+JSON dual save), **CliRelay** (893★, mini-9Router with request logs + quotas), **claude-code-trace** (362★, 3-panel layout + SSE live tail), **token-dashboard** (654★, turn-by-turn Sessions spec), **chatgpt-json-tree-viewer** (56★, branching conversation tree), **recensa** (69★, SQLite FTS5 search), **claudex** (92★, MCP-exposable history API), **cloud-sre-agent** (49★, AI log-anomaly agent = the synthetic-scan idea), **llm-proxy** (27★) & **Spanlens** (11★) & **SectorFlux** (7★) — tiny proxy-with-logs baselines, **logfire** (4,416★, Pydantic), **RagaAI-Catalyst** (16,142★, execution-graph view), **teley** (61★, LCS side-by-side trace compare), **claude-pulse** (243★, ntfy budget alerts)
+- Synthesized: 10 copy-ideas incl. the confirmed market gap — *no existing project groups raw OpenAI-compatible proxy traffic into conversation trees with wire fidelity*; 9Router (being the proxy) is uniquely positioned
+- Top-3 actionable: (1) per-conversation dir grouping + raw bodies, (2) 3-panel Messages layout, (3) request body-diff collapsing

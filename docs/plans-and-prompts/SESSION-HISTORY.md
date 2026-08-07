@@ -482,3 +482,13 @@ Key conclusions (documented, research-only, NO code changed):
 3. UX blueprints to copy: Bruno/Hoppscotch format tabs (Pretty/Raw/Preview/Headers/cURL), mitmweb master-detail, OpenObserve histogram+facets, HyperDX property search, Sentry error workflow (via GlitchTip MIT reference), Apprise URL-notifications.
 4. License landmines: Phoenix ELv2, Sentry FSL-1.1+20 containers, Graylog SSPL, LangWatch ELv2, TensorZero archived, Axiom self-host discontinued.
 5. Recommendation: BUILD in-app Messages page + error inbox + batch AI + optional webhooks; ship-out to Langfuse/OpenLIT later if wanted.
+
+---
+
+## UPDATE 2026-08-07 (deep research v3 — OBSCURE projects)
+
+User: "I would like to find even obscure options not just the ones with a lot of stars… some projects that only have a hundred stars that could be really good baselines."
+- Ran 1 subagent (chat/conversation-viewer niche, 35 projects, all verified) + direct GitHub API searches ("llm request logging", "llm observability", "log viewer", "request bin").
+- Produced `research/message-capture-obscure-projects-v3.md` (50+ projects, 7–4,400★).
+- Key new finds vs v2: cc-viewer (per-conversation dirs + body-diff), tokentap (Markdown+JSON dual save), CliRelay (mini-9Router), claude-code-trace (3-panel + SSE tail), token-dashboard (turn-by-turn spec), chatgpt-json-tree-viewer (branching tree), recensa/claudex (FTS5 search), cloud-sre-agent (AI log-scan agent), llm-proxy/Spanlens/SectorFlux (tiny proxy-with-logs), logfire (Pydantic), RagaAI-Catalyst (execution graph), teley (LCS compare), claude-pulse (ntfy alerts).
+- Confirmed market gap: nothing groups raw OpenAI-compatible proxy traffic into conversation trees with wire fidelity → 9Router's moat.
