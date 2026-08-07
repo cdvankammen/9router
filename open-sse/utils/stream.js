@@ -260,6 +260,12 @@ export function createSSEStream(options = {}) {
             }
           }
 
+          // Track [DONE] sentinel to prevent duplicate emission in flush().
+          // Upstream already sent the terminator — don't re-emit on stream end.
+          if (trimmed === "data: [DONE]") {
+            streamDoneSent = true;
+          }
+
           reqLogger?.appendConvertedChunk?.(output);
           controller.enqueue(sharedEncoder.encode(output));
           // Responses clients (codex CLI) close on response.completed instead of [DONE]
