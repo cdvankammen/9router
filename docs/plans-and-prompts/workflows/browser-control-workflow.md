@@ -129,3 +129,46 @@ is state-based, not pixel-based.
 **Q: Why is it consistent?** Because every step ends in an assertion against the
 application's real persisted state, and the recipe (navigate → snapshot → act →
 probe → persist-check → regression → cleanup) is identical every time.
+
+## Troubleshooting: the browser tool dies (2026-08-07 incident)
+
+### Symptoms (all at once)
+- `open_browser_page(forceNew: true)` → `browserContext.newPage: Cannot read
+  properties of undefined (reading '_page')`
+- Existing page IDs → `Page "..." not found` / `Protocol error (Page.navigate):
+  Session not found`
+- `read_page` on a listed page → `Snapshot: <unavailable>`
+- The tool's page list still shows tabs (e.g. `about:blank`) but every session
+  behind them is dead
+
+### Root cause
+The extension-host Playwright context behind the browser tools lost its browser
+instance reference (typically after the embedded browser view was closed,
+reopened, or the editor state refreshed). The tool registry keeps stale tab
+entries; `forceNew` fails because the underlying `browserContext` object is
+`undefined` on the tool side.
+
+### What does NOT fix it
+- Retrying `open_browser_page` / `navigate_page` / `run_playwright_code` on the
+  listed page IDs (sessions are dead, retries just re-error)
+- `open_browser_page` with no URL (user-share prompt) — the shared page comes
+  from the same dead context
+- Restarting the app server or mock upstream (they were never the problem —
+  `curl` shows 200 the whole time)
+
+### The fix (one user action, no VS Code quit)
+1. **Close the broken browser preview tabs** in the editor (the `about:blank`
+   ones), OR
+2. Run the command palette → **Developer: Reload Window**
+   (`Cmd+Shift+P` → `Developer: Reload Window`). This restarts the extension
+   host and rebuilds the browser tool's context. It does NOT quit VS Code and
+   does not touch the app server.
+
+After reload, `open_browser_page` works again — re-login if the session cookie
+didn't survive.
+
+### How to verify the tool recovered
+```text
+open_browser_page(http://localhost:20130/dashboard/combos)
+→ returns a pageId + a real Snapshot (not "unavailable")
+```
