@@ -48,3 +48,32 @@
 | 25 | Webhook alerting (P3) | Large scope, not requested in this session's core ask |
 | 26 | Drag-and-drop in ComboFormModal | Cosmetic; dnd-kit already available |
 | 27 | Cloud sync of fallback rules | Not requested |
+
+---
+
+## UPDATE 2026-08-06 (continued session — documentation audit + [DONE] fix)
+
+### Newly Completed
+
+| # | Task | Status | Evidence |
+|---|------|--------|----------|
+| 20 | Custom provider nodes in smart router | ✅ | `getNodeModels` + node scoring loop in smartRouter.js, test added in smart-router-resolve.test.js |
+| 21 | `[DONE]` SSE duplicate leak fix | ✅ | Root cause found in stream.js passthrough transform + fix applied + E2E verified (1× DONE for single+combo, clean JSON for non-stream) |
+| 22 | Comprehensive documentation audit | ✅ | Read ALL existing docs (4 ADRs, 3 learnings, narrative, history, task-log, changelog, prompts, architecture, plans, meetings) — identified 5 gaps |
+| 23 | Documentation gap filling | ✅ | Created learnings/2026-08-06-sse-done-duplicate-leak.md, updated SESSION-HISTORY with bugs #6-7, updated all tracking docs |
+
+### Still In Progress
+
+| # | Task | Notes |
+|---|------|-------|
+| 24 | Retry counts loop in handleComboChat | `retriesPerModel`/`perModelRetries` signature added to combo.js; retry LOOP logic still pending |
+| 25 | Visual Fallback Rule Builder (form modal + rules table) | Design done, implementation pending |
+| 26 | Markdown log flush explanation (overwrite vs append) | Text fix pending |
+| 27 | Detailed commits with full attribution | IN PROGRESS — docs updated, commits next |
+
+### Key Discovery: Documentation Standards
+
+Per user's explicit request, established standards for all future work:
+- Every commit must include: full root cause, links to related commits/PRs, attribution (who wrote original, who found bug, who fixed), external references (URLs, docs)
+- All tracking docs in `docs/plans-and-prompts/` must be updated BEFORE committing, not after
+- Must note whether changes come from: user requests, PR imports, agent-discovered issues, or E2E testing

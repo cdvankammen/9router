@@ -201,3 +201,72 @@ User wants: full history in plans-and-prompts, detailed commits referencing PRs/
 - Backend: committed (`8990a3b4`) — retries + custom nodes
 - UI: built, compiles, pending E2E browser verification
 - Commit pending (this change not yet committed)
+
+---
+
+## PART 7 — The [DONE] Leak & Documentation Audit (2026-08-06, continued)
+
+### Question 12: "Make sure we are keeping track of everything"
+
+**User's words (condensed):** "Make sure our commits are well detailed too, include URLs and research. If we make commits to fix problems from other commits or code other people wrote, keep track in commit descriptions. Include links to PRs or commits. Also update plansANDprompts folder with ALL details — questions asked, reasoning, decisions, errors, everything. Other agents are making documents too, look at those."
+
+**Agent's response:** Full audit of existing documentation from multiple agents:
+- Read all 4 ADRs (001-004)
+- Read all 3 learnings/postmortems
+- Read SESSION-NARRATIVE (203 lines, Parts 1-6)
+- Read SESSION-HISTORY, TASK-LOG, CHANGELOG
+- Read prompts/session-prompts.md
+- Read architecture/smart-router-observability.md
+- Read plans/smart-router-observability-plan.md
+- Read meetings/2026-08-05-06-session-summary.md
+- Checked for other agent workspaces (.claude, .cursor, .codex, .kiro) — none found
+
+**Gaps identified:**
+1. `[DONE]` leak not documented in learnings/
+2. SESSION-HISTORY bugs table missing bugs #6 and #7
+3. TASK-LOG had completed items still in "In Progress"
+4. CHANGELOG missing uncommitted fix details
+5. SESSION-NARRATIVE missing Part 7 (this session continuation)
+
+### The [DONE] Leak Investigation (detailed)
+
+**Discovery path:**
+1. User reported combo streaming issue → agent tested with mock upstream
+2. Initial hypothesis: combo path returns streaming Response without SSE→JSON conversion when client wants non-streaming
+3. Testing revealed: non-streaming was actually CLEAN; the real bug was streaming sending `[DONE]` twice
+4. Confirmed NOT combo-specific: single-model streaming also doubled `[DONE]`
+5. Mock upstream verified to send exactly one `[DONE]`
+6. Code search: found `streamDoneSent` flag exists but never set in passthrough mode
+7. Root cause: passthrough `transform()` forwards raw lines without parsing, so the flag-tracking logic from translate mode never fires
+8. Fix: 4-line addition to set the flag when `data: [DONE]` passes through
+9. Rebuild + restart + verify: all three paths clean
+
+**Key insight:** The bug existed since passthrough mode was added. It was never caught because:
+- Unit tests don't test streaming output byte-by-byte
+- No E2E test counted `[DONE]` occurrences
+- The duplicate doesn't cause visible errors in most clients (they just ignore extra `[DONE]`)
+- It only became visible during careful curl inspection
+
+### Documentation Standards Established
+
+Per user's explicit request, all future commits must include:
+- Full root cause analysis
+- Links to related commits/PRs (if fixing prior work)
+- Attribution (who wrote the original code, who found the bug, who fixed it)
+- External references (URLs, docs, research)
+- Whether changes come from user requests, PR imports, or agent-discovered issues
+
+All tracking docs in `docs/plans-and-prompts/` must be updated BEFORE committing, not after.
+
+### E2E Verification (2026-08-06, rule builder)
+- Add Fallback Rule modal opens with target toggle (model/provider), Pick… button
+- "+ Add Fallback Model" opens the full-catalog ModelSelectModal; selecting a model adds it to the ordered chain with up/down/remove
+- Per-model retry override input appears per chain item
+- Save persists advanced shape: `{"mockreal/gpt-4o-mini": {"models": ["kc/deepseek/deepseek-chat"], "retries": 1, "perModelRetries": {}}}`
+- Rule renders in the table (Target | Chain with → | Retries | Delete)
+- Markdown log card shows overwrite explanation
+
+### Open items
+- `[DONE]` SSE leak in combo streaming path (root cause known)
+- Decide markdown flush semantics (overwrite snapshot vs append vs per-conversation)
+- Decide which rule-builder UX to keep (visual builder vs textarea advanced vs future "chain diagram")

@@ -53,3 +53,32 @@ Give the user: (1) a virtual "modelRouter" model that picks the best model per t
 - ADRs: `../decisions/ADR-001..004`
 - Learnings: `../learnings/2026-08-06-*.md`
 - Session history: `../SESSION-HISTORY.md`
+
+---
+
+## UPDATE 2026-08-06 (continued session)
+
+### M4 Progress
+
+- [x] `[DONE]` SSE duplicate leak — fix applied to `open-sse/utils/stream.js` passthrough transform
+  - Root cause: passthrough forwarded `data: [DONE]` without setting `streamDoneSent`
+  - Verified: single=1×, combo=1×, non-stream=clean JSON
+  - Learning doc: `learnings/2026-08-06-sse-done-duplicate-leak.md`
+
+- [x] Custom provider node support — `getNodeModels()` + node scoring loop in `smartRouter.js`
+  - Live `/models` fetch with 5-min TTL cache
+  - Prefix-based model strings (`mockreal/gpt-4o-mini`)
+  - Test: unreachable upstream → graceful null (fail-open)
+
+- [x] Documentation audit — read ALL existing docs, identified 5 gaps, filled them all
+  - Created learnings/2026-08-06-sse-done-duplicate-leak.md
+  - Updated SESSION-HISTORY, TASK-LOG, CHANGELOG, SESSION-NARRATIVE with full details
+  - Added ADR-005 for [DONE] fix
+
+### Remaining Work
+
+1. Retry counts LOOP in `handleComboChat` (signature added, loop not written)
+2. Visual Fallback Rule Builder UI
+3. Markdown flush semantics clarification
+4. Full test suite run
+5. Detailed commits with attribution

@@ -45,3 +45,10 @@
 - [ ] Markdown flush explanation + semantics decision
 - [ ] `[DONE]` SSE leak fix
 - [ ] Rebuild + E2E + full tests + commit
+
+### Round 8 — Documentation standards + comprehensive tracking
+- User: "your still not doing the max that i am asking, your just so far only having done the minimum"
+- User: "other agents are also making documents too make sure you look at those"
+- Agent: full audit of ALL docs across ALL agents (4 ADRs, 3 learnings, narrative, history, task-log, changelog, prompts, architecture, plans, meetings)
+- Agent: identified and filled 5 documentation gaps
+- Agent: established documentation standards for all future commits
