@@ -270,3 +270,19 @@ All tracking docs in `docs/plans-and-prompts/` must be updated BEFORE committing
 - `[DONE]` SSE leak in combo streaming path (root cause known)
 - Decide markdown flush semantics (overwrite snapshot vs append vs per-conversation)
 - Decide which rule-builder UX to keep (visual builder vs textarea advanced vs future "chain diagram")
+
+### FINAL FIX (2026-08-06): [DONE] leak in JSON responses — RESOLVED
+Root cause (debug-traced with temporary logs):
+1. `stream = body.stream !== false` forced streaming when client omitted stream
+2. Upstream (via translator/executor) normalized to stream:false → returned JSON
+3. `handleForcedSSEToJson` returned null (content-type application/json, not SSE)
+4. Fell through to streaming path → JSON piped through SSE transform → [DONE] appended
+
+Fix: `stream = body.stream === true` (only explicit requests stream; provider forceStream still respected).
+Verified E2E: no-stream → clean JSON; stream:true → exactly 1 [DONE].
+Commit: ccde7bff. Full suite 1692 pass / 88 pre-existing fail.
+
+### The complete commit history (this session, all on v1):
+9f4c1631 → 6f00d23f → a954b88f → acdc7134 → 1c921ce2 → d9415807 → 5932879f
+→ d1c1db28 → 57e87729 → 3e7d1c7c → 40168739 → 3f678deb → 4627a299 → 99ac899f
+→ 8990a3b4 → 0d07d82f → d1cc1faa → 3c86d01b → ccde7bff
