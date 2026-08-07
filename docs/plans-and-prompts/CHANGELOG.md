@@ -367,3 +367,36 @@ Full suite 1718 pass / 88 baseline fail (exact baseline). Lint clean on changed 
 - Smart router score breakdown UI (why did it pick this model?)
 - Surface dropped observability records when 1000-cap exceeded
 - Auto-disable provider after N consecutive refresh failures (with UI re-enable)
+
+---
+
+## UPDATE 2026-08-07 (Messages page P1 implemented)
+
+### feat(messages): Messages page P1 — commit `2b20618b`
+- New API: `/api/messages` (list + filters + conversation grouping), `/api/messages/:id` (detail), `/api/messages/:id/export` (json/markdown/curl)
+- New page `/dashboard/messages`: list view (status badges, tokens, latency, pagination), detail drawer (5 format tabs + copy), conversations view (per-session grouping)
+- Sidebar: "Messages" nav entry
+- Verified: browser walkthrough (list, drawer, tabs, tree), tray app rebuilt + serving
+- Spec: `plans/messages-page-feature-spec.md` P1 scope
+
+---
+
+## UPDATE 2026-08-07 (hardening roadmap + origin classification)
+
+### User asked
+"which mimo model did you use? research ways that we would fix these problems and explain more about what you mean by them and add them to our todo list... if they were already there then keep them as things for later. If they were us then lets find ways and research how we would fix them and importance level"
+
+### Answers
+- **mimo model used**: `oc/mimo-v2.5-free` = **OpenCode Free** provider (`opencode.js`, alias `oc`, no-auth, passthrough). It is the user's own default (`8e59093d`) and was verified working live (log: `opencode/mimo-v2.5-free · ACC:Public · DONE 7520ms`).
+- **Origin classification done for every reviewed item** (git-traced): OURS (this session) / YOURS (user's master commits) / PRE-EXISTING / NEW.
+  - OURS → fix now: deep-merge activated by our nested settings; provider+model conflict warning; fallback validation; score breakdown; sticky TTL config; node refresh; chip truncation; Expert Text highlighting; markdown lock; export pagination; node error badge
+  - YOURS → keep for later: TokenRouter pricing re-validation; mimo health check; calculateCostFromTokens JSDoc
+  - PRE-EXISTING → keep for later unless trivial: shallow-merge pattern (but our nested objects activate it → moved to Phase 1); 1000-cap dropped records
+  - NEW → plan: provider health endpoint; auto-disable after refresh failures
+
+### New doc
+- **`plans/hardening-roadmap.md`** — 4-phase roadmap (quick wins / UX gaps / robustness / provider resilience), each item with meaning, origin, fix approach, importance; execution order; 3 open questions.
+- TASK-LOG items 70–86 added as the working todo list.
+
+### Subagent failure mode (explained for the record)
+`rate_limit_exceeded` = Copilot model API quota for concurrent subagent calls; `net::ERR_FAILED` = dropped network connection to model API. Transient infra failures, NOT code problems. Mitigation documented: spawn one-at-a-time, retry, fall back to main session.

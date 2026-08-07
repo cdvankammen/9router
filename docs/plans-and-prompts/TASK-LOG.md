@@ -176,3 +176,43 @@ Per user's explicit request, established standards for all future work:
 | 67 | Feature-gap review (all v1 features vs original) | ✅ | `research/9router/18-feature-gap-review.md` — per-feature lacks, cross-cutting (shallow merge confirmed), 10-item action table |
 | 68 | Upstream provider risk review | ✅ | `research/9router/19-upstream-provider-risks.md` — 12 risks w/ observed evidence, 3 open questions |
 | 69 | Subagent spawn attempted (as requested) | ⚠️ rate-limited | All spawns failed (`rate_limit_exceeded`, `net::ERR_FAILED`); main-session agent completed reviews; recovery rationale documented |
+
+### Newly Completed (2026-08-07 Messages page P1)
+
+| # | Task | Status | Evidence |
+|---|------|--------|----------|
+| 67 | Messages page P1 — View (list, detail drawer, conversation tree, export) | ✅ | commit `2b20618b` — 3 API routes + page + sidebar entry, 719 LOC |
+| 68 | Messages API endpoints | ✅ | `/api/messages`, `/api/messages/:id`, `/api/messages/:id/export` (json/markdown/curl) |
+| 69 | Messages UI verified in browser | ✅ | list 50 rows, detail drawer 5 tabs, conversations view, cURL tab |
+| 70 | Tray app rebuilt with Messages page | ✅ | cli/app bundle rebuilt, `/dashboard/messages` 200 on port 20130 |
+
+### HARDENING ROADMAP (todo — from plan/hardening-roadmap.md)
+
+Phase 1 — Quick wins (OURS, do now):
+| # | Task | Status | Origin |
+|---|------|--------|--------|
+| 70 | Deep-merge nested settings (capacityAdapter, smartRouter, srComboCleanup, modelFallbacks) in updateSettings + test | ⏳ todo | PRE-EXISTING pattern, activated by ours — HIGH |
+| 71 | JSDoc for calculateCostFromTokens arg order | ⏳ todo | YOURS — LOW |
+| 72 | Provider+model rule conflict warning in fallbacks UI | ⏳ todo | OURS — HIGH |
+| 73 | Fallback string validation on save (warn unknown) | ⏳ todo | OURS — MED-HIGH |
+
+Phase 2 — UX gaps (OURS):
+| 74 | Smart router score breakdown ("why this model") | ⏳ todo | OURS — HIGH |
+| 75 | Sticky TTL configurable (smartRouter.stickyTtlMin) | ⏳ todo | OURS — MED |
+| 76 | Node models refresh button (bust getNodeModels cache) | ⏳ todo | OURS — MED |
+| 77 | Chain Flow chip truncation + title tooltip | ⏳ todo | OURS — LOW |
+| 78 | Expert Text invalid-line highlighting | ⏳ todo | OURS — LOW-MED |
+
+Phase 3 — Robustness (OURS):
+| 79 | Markdown flush concurrency lock | ⏳ todo | OURS — MED |
+| 80 | Export pagination (limit/offset) | ⏳ todo | OURS — MED |
+| 81 | Surface dropped observability records (1000-cap) | ⏳ todo | PRE-EXISTING cap — MED |
+
+Phase 4 — Provider resilience (MIXED):
+| 82 | Provider health endpoint (/api/health/providers) + UI | ⏳ todo | NEW — HIGH |
+| 83 | Auto-disable provider after N refresh failures (+ re-auth badge) | ⏳ todo | NEW — MED-HIGH |
+| 84 | TokenRouter catalog/pricing re-validation | ⏳ later | YOURS — MED |
+| 85 | mimo fallback startup health check | ⏳ later | YOURS — MED |
+| 86 | Node /models fetch error badge | ⏳ todo | OURS — MED |
+
+Open questions for user (block 83/84/85): auto-disable behavior; pricing re-fetch policy; mimo fallback policy.
