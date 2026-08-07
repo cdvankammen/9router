@@ -133,7 +133,11 @@ export async function handleChatCore({ body, modelInfo, credentials, log, onCred
 
   const clientRequestedStreaming = body.stream === true || sourceFormat === FORMATS.ANTIGRAVITY || sourceFormat === FORMATS.GEMINI || sourceFormat === FORMATS.GEMINI_CLI;
   const providerRequiresStreaming = PROVIDERS[provider]?.forceStream === true;
-  let stream = providerRequiresStreaming ? true : (body.stream !== false);
+  // Default: only stream when the client explicitly asked, OR the provider
+  // requires streaming. A client that omits `stream` gets a JSON response —
+  // forcing streaming upstream and re-converting risks SSE leakage (e.g.
+  // [DONE] sentinels in the JSON body).
+  let stream = providerRequiresStreaming ? true : (body.stream === true);
 
   // Image generation models require non-streaming (Google v1internal:generateContent)
   const modelType = getModelType(alias, model);
