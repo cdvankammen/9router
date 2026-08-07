@@ -335,3 +335,13 @@ Full suite 1718 pass / 88 baseline fail (exact baseline). Lint clean on changed 
   4. **Agent-framework storage synthesis** (LangGraph/Dify/Open WebUI/LibreChat/Cherry Studio/Mastra/Vercel AI SDK/Pydantic AI): recommended `messages` table schema (session_id, request_id FK, parent_message_id tree, status/done) + fat bodies in requestDetails — the definitive conversation-schema recommendation
   5. **Top-copy synthesis** (10 ranked picks incl. ccglass UX, latitude-llm error platform, agent-prism components, CrossLink routing-stats, MCP-over-trace-store)
 - Flags: Helicone maintenance-mode (acquired Mintlify 2026-03 — copy ideas only); avoid GPL/AGPL (octopus, Helicone ai-gateway, nullsink); TensorZero archived confirms gateway-observability consolidation
+
+---
+
+## UPDATE 2026-08-07 (research synthesis + feature spec + gaps — subagent-written docs)
+
+### research/spec only, no code changed
+- **`learnings/2026-08-07-research-synthesis.md`** — master synthesis of ALL v1–v4 passes (3,498 words): what we learned by category, confirmed market gap, 20 ranked copy items with license guardrails, definitive schema, 10 security/privacy obligations, 15-feature roadmap with citations, open questions
+- **`plans/messages-page-feature-spec.md`** — concrete buildable spec for Messages page + Error Inbox (2,069 words): SQLite `messages` DDL sketch + indexes, list/detail/conversation-tree/export features, error-inbox workflow, phased rollout P1–P4, every feature citing research source
+- **`research/message-capture-gaps-and-risks.md`** — blind spots (Reddit blocked w/ manual URLs, OTel churn, maintenance risks, license traps), 10 implementation risks w/ mitigations, 7-question decision log (D1–D7, none block P1), effort table (P1–P4 ≈ 4.8k–6.8k LOC)
+- Method: 2 subagent batches; 1 network failure recovered by retry (validates subagent-recovery rationale)

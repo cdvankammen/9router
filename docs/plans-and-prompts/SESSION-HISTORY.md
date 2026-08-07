@@ -574,3 +574,16 @@ User: "use subagents again to actually do better job… read all of the options 
   - Agent-framework conversation-storage synthesis → recommended messages-table schema for 9Router
   - Top-10 copy list (ccglass, latitude-llm, agent-prism, CrossLink, MCP-over-trace-store, …)
 - Key strategic findings: (a) ContinuityBench proves naive failover drops conversation history — our combo/account fallback needs CPR/CLO metrics in the viewer; (b) SEAR gives a published SQL schema blueprint; (c) "AI Oops" paper: analyzer must treat log content as untrusted input; (d) nobody owns "Sentry for self-hosted LLM gateways" — gap confirmed across HN + GitHub issues.
+
+---
+
+## UPDATE 2026-08-07 (research synthesis — subagents writing to plans-and-prompts)
+
+User: "list every single thing you learned… send subagents as usual at them and make sure those subagents keep the documents, plansAndPrompts and tracking up to date… this will take a very long time to provide me with the very best of answers. no limits."
+
+- Ran subagents that READ all 4 research passes and WROTE synthesis/spec/gaps docs directly into plans-and-prompts:
+  1. `learnings/2026-08-07-research-synthesis.md` — everything learned, ranked copy list, roadmap, security obligations
+  2. `plans/messages-page-feature-spec.md` — buildable Messages page + Error Inbox spec with DDL
+  3. `research/message-capture-gaps-and-risks.md` — blind spots, risks, decision log, effort
+- One subagent hit a network failure; retried successfully (recovery rationale again validated).
+- Master answer to user compiled in chat (see conversation).
