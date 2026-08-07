@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -588,6 +588,7 @@ export default function CombosPage() {
       <ModelFallbacksSection
         modelFallbacks={modelFallbacks}
         onChange={handleSetModelFallbacks}
+        activeProviders={activeProviders}
       />
 
       {/* Create Modal - Use key to force remount and reset state */}
@@ -1121,6 +1122,7 @@ function MarkdownLogSection({ markdownLog, onChange }) {
           </p>
           <ul className="mt-1.5 text-[11px] text-text-muted flex flex-col gap-0.5">
             <li><span className="font-medium text-text-main">Location</span> — <code className="font-mono">~/.9router/logs/YYYY-MM-DD.md</code></li>
+            <li><span className="font-medium text-text-main">Behavior</span> — each flush <span className="font-medium text-amber-600">overwrites</span> the day's file with the latest 24h of captured requests. It is a snapshot, not an append log.</li>
             <li><span className="font-medium text-text-main">Requires</span> — request detail capture (Settings → Observability) to have data</li>
           </ul>
         </div>
@@ -1145,7 +1147,7 @@ function MarkdownLogSection({ markdownLog, onChange }) {
             onChange={(e) => patch({ intervalMin: Math.max(1, Math.min(1440, Number(e.target.value) || 5)) })}
           />
           <p className="text-[10px] text-text-muted mt-0.5">
-            How often the daily markdown file is rewritten.
+            How often the daily markdown file is <span className="font-medium">rewritten (overwritten)</span> with the latest 24h of requests.
           </p>
         </div>
       )}
@@ -1153,13 +1155,29 @@ function MarkdownLogSection({ markdownLog, onChange }) {
   );
 }
 
-function ModelFallbacksSection({ modelFallbacks, onChange }) {
-  // Textarea format: one rule per line, "target:fallback1,fallback2"
-  // target can be "provider/model" (exact) or "provider" (all its models)
-  const [draft, setDraft] = useState(() => toDraftText(modelFallbacks));
+function ModelFallbacksSection({ modelFallbacks, onChange, activeProviders }) {
+  const [showBuilder, setShowBuilder] = useState(false);
 
-  const handleSave = () => {
-    onChange(parseDraftText(draft));
+  // Normalize each rule value into { models, retries, perModelRetries }
+  const rules = useMemo(() => {
+    const out = [];
+    for (const [target, raw] of Object.entries(modelFallbacks || {})) {
+      let models, retries, perModelRetries;
+      if (Array.isArray(raw)) { models = raw; retries = 1; perModelRetries = {}; }
+      else if (raw && typeof raw === "object") {
+        models = Array.isArray(raw.models) ? raw.models : [];
+        retries = Number.isFinite(Number(raw.retries)) ? Math.max(1, Number(raw.retries)) : 1;
+        perModelRetries = raw.perModelRetries && typeof raw.perModelRetries === "object" ? raw.perModelRetries : {};
+      }
+      out.push({ target, models, retries, perModelRetries });
+    }
+    return out;
+  }, [modelFallbacks]);
+
+  const handleDeleteRule = (target) => {
+    const next = { ...modelFallbacks };
+    delete next[target];
+    onChange(next);
   };
 
   return (
@@ -1173,41 +1191,244 @@ function ModelFallbacksSection({ modelFallbacks, onChange }) {
           <p className="text-xs text-text-muted mt-0.5">
             Attach an ordered fallback chain directly to any model or provider — no combo needed. When the requested model fails, 9Router retries down the chain automatically.
           </p>
-          <ul className="mt-1.5 text-[11px] text-text-muted flex flex-col gap-0.5">
-            <li>
-              <span className="font-medium text-text-main">Exact model</span> —{" "}
-              <code className="font-mono">openai/gpt-4o:anthropic/claude-sonnet-4.6,deepseek/chat</code>
-            </li>
-            <li>
-              <span className="font-medium text-text-main">Whole provider</span> —{" "}
-              <code className="font-mono">openai:anthropic/claude-sonnet-4.6,deepseek/chat</code>{" "}
-              (applies to every openai/* model)
-            </li>
-            <li><span className="font-medium text-text-main">Composes with combos</span> — combos still work exactly as before; this adds fallbacks to plain model requests</li>
-          </ul>
         </div>
-      </div>
-
-      <div className="mt-4">
-        <label className="text-xs font-medium text-text-main mb-1 block">Fallback rules (one per line)</label>
-        <textarea
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          rows={6}
-          spellCheck={false}
-          className="w-full rounded-lg border border-black/10 dark:border-white/10 bg-surface p-3 font-mono text-xs text-text-main focus:outline-none focus:ring-2 focus:ring-primary/20"
-          placeholder={"openai/gpt-4o:anthropic/claude-sonnet-4.6,deepseek/chat\nanthropic:deepseek/chat"}
-        />
-        <div className="mt-2 flex items-center justify-between gap-2">
-          <p className="text-[10px] text-text-muted">
-            Format: <code className="font-mono">target:fallback1,fallback2</code> — target is a model (<code className="font-mono">provider/model</code>) or a provider (<code className="font-mono">provider</code>). Saved rules apply immediately to new requests.
-          </p>
-          <Button size="sm" onClick={handleSave} disabled={draft === toDraftText(modelFallbacks)}>
-            Save Fallbacks
+        <div className="shrink-0">
+          <Button icon="add" onClick={() => setShowBuilder(true)} className="whitespace-nowrap">
+            Add Fallback Rule
           </Button>
         </div>
       </div>
+
+      {/* Rules table */}
+      <div className="mt-4 overflow-x-auto">
+        <table className="w-full min-w-[640px] text-sm">
+          <thead>
+            <tr className="border-b border-black/5 dark:border-white/5">
+              <th className="text-left p-2 text-xs font-semibold text-text-muted">Target</th>
+              <th className="text-left p-2 text-xs font-semibold text-text-muted">Fallback Chain (in order)</th>
+              <th className="text-center p-2 text-xs font-semibold text-text-muted">Retries</th>
+              <th className="text-center p-2 text-xs font-semibold text-text-muted">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rules.length === 0 ? (
+              <tr>
+                <td colSpan="4" className="p-4 text-center text-xs text-text-muted">
+                  No fallback rules yet. Click "Add Fallback Rule" to create one.
+                </td>
+              </tr>
+            ) : rules.map((rule) => (
+              <tr key={rule.target} className="border-b border-black/5 dark:border-white/5 last:border-b-0 hover:bg-black/[0.02] dark:hover:bg-white/[0.02]">
+                <td className="p-2 font-mono text-xs text-text-main whitespace-nowrap">{rule.target}</td>
+                <td className="p-2">
+                  <div className="flex flex-wrap items-center gap-1">
+                    {rule.models.map((m, i) => (
+                      <span key={m} className="inline-flex items-center gap-0.5 rounded bg-black/5 dark:bg-white/5 px-1.5 py-0.5 font-mono text-[11px] text-text-muted">
+                        {m}
+                        {i < rule.models.length - 1 && <span className="text-primary">→</span>}
+                      </span>
+                    ))}
+                    {rule.perModelRetries && Object.keys(rule.perModelRetries).length > 0 && (
+                      <span className="text-[10px] text-text-muted italic ml-1">
+                        ({Object.entries(rule.perModelRetries).map(([m, r]) => `${m}:${r}`).join(", ")})
+                      </span>
+                    )}
+                  </div>
+                </td>
+                <td className="p-2 text-center font-mono text-xs">{rule.retries}</td>
+                <td className="p-2 text-center">
+                  <Button variant="ghost" size="sm" onClick={() => handleDeleteRule(rule.target)} title="Delete rule">
+                    <span className="material-symbols-outlined text-[16px] text-red-500">delete</span>
+                  </Button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {showBuilder && (
+        <FallbackRuleModal
+          onClose={() => setShowBuilder(false)}
+          onSave={(rule) => {
+            onChange({ ...modelFallbacks, [rule.target]: { models: rule.models, retries: rule.retries, perModelRetries: rule.perModelRetries } });
+            setShowBuilder(false);
+          }}
+          activeProviders={activeProviders}
+        />
+      )}
     </Card>
+  );
+}
+
+/** Form modal for building a fallback rule visually. */
+function FallbackRuleModal({ onClose, onSave, activeProviders }) {
+  const [target, setTarget] = useState("");                 // "provider/model" or "provider"
+  const [targetIsProvider, setTargetIsProvider] = useState(false); // true = whole provider
+  const [fallbacks, setFallbacks] = useState([]);           // ordered model strings
+  const [retries, setRetries] = useState(1);                // universal retries
+  const [perModelRetries, setPerModelRetries] = useState({}); // per-model overrides
+  const [showModelSelect, setShowModelSelect] = useState(false);
+  const [showTargetSelect, setShowTargetSelect] = useState(false);
+
+  const handleAddFallback = (model) => {
+    if (!fallbacks.includes(model.value)) setFallbacks([...fallbacks, model.value]);
+  };
+
+  const handleMove = (idx, delta) => {
+    const t = idx + delta;
+    if (t < 0 || t >= fallbacks.length) return;
+    const next = [...fallbacks];
+    [next[idx], next[t]] = [next[t], next[idx]];
+    setFallbacks(next);
+  };
+
+  const canSave = target.trim() && fallbacks.length > 0;
+
+  return (
+    <Modal isOpen onClose={onClose} title="Add Fallback Rule">
+      <div className="flex flex-col gap-4">
+        {/* Target: model or provider */}
+        <div>
+          <label className="text-sm font-medium mb-1.5 block">Target</label>
+          <div className="flex items-center gap-2 mb-1.5">
+            <label className="flex items-center gap-1.5 text-xs text-text-muted cursor-pointer select-none">
+              <Toggle checked={!targetIsProvider} onChange={(v) => setTargetIsProvider(!v)} size="sm" aria-label="Target is a specific model" />
+              <span>Specific model</span>
+            </label>
+            <label className="flex items-center gap-1.5 text-xs text-text-muted cursor-pointer select-none">
+              <Toggle checked={targetIsProvider} onChange={(v) => setTargetIsProvider(v)} size="sm" aria-label="Target is a whole provider" />
+              <span>Whole provider</span>
+            </label>
+          </div>
+          {targetIsProvider ? (
+            <Input
+              value={target}
+              onChange={(e) => setTarget(e.target.value)}
+              placeholder="openai, anthropic, deepseek (provider id)"
+            />
+          ) : (
+            <div className="flex gap-2">
+              <Input
+                value={target}
+                onChange={(e) => setTarget(e.target.value)}
+                placeholder="openai/gpt-4o"
+                className="flex-1"
+              />
+              <Button variant="outline" size="sm" onClick={() => setShowTargetSelect(true)}>Pick…</Button>
+            </div>
+          )}
+          <p className="text-[10px] text-text-muted mt-0.5">
+            {targetIsProvider
+              ? "Provider-level: applies to every model from this provider."
+              : "Model-level: applies only to this exact model."}
+          </p>
+        </div>
+
+        {/* Ordered fallback chain */}
+        <div>
+          <label className="text-sm font-medium mb-1.5 block">Fallback chain (tried in order)</label>
+          {fallbacks.length === 0 ? (
+            <div className="text-center py-3 border border-dashed border-black/10 dark:border-white/10 rounded-lg text-xs text-text-muted">
+              No fallbacks yet — add at least one model
+            </div>
+          ) : (
+            <div className="flex flex-col gap-1">
+              {fallbacks.map((m, idx) => (
+                <div key={m} className="flex items-center gap-1.5 rounded-md px-2 py-1 bg-black/[0.02] dark:bg-white/[0.02]">
+                  <span className="text-[10px] font-medium text-text-muted w-4 text-center">{idx + 1}</span>
+                  <code className="min-w-0 flex-1 truncate font-mono text-xs">{m}</code>
+                  <button onClick={() => handleMove(idx, -1)} disabled={idx === 0} className={`p-0.5 rounded ${idx === 0 ? "text-text-muted/20" : "text-text-muted hover:text-primary"}`}>
+                    <span className="material-symbols-outlined text-[14px]">arrow_upward</span>
+                  </button>
+                  <button onClick={() => handleMove(idx, 1)} disabled={idx === fallbacks.length - 1} className={`p-0.5 rounded ${idx === fallbacks.length - 1 ? "text-text-muted/20" : "text-text-muted hover:text-primary"}`}>
+                    <span className="material-symbols-outlined text-[14px]">arrow_downward</span>
+                  </button>
+                  <button onClick={() => setFallbacks(fallbacks.filter((_, i) => i !== idx))} className="p-0.5 rounded text-text-muted hover:text-red-500">
+                    <span className="material-symbols-outlined text-[14px]">close</span>
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          <button
+            onClick={() => setShowModelSelect(true)}
+            className="w-full mt-2 py-1.5 border border-dashed border-black/10 dark:border-white/10 rounded-lg text-xs text-primary font-medium hover:border-primary/50 transition-colors"
+          >
+            + Add Fallback Model
+          </button>
+        </div>
+
+        {/* Retries */}
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div>
+            <label className="text-xs font-medium text-text-main mb-1 block">Retries (universal)</label>
+            <Input
+              type="number" min={1} max={10}
+              value={String(retries)}
+              onChange={(e) => setRetries(Math.max(1, Math.min(10, Number(e.target.value) || 1)))}
+            />
+            <p className="text-[10px] text-text-muted mt-0.5">Times each model is retried on transient errors before moving down the chain.</p>
+          </div>
+          <div>
+            <label className="text-xs font-medium text-text-main mb-1 block">Per-model overrides (optional)</label>
+            {fallbacks.length === 0 ? (
+              <p className="text-[10px] text-text-muted italic pt-2">Add fallbacks first to set per-model retries.</p>
+            ) : (
+              <div className="flex flex-col gap-1">
+                {fallbacks.map((m) => (
+                  <div key={m} className="flex items-center gap-2">
+                    <code className="min-w-0 flex-1 truncate font-mono text-[11px] text-text-muted">{m}</code>
+                    <Input
+                      type="number" min={1} max={10}
+                      value={perModelRetries[m] !== undefined ? String(perModelRetries[m]) : ""}
+                      placeholder="inherit"
+                      className="w-20"
+                      onChange={(e) => {
+                        const v = e.target.value === "" ? undefined : Math.max(1, Math.min(10, Number(e.target.value) || 1));
+                        const next = { ...perModelRetries };
+                        if (v === undefined) delete next[m]; else next[m] = v;
+                        setPerModelRetries(next);
+                      }}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="flex gap-2 pt-1">
+          <Button variant="ghost" fullWidth size="sm" onClick={onClose}>Cancel</Button>
+          <Button fullWidth size="sm" disabled={!canSave} onClick={() => onSave({ target: target.trim(), models: fallbacks, retries, perModelRetries })}>
+            Save Rule
+          </Button>
+        </div>
+      </div>
+
+      {showModelSelect && (
+        <ModelSelectModal
+          isOpen={showModelSelect}
+          onClose={() => setShowModelSelect(false)}
+          onSelect={handleAddFallback}
+          activeProviders={activeProviders}
+          title="Add Fallback Model"
+          addedModelValues={fallbacks}
+          closeOnSelect={true}
+        />
+      )}
+      {showTargetSelect && (
+        <ModelSelectModal
+          isOpen={showTargetSelect}
+          onClose={() => setShowTargetSelect(false)}
+          onSelect={(m) => { setTarget(m.value); setShowTargetSelect(false); }}
+          activeProviders={activeProviders}
+          title="Pick Target Model"
+          closeOnSelect={true}
+        />
+      )}
+    </Modal>
   );
 }
 
