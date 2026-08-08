@@ -119,6 +119,16 @@ export default function RequestDetailsTab() {
     endDate: "",
     conversationId: ""
   });
+  const [obsStatus, setObsStatus] = useState(null); // { enabled, maxRecords, currentCount, droppedRecords }
+
+  const fetchObsStatus = useCallback(async () => {
+    try {
+      const res = await fetch("/api/observability/status");
+      if (res.ok) setObsStatus(await res.json());
+    } catch {
+      // non-fatal — banner just doesn't show
+    }
+  }, []);
 
   const fetchProviders = useCallback(async () => {
     try {
@@ -159,7 +169,8 @@ export default function RequestDetailsTab() {
 
   useEffect(() => {
     fetchProviders();
-  }, [fetchProviders]);
+    fetchObsStatus();
+  }, [fetchProviders, fetchObsStatus]);
 
   useEffect(() => {
     fetchDetails();
@@ -205,6 +216,15 @@ export default function RequestDetailsTab() {
 
   return (
     <div className="flex min-w-0 flex-col gap-6">
+      {/* Observability capture status — surfaces silent data loss from the cap */}
+      {obsStatus?.enabled && obsStatus.droppedRecords > 0 && (
+        <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-600 dark:text-amber-400">
+          <span className="font-medium">Capture at cap:</span>{" "}
+          {obsStatus.currentCount.toLocaleString()}/{obsStatus.maxRecords.toLocaleString()} records stored —{" "}
+          <span className="font-mono">{obsStatus.droppedRecords.toLocaleString()}</span> oldest dropped since startup.
+          Increase <code className="font-mono">Observability → Max records</code> in Settings if you need more history.
+        </div>
+      )}
       <Card padding="md">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <div className="flex min-w-0 flex-col gap-2">

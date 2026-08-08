@@ -17,6 +17,7 @@ export async function GET(request) {
     const url = new URL(request.url);
     const format = url.searchParams.get("format") || "json";
     const pageSize = Math.min(Number(url.searchParams.get("limit") || 1000), MAX_EXPORT_ROWS);
+    const page = Math.max(1, Number(url.searchParams.get("page") || 1));
 
     const filter = {
       provider: url.searchParams.get("provider") || undefined,
@@ -32,7 +33,9 @@ export async function GET(request) {
       if (filter[k] === undefined) delete filter[k];
     }
 
-    const { details, pagination } = await getRequestDetails({ ...filter, pageSize });
+    // Paginated export: pass page through so callers can walk large datasets
+    // (page + limit, response includes pagination with hasNext).
+    const { details, pagination } = await getRequestDetails({ ...filter, pageSize, page });
 
     if (format === "markdown") {
       const md = renderRequestsMarkdown(details);

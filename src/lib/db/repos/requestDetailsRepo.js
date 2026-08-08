@@ -10,6 +10,15 @@ const CONFIG_CACHE_TTL_MS = 5000;
 let cachedConfig = null;
 let cachedConfigTs = 0;
 
+// Cumulative count of requestDetails dropped because the maxRecords cap was
+// exceeded (in-process; reset on server restart). Exposed via the
+// observability status API so the UI can surface silent data loss.
+let droppedRecordsCount = 0;
+
+export function getDroppedRecordsCount() {
+  return droppedRecordsCount;
+}
+
 async function getObservabilityConfig() {
   if (cachedConfig && (Date.now() - cachedConfigTs) < CONFIG_CACHE_TTL_MS) return cachedConfig;
   try {
@@ -128,9 +137,11 @@ async function flushToDatabase() {
 
         const cnt = db.get(`SELECT COUNT(*) as c FROM requestDetails`);
         if (cnt && cnt.c > config.maxRecords) {
+          const dropCount = cnt.c - config.maxRecords;
+          droppedRecordsCount += dropCount;
           db.run(
             `DELETE FROM requestDetails WHERE id IN (SELECT id FROM requestDetails ORDER BY timestamp ASC LIMIT ?)`,
-            [cnt.c - config.maxRecords]
+            [dropCount]
           );
         }
       });

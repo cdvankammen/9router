@@ -37,7 +37,13 @@ export async function flushMarkdownLog() {
     fs.mkdirSync(LOGS_DIR(), { recursive: true });
     const filePath = getLogFileName();
     const content = renderRequestsMarkdown(details);
-    await fs.promises.writeFile(filePath, content, "utf8");
+    // Atomic write: render to a temp file then rename over the target. A
+    // reader (or another process flushing concurrently) never observes a
+    // partially-written file — rename is atomic on POSIX. Last-writer-wins
+    // across processes is accepted (this is a snapshot, not an append log).
+    const tmpPath = `${filePath}.${process.pid}.tmp`;
+    await fs.promises.writeFile(tmpPath, content, "utf8");
+    await fs.promises.rename(tmpPath, filePath);
     return true;
   } catch (err) {
     console.error("[markdownLog] flush failed:", err.message);
