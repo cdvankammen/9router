@@ -112,3 +112,33 @@ The committed work is a **credible read-only view shell** that matches the spec'
 3. Decide: build the real `messages` table + FTS5 + cost capture (spec §3/§4), or accept projection-mode as P1 scope
 4. Fix deep-merge to merge against stored (object keys) with a sequential-PATCH test
 5. Then proceed to P2 (error inbox) per roadmap
+
+---
+
+## UPDATE 2026-08-08 — Re-verification (bots fixed most findings)
+
+Re-ran the review after the bots' follow-up commits (50b17ce6, e4555f4d, ba7378db, 378cd321, 0a65a631, f7c1bf8e, c6fbe402, b63501f2, 88e2f2b8, 723e9669, 0194d065, cb01da52).
+
+### ✅ FIXED since first review (all verified)
+| Finding | Fix | Evidence |
+|---|---|---|
+| **P0: smartRouterMeta undeclared → every chat 500s** | ✅ | `let smartRouterMeta = null` at chat.js:52; live chat test = **200** (after mock restart; the earlier 502 was mock-down, not a crash — full pipeline auth→route→executor→fallback worked) |
+| **B1: status filter broken (success vs done)** | ✅ | `ba7378db`; verified live: filter now offers `success/error/streaming/partial/cancelled`; filtering success → **7 rows** |
+| **B2: errorCategory post-pagination JS filter** | ✅ | `0a65a631` — JSON1 SQL filtering so pagination math correct |
+| **Deep-merge sequential PATCH clobbering** | ✅ | `f7c1bf8e` — "sequential partial PATCHes no longer clobber each other" |
+| **Hardening Phases 1–4** | ✅ | `88e2f2b8` "hardening phases 1-4 complete": health endpoint (`/api/health/providers` exists), auto-disable on refresh failures, node model error badge, atomic markdown flush, export pagination, dropped-record surfacing |
+| **New views + facets + histogram** | ✅ | `0194d065` — Timeline/Trace/Board tabs (all 5 tabs verified live), facet API (`facets:2` via curl), histogram (`hist:24`) |
+| **sourceApp/userAgent threading** | ✅ | `b63501f2`/`c6fbe402`/`50b17ce6` |
+| **Suite** | ✅ | 1730 pass (12 new tests added); 89 fail = 88 baseline + 1 flaky timing |
+
+### ❌ STILL OPEN (unchanged)
+- **messages table + parent_message_id branching** — still projection over requestDetails; conversation grouping still page-window scoped (route.js:60-61 comment confirms) — **B3 not fixed**
+- **FTS5 search** — still no search
+- **Cost capture + provenance labels** — still not captured (only a comment in requestDetail.js:115) — **B6 not fixed**
+- **B4: cURL placeholder** — still `curl -X POST "<provider-endpoint>/..."` (page.js:93) — not fixed
+- **Keyset pagination** — still `LIMIT/OFFSET` (facet GROUP BY added)
+- **Export sanitizer/system-prompt exclusion** — not confirmed added
+
+### Updated standing vs my first review
+First review: Messages P1 ≈ 45%, hardening P1 = 7.5/10, uncommitted P2 = 2/10 (P0 crash).
+Now: **all crash-blockers + top user-visible bugs + all 4 hardening phases done; the remaining gaps are the architectural substance** (messages table, FTS5, cost, branching trees) that need a deliberate scope decision.
