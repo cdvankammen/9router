@@ -11,6 +11,7 @@ import { useCopyToClipboard } from "@/shared/hooks/useCopyToClipboard";
 import TimelineView from "./components/TimelineView";
 import TraceTreeView from "./components/TraceTreeView";
 import BoardView from "./components/BoardView";
+import { prettyJson, buildCurl, extractText } from "@/shared/messageFormats";
 
 // ── Provider name resolution (mirrors RequestDetailsTab) ────────────────────
 let providerNameCache = null;
@@ -82,48 +83,11 @@ function fmtLatency(latency) {
 }
 
 // ── Format tab content builders ─────────────────────────────────────────────
-function prettyJson(obj) {
-  try { return JSON.stringify(obj, null, 2); } catch { return String(obj); }
-}
+// prettyJson / buildCurl / extractText come from the shared messageFormats
+// module (also used by the export API route) so they can't drift.
+// buildMarkdown stays local — the page renders a richer transcript than the
+// export route (role-styled request + provider payload sections).
 
-function buildCurl(detail) {
-  // Try to reconstruct the upstream request: providerRequest has the payload.
-  // URL isn't captured, so show the endpoint pattern + full body.
-  const body = detail.providerRequest || detail.request || {};
-  const lines = [`curl -X POST "<provider-endpoint>/v1/chat/completions"`];
-  if (body && typeof body === "object" && Object.keys(body).length > 0) {
-    lines.push('  -H "Content-Type: application/json"');
-    lines.push('  -H "Authorization: Bearer YOUR_API_KEY"');
-    if (body._truncated) {
-      lines.push(`  # NOTE: original payload was truncated at capture (${body._originalSize || "?"} bytes)`);
-      lines.push(`  -d '${JSON.stringify(body._preview || {}, null, 2)}'`);
-    } else {
-      lines.push(`  -d '${JSON.stringify(body, null, 2)}'`);
-    }
-  }
-  lines.push("");
-  lines.push(`# Provider: ${detail.provider}`);
-  lines.push(`# Model: ${detail.model}`);
-  lines.push(`# Account: ${detail.connectionId || "unknown"}`);
-  return lines.join(" \\\n");
-}
-
-// Extract plain text from message content (string, array of blocks, or structured).
-function extractText(content) {
-  if (content == null) return "";
-  if (typeof content === "string") return content;
-  if (Array.isArray(content)) {
-    return content
-      .map((b) => {
-        if (typeof b === "string") return b;
-        if (b?.text) return b.text;
-        if (b?.content) return extractText(b.content);
-        return "";
-      })
-      .join("\n");
-  }
-  return "";
-}
 
 function buildMarkdown(detail) {
   const out = [];
