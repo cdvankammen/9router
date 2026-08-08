@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getProviderConnections } from "@/lib/db/repos/connectionsRepo.js";
-import { isModelLockActive } from "open-sse/services/accountFallback.js";
+import { getEarliestModelLockUntil } from "open-sse/services/accountFallback.js";
 import { getCredentialExpiryMs } from "open-sse/services/oauthCredentialManager.js";
 
 /**
@@ -49,8 +49,8 @@ export async function GET() {
         entry.reauthReason = String(conn.needsReauthReason).slice(0, 160);
       }
 
-      // Lock state
-      if (isModelLockActive(conn)) entry.locked += 1;
+      // Lock state — ANY active model lock (per-model or account-level)
+      if (getEarliestModelLockUntil(conn) !== null) entry.locked += 1;
 
       // Last error (only surface recent/meaningful ones)
       if (conn.lastError && conn.lastError !== "success") {

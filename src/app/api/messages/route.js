@@ -43,20 +43,18 @@ export async function GET(request) {
     if (provider) filter.provider = provider;
     if (model) filter.model = model;
     if (status) filter.status = status;
+    if (errorCategory) filter.errorCategory = errorCategory;
+    if (sourceApp) filter.sourceApp = sourceApp;
     if (conversationId) filter.conversationId = conversationId;
     if (startDate) filter.startDate = startDate;
     if (endDate) filter.endDate = endDate;
 
+    // errorCategory/sourceApp are filtered in SQL (JSON1) so pagination math
+    // stays correct — client-side filtering after pagination would produce
+    // wrong totals and empty pages with matches on later pages.
     const result = await getRequestDetails(filter);
 
-    // errorCategory + sourceApp live inside requestDetails.data — filter client-visible rows
     let messages = result.details || [];
-    if (errorCategory) {
-      messages = messages.filter((m) => m.errorCategory === errorCategory);
-    }
-    if (sourceApp) {
-      messages = messages.filter((m) => m.sourceApp === sourceApp);
-    }
 
     // Build a lightweight conversation projection from the flat list.
     // Only conversations whose rows appear in this page's window.

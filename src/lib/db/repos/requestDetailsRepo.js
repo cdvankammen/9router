@@ -127,6 +127,8 @@ async function flushToDatabase() {
             pxpipe: item.pxpipe || undefined,
             conversationId: item.conversationId || null,
             errorCategory: item.errorCategory || null,
+            sourceApp: item.sourceApp || undefined,
+            userAgent: item.userAgent || undefined,
           };
 
           db.run(
@@ -184,6 +186,11 @@ export async function getRequestDetails(filter = {}) {
   if (filter.conversationId) { conds.push("conversationId = ?"); params.push(filter.conversationId); }
   if (filter.startDate) { conds.push("timestamp >= ?"); params.push(new Date(filter.startDate).toISOString()); }
   if (filter.endDate) { conds.push("timestamp <= ?"); params.push(new Date(filter.endDate).toISOString()); }
+  // Fields stored inside the `data` JSON column — filter via JSON1 so the
+  // pagination math (COUNT + OFFSET) stays correct. All bundled SQLite
+  // adapters ship JSON1 (SQLite ≥ 3.38 / sql.js includes it).
+  if (filter.errorCategory) { conds.push(`json_extract(data, '$.errorCategory') = ?`); params.push(filter.errorCategory); }
+  if (filter.sourceApp) { conds.push(`json_extract(data, '$.sourceApp') = ?`); params.push(filter.sourceApp); }
 
   const where = conds.length ? `WHERE ${conds.join(" AND ")}` : "";
   const cntRow = db.get(`SELECT COUNT(*) as c FROM requestDetails ${where}`, params);

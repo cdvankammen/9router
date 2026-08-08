@@ -15,7 +15,10 @@ const UA_RULES = [
   { re: /claude-code/i, app: "Claude Code" },
   { re: /cursor\//i, app: "Cursor" },
   { re: /codex-cli|codex\//i, app: "Codex CLI" },
-  { re: /droid/i, app: "Codex CLI" },
+  // Codex CLI's Android companion identifies via "codex droid"/"CodexDroid" —
+  // a BARE /droid/i would also catch ordinary mobile-browser UAs ("Android 13")
+  // and misclassify them as Codex CLI. Require codex adjacency.
+  { re: /codex[ _-]?droid|droid[ _-]?codex/i, app: "Codex CLI" },
   { re: /githubcopilot|copilot-chat/i, app: "GitHub Copilot" },
   { re: /openai\/js/i, app: "OpenAI JS SDK" },
   { re: /openai\/python/i, app: "OpenAI Python SDK" },
