@@ -224,3 +224,21 @@ Open questions for user (block 83/84/85): auto-disable behavior; pricing re-fetc
 | 87 | Detail drawer overflows off-screen in compact/narrow windows (fixed w-[800px]) | ⏳ deferred | Probe: left:-160px at narrow width; spec §12.1 |
 | 88 | Detail payload `pre` not visibly scrollable (wrap policy + missing min-h-0 on flex chain + nested scroll containers) | ⏳ deferred | Probe: scrollHeight==clientHeight on sample; spec §12.2 |
 | 89 | Optional vision-assisted QA of drawer at 375px (qwen-3.5-omni-plus subagent) | ⏳ deferred | spec §12.3 |
+
+### Newly Completed (2026-08-07 Messages drawer fixes)
+
+| # | Task | Status | Evidence |
+|---|------|--------|----------|
+| 71 | Drawer overflow in compact mode | ✅ | commit `79c457e6` — all Drawer width presets now `w-[min(Npx,100vw)]`; verified `w-[min(800px,100vw)]` in DOM |
+| 72 | Payload text scrollability | ✅ | commit `79c457e6` — `min-h-0 flex-1 overflow-auto` wrapper + `pre h-full min-h-0 overflow-auto`; scrollH 22018 > clientH verified |
+| 73 | Word wrap toggle | ✅ | commit `79c457e6` — Wrap/No-wrap toggle (pre-wrap+break-words vs whitespace-pre) |
+| 74 | Tray app rebuilt with drawer fixes | ✅ | cli/app bundle rebuilt + restarted; messages page + api both 200 on port 20130 |
+
+### Newly Completed (2026-08-07 message-viewer design research)
+
+| # | Task | Status | Evidence |
+|---|------|--------|----------|
+| 67 | Design-philosophy research: 10 message/log viewer tools | ✅ | `research/message-viewer-design-philosophies.md` §A (Sentry/Datadog/Langfuse/Linear/Obsidian/mitmproxy/Dozzle/Claude-Code-trace/Open-WebUI/GitHub-PR) |
+| 68 | Filter-dimension research: LLM observability tools | ✅ | `research/message-viewer-design-philosophies.md` §B (dimension table + gateway-vs-client split + SDK header conventions from openai-node source) |
+| 69 | Gateway capture-dimension analysis (API key/IP/combo/route) | ✅ | `research/message-viewer-design-philosophies.md` §C (audited requestDetailsRepo/usageRepo/chat.js/custom-server.js) |
+| 70 | 3 view designs + filters + visual improvements + privacy risks | ✅ | `research/message-viewer-design-philosophies.md` §D (Timeline/Trace-Tree/Board views, 8 filters, 5 UX fixes, 7 guardrails) |

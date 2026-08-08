@@ -413,3 +413,14 @@ User reported (for later): compact-mode drawer goes off-screen; payload text not
 t) 
 | # | Task | Status | Evidence |
 |---|--`w-[min(800px,100vw)]` + ve|---|------|-------- `pre` is `ov| 87 | Detail drawer overflows k-| 88 | Detail payload `pre` not visibly scrollable (wrap policy + missing min-h-0 on flex chain + nested scroll containers) | ⏳ deferred | Probe: scron| 89 | Optional vision-assisted QA of drawer at 375px (qwen-3.5-omni-plus subagent) | ⏳ deferred | spec §12.3 |
+
+---
+
+## UPDATE 2026-08-07 (message-viewer design research — main session)
+
+### research only, no code changed
+- **`research/message-viewer-design-philosophies.md`** — new research doc:
+  - **A.** Design philosophies distilled from 10 tools: Sentry (issue details), Datadog/Grafana (query + histogram + facets), LangSmith/Langfuse (trace tree, sessions, propagation), Linear/Notion (views-not-modes), Obsidian/Roam (backlinks), mitmproxy/Proxyman (request/response pairs + replay), HyperDX/OpenObserve/Dozzle (live tail), Claude Code/Codex traces (3-panel conversation trees), Open WebUI/LibreChat (transcripts), GitHub PR (diff + inline threads)
+  - **B.** Filter dimensions from LangSmith/Langfuse/Helicone/OpenLLMetry/Weave/AgentOps (trace/session/user/project/env/model/cost/tags/metadata/error) + gateway-vs-client capture split
+  - **C.** Gateway-only capture dimensions 9Router can add: API key, trusted client IP (x-9r-real-ip already computed in custom-server.js!), UA→sourceApp fingerprint, combo name, smart-router taskType, route chain, provider account, x-project/x-app/Helicone-Property-* headers
+  - **D.** 3 view designs (Timeline/Waterfall, Trace Tree, Board/Triage), 8 filter dimensions, 5 visual UX improvements, 7 privacy risk guardrails

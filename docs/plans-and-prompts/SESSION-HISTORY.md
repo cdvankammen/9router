@@ -587,3 +587,14 @@ User: "list every single thing you learned… send subagents as usual at them an
   3. `research/message-capture-gaps-and-risks.md` — blind spots, risks, decision log, effort
 - One subagent hit a network failure; retried successfully (recovery rationale again validated).
 - Master answer to user compiled in chat (see conversation).
+
+---
+
+## UPDATE 2026-08-07 (message-viewer design research — main session)
+
+User asked (read-only): research design philosophies for LLM message/log viewer UIs, 3 more distinct view designs, more filter dimensions, and visual improvements for the Messages page.
+
+- Read the existing spec (`plans/messages-page-feature-spec.md`) + current `messages/page.js` + capture layer (`requestDetailsRepo.js`, `usageRepo.js`, `chat.js`, `custom-server.js`) to ground everything in what 9Router already captures.
+- Web research: Sentry issue details, Datadog Log Explorer search syntax, Langfuse tracing/sessions/tags/data-model, LangSmith, Grafana Loki, Helicone header conventions (from source), OpenRouter app-attribution headers, openai-node SDK user-agent (from source).
+- Wrote `research/message-viewer-design-philosophies.md` covering: 10-tool design-philosophy breakdown; observability filter-dimension table; gateway-only capture dimensions (API key, trusted IP via x-9r-real-ip, UA fingerprint, combo, taskType, route chain, custom headers); 3 view designs (Timeline/Waterfall, Trace Tree, Board/Triage); 8 filter dimensions; 5 visual UX improvements; 7 privacy guardrails.
+- Key finding: 9Router already computes a trusted client IP (custom-server.js) and already stores the API key + taskType — several "new" dimensions are near-zero-cost to surface. SDKs send standard attribution headers (OpenAI-Project, HTTP-Referer, X-Title, Helicone-Property-*) that can identify source apps with no client changes.
