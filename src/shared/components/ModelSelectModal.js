@@ -97,6 +97,7 @@ export default function ModelSelectModal({
   const [searchQuery, setSearchQuery] = useState("");
   const [combos, setCombos] = useState([]);
   const [providerNodes, setProviderNodes] = useState([]);
+  const [nodeModelsError, setNodeModelsError] = useState({}); // nodeId -> message
   const [customModels, setCustomModels] = useState([]);
   const [disabledModels, setDisabledModels] = useState({});
   // Cursor and Cline expose the usable catalog per account, so the static catalog is
@@ -143,6 +144,26 @@ export default function ModelSelectModal({
       if (!res.ok) throw new Error(`Failed to fetch provider nodes: ${res.status}`);
       const data = await res.json();
       setProviderNodes(data.nodes || []);
+
+      // Probe each custom node's /models endpoint so a node whose models fail
+      // to load gets a visible badge instead of silently showing nothing.
+      // Use the connection models route (auth-aware) per node.
+      const nodes = data.nodes || [];
+      const failures = {};
+      const conns = await fetch("/api/providers").then((r) => r.ok ? r.json() : { connections: [] }).catch(() => ({ connections: [] }));
+      for (const node of nodes) {
+        const conn = (conns.connections || []).find((c) => c.provider === node.id && c.isActive !== false);
+        if (!conn?.id) continue;
+        try {
+          const mres = await fetch(`/api/providers/${conn.id}/models`, { cache: "no-store" });
+          if (!mres.ok || (await mres.json()).models?.length === 0) {
+            failures[node.id] = `models failed to load (${mres.status || "empty"})`;
+          }
+        } catch {
+          failures[node.id] = "models failed to load";
+        }
+      }
+      setNodeModelsError(failures);
     } catch (error) {
       console.error("Error fetching provider nodes:", error);
       setProviderNodes([]);
@@ -591,6 +612,14 @@ export default function ModelSelectModal({
                   title="No credentials connected — you must connect this provider before requests will succeed"
                 >
                   not connected
+                </span>
+              )}
+              {nodeModelsError[providerId] && (
+                <span
+                  className="text-[9px] px-1 py-px rounded bg-red-500/10 text-red-500 font-medium"
+                  title={`${nodeModelsError[providerId]} — the router will skip this node's models until it responds`}
+                >
+                  {nodeModelsError[providerId]}
                 </span>
               )}
             </div>

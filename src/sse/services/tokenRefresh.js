@@ -261,29 +261,43 @@ export async function checkAndRefreshToken(provider, credentials, options = {}) 
       lastRefreshAt: creds.lastRefreshAt || null,
     });
 
-    const newCreds = await _refreshProviderCredentials(provider, creds, log);
-    if (newCreds?.accessToken || newCreds?.apiKey || newCreds?.copilotToken) {
-      const mergedCreds = {
-        ...newCreds,
-        existingProviderSpecificData: creds.providerSpecificData,
-      };
+    try {
+      const newCreds = await _refreshProviderCredentials(provider, creds, log);
+      if (newCreds?.accessToken || newCreds?.apiKey || newCreds?.copilotToken) {
+        const mergedCreds = {
+          ...newCreds,
+          existingProviderSpecificData: creds.providerSpecificData,
+        };
 
-      // Persist to DB (non-blocking path continues below)
-      await updateProviderCredentials(creds.connectionId, mergedCreds);
+        // Persist to DB (non-blocking path continues below)
+        await updateProviderCredentials(creds.connectionId, mergedCreds);
 
-      creds = {
-        ...creds,
-        ...newCreds,
-        expiresAt: newCreds.expiresIn
-          ? toExpiresAt(newCreds.expiresIn)
-          : normalizeExpiresAt(newCreds.expiresAt) || newCreds.expiresAt || creds.expiresAt,
-        providerSpecificData: newCreds.providerSpecificData
-          ? { ...creds.providerSpecificData, ...newCreds.providerSpecificData }
-          : creds.providerSpecificData,
-      };
+        creds = {
+          ...creds,
+          ...newCreds,
+          expiresAt: newCreds.expiresIn
+            ? toExpiresAt(newCreds.expiresIn)
+            : normalizeExpiresAt(newCreds.expiresAt) || newCreds.expiresAt || creds.expiresAt,
+          providerSpecificData: newCreds.providerSpecificData
+            ? { ...creds.providerSpecificData, ...newCreds.providerSpecificData }
+            : creds.providerSpecificData,
+        };
 
-      // Non-blocking: refresh projectId with the new access token
-      _refreshProjectId(provider, creds.connectionId, creds.accessToken);
+        // Success: reset the consecutive-failure counter so a transient blip
+        // never accumulates toward auto-disable.
+        await _resetRefreshFailureCount(creds.connectionId);
+
+        // Non-blocking: refresh projectId with the new access token
+        _refreshProjectId(provider, creds.connectionId, creds.accessToken);
+      }
+    } catch (refreshError) {
+      // Track consecutive refresh failures; auto-disable the connection after
+      // MAX_REFRESH_FAILURES so the provider isn't silently dead forever.
+      log.warn("TOKEN_REFRESH", `Refresh failed for ${provider} (attempt tracked)`, {
+        connectionId: creds.connectionId,
+        error: refreshError?.message,
+      });
+      await _trackRefreshFailure(provider, creds, refreshError);
     }
   }
 
@@ -323,7 +337,68 @@ export async function checkAndRefreshToken(provider, credentials, options = {}) 
   return creds;
 }
 
-// ─── Local-specific: combined GitHub + Copilot refresh ───────────────────────
+// ─── Consecutive refresh-failure tracking + auto-disable ────────────────────
+// A revoked/expired refresh token (e.g. xAI invalid_grant) makes a provider
+// permanently unusable until the user re-auths. Instead of hammering the
+// refresh endpoint forever, count consecutive failures on the connection
+// record and auto-deactivate it past the threshold, with a clear reason the
+// UI can show ("re-auth required").
+
+const MAX_REFRESH_FAILURES = 3;
+const REFRESH_FAILURE_KEY = "refreshFailCount";
+const REAUTH_REASON_KEY = "needsReauthReason";
+
+async function _trackRefreshFailure(provider, creds, error) {
+  try {
+    const { getProviderConnectionById, updateProviderConnection } = await import("@/lib/db/repos/connectionsRepo.js");
+    const connectionId = creds.connectionId || creds.id;
+    if (!connectionId) return;
+
+    const conn = await getProviderConnectionById(connectionId);
+    if (!conn) return;
+
+    const current = Number(conn[REFRESH_FAILURE_KEY] || 0);
+    const next = current + 1;
+    const updates = {
+      [REFRESH_FAILURE_KEY]: next,
+      lastError: String(error?.message || "refresh failed").slice(0, 200),
+      lastErrorAt: new Date().toISOString(),
+      lastErrorCode: error?.code || "token_refresh_failed",
+    };
+
+    if (next >= MAX_REFRESH_FAILURES) {
+      updates.isActive = false;
+      updates[REAUTH_REASON_KEY] = "token refresh failed repeatedly — re-authenticate to re-enable";
+      log.warn("TOKEN_REFRESH", `Auto-disabled ${provider} after ${next} consecutive refresh failures`, {
+        connectionId,
+      });
+    } else {
+      log.warn("TOKEN_REFRESH", `${provider} refresh failure ${next}/${MAX_REFRESH_FAILURES}`, {
+        connectionId,
+      });
+    }
+
+    await updateProviderConnection(connectionId, updates);
+  } catch (err) {
+    log.warn("TOKEN_REFRESH", "Failed to persist refresh-failure tracking", { error: err?.message });
+  }
+}
+
+async function _resetRefreshFailureCount(connectionId) {
+  try {
+    if (!connectionId) return;
+    const { getProviderConnectionById, updateProviderConnection } = await import("@/lib/db/repos/connectionsRepo.js");
+    const conn = await getProviderConnectionById(connectionId);
+    if (!conn) return;
+    if (Number(conn[REFRESH_FAILURE_KEY] || 0) === 0 && !conn[REAUTH_REASON_KEY]) return;
+    const updates = { [REFRESH_FAILURE_KEY]: 0 };
+    // Clear the re-auth reason if the connection was re-enabled by the user
+    if (conn.isActive && conn[REAUTH_REASON_KEY]) updates[REAUTH_REASON_KEY] = null;
+    await updateProviderConnection(connectionId, updates);
+  } catch {
+    // best-effort
+  }
+}
 
 /**
  * Refresh the GitHub OAuth token and immediately exchange it for a fresh

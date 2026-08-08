@@ -107,6 +107,7 @@ export default function ProvidersPage() {
   const [testingMode, setTestingMode] = useState(null);
   const [testResults, setTestResults] = useState(null);
   const [statusFilter, setStatusFilter] = useState("all");
+  const [providerHealth, setProviderHealth] = useState(null);
   const notify = useNotificationStore();
   const searchQuery = useHeaderSearchStore((s) => s.query);
   const registerSearch = useHeaderSearchStore((s) => s.register);
@@ -169,6 +170,19 @@ export default function ProvidersPage() {
     };
     fetchData();
   }, []);
+
+  const refreshProviderHealth = useCallback(async () => {
+    try {
+      const res = await fetch("/api/health/providers", { cache: "no-store" });
+      if (res.ok) setProviderHealth(await res.json());
+    } catch {
+      // non-fatal — banner just doesn't show
+    }
+  }, []);
+
+  useEffect(() => {
+    refreshProviderHealth();
+  }, [refreshProviderHealth]);
 
   const getProviderStats = (providerId, authType) => {
     const authTypes = Array.isArray(authType) ? authType : [authType];
@@ -386,6 +400,44 @@ export default function ProvidersPage() {
 
   return (
     <div className="flex min-w-0 flex-col gap-6 px-1 sm:px-0">
+      {/* Provider health — providers needing attention (auth expired, locked, errors) */}
+      {providerHealth?.needsAttention?.length > 0 && (
+        <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <span className="material-symbols-outlined text-[16px] text-amber-600 dark:text-amber-400">warning</span>
+              <span className="text-xs font-medium text-amber-700 dark:text-amber-300">
+                {providerHealth.needsAttention.length} provider{providerHealth.needsAttention.length === 1 ? "" : "s"} need attention
+              </span>
+            </div>
+            <button
+              onClick={refreshProviderHealth}
+              className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] text-amber-700 hover:bg-amber-500/10 dark:text-amber-300"
+            >
+              <span className="material-symbols-outlined text-[13px]">refresh</span>
+              Refresh
+            </button>
+          </div>
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
+            {providerHealth.providers
+              .filter((p) => providerHealth.needsAttention.includes(p.provider))
+              .map((p) => (
+                <span
+                  key={p.provider}
+                  className="inline-flex items-center gap-1 rounded bg-black/5 dark:bg-white/5 px-1.5 py-0.5 font-mono text-[11px] text-text-main"
+                  title={p.lastError || ""}
+                >
+                  {p.provider}
+                  {p.auth === "expired" && <span className="rounded bg-red-500/15 px-1 text-[10px] font-medium text-red-500">expired</span>}
+                  {p.auth === "needs-reauth" && <span className="rounded bg-red-500/15 px-1 text-[10px] font-medium text-red-500">re-auth</span>}
+                  {p.locked > 0 && <span className="rounded bg-amber-500/15 px-1 text-[10px] font-medium text-amber-600 dark:text-amber-400">locked</span>}
+                  {p.lastError && <span className="max-w-[200px] truncate text-[10px] text-text-muted">{p.lastError}</span>}
+                </span>
+              ))}
+          </div>
+        </div>
+      )}
+
       <div className="flex items-center justify-end">
         <select
           value={statusFilter}
