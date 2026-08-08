@@ -45,12 +45,12 @@ function normalizeError(m) {
 }
 
 export default function BoardView({ messages = [], providerNames, onSelect }) {
-  // Local column assignment per fingerprint (no persistence yet — P2)
-  const [columns, setColumns] = useState(() => {
-    const init = {};
-    for (const c of COLUMNS) init[c.key] = [];
-    return init;
-  });
+  // Local column assignment per fingerprint (no persistence yet — P2).
+  // `columns` holds ONLY user moves (drag assignments); fingerprints not
+  // present in `columns` are derived into "new" via useMemo below. This
+  // avoids setState-during-render and keeps the board in sync with the
+  // current filter/page (new fingerprints appear, stale ones disappear).
+  const [moves, setMoves] = useState({}); // fp -> column key
 
   const grouped = useMemo(() => {
     const map = new Map();
@@ -70,36 +70,37 @@ export default function BoardView({ messages = [], providerNames, onSelect }) {
     }));
   }, [messages]);
 
-  // Assign unassigned groups to "new" on first render (only once)
-  const [seeded, setSeeded] = useState(false);
-  if (!seeded && grouped.length > 0) {
-    setSeeded(true);
-    const next = { ...columns };
+  // Derive column membership: user moves win; everything else lands in "new".
+  const columns = useMemo(() => {
+    const cols = {};
+    for (const c of COLUMNS) cols[c.key] = [];
     for (const g of grouped) {
-      if (!Object.values(next).flat().some((x) => x.fp === g.fp)) {
-        next.new.push(g);
-      }
+      const target = moves[g.fp] || "new";
+      cols[target] = cols[target] || [];
+      cols[target].push(g);
     }
-    setColumns(next);
-  }
+    return cols;
+  }, [grouped, moves]);
 
   const move = (fp, fromKey, toKey) => {
     if (fromKey === toKey) return;
-    const group = columns[fromKey].find((x) => x.fp === fp);
-    if (!group) return;
-    setColumns({
-      ...columns,
-      [fromKey]: columns[fromKey].filter((x) => x.fp !== fp),
-      [toKey]: [...columns[toKey], group],
-    });
+    setMoves((prev) => ({ ...prev, [fp]: toKey }));
   };
-
-  const allGrouped = Object.values(columns).flat();
 
   return (
     <div className="flex min-h-0 flex-1 gap-3 overflow-auto p-3">
       {COLUMNS.map((col) => (
-        <div key={col.key} className="flex w-64 shrink-0 flex-col rounded-lg border border-black/5 dark:border-white/5">
+        <div
+          key={col.key}
+          className="flex w-64 shrink-0 flex-col rounded-lg border border-black/5 dark:border-white/5"
+          onDragOver={(e) => e.preventDefault()}
+          onDrop={(e) => {
+            e.preventDefault();
+            const fp = e.dataTransfer.getData("text/fp");
+            const from = e.dataTransfer.getData("text/from");
+            if (fp) move(fp, from, col.key);
+          }}
+        >
           <div className="flex items-center justify-between border-b border-black/5 dark:border-white/5 p-2">
             <span className="flex items-center gap-2 text-xs font-semibold text-text-muted">
               <span className="h-2 w-2 rounded-full" style={{ background: col.accent }} />

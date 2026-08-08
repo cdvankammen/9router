@@ -46,7 +46,7 @@ function statusColor(status) {
 function latencyMetrics(m) {
   const lat = m.latency || {};
   const ttft = typeof lat.ttft === "number" ? lat.ttft : 0;
-  const total = typeof lat.total === "number" ? lat.total : (ttft || null);
+  const total = typeof lat.total === "number" ? lat.total : null;
   return { ttft, total };
 }
 
@@ -117,7 +117,9 @@ export default function TimelineView({ histogram = [], messages = [], providerNa
                 const { ttft, total } = latencyMetrics(m);
                 const color = statusColor(m.status);
                 const ttftPct = ttft ? (ttft / max) * 100 : 0;
-                const bodyPct = total ? ((total - ttft) / max) * 100 : 0;
+                // Body segment only when there is real body latency after ttft.
+                const bodyMs = total && ttft < total ? total - ttft : 0;
+                const bodyPct = bodyMs ? (bodyMs / max) * 100 : 0;
                 return (
                   <tr
                     key={m.id || m._id || i}
@@ -149,12 +151,12 @@ export default function TimelineView({ histogram = [], messages = [], providerNa
                             title={`ttft ${ttft}ms`}
                           />
                         )}
-                        {/* body segment */}
-                        {total > 0 && (
+                        {/* body segment — only when there is real body latency */}
+                        {bodyMs > 0 && (
                           <div
                             className={cn("h-3", ttft > 0 ? "" : "rounded", "opacity-80")}
                             style={{ width: `${Math.max(bodyPct, 2)}%`, background: color }}
-                            title={`total ${total}ms`}
+                            title={`body ${bodyMs}ms (total ${total}ms)`}
                           />
                         )}
                         {!total && <span className="text-[10px] text-text-muted">—</span>}

@@ -26,14 +26,22 @@ function extractText(content) {
 }
 
 function buildCurl(detail) {
-  const url = detail.providerRequest?.url || "";
+  // The capture path never stores the upstream URL — emit a placeholder
+  // endpoint so the curl is usable as a template (matches the page's
+  // buildCurl behavior). Detect truncated bodies and note them.
+  const url = detail.providerRequest?.url || "https://<your-9router-host>/v1/chat/completions";
   const method = detail.providerRequest?.method || "POST";
   const body = detail.providerRequest?.body || detail.providerRequest || null;
   const lines = [`curl -X ${method} "${url}"`];
   if (body && typeof body === "object") {
     lines.push(`  -H "Content-Type: application/json"`);
     lines.push(`  -H "Authorization: Bearer YOUR_API_KEY"`);
-    lines.push(`  -d '${JSON.stringify(body, null, 2)}'`);
+    if (body._truncated) {
+      lines.push(`  # NOTE: original payload was truncated at capture (${body._originalSize || "?"} bytes)`);
+      lines.push(`  -d '${JSON.stringify(body._preview || {}, null, 2)}'`);
+    } else {
+      lines.push(`  -d '${JSON.stringify(body, null, 2)}'`);
+    }
   }
   return lines.join(" \\\n");
 }

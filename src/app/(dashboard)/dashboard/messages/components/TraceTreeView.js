@@ -57,7 +57,7 @@ export default function TraceTreeView({ conversations = [], providerNames, onSel
           >
             <code className="truncate font-mono text-[11px]">{c.conversationId}</code>
             <span className="text-[10px] text-text-muted">
-              {c.messageCount} msg · {c.tokens.prompt + c.tokens.completion} tok
+              {c.messageCount} msg · {(c.tokens?.prompt || 0) + (c.tokens?.completion || 0)} tok
             </span>
           </button>
         ))}

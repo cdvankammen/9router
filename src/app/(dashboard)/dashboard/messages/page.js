@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import Card from "@/shared/components/Card";
 import Button from "@/shared/components/Button";
 import Drawer from "@/shared/components/Drawer";
@@ -94,7 +94,12 @@ function buildCurl(detail) {
   if (body && typeof body === "object" && Object.keys(body).length > 0) {
     lines.push('  -H "Content-Type: application/json"');
     lines.push('  -H "Authorization: Bearer YOUR_API_KEY"');
-    lines.push(`  -d '${JSON.stringify(body, null, 2)}'`);
+    if (body._truncated) {
+      lines.push(`  # NOTE: original payload was truncated at capture (${body._originalSize || "?"} bytes)`);
+      lines.push(`  -d '${JSON.stringify(body._preview || {}, null, 2)}'`);
+    } else {
+      lines.push(`  -d '${JSON.stringify(body, null, 2)}'`);
+    }
   }
   lines.push("");
   lines.push(`# Provider: ${detail.provider}`);
@@ -348,7 +353,7 @@ function ConversationView({ conversation, onSelect }) {
         <code className="min-w-0 flex-1 truncate font-mono text-xs">{conversation.conversationId}</code>
         <span className="text-[10px] text-text-muted">{conversation.messageCount} msgs</span>
         <span className="text-[10px] text-text-muted">
-          {fmtTokens(conversation.tokens.prompt + conversation.tokens.completion)} tok
+          {fmtTokens((conversation.tokens?.prompt || 0) + (conversation.tokens?.completion || 0))} tok
         </span>
       </button>
       {open && (
@@ -392,23 +397,31 @@ export default function MessagesPage() {
   // View mode
   const [viewMode, setViewMode] = useState("list"); // "list" | "conversations"
   const [selected, setSelected] = useState(null);
+  const loadAbortRef = useRef(null);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
+    // Abort any in-flight request so a slow response for an older filter
+    // can't overwrite the results of a newer one (fetch race, R1).
+    if (loadAbortRef.current) loadAbortRef.current.abort();
+    const controller = new AbortController();
+    loadAbortRef.current = controller;
     try {
       const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
       if (provider) params.set("provider", provider);
       if (status) params.set("status", status);
       if (conversationId) params.set("conversationId", conversationId);
-      const res = await fetch(`/api/messages?${params}`);
+      const res = await fetch(`/api/messages?${params}`, { signal: controller.signal });
       if (!res.ok) throw new Error("Failed to load messages");
       const json = await res.json();
       setData(json);
     } catch (e) {
+      // Ignore aborts (a newer request superseded this one)
+      if (e.name === "AbortError") return;
       setError(e.message);
     } finally {
-      setLoading(false);
+      if (loadAbortRef.current === controller) setLoading(false);
     }
   }, [page, pageSize, provider, status, conversationId]);
 
