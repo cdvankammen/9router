@@ -250,3 +250,14 @@ Open questions for user (block 83/84/85): auto-disable behavior; pricing re-fetc
 | 90 | Review Messages P1 vs spec (2 subagents + live browser) | ✅ | `research/9router/20-review-otherbot-work-vs-research.md` — ~45% of spec P1; B1 status-filter bug + B3 fake tree + B4 curl URL confirmed live |
 | 91 | Review hardening P1 vs roadmap | ✅ | 7.5/10 — 1.2/1.3/1.4 good; 1.1 merges-vs-defaults gap (sequential PATCH resets) |
 | 92 | Review uncommitted Phase 2 work | ✅ | **P0: smartRouterMeta undeclared in chat.js (8 uses, 0 decls) → every chat request 500s; eslint misses it. DO NOT COMMIT.** 2.1 UI absent; 2.2 correct but unreachable |
+
+### Newly Completed (2026-08-08 Messages multi-view)
+
+| # | Task | Status | Evidence |
+|---|------|--------|----------|
+| 75 | Timeline/Waterfall view (Messages 2) | ✅ | commit `0194d065` — recharts histogram + latency waterfall rows |
+| 76 | Trace Tree view (Messages 3) | ✅ | commit `0194d065` — 3-panel conversation→chain→detail |
+| 77 | Board/Kanban triage view (Messages 4) | ✅ | commit `0194d065` — 4 columns, fingerprint cards, drag-drop |
+| 78 | Facet API + histogram | ✅ | commit `0194d065` — provider/model/status/errorCategory/sourceApp counts + 24h buckets |
+| 79 | Fixed duplicate url build-breaker | ✅ | commit `0194d065` — providers models route const/let url collision |
+| 80 | Tray app rebuilt with new views | ✅ | cli/app bundle 62M, messages page 200 on 20130 |
