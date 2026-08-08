@@ -80,6 +80,8 @@ export function buildRequestDetail(base, overrides = {}) {
     status: base.status || "success",
     conversationId: base.conversationId || undefined,
     errorCategory: base.errorCategory || undefined,
+    sourceApp: base.sourceApp || undefined,
+    userAgent: base.userAgent || undefined,
     ...overrides
   };
 }
@@ -102,7 +104,7 @@ export function formatDoneLine({ usage, latency }) {
   return `DONE ${latency?.total ?? 0}ms${ttftStr} · ${inStr} · OUT ${outTok}`;
 }
 
-export function saveUsageStats({ provider, model, tokens, connectionId, apiKey, endpoint, label = "USAGE", silent = false, conversationId, taskType }) {
+export function saveUsageStats({ provider, model, tokens, connectionId, apiKey, endpoint, label = "USAGE", silent = false, conversationId, taskType, smartRouterMeta }) {
   if (!tokens || typeof tokens !== "object") return;
 
   const inTokens = tokens.input_tokens ?? tokens.prompt_tokens ?? 0;
@@ -132,6 +134,9 @@ export function saveUsageStats({ provider, model, tokens, connectionId, apiKey, 
     apiKey: apiKey || undefined,
     endpoint: endpoint || null,
     conversationId: conversationId || undefined,
-    meta: taskType ? { taskType } : undefined
+    meta: {
+      ...(taskType ? { taskType } : {}),
+      ...(smartRouterMeta || {}),
+    },
   }).catch(() => {});
 }

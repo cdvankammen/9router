@@ -24,6 +24,7 @@ const DEFAULT_SETTINGS = {
     allowedModels: [],
     costQualityTradeoff: 5,
     maxCandidates: 3,
+    stickyTtlMin: 5,
   },
   // Optional sweep of stale smart-router (sr-*) combos. OFF by default —
   // users opt in. ttlHours = age after which an unused sr- combo is deleted;

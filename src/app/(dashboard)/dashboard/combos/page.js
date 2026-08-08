@@ -63,7 +63,7 @@ export default function CombosPage() {
   const [activeProviders, setActiveProviders] = useState([]);
   const [comboStrategies, setComboStrategies] = useState({});
   const [capacityAdapter, setCapacityAdapter] = useState(EMPTY_CAPACITY_ADAPTER);
-  const [smartRouter, setSmartRouter] = useState({ enabled: false, names: ["modelRouter"], allowedProviders: [], allowedModels: [], costQualityTradeoff: 5, maxCandidates: 3 });
+  const [smartRouter, setSmartRouter] = useState({ enabled: false, names: ["modelRouter"], allowedProviders: [], allowedModels: [], costQualityTradeoff: 5, maxCandidates: 3, stickyTtlMin: 5 });
   const [srComboCleanup, setSrComboCleanup] = useState({ enabled: false, ttlHours: 24, intervalHours: 12 });
   const [markdownLog, setMarkdownLog] = useState({ enabled: false, intervalMin: 5 });
   const [modelFallbacks, setModelFallbacks] = useState({});
@@ -190,6 +190,7 @@ export default function CombosPage() {
         allowedModels: settingsData.smartRouter?.allowedModels || [],
         costQualityTradeoff: settingsData.smartRouter?.costQualityTradeoff ?? 5,
         maxCandidates: settingsData.smartRouter?.maxCandidates ?? 3,
+        stickyTtlMin: settingsData.smartRouter?.stickyTtlMin ?? 5,
       });
       setSrComboCleanup({
         enabled: !!settingsData.srComboCleanup?.enabled,
@@ -1007,7 +1008,7 @@ function CapacityAdapterCap({ cap, entry, onChange, activeProviders, getCaps }) 
 }
 
 function SmartRouterSection({ smartRouter, onChange, srComboCleanup, onSrComboCleanupChange }) {
-  const { enabled, names, allowedProviders, allowedModels, costQualityTradeoff, maxCandidates } = smartRouter;
+  const { enabled, names, allowedProviders, allowedModels, costQualityTradeoff, maxCandidates, stickyTtlMin } = smartRouter;
   const cleanup = srComboCleanup || { enabled: false, ttlHours: 24, intervalHours: 12 };
   const patchCleanup = (p) => onSrComboCleanupChange({ ...cleanup, ...p });
 
@@ -1123,6 +1124,21 @@ function SmartRouterSection({ smartRouter, onChange, srComboCleanup, onSrComboCl
             />
             <p className="text-[10px] text-text-muted mt-0.5">
               How many top models to include in the automatic fallback combo (tried in score order).
+            </p>
+          </div>
+
+          {/* Sticky session TTL */}
+          <div className="sm:col-span-2">
+            <label className="text-xs font-medium text-text-main mb-1 block">Sticky session TTL (minutes)</label>
+            <Input
+              type="number"
+              min={1}
+              max={1440}
+              value={String(stickyTtlMin ?? 5)}
+              onChange={(e) => patch({ stickyTtlMin: Math.max(1, Math.min(1440, Number(e.target.value) || 5)) })}
+            />
+            <p className="text-[10px] text-text-muted mt-0.5">
+              How long a conversation keeps using the same auto-picked combo before re-scoring. Longer = more consistent answers; shorter = adapts faster to load.
             </p>
           </div>
 

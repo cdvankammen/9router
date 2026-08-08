@@ -187,13 +187,13 @@ async function getOrCreateSmartCombo(candidates, taskType, virtualModel) {
 // The open-sse session API stores {provider, model} — we store the combo name
 // in the provider slot and read it back. Same TTL/eviction, no double cache.
 
-function getSticky(messages) {
-  const entry = _getStickySession(messages);
+function getSticky(messages, ttlMs) {
+  const entry = _getStickySession(messages, ttlMs);
   return entry?.provider || null;
 }
 
-function setSticky(messages, comboName) {
-  _setStickySession(messages, comboName, null);
+function setSticky(messages, comboName, ttlMs) {
+  _setStickySession(messages, comboName, null, ttlMs);
 }
 
 // ── Main Entry Point ────────────────────────────────────────────────────────
@@ -218,11 +218,18 @@ export async function resolveSmartRouter(modelStr, body, settings) {
 
   const messages = body.messages || [];
 
+  // Sticky TTL is configurable (minutes); default 5. Passed through so the
+  // session cache honors the user's setting.
+  const stickyTtlMin = Number.isFinite(Number(config.stickyTtlMin))
+    ? Math.max(1, Number(config.stickyTtlMin))
+    : 5;
+  const stickyTtlMs = stickyTtlMin * 60 * 1000;
+
   // 1. Check session stickiness first
-  const sticky = getSticky(messages);
+  const sticky = getSticky(messages, stickyTtlMs);
   if (sticky) {
     log.debug("SMART", `Sticky session hit: ${modelStr} → ${sticky}`);
-    return { comboName: sticky, taskType: classifyTask(messages) };
+    return { comboName: sticky, taskType: classifyTask(messages), scores: null, sticky: true };
   }
 
   // 2. Classify task from prompt content
@@ -340,18 +347,26 @@ export async function resolveSmartRouter(modelStr, body, settings) {
   // 5. Take top N candidates for fallback chain
   const topCandidates = candidates.slice(0, maxCandidates);
 
+  // Score breakdown for observability (why did it pick X?): expose the top
+  // candidates with their scores so the dashboard can show a "why" panel.
+  const scores = topCandidates.map((c) => ({
+    model: `${c.provider}/${c.model}`,
+    score: Math.round(c.score * 100) / 100,
+  }));
+
   // 6. Create or reuse a dynamic combo with these candidates
   const comboName = await getOrCreateSmartCombo(topCandidates, taskType, modelStr);
 
   // 7. Store sticky session so subsequent turns use the same combo
-  setSticky(messages, comboName);
+  setSticky(messages, comboName, stickyTtlMs);
 
   log.info(
     "SMART",
     `Router "${modelStr}" → combo "${comboName}" (task: ${taskType}, ` +
       `top: ${topCandidates[0].provider}/${topCandidates[0].model}, ` +
-      `candidates: ${topCandidates.length})`
+      `candidates: ${topCandidates.length}, ` +
+      `scores: [${scores.map((s) => `${s.model}=${s.score}`).join(", ")}])`
   );
 
-  return { comboName, taskType };
+  return { comboName, taskType, scores, sticky: false };
 }
