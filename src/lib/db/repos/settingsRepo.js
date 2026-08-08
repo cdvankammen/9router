@@ -96,16 +96,7 @@ async function readRaw() {
 // Merge raw settings with defaults; backward-compat for missing keys
 // Deep-merges nested objects so a PARTIAL update (e.g. {smartRouter:{enabled:true}})
 // never shadows the sibling defaults (names, allowedModels, ...).
-const NESTED_KEYS = new Set([
-  "providerStrategies",
-  "quotaVisibility",
-  "comboStrategies",
-  "smartRouter",
-  "srComboCleanup",
-  "modelFallbacks",
-  "capacityAdapter",
-  "dnsToolEnabled",
-]);
+// (Key sets are defined below: CONFIG_MERGE_KEYS + MAP_REPLACE_KEYS.)
 
 // Recursive plain-object merge (arrays and scalars replace; objects merge
 // key-by-key). Used for the nested settings so partial updates at ANY depth
@@ -128,6 +119,32 @@ function deepMergeObject(base, override) {
   return out;
 }
 
+// Nested config OBJECTS: partial PATCHes accumulate against the stored value
+// (sequential PATCHes never reset each other). These are UI-owned config
+// shapes, not maps — merging with the stored value is the correct semantics.
+const CONFIG_MERGE_KEYS = new Set([
+  "smartRouter",
+  "capacityAdapter",
+  "srComboCleanup",
+]);
+
+// Nested MAP keys: the sender owns the full map (replace semantics — deleting
+// an entry = sending the map without it; merging with stored would resurrect
+// deletes). Their defaults are empty objects, so merging against defaults IS
+// a replace.
+const MAP_REPLACE_KEYS = new Set([
+  "modelFallbacks",
+  "comboStrategies",
+  "providerStrategies",
+  "quotaVisibility",
+  "dnsToolEnabled",
+]);
+
+const NESTED_KEYS = new Set([...CONFIG_MERGE_KEYS, ...MAP_REPLACE_KEYS]);
+
+// Read-path: fill missing nested keys from defaults (backward compat for DBs
+// written before a key existed). Map keys have empty-object defaults, so this
+// is a no-op for them unless the stored value is missing entirely.
 function deepMergeNested(merged, key) {
   const defVal = DEFAULT_SETTINGS[key];
   const curVal = merged[key];
@@ -184,15 +201,15 @@ export async function updateSettings(updates) {
   db.transaction(function () {
     const row = db.get(`SELECT data FROM settings WHERE id = 1`);
     const current = row ? parseJson(row.data, {}) : {};
-    // Deep-merge nested objects against their DEFAULTS (not against the stored
-    // value): a partial nested update (e.g. {smartRouter:{enabled:true}}) keeps
-    // the sibling defaults, while full-map keys (modelFallbacks, strategies)
-    // keep REPLACE semantics — merging against the stored map would resurrect
-    // deleted entries (the UI deletes by sending the map without the key).
+    // CONFIG_MERGE_KEYS accumulate against the STORED value: sequential partial
+    // PATCHes (e.g. {smartRouter:{enabled:true}} then {smartRouter:{allowedModels:[...]}})
+    // never reset each other. MAP_REPLACE_KEYS keep replace semantics — the
+    // sender owns the full map, so deleting an entry (map without the key) is
+    // honored and never resurrected.
     next = { ...current, ...updates };
-    for (const key of NESTED_KEYS) {
-      if (next[key] && typeof next[key] === "object" && !Array.isArray(next[key])) {
-        next[key] = deepMergeObject(DEFAULT_SETTINGS[key] ?? {}, next[key]);
+    for (const key of CONFIG_MERGE_KEYS) {
+      if (updates[key] && typeof updates[key] === "object" && !Array.isArray(updates[key])) {
+        next[key] = deepMergeObject(current[key] ?? DEFAULT_SETTINGS[key] ?? {}, updates[key]);
       }
     }
     db.run(

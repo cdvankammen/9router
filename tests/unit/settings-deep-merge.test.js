@@ -71,6 +71,33 @@ describe("settingsRepo nested deep-merge", () => {
     expect(s.modelFallbacks["anthropic/claude-sonnet-4.6"]).toEqual(["openai/gpt-4o"]);
   });
 
+  it("SEQUENTIAL partial PATCHes accumulate (no clobbering)", async () => {
+    const { initDb, updateSettings, getSettings } = await import("@/lib/db/index.js");
+    await initDb();
+
+    // PATCH 1: enable the router
+    await updateSettings({ smartRouter: { enabled: true } });
+    // PATCH 2: set allowedModels — must NOT reset enabled back to default false
+    await updateSettings({ smartRouter: { allowedModels: ["dial/*"] } });
+    const s = await getSettings();
+
+    expect(s.smartRouter.enabled).toBe(true); // ← was false before the fix
+    expect(s.smartRouter.allowedModels).toEqual(["dial/*"]);
+    expect(s.smartRouter.names).toEqual(["modelRouter"]);
+  });
+
+  it("sequential capacityAdapter PATCHes accumulate per capability", async () => {
+    const { initDb, updateSettings, getSettings } = await import("@/lib/db/index.js");
+    await initDb();
+
+    await updateSettings({ capacityAdapter: { vision: { enabled: false } } });
+    await updateSettings({ capacityAdapter: { vision: { roundRobin: true } } });
+    const s = await getSettings();
+
+    expect(s.capacityAdapter.vision.enabled).toBe(false);
+    expect(s.capacityAdapter.vision.roundRobin).toBe(true);
+  });
+
   it("explicit nested updates override defaults (full object replaces)", async () => {
     const { initDb, updateSettings, getSettings } = await import("@/lib/db/index.js");
     await initDb();
