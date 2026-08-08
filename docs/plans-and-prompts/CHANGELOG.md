@@ -424,3 +424,14 @@ t)
   - **B.** Filter dimensions from LangSmith/Langfuse/Helicone/OpenLLMetry/Weave/AgentOps (trace/session/user/project/env/model/cost/tags/metadata/error) + gateway-vs-client capture split
   - **C.** Gateway-only capture dimensions 9Router can add: API key, trusted client IP (x-9r-real-ip already computed in custom-server.js!), UA→sourceApp fingerprint, combo name, smart-router taskType, route chain, provider account, x-project/x-app/Helicone-Property-* headers
   - **D.** 3 view designs (Timeline/Waterfall, Trace Tree, Board/Triage), 8 filter dimensions, 5 visual UX improvements, 7 privacy risk guardrails
+
+---
+
+## UPDATE 2026-08-07/08 (review of other-bot work vs research)
+
+### review only, no code changed
+- **`research/9router/20-review-otherbot-work-vs-research.md`** — rigorous review of Messages P1 (2b20618b, 79c457e6) + hardening P1 (5918de88) + uncommitted Phase 2, via 2 review subagents + live browser verification on port 20131
+- Verdicts: Messages P1 ≈ 45% of spec (correct shell: 3 routes, 5 tabs, badges, sidebar, drawer fixes; missing: messages table, parent_message_id trees, FTS5, cost, keyset pagination, siblings nav, sanitizers). Hardening P1 = 7.5/10 (1.1 merges-against-defaults gap; 1.2-1.4 good). Uncommitted Phase 2 = 2/10 — **P0: smartRouterMeta never declared in chat.js → every chat request 500s; eslint misses it; DO NOT COMMIT**
+- Live-confirmed bugs: B1 status filter (success vs done vocabulary), B3 conversation view page-window-scoped, B4 cURL placeholder endpoint
+- Research alignment: 5-tab Bruno pattern + sidebar + drawer fixes = used well; parent_message_id trees, FTS5, cost/provenance, CPR/CLO, sanitizers = the missed substance
+- Suggested next: fix P0 (1 line), fix B1, decide messages-table vs projection, fix deep-merge semantics, then P2

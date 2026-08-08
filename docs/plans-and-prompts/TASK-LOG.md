@@ -242,3 +242,11 @@ Open questions for user (block 83/84/85): auto-disable behavior; pricing re-fetc
 | 68 | Filter-dimension research: LLM observability tools | ✅ | `research/message-viewer-design-philosophies.md` §B (dimension table + gateway-vs-client split + SDK header conventions from openai-node source) |
 | 69 | Gateway capture-dimension analysis (API key/IP/combo/route) | ✅ | `research/message-viewer-design-philosophies.md` §C (audited requestDetailsRepo/usageRepo/chat.js/custom-server.js) |
 | 70 | 3 view designs + filters + visual improvements + privacy risks | ✅ | `research/message-viewer-design-philosophies.md` §D (Timeline/Trace-Tree/Board views, 8 filters, 5 UX fixes, 7 guardrails) |
+
+### Review of other-bot work (2026-08-07/08)
+
+| # | Task | Status | Evidence |
+|---|------|--------|----------|
+| 90 | Review Messages P1 vs spec (2 subagents + live browser) | ✅ | `research/9router/20-review-otherbot-work-vs-research.md` — ~45% of spec P1; B1 status-filter bug + B3 fake tree + B4 curl URL confirmed live |
+| 91 | Review hardening P1 vs roadmap | ✅ | 7.5/10 — 1.2/1.3/1.4 good; 1.1 merges-vs-defaults gap (sequential PATCH resets) |
+| 92 | Review uncommitted Phase 2 work | ✅ | **P0: smartRouterMeta undeclared in chat.js (8 uses, 0 decls) → every chat request 500s; eslint misses it. DO NOT COMMIT.** 2.1 UI absent; 2.2 correct but unreachable |
