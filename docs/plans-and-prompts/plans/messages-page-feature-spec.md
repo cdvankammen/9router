@@ -168,3 +168,73 @@ All exports run through the same sanitizer as rendering (§9). System prompts ex
 - OTLP span-kind/semconv churn — which survive for P4 (v4 §3/§4 HN).
 - SEAR ~100-attribute mapping effort unestimated (synthesis §7.3).
 - Need a labeled failure corpus / eval set for the analyzer (ALPHA 2509.05936; v4 §3 #32).
+
+---
+
+## 12. Known UI Issues — P1 Detail Drawer (logged 2026-08-07, fix deferred)
+
+> User-reported during P1 verification. Both are **deferred** (not blocking P1
+> data/API work) — recorded here so they are not lost.
+
+### 12.1 Compact-mode overflow: detail drawer goes off-screen
+
+**Symptom:** in a narrow/compact window, the detail drawer (and the
+conversation/error detail it shows) renders **partially off the left edge of the
+page** — content is not visible and cannot be scrolled into view.
+
+**Evidence (browser probe, 2026-08-07):**
+- Drawer is hard-coded `w-[800px]` + `right-0` (see `combos`-style detail drawer
+  markup: `div.absolute.right-0.top-0.h-full...w-[800px]`).
+- At a ≥800px window the drawer fits (probe: `left:0, right:800`).
+- At a narrower window the drawer's bounding rect goes negative
+  (user-attached element context showed `left: -160px`), i.e. 160px of the
+  drawer is off-screen with no way to reach it.
+
+**Root cause (from code):** fixed 800px width with no viewport adaptation
+(`max-w-full`, `w-[min(800px,100vw)]`, or responsive `sm:`/`md:` widths).
+
+**Fix approach (when we get to it):**
+- `w-[min(800px,100vw)]` (or `w-full max-w-[800px]`) so the drawer never exceeds
+  the viewport;
+- verify the inner scroll container still works at reduced width;
+- optionally a drag-to-resize drawer (P3 nicety, not required).
+
+**Verification for the fix:** open the drawer at window widths 1280 / 900 / 640 /
+375 → assert drawer rect ∈ viewport at every width and the Pretty JSON tab is
+fully reachable.
+
+### 12.2 Detail text not (visibly) scrollable
+
+**Symptom:** the `pre` block showing the conversation/error payload does not
+scroll up/down or side to side (or the scroll affordance is invisible).
+
+**Evidence (browser probe, 2026-08-07):**
+- `pre` has `overflow-auto`, `whitespace-pre-wrap`, `break-words`.
+- For the sampled (small) message: `scrollHeight == clientHeight` and
+  `scrollWidth == clientWidth` → nothing to scroll for short payloads (correct
+  behavior, but easy to read as "broken").
+- Horizontal scrolling **never** occurs by design: `pre-wrap` + `break-words`
+  wraps long lines instead of overflowing. If horizontal scroll is desired, it
+  needs `whitespace-pre` + `overflow-x-auto` (or a toggle).
+- Nested scroll containers: the drawer body is also `overflow-y-auto` wrapping
+  the `pre`'s flex column, and the middle wrapper (`flex min-w-0 flex-1 flex-col`)
+  lacks `min-h-0` — for very long payloads the `pre` may grow past the drawer
+  body instead of scrolling (needs verification with a large synthetic payload).
+
+**Fix approach (when we get to it):**
+- Add `min-h-0` to the `pre`'s flex parent chain;
+- decide wrap vs horizontal-scroll policy (recommend: keep wrap for readability,
+  add a "Word wrap" toggle);
+- make the scrollbar visible in compact mode (custom-scrollbar styling).
+
+**Verification:** inject a >10k-char synthetic message → assert `pre` scrolls
+vertically inside the drawer without the drawer body scrolling; assert both
+nested scrollbars behave (drawer body scrolls to bottom, pre scrolls
+independently).
+
+### 12.3 Vision-assisted review (optional, deferred)
+
+If needed later, use a subagent with a vision-capable model (e.g.
+`dialagram/qwen-3.5-omni-plus`) on a screenshot of the drawer at 375px width to
+confirm the off-screen/scroll issues visually. Not required for the fixes above
+(DOM probes are sufficient), but useful as final QA.

@@ -216,3 +216,11 @@ Phase 4 — Provider resilience (MIXED):
 | 86 | Node /models fetch error badge | ⏳ todo | OURS — MED |
 
 Open questions for user (block 83/84/85): auto-disable behavior; pricing re-fetch policy; mimo fallback policy.
+
+### Messages drawer UI issues (deferred — documented 2026-08-07)
+
+| # | Task | Status | Evidence |
+|---|------|--------|----------|
+| 87 | Detail drawer overflows off-screen in compact/narrow windows (fixed w-[800px]) | ⏳ deferred | Probe: left:-160px at narrow width; spec §12.1 |
+| 88 | Detail payload `pre` not visibly scrollable (wrap policy + missing min-h-0 on flex chain + nested scroll containers) | ⏳ deferred | Probe: scrollHeight==clientHeight on sample; spec §12.2 |
+| 89 | Optional vision-assisted QA of drawer at 375px (qwen-3.5-omni-plus subagent) | ⏳ deferred | spec §12.3 |

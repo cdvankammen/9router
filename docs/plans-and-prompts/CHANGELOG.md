@@ -400,3 +400,16 @@ Full suite 1718 pass / 88 baseline fail (exact baseline). Lint clean on changed 
 
 ### Subagent failure mode (explained for the record)
 `rate_limit_exceeded` = Copilot model API quota for concurrent subagent calls; `net::ERR_FAILED` = dropped network connection to model API. Transient infra failures, NOT code problems. Mitigation documented: spawn one-at-a-time, retry, fall back to main session.
+
+---
+
+## UPDATE 2026-08-07 (Messages drawer UI issues documented — deferred fixes)
+
+User reported (for later): compact-mode drawer goes off-screen; payload text not visibly scrollable. Probed live:
+- Drawer is fixed `w-[800px]` + `right-0` →
+### Messages drawer UI issues (deferred — documented 2026-08-07)
+
+| # | Task | Status | Evidence |
+t) 
+| # | Task | Status | Evidence |
+|---|--`w-[min(800px,100vw)]` + ve|---|------|-------- `pre` is `ov| 87 | Detail drawer overflows k-| 88 | Detail payload `pre` not visibly scrollable (wrap policy + missing min-h-0 on flex chain + nested scroll containers) | ⏳ deferred | Probe: scron| 89 | Optional vision-assisted QA of drawer at 375px (qwen-3.5-omni-plus subagent) | ⏳ deferred | spec §12.3 |
