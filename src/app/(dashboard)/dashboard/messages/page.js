@@ -512,8 +512,9 @@ export default function MessagesPage() {
             className="h-8 rounded-lg border border-black/10 dark:border-white/10 bg-transparent px-2 text-xs text-text-main outline-none"
           >
             <option value="">All statuses</option>
-            <option value="done">done</option>
+            <option value="success">success</option>
             <option value="error">error</option>
+            <option value="streaming">streaming</option>
             <option value="partial">partial</option>
             <option value="cancelled">cancelled</option>
           </select>
