@@ -12,10 +12,10 @@ export default function Drawer({
   className
 }) {
   const widths = {
-    sm: "w-[400px]",
-    md: "w-[500px]",
-    lg: "w-[600px]",
-    xl: "w-[800px]",
+    sm: "w-[min(400px,100vw)]",
+    md: "w-[min(500px,100vw)]",
+    lg: "w-[min(600px,100vw)]",
+    xl: "w-[min(800px,100vw)]",
     full: "w-full",
   };
 

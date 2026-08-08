@@ -132,6 +132,7 @@ function buildMarkdown(detail) {
 
 function FormatTabs({ detail, onCopy }) {
   const [tab, setTab] = useState("pretty");
+  const [wrap, setWrap] = useState(true); // true = wrap lines; false = horizontal scroll
   const tabs = [
     { key: "pretty", label: "Pretty JSON" },
     { key: "raw", label: "Raw" },
@@ -155,8 +156,8 @@ function FormatTabs({ detail, onCopy }) {
   }, [tab, detail]);
 
   return (
-    <div className="flex min-w-0 flex-1 flex-col">
-      <div className="flex items-center justify-between border-b border-black/5 dark:border-white/5">
+    <div className="flex h-full min-h-0 flex-1 flex-col">
+      <div className="flex items-center justify-between gap-2 border-b border-black/5 dark:border-white/5">
         <div className="flex flex-wrap gap-1 p-2">
           {tabs.map((t) => (
             <button
@@ -172,13 +173,31 @@ function FormatTabs({ detail, onCopy }) {
             </button>
           ))}
         </div>
-        <div className="shrink-0 pr-2">
+        <div className="flex shrink-0 items-center gap-1 pr-2">
+          <button
+            type="button"
+            onClick={() => setWrap(!wrap)}
+            className={cn(
+              "rounded-lg px-2 py-1 text-[10px] font-medium transition-colors",
+              wrap ? "text-text-muted hover:bg-black/5 dark:hover:bg-white/5" : "bg-primary/10 text-primary"
+            )}
+            title={wrap ? "Lines wrap — click for horizontal scroll" : "No wrap — click for line wrap"}
+          >
+            {wrap ? "Wrap" : "No wrap"}
+          </button>
           <Button size="sm" variant="ghost" onClick={() => onCopy(content)}>Copy</Button>
         </div>
       </div>
-      <pre className="min-w-0 flex-1 overflow-auto whitespace-pre-wrap break-words p-4 font-mono text-[11px] leading-relaxed text-text-main">
-        {content}
-      </pre>
+      <div className="min-h-0 flex-1 overflow-auto">
+        <pre
+          className={cn(
+            "h-full min-h-0 overflow-auto p-4 font-mono text-[11px] leading-relaxed text-text-main",
+            wrap ? "whitespace-pre-wrap break-words" : "whitespace-pre"
+          )}
+        >
+          {content}
+        </pre>
+      </div>
     </div>
   );
 }
