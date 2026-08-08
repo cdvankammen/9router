@@ -93,8 +93,58 @@ async function readRaw() {
 }
 
 // Merge raw settings with defaults; backward-compat for missing keys
+// Deep-merges nested objects so a PARTIAL update (e.g. {smartRouter:{enabled:true}})
+// never shadows the sibling defaults (names, allowedModels, ...).
+const NESTED_KEYS = new Set([
+  "providerStrategies",
+  "quotaVisibility",
+  "comboStrategies",
+  "smartRouter",
+  "srComboCleanup",
+  "modelFallbacks",
+  "capacityAdapter",
+  "dnsToolEnabled",
+]);
+
+// Recursive plain-object merge (arrays and scalars replace; objects merge
+// key-by-key). Used for the nested settings so partial updates at ANY depth
+// (e.g. capacityAdapter.vision.enabled) keep the sibling defaults.
+function deepMergeObject(base, override) {
+  if (
+    !override ||
+    typeof override !== "object" ||
+    Array.isArray(override) ||
+    !base ||
+    typeof base !== "object" ||
+    Array.isArray(base)
+  ) {
+    return override === undefined ? base : override;
+  }
+  const out = { ...base };
+  for (const [k, v] of Object.entries(override)) {
+    out[k] = deepMergeObject(base[k], v);
+  }
+  return out;
+}
+
+function deepMergeNested(merged, key) {
+  const defVal = DEFAULT_SETTINGS[key];
+  const curVal = merged[key];
+  if (
+    curVal &&
+    typeof curVal === "object" &&
+    !Array.isArray(curVal) &&
+    defVal &&
+    typeof defVal === "object" &&
+    !Array.isArray(defVal)
+  ) {
+    merged[key] = deepMergeObject(defVal, curVal);
+  }
+}
+
 export function mergeWithDefaults(raw) {
   const merged = { ...DEFAULT_SETTINGS, ...(raw || {}) };
+  for (const key of NESTED_KEYS) deepMergeNested(merged, key);
   for (const [key, defVal] of Object.entries(DEFAULT_SETTINGS)) {
     if (merged[key] === undefined) {
       if (
@@ -133,7 +183,17 @@ export async function updateSettings(updates) {
   db.transaction(function () {
     const row = db.get(`SELECT data FROM settings WHERE id = 1`);
     const current = row ? parseJson(row.data, {}) : {};
+    // Deep-merge nested objects against their DEFAULTS (not against the stored
+    // value): a partial nested update (e.g. {smartRouter:{enabled:true}}) keeps
+    // the sibling defaults, while full-map keys (modelFallbacks, strategies)
+    // keep REPLACE semantics — merging against the stored map would resurrect
+    // deleted entries (the UI deletes by sending the map without the key).
     next = { ...current, ...updates };
+    for (const key of NESTED_KEYS) {
+      if (next[key] && typeof next[key] === "object" && !Array.isArray(next[key])) {
+        next[key] = deepMergeObject(DEFAULT_SETTINGS[key] ?? {}, next[key]);
+      }
+    }
     db.run(
       `INSERT INTO settings(id, data) VALUES(1, ?) ON CONFLICT(id) DO UPDATE SET data = excluded.data`,
       [stringifyJson(next)],

@@ -10,6 +10,8 @@ import { toDraftText, parseDraftText } from "@/lib/fallbackTextFormat";
 import { useCopyToClipboard } from "@/shared/hooks/useCopyToClipboard";
 import { useModelCaps } from "@/shared/hooks/useModelCaps";
 import { aggregateComboCapabilities } from "open-sse/providers/capabilities.js";
+import { isOpenAICompatibleProvider, isAnthropicCompatibleProvider } from "@/shared/constants/providers";
+import { isValidModel } from "@/shared/constants/models";
 
 // Validate combo name: only a-z, A-Z, 0-9, -, _
 const VALID_NAME_REGEX = /^[a-zA-Z0-9_.\-]+$/;
@@ -1350,6 +1352,30 @@ function ModelFallbacksSection({ modelFallbacks, onChange, activeProviders }) {
 
 /** Approach 1: table view (the original modal + table). */
 function FallbackRulesTable({ rules, onDelete }) {
+  // Precedence: a model-level rule ("provider/model") beats a provider-level
+  // rule ("provider") when both exist — the model rule wins silently today.
+  // Surface both directions so the user can see the conflict.
+  const providerTargets = new Set(
+    rules.filter((r) => !r.target.includes("/")).map((r) => r.target)
+  );
+  const conflictInfo = (target) => {
+    if (target.includes("/")) {
+      const provider = target.split("/")[0];
+      if (providerTargets.has(provider)) {
+        return { kind: "model-over-provider", text: `Provider rule for "${provider}" also exists — this model rule takes precedence` };
+      }
+    } else {
+      const modelRules = rules.filter((r) => r.target.startsWith(target + "/"));
+      if (modelRules.length > 0) {
+        return {
+          kind: "provider-overlaps-models",
+          text: `Also applies to ${modelRules.length} model rule${modelRules.length === 1 ? "" : "s"} (${modelRules.map((r) => r.target).join(", ")}) — those take precedence`,
+        };
+      }
+    }
+    return null;
+  };
+
   return (
     <div className="mt-4 overflow-x-auto">
       <table className="w-full min-w-[640px] text-sm">
@@ -1368,9 +1394,28 @@ function FallbackRulesTable({ rules, onDelete }) {
                 No fallback rules yet. Click &quot;Add Fallback Rule&quot; to create one.
               </td>
             </tr>
-          ) : rules.map((rule) => (
+          ) : rules.map((rule) => {
+            const conflict = conflictInfo(rule.target);
+            return (
             <tr key={rule.target} className="border-b border-black/5 dark:border-white/5 last:border-b-0 hover:bg-black/[0.02] dark:hover:bg-white/[0.02]">
-              <td className="p-2 font-mono text-xs text-text-main whitespace-nowrap">{rule.target}</td>
+              <td className="p-2 font-mono text-xs text-text-main whitespace-nowrap">
+                <div className="flex flex-col gap-1">
+                  <span>{rule.target}</span>
+                  {conflict && (
+                    <span
+                      className={`inline-flex max-w-[260px] items-start gap-1 rounded px-1.5 py-0.5 text-[10px] leading-snug ${
+                        conflict.kind === "model-over-provider"
+                          ? "bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                          : "bg-primary/10 text-primary"
+                      }`}
+                      title={conflict.text}
+                    >
+                      <span className="material-symbols-outlined text-[12px] shrink-0">warning</span>
+                      {conflict.text}
+                    </span>
+                  )}
+                </div>
+              </td>
               <td className="p-2">
                 <div className="flex flex-wrap items-center gap-1">
                   {rule.models.map((m, i) => (
@@ -1393,7 +1438,8 @@ function FallbackRulesTable({ rules, onDelete }) {
                 </Button>
               </td>
             </tr>
-          ))}
+            );
+          })}
         </tbody>
       </table>
     </div>
@@ -1841,6 +1887,25 @@ function FallbackRuleModal({ onClose, onSave, activeProviders }) {
   const [showModelSelect, setShowModelSelect] = useState(false);
   const [showTargetSelect, setShowTargetSelect] = useState(false);
   const [showProviderSelect, setShowProviderSelect] = useState(false);
+  const [nodePrefixes, setNodePrefixes] = useState([]);     // custom node prefixes (valid providers)
+
+  // Custom provider nodes (openai/anthropic-compatible) use a prefix (e.g.
+  // "mockreal") that is NOT in the static catalog — their models are valid.
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/provider-nodes")
+      .then((r) => (r.ok ? r.json() : { nodes: [] }))
+      .then((d) => {
+        if (cancelled) return;
+        setNodePrefixes(
+          (d.nodes || [])
+            .map((n) => n.prefix || n.id)
+            .filter((p) => typeof p === "string" && p)
+        );
+      })
+      .catch(() => { if (!cancelled) setNodePrefixes([]); });
+    return () => { cancelled = true; };
+  }, []);
 
   const chainSensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
@@ -1884,11 +1949,35 @@ function FallbackRuleModal({ onClose, onSave, activeProviders }) {
     setFallbacks(next);
   };
 
+  // Validate fallback strings against the known catalog. Warn, don't block:
+  // custom nodes and passthrough providers accept arbitrary model ids, so
+  // "unknown" is a hint, not an error.
+  const unknownFallbacks = fallbacks.filter((m) => {
+    if (!m || typeof m !== "string") return true;
+    const slash = m.indexOf("/");
+    if (slash <= 0) return true; // not provider/model form
+    const provider = m.slice(0, slash);
+    const modelId = m.slice(slash + 1);
+    if (!modelId) return true;
+    if (nodePrefixes.includes(provider)) return false; // custom node — valid
+    return !isValidModel(provider, modelId);
+  });
+
   const canSave = target.trim() && fallbacks.length > 0;
 
   return (
     <Modal isOpen onClose={onClose} title="Add Fallback Rule">
       <div className="flex flex-col gap-4">
+        {/* Unknown-model warning */}
+        {unknownFallbacks.length > 0 && (
+          <div className="flex items-start gap-2 rounded-lg bg-amber-500/10 px-3 py-2 text-xs text-amber-600 dark:text-amber-400">
+            <span className="material-symbols-outlined text-[16px] shrink-0">warning</span>
+            <span>
+              Not in the model catalog (may still work if it&apos;s a passthrough/custom
+              model): <code className="font-mono">{unknownFallbacks.join(", ")}</code>
+            </span>
+          </div>
+        )}
         {/* Target: model or provider */}
         <div>
           <label className="text-sm font-medium mb-1.5 block">Target</label>

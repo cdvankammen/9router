@@ -452,10 +452,27 @@ export function formatCost(cost) {
 }
 
 /**
- * Calculate cost from tokens and pricing
- * @param {object} tokens
- * @param {object} pricing
+ * Calculate cost from tokens and pricing.
+ *
+ * NOTE argument order: `(tokens, pricing)` — tokens FIRST, pricing SECOND.
+ * (The price object is the "lookup result", tokens are the "input data";
+ * don't be fooled by the names when calling.)
+ *
+ * @param {object} tokens - Usage counters, e.g.
+ *   { prompt_tokens: 1000, completion_tokens: 500, cached_tokens: 0 }
+ *   (accepts OpenAI-style or Claude-style field names; prompt_tokens is
+ *   cache-inclusive, cached/cache_creation are subtracted from it)
+ * @param {object} pricing - Price object from getPricingForModel(provider, model),
+ *   e.g. { input: 5, output: 25, cached: 0.5, cache_creation: 6.25, reasoning: 25 }
+ *   (all values are $ per 1M tokens)
  * @returns {number} cost in dollars
+ *
+ * @example
+ * const p = getPricingForModel("tokenrouter", "anthropic/claude-opus-4.6");
+ * const cost = calculateCostFromTokens(
+ *   { prompt_tokens: 1000, completion_tokens: 500, cached_tokens: 0 },
+ *   p
+ * ); // 0.0175
  */
 export function calculateCostFromTokens(tokens, pricing) {
   if (!tokens || !pricing) return 0;
