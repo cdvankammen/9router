@@ -84,16 +84,37 @@ function prettyJson(obj) {
 }
 
 function buildCurl(detail) {
-  const url = detail.providerRequest?.url || "";
-  const method = detail.providerRequest?.method || "POST";
-  const body = detail.providerRequest?.body || detail.providerRequest || null;
-  const lines = [`curl -X ${method} "${url}"`];
+  // Try to reconstruct the upstream request: providerRequest has the payload.
+  // URL isn't captured, so show the endpoint pattern + full body.
+  const body = detail.providerRequest || detail.request || {};
+  const lines = [`curl -X POST "<provider-endpoint>/v1/chat/completions"`];
   if (body && typeof body === "object" && Object.keys(body).length > 0) {
     lines.push('  -H "Content-Type: application/json"');
     lines.push('  -H "Authorization: Bearer YOUR_API_KEY"');
     lines.push(`  -d '${JSON.stringify(body, null, 2)}'`);
   }
+  lines.push("");
+  lines.push(`# Provider: ${detail.provider}`);
+  lines.push(`# Model: ${detail.model}`);
+  lines.push(`# Account: ${detail.connectionId || "unknown"}`);
   return lines.join(" \\\n");
+}
+
+// Extract plain text from message content (string, array of blocks, or structured).
+function extractText(content) {
+  if (content == null) return "";
+  if (typeof content === "string") return content;
+  if (Array.isArray(content)) {
+    return content
+      .map((b) => {
+        if (typeof b === "string") return b;
+        if (b?.text) return b.text;
+        if (b?.content) return extractText(b.content);
+        return "";
+      })
+      .join("\n");
+  }
+  return "";
 }
 
 function buildMarkdown(detail) {
@@ -101,29 +122,60 @@ function buildMarkdown(detail) {
   out.push(`## ${detail.timestamp} — ${detail.provider}/${detail.model} [${detail.status}]`);
   out.push("");
   if (detail.conversationId) out.push(`- **Conversation:** \`${detail.conversationId}\``);
+  if (detail.connectionId) out.push(`- **Account:** \`${detail.connectionId}\``);
   if (detail.errorCategory) out.push(`- **Category:** \`${detail.errorCategory}\``);
   const lat = detail.latency;
   if (lat) out.push(`- **Latency:** ttft=${lat.ttft ?? "?"}ms total=${lat.total ?? "?"}ms`);
   const tok = detail.tokens;
   if (tok) out.push(`- **Tokens:** in=${tok.prompt_tokens ?? tok.input_tokens ?? "?"} out=${tok.completion_tokens ?? tok.output_tokens ?? "?"}`);
   out.push("");
+
+  // Request messages (what the client sent)
   const reqMsgs = detail.request?.messages || detail.request?.input || [];
   if (reqMsgs.length) {
     out.push("### Request");
+    out.push("");
+    for (const msg of reqMsgs) {
+      const role = msg.role || "unknown";
+      const text = extractText(msg.content);
+      out.push(`**${role}:** ${text}`);
+      out.push("");
+    }
+  }
+
+  // Provider payload (what was actually sent upstream)
+  const provReq = detail.providerRequest;
+  if (provReq && Object.keys(provReq).length) {
+    out.push("### Provider Request (sent upstream)");
+    out.push("");
     out.push("```json");
-    out.push(JSON.stringify(reqMsgs, null, 2));
+    out.push(JSON.stringify(provReq, null, 2));
     out.push("```");
     out.push("");
   }
-  const content = detail.response?.content || detail.providerResponse?.content;
+
+  // Response content
+  const content = detail.response?.content || detail.providerResponse?.choices?.[0]?.message?.content;
   if (content) {
     out.push("### Response");
+    out.push("");
     out.push(content);
     out.push("");
   }
+
+  // Thinking blocks
+  if (detail.response?.thinking) {
+    out.push("### Thinking");
+    out.push("");
+    out.push(detail.response.thinking);
+    out.push("");
+  }
+
+  // Error
   const err = detail.response?.error;
   if (err) {
     out.push("### Error");
+    out.push("");
     out.push(typeof err === "string" ? err : JSON.stringify(err, null, 2));
     out.push("");
   }
@@ -144,10 +196,36 @@ function FormatTabs({ detail, onCopy }) {
   const content = useMemo(() => {
     switch (tab) {
       case "pretty": return prettyJson(detail);
-      case "raw": return JSON.stringify(detail, null, 2);
+      case "raw": {
+        // Raw = the exact provider request/response payload (wire fidelity)
+        const provReq = detail.providerRequest || {};
+        const provResp = detail.providerResponse || {};
+        return [
+          "// Provider request (what was sent upstream):",
+          JSON.stringify(provReq, null, 2),
+          "",
+          "// Provider response (what came back):",
+          JSON.stringify(provResp, null, 2),
+        ].join("\n");
+      }
       case "headers": {
-        const h = detail.request?.headers || {};
-        return Object.entries(h).length ? prettyJson(h) : "No headers captured (sanitized).";
+        // Headers are sanitized at capture time; explain + show what we know.
+        const known = {};
+        if (detail.provider) known["x-provider"] = detail.provider;
+        if (detail.model) known["x-model"] = detail.model;
+        if (detail.connectionId) known["x-account"] = detail.connectionId;
+        if (detail.conversationId) known["x-conversation-id"] = detail.conversationId;
+        const lines = [
+          "// Headers are stripped at capture time for privacy (authorization,",
+          "// x-api-key, cookies are never stored). The following is what we know:",
+        ];
+        for (const [k, v] of Object.entries(known)) {
+          lines.push(`${k}: ${v}`);
+        }
+        lines.push("");
+        lines.push("// To capture request/response headers, enable the header");
+        lines.push("// capture option (P3 enrichment — planned).");
+        return lines.join("\n");
       }
       case "curl": return buildCurl(detail);
       case "markdown": return buildMarkdown(detail);
@@ -213,12 +291,12 @@ function MessageDetailDrawer({ message, onClose }) {
         <div className="mb-3 flex flex-wrap items-center gap-2">
           <StatusBadge status={message.status} category={message.errorCategory} />
           {message.errorCategory && (
-            <span className="rounded bg-black/5 dark:bg-white/5 px-1.5 py-0.5 text-[10px] text-text-muted">
+            <span className="rounded bg-black/5 dark:bg-white/5 px-2 py-0.5 text-xs font-medium text-text-muted">
               {message.errorCategory}
             </span>
           )}
-          <span className="font-mono text-[11px] text-text-muted">{message.provider}/{message.model}</span>
-          <span className="ml-auto text-[11px] text-text-muted">{message.timestamp}</span>
+          <span className="font-mono text-sm text-text-main">{message.provider}/{message.model}</span>
+          <span className="ml-auto text-xs text-text-muted">{message.timestamp}</span>
         </div>
 
         <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -227,6 +305,13 @@ function MessageDetailDrawer({ message, onClose }) {
           <InfoCell label="Tokens" value={`${fmtTokens(message.tokens?.prompt_tokens ?? message.tokens?.input_tokens)} / ${fmtTokens(message.tokens?.completion_tokens ?? message.tokens?.output_tokens)}`} />
           <InfoCell label="Cost" value={fmtCost(message.cost)} />
         </div>
+
+        {message.conversationId && (
+          <div className="mb-3 rounded-lg border border-black/5 dark:border-white/5 p-2">
+            <div className="text-[10px] uppercase tracking-wide text-text-muted">Conversation</div>
+            <code className="mt-0.5 block truncate font-mono text-xs text-text-main">{message.conversationId}</code>
+          </div>
+        )}
 
         <FormatTabs detail={message} onCopy={copyToClipboard} />
       </div>
@@ -238,7 +323,7 @@ function InfoCell({ label, value }) {
   return (
     <div className="rounded-lg border border-black/5 dark:border-white/5 p-2">
       <div className="text-[10px] uppercase tracking-wide text-text-muted">{label}</div>
-      <div className="mt-0.5 truncate font-mono text-xs text-text-main">{value}</div>
+      <div className="mt-0.5 truncate font-mono text-sm text-text-main">{value}</div>
     </div>
   );
 }
