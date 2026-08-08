@@ -191,7 +191,9 @@ export async function handleForcedSSEToJson({ providerResponse, sourceFormat, ta
     provider, model, connectionId,
     conversationId,
     request: extractRequestConfig(body, stream),
-    providerRequest: finalBody || translatedBody || null
+    providerRequest: finalBody || translatedBody || null,
+    sourceApp,
+    userAgent
   };
 
   // Codex/Responses API SSE path
