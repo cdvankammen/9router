@@ -435,3 +435,40 @@ t)
 - Live-confirmed bugs: B1 status filter (success vs done vocabulary), B3 conversation view page-window-scoped, B4 cURL placeholder endpoint
 - Research alignment: 5-tab Bruno pattern + sidebar + drawer fixes = used well; parent_message_id trees, FTS5, cost/provenance, CPR/CLO, sanitizers = the missed substance
 - Suggested next: fix P0 (1 line), fix B1, decide messages-table vs projection, fix deep-merge semantics, then P2
+
+---
+
+## UPDATE 2026-08-08 (Hardening phases 1–4 complete — commits 5918de88, 6485e782, 12895e19, cb01da52, 723e9669)
+
+### What shipped (all 4 phases of plans/hardening-roadmap.md)
+
+**Phase 1 — Quick wins:**
+- Deep-merge nested settings (capacityAdapter, smartRouter, srComboCleanup, modelFallbacks) in updateSettings + 6 unit tests
+- JSDoc for calculateCostFromTokens
+- Provider+model conflict warning in fallbacks UI
+- Fallback string validation on save (custom-node aware)
+
+**Phase 2 — UX gaps:**
+- Smart router score breakdown (backend: resolveSmartRouter returns top-N scores; UI: Smart Router panel with score bars in usage drawer)
+- Configurable sticky TTL (stickyTtlMin, 1-1440, UI input)
+- Node models cache refresh (?refresh=1 busts cache; import refreshes)
+- Chain Flow chip truncation (180px + title tooltip)
+- Expert Text invalid-line highlighting (#N list + red banner)
+
+**Phase 3 — Robustness:**
+- markdownLog atomic write (temp + rename)
+- Export pagination (page param + pagination.hasNext)
+- droppedRecords counter + /api/observability/status + amber banner in RequestDetailsTab
+
+**Phase 4 — Provider resilience:**
+- /api/health/providers (auth status, locks, last error, needsAttention)
+- Providers page amber attention banner with refresh
+- Auto-disable after 3 consecutive refresh failures (refreshFailCount + needsReauthReason)
+- Node /models failure red badge in ModelSelectModal
+- 4.3/4.4 deferred (user-owned: TokenRouter revalidation, mimo health check)
+
+### E2E verified live (production build :20130)
+- /api/health/providers: detected mock 429 as needs-attention with full detail ✅
+- /api/observability/status: {enabled, maxRecords, currentCount, droppedRecords} ✅
+- Export pagination: page+limit → pagination.hasNext correct ✅
+- Suite: 1724 pass / 88 baseline fail (zero regressions)
