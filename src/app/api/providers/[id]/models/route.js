@@ -14,6 +14,7 @@ import { resolveCursorModels } from "open-sse/services/cursorModels.js";
 import { resolveZedModels } from "open-sse/shared/zedAuth.js";
 import { resolveClineModels, resolveClinepassModels } from "open-sse/services/clinepassModels.js";
 import codexProvider from "open-sse/providers/registry/codex.js";
+import { bustNodeModelsCache } from "@/sse/services/smartRouter.js";
 
 const GEMINI_CLI_MODELS_URL = "https://cloudcode-pa.googleapis.com/v1internal:fetchAvailableModels";
 
@@ -533,6 +534,12 @@ const PROVIDER_MODELS_CONFIG = {
 export async function GET(request, { params }) {
   try {
     const { id } = await params;
+    const url = new URL(request.url);
+    // ?refresh=1 busts the smart-router's node models cache (used by the
+    // dashboard refresh action for custom provider nodes).
+    if (url.searchParams.get("refresh") === "1") {
+      bustNodeModelsCache(id);
+    }
     const connection = await getProviderConnectionById(id);
 
     if (!connection) {

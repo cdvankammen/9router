@@ -1748,14 +1748,14 @@ function SortableChainNode({ model, isLast, onRemove }) {
       }`}
       {...attributes}
       {...listeners}
-      title="Drag to reorder the chain"
+      title={model}
     >
-      <span className="material-symbols-outlined text-[12px] text-text-muted/60">drag_indicator</span>
-      {model}
-      {!isLast && <span className="text-primary pointer-events-none">→</span>}
+      <span className="material-symbols-outlined text-[12px] text-text-muted/60 shrink-0">drag_indicator</span>
+      <span className="max-w-[180px] truncate">{model}</span>
+      {!isLast && <span className="text-primary pointer-events-none shrink-0">→</span>}
       <button
         onClick={(e) => { e.stopPropagation(); onRemove(); }}
-        className="leading-none text-text-muted hover:text-red-500 pointer-events-auto"
+        className="leading-none text-text-muted hover:text-red-500 pointer-events-auto shrink-0"
       >
         <span className="material-symbols-outlined text-[12px]">close</span>
       </button>
@@ -2461,6 +2461,22 @@ function FallbackTextEditor({ modelFallbacks, onChange, rules, onDelete }) {
 
   const parsed = useMemo(() => parseDraftText(draft, modelFallbacks), [draft, modelFallbacks]);
 
+  // Lines that look like a rule but fail to parse (missing colon, empty target,
+  // empty chain) — surfaced so users aren't surprised by silently ignored lines.
+  const invalidLines = useMemo(() => {
+    const out = [];
+    String(draft || "").split("\n").forEach((raw, i) => {
+      const line = raw.trim();
+      if (!line || line.startsWith("#")) return;
+      const sep = line.indexOf(":");
+      if (sep <= 0) { out.push(i + 1); return; }
+      const target = line.slice(0, sep).trim();
+      const chain = line.slice(sep + 1).split(",").map((s) => s.trim()).filter(Boolean);
+      if (!target || chain.length === 0) out.push(i + 1);
+    });
+    return out;
+  }, [draft]);
+
   const handleApply = () => {
     setError("");
     onChange(parsed);
@@ -2505,6 +2521,14 @@ function FallbackTextEditor({ modelFallbacks, onChange, rules, onDelete }) {
       {savedFlash && (
         <div className="rounded-lg bg-emerald-500/10 px-3 py-2 text-xs font-medium text-emerald-600 dark:text-emerald-400">
           ✓ Applied {Object.keys(parsed).length} rule{Object.keys(parsed).length === 1 ? "" : "s"}.
+        </div>
+      )}
+      {invalidLines.length > 0 && (
+        <div className="rounded-lg border border-red-500/30 bg-red-500/5 px-3 py-2 text-xs text-red-500">
+          <span className="font-medium">Invalid line{invalidLines.length === 1 ? "" : "s"} ignored:</span>{" "}
+          {invalidLines.slice(0, 5).map((n) => `#${n}`).join(", ")}
+          {invalidLines.length > 5 && ` +${invalidLines.length - 5} more`}
+          <span className="text-red-400/70"> — each line must be <code className="font-mono">target:model1,model2</code></span>
         </div>
       )}
       {error && <p className="text-xs text-red-500">{error}</p>}

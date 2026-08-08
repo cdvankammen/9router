@@ -41,6 +41,14 @@ const NODE_MODELS_TTL_MS = 5 * 60 * 1000;
 const nodeModelsCache = new Map(); // nodeId -> { models: [{id,name}], ts }
 
 /**
+ * Drop a node's cached /models result so the next resolve re-fetches.
+ * Used by the dashboard "Refresh models" action for custom provider nodes.
+ */
+export function bustNodeModelsCache(nodeId) {
+  nodeModelsCache.delete(nodeId);
+}
+
+/**
  * Resolve the apiKey for a provider node by looking up the first active
  * connection whose provider id matches the node id. Returns null if none.
  */

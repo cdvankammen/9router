@@ -537,6 +537,52 @@ export default function RequestDetailsTab() {
               </div>
             )}
 
+            {/* Smart Router: task type + score breakdown ("why this model") */}
+            {selectedDetail.meta && (selectedDetail.meta.taskType || selectedDetail.meta.scores) && (
+              <div className="rounded-lg border border-black/5 dark:border-white/5 p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="material-symbols-outlined text-[18px] text-text-muted">route</span>
+                  <span className="font-semibold text-sm text-text-main">Smart Router</span>
+                  {selectedDetail.meta.taskType && (
+                    <span className="rounded bg-primary/10 px-1.5 py-0.5 font-mono text-[10px] text-primary">
+                      {selectedDetail.meta.taskType}
+                    </span>
+                  )}
+                  {selectedDetail.meta.sticky && (
+                    <span className="rounded bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-medium text-amber-600 dark:text-amber-400">
+                      sticky session
+                    </span>
+                  )}
+                </div>
+                {Array.isArray(selectedDetail.meta.scores) && selectedDetail.meta.scores.length > 0 && (
+                  <div className="mt-2">
+                    <p className="text-[11px] text-text-muted mb-1.5">Why this model was picked (top candidates by score)</p>
+                    <div className="flex flex-col gap-1">
+                      {selectedDetail.meta.scores.map((s, i) => {
+                        const isWinner = i === 0;
+                        const maxScore = Math.max(...selectedDetail.meta.scores.map((x) => x.score), 1);
+                        return (
+                          <div key={`${s.model}-${i}`} className="flex items-center gap-2">
+                            <span className="w-4 text-center font-mono text-[10px] text-text-muted">{i + 1}</span>
+                            <code className="min-w-0 flex-1 truncate font-mono text-xs text-text-main">{s.model}</code>
+                            <div className="h-1.5 w-24 overflow-hidden rounded-full bg-black/5 dark:bg-white/5">
+                              <div
+                                className={`h-full rounded-full ${isWinner ? "bg-primary" : "bg-text-muted/30"}`}
+                                style={{ width: `${Math.max(4, (s.score / maxScore) * 100)}%` }}
+                              />
+                            </div>
+                            <span className={`w-12 text-right font-mono text-[11px] ${isWinner ? "font-semibold text-primary" : "text-text-muted"}`}>
+                              {s.score}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             <div className="space-y-4">
               <CollapsibleSection title="1. Client Request (Input)" defaultOpen={true} icon="input">                <pre className="max-h-[300px] max-w-full overflow-auto rounded-lg border border-black/5 bg-black/5 p-3 font-mono text-xs text-text-main dark:border-white/5 dark:bg-white/5 sm:p-4">
                   {JSON.stringify(selectedDetail.request, null, 2)}
