@@ -472,3 +472,34 @@ t)
 - /api/observability/status: {enabled, maxRecords, currentCount, droppedRecords} ✅
 - Export pagination: page+limit → pagination.hasNext correct ✅
 - Suite: 1724 pass / 88 baseline fail (zero regressions)
+
+---
+
+## UPDATE 2026-08-08 (exhaustive audit — 7 bugs fixed, research docs, refactor decisions)
+
+### Exhaustive no-more-bugs pass (research/9router/21-audit-no-more-bugs.md)
+7 real bugs found + fixed with tests (suite 1731 pass / 88 baseline, +7 tests):
+- A: sequential partial PATCH clobbering (settingsRepo) — `f7c1bf8e`
+- B: sourceApp /droid/i misclassified Android browsers — `0a65a631`
+- C: health endpoint missed per-model locks — `0a65a631`
+- D: messages errorCategory/sourceApp filters broke pagination (JSON1 SQL) — `0a65a631`
+- E: facets fetched 10k full records per page load (SQL GROUP BY) — `378cd321`
+- F: histogram dropped current-hour rows — `378cd321`
+- G: status filter vocabulary mismatch (review B1) — `ba7378db`
+6 areas verified clean (combo retries, chat fallbacks, markdown atomic write,
+sticky TTL plumbing, refresh-failure tracking, messages views).
+
+### Error sweep (research/9router/22-error-sweep.md)
+E1 xAI invalid_grant (auto-disable now active — re-auth needed), E2 OpenRouter
+guardrail 404 (account setting), E3 B3 conversation grouping (deferred), E4 B4
+cURL URL capture (deferred), E5 1000-record cap (surfaced), E6 markdown snapshot
+(single-server).
+
+### Refactor decisions (research/9router/23-refactor-decisions.md)
+D1 circuit-breaker auto-disable (Fowler + Azure), D2 SQL facets (faceted search
+practice), D3 config-merge vs map-replace semantics, D4 retry policy (verified),
+D5 drawer/viewport resilience, D6 atomic writes + drop surfacing, D7 privacy
+UA fingerprinting, D8 5-view consolidation pending user pick.
+
+### Docs per conventions
+research/9router/21/22/23 + TASK-LOG 93-102 + this changelog. Commit `2f8c????` pending.

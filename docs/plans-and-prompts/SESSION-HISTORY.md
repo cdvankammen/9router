@@ -598,3 +598,32 @@ User asked (read-only): research design philosophies for LLM message/log viewer 
 - Web research: Sentry issue details, Datadog Log Explorer search syntax, Langfuse tracing/sessions/tags/data-model, LangSmith, Grafana Loki, Helicone header conventions (from source), OpenRouter app-attribution headers, openai-node SDK user-agent (from source).
 - Wrote `research/message-viewer-design-philosophies.md` covering: 10-tool design-philosophy breakdown; observability filter-dimension table; gateway-only capture dimensions (API key, trusted IP via x-9r-real-ip, UA fingerprint, combo, taskType, route chain, custom headers); 3 view designs (Timeline/Waterfall, Trace Tree, Board/Triage); 8 filter dimensions; 5 visual UX improvements; 7 privacy guardrails.
 - Key finding: 9Router already computes a trusted client IP (custom-server.js) and already stores the API key + taskType — several "new" dimensions are near-zero-cost to surface. SDKs send standard attribution headers (OpenAI-Project, HTTP-Referer, X-Title, Helicone-Property-*) that can identify source apps with no client changes.
+
+---
+
+## UPDATE 2026-08-08 (exhaustive audit + research phase — goal 54bc47d3)
+
+User: "continue until no work left... exhaustive research until no more bugs...
+refactor decisions rooted in researched stuff... /goal"
+
+### Done
+- Cleaned remaining uncommitted work (sourceApp/userAgent threading through all
+  sub-handlers — c6fbe402, b63501f2). Tree clean.
+- Exhaustive bug audit of every v1-changed file: 7 bugs found + fixed with
+  tests (BUG-A..G, see 21-audit-no-more-bugs.md). Areas verified clean: combo
+  retries, chat fallbacks, markdown atomic write, sticky TTL, refresh-failure
+  tracking, messages views.
+- Error sweep (22-error-sweep.md): E1 xAI invalid_grant (auto-disable active;
+  user re-auth), E2 OpenRouter guardrails (account setting), E3/E4 deferred
+  (B3/B4), E5 surfaced, E6 documented.
+- Refactor decisions (23-refactor-decisions.md), grounded in Fowler Circuit
+  Breaker + Azure Architecture Center + faceted-search practice: D1 breaker-
+  style auto-disable, D2 SQL facets, D3 merge semantics, D4 retry policy,
+  D5 drawer resilience, D6 atomic writes, D7 privacy UA classes, D8 view
+  consolidation.
+- All plans-and-prompts docs updated per README/AGENTS conventions; TASK-LOG
+  93-102.
+
+### Remaining (documented, deferred by design)
+B3 conversation grouping; B4 cURL URL capture; 4.3/4.4 user-owned; Error Inbox
+P2; fallback-view pick (D8).

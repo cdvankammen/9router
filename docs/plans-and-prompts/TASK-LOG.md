@@ -261,3 +261,21 @@ Open questions for user (block 83/84/85): auto-disable behavior; pricing re-fetc
 | 78 | Facet API + histogram | ✅ | commit `0194d065` — provider/model/status/errorCategory/sourceApp counts + 24h buckets |
 | 79 | Fixed duplicate url build-breaker | ✅ | commit `0194d065` — providers models route const/let url collision |
 | 80 | Tray app rebuilt with new views | ✅ | cli/app bundle 62M, messages page 200 on 20130 |
+
+### Newly Completed (2026-08-08 exhaustive audit + research)
+
+| # | Task | Status | Evidence |
+|---|------|--------|----------|
+| 93 | Exhaustive no-more-bugs audit (all v1 code) | ✅ | `research/9router/21-audit-no-more-bugs.md` — 7 bugs found+fixed, 6 areas verified clean, deferred list |
+| 94 | BUG-A: sequential partial PATCH clobbering | ✅ | `f7c1bf8e` — CONFIG_MERGE_KEYS vs MAP_REPLACE_KEYS; +2 tests |
+| 95 | BUG-B: sourceApp /droid/i → Android misclassification | ✅ | `0a65a631` — codex-adjacency regex |
+| 96 | BUG-C: health endpoint missed per-model locks | ✅ | `0a65a631` — getEarliestModelLockUntil |
+| 97 | BUG-D: messages JSON filters broke pagination | ✅ | `0a65a631` — json_extract SQL filters; +5 tests |
+| 98 | BUG-E: facets fetched 10k full records per load | ✅ | `378cd321` — getRequestFacets GROUP BY |
+| 99 | BUG-F: histogram dropped current hour | ✅ | `378cd321` — hour-anchored buckets |
+| 100 | BUG-G: status filter vocabulary (review B1) | ✅ | `ba7378db` — success/error/streaming |
+| 101 | Error sweep + action items | ✅ | `research/9router/22-error-sweep.md` — E1–E6 (xAI re-auth, OpenRouter guardrails, B3/B4 deferred) |
+| 102 | Refactor decisions (research-grounded) | ✅ | `research/9router/23-refactor-decisions.md` — D1–D8 (circuit breaker, SQL facets, merge semantics, retry policy, etc.) |
+
+### Still open (documented, deferred)
+- B3 conversation grouping page-scoped; B4 cURL URL capture; 4.3/4.4 (user-owned); Error Inbox P2; user's fallback-rule view pick (D8).

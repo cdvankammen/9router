@@ -86,3 +86,20 @@ earlier research passes did (5/5 completed with retries).
 - `research/9router/18-feature-gap-review.md` (source of Phases 1–3)
 - `research/9router/19-upstream-provider-risks.md` (source of Phase 4 + open questions)
 - `plans/fallback-rules-ux-plan.md` (UI consolidation pending user pick)
+
+---
+
+## STATUS UPDATE 2026-08-08 — ALL PHASES COMPLETE + AUDIT CLEAN
+
+Phase 1 ✅ (commits 5918de88, f7c1bf8e) — incl. sequential-PATCH accumulation fix (BUG-A)
+Phase 2 ✅ (6485e782, 12895e19)
+Phase 3 ✅ (cb01da52) — incl. markdown atomic write, export pagination, drop surfacing
+Phase 4 ✅ (723e9669) — health endpoint, auto-disable (D1), node error badge
+Messages review bugs: B1 status filter ✅ (ba7378db), B3/B4 deferred (documented)
+Exhaustive audit ✅ — 7 bugs fixed (21-audit-no-more-bugs.md); refactor decisions D1–D8 (23-refactor-decisions.md); error sweep E1–E6 (22-error-sweep.md)
+
+### Still open (user/owner-gated)
+- User re-auth xAI (E1); OpenRouter privacy setting (E2)
+- B3 conversation-grouped query; B4 providerUrl capture (P3)
+- 4.3 TokenRouter pricing re-validation; 4.4 mimo health check (YOURS)
+- Error Inbox P2; fallback-rule view pick (D8)
