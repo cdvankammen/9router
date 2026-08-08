@@ -8,6 +8,9 @@ import Pagination from "@/shared/components/Pagination";
 import { cn } from "@/shared/utils/cn";
 import { AI_PROVIDERS, getProviderByAlias } from "@/shared/constants/providers";
 import { useCopyToClipboard } from "@/shared/hooks/useCopyToClipboard";
+import TimelineView from "./components/TimelineView";
+import TraceTreeView from "./components/TraceTreeView";
+import BoardView from "./components/BoardView";
 
 // ── Provider name resolution (mirrors RequestDetailsTab) ────────────────────
 let providerNameCache = null;
@@ -460,6 +463,27 @@ export default function MessagesPage() {
           >
             Conversations
           </button>
+          <button
+            type="button"
+            onClick={() => setViewMode("timeline")}
+            className={cn("rounded-md px-3 py-1 text-xs font-medium transition-colors", viewMode === "timeline" ? "bg-surface text-text-main shadow-sm" : "text-text-muted")}
+          >
+            Timeline
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewMode("trace")}
+            className={cn("rounded-md px-3 py-1 text-xs font-medium transition-colors", viewMode === "trace" ? "bg-surface text-text-main shadow-sm" : "text-text-muted")}
+          >
+            Trace
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewMode("board")}
+            className={cn("rounded-md px-3 py-1 text-xs font-medium transition-colors", viewMode === "board" ? "bg-surface text-text-main shadow-sm" : "text-text-muted")}
+          >
+            Board
+          </button>
         </div>
       </div>
 
@@ -566,6 +590,31 @@ export default function MessagesPage() {
               </div>
             )}
           </div>
+        ) : viewMode === "conversations" ? (
+          <div className="flex flex-col gap-2 p-3">
+            {conversations.map((conv) => (
+              <ConversationView key={conv.conversationId} conversation={conv} onSelect={(m) => openDetail(m.id || m._id)} />
+            ))}
+          </div>
+        ) : viewMode === "timeline" ? (
+          <TimelineView
+            histogram={data?.histogram || []}
+            messages={messages}
+            providerNames={providerNames}
+            onSelect={(m) => openDetail(m.id || m._id)}
+          />
+        ) : viewMode === "trace" ? (
+          <TraceTreeView
+            conversations={conversations}
+            providerNames={providerNames}
+            onSelect={(m) => openDetail(m.id || m._id)}
+          />
+        ) : viewMode === "board" ? (
+          <BoardView
+            messages={messages}
+            providerNames={providerNames}
+            onSelect={(m) => openDetail(m.id || m._id)}
+          />
         ) : (
           <div className="flex flex-col gap-2 p-3">
             {conversations.map((conv) => (

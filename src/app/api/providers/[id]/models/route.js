@@ -649,9 +649,9 @@ export async function GET(request, { params }) {
     }
 
     // Build request URL
-    let url = config.url;
+    let modelsUrl = config.url;
     if (config.authQuery) {
-      url += `?${config.authQuery}=${token}`;
+      modelsUrl += `?${config.authQuery}=${token}`;
     }
 
     // Build headers
@@ -670,7 +670,7 @@ export async function GET(request, { params }) {
       fetchOptions.body = JSON.stringify(config.body);
     }
 
-    const response = await fetch(url, fetchOptions);
+    const response = await fetch(modelsUrl, fetchOptions);
 
     if (!response.ok) {
       const errorText = await response.text();
