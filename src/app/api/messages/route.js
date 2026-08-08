@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getRequestDetails } from "@/lib/usageDb";
+import { getRequestDetails, getRequestFacets } from "@/lib/usageDb";
 
 /**
  * GET /api/messages
@@ -88,58 +88,9 @@ export async function GET(request) {
     });
 
     // ── Facets: counts per dimension for the filter sidebar ────────────────
-    // Computed over the full filtered set (not just the page window) so
-    // facet counts stay stable as you paginate. We refetch with a large
-    // pageSize to get the full window for counting; cheap at this scale.
-    const facetFilter = { ...filter, page: 1, pageSize: 10000 };
-    const facetResult = await getRequestDetails(facetFilter);
-    let facetRows = facetResult.details || [];
-    if (errorCategory) facetRows = facetRows.filter((m) => m.errorCategory === errorCategory);
-    if (sourceApp) facetRows = facetRows.filter((m) => m.sourceApp === sourceApp);
-
-    const countBy = (fn) => {
-      const counts = {};
-      for (const m of facetRows) {
-        const k = fn(m) || "unknown";
-        counts[k] = (counts[k] || 0) + 1;
-      }
-      return Object.entries(counts)
-        .map(([value, count]) => ({ value, count }))
-        .sort((a, b) => b.count - a.count)
-        .slice(0, 20);
-    };
-
-    const facets = {
-      provider: countBy((m) => m.provider),
-      model: countBy((m) => m.model),
-      status: countBy((m) => m.status),
-      errorCategory: countBy((m) => m.errorCategory),
-      sourceApp: countBy((m) => m.sourceApp),
-    };
-
-    // ── Time histogram (last 24h, hourly buckets) for the waterfall header ─
-    const histogram = [];
-    if (facetRows.length > 0) {
-      const now = Date.now();
-      const start = now - 24 * 60 * 60 * 1000;
-      const buckets = new Map();
-      for (let h = 0; h < 24; h++) {
-        const ts = new Date(start + h * 60 * 60 * 1000);
-        const key = ts.toISOString().slice(0, 13) + ":00";
-        buckets.set(key, { label: ts.toISOString().slice(11, 16), count: 0, errors: 0 });
-      }
-      for (const m of facetRows) {
-        const t = new Date(m.timestamp || Date.now()).getTime();
-        if (t < start || t > now) continue;
-        const key = new Date(t).toISOString().slice(0, 13) + ":00";
-        const b = buckets.get(key);
-        if (b) {
-          b.count += 1;
-          if (m.status === "error") b.errors += 1;
-        }
-      }
-      for (const [, b] of buckets) histogram.push(b);
-    }
+    // Computed in SQL (GROUP BY) over the FULL filtered set — no row payloads,
+    // correct counts at any scale, stable across pages.
+    const { facets, histogram } = await getRequestFacets(filter);
 
     return NextResponse.json({
       messages,

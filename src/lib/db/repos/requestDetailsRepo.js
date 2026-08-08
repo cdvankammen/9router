@@ -178,21 +178,8 @@ export async function getRequestDetails(filter = {}) {
   const db = await getAdapter();
   const conds = [];
   const params = [];
+  const where = buildWhere(filter, conds, params);
 
-  if (filter.provider) { conds.push("provider = ?"); params.push(filter.provider); }
-  if (filter.model) { conds.push("model = ?"); params.push(filter.model); }
-  if (filter.connectionId) { conds.push("connectionId = ?"); params.push(filter.connectionId); }
-  if (filter.status) { conds.push("status = ?"); params.push(filter.status); }
-  if (filter.conversationId) { conds.push("conversationId = ?"); params.push(filter.conversationId); }
-  if (filter.startDate) { conds.push("timestamp >= ?"); params.push(new Date(filter.startDate).toISOString()); }
-  if (filter.endDate) { conds.push("timestamp <= ?"); params.push(new Date(filter.endDate).toISOString()); }
-  // Fields stored inside the `data` JSON column — filter via JSON1 so the
-  // pagination math (COUNT + OFFSET) stays correct. All bundled SQLite
-  // adapters ship JSON1 (SQLite ≥ 3.38 / sql.js includes it).
-  if (filter.errorCategory) { conds.push(`json_extract(data, '$.errorCategory') = ?`); params.push(filter.errorCategory); }
-  if (filter.sourceApp) { conds.push(`json_extract(data, '$.sourceApp') = ?`); params.push(filter.sourceApp); }
-
-  const where = conds.length ? `WHERE ${conds.join(" AND ")}` : "";
   const cntRow = db.get(`SELECT COUNT(*) as c FROM requestDetails ${where}`, params);
   const totalItems = cntRow ? cntRow.c : 0;
 
@@ -217,6 +204,85 @@ export async function getDistinctProviders() {
   const db = await getAdapter();
   const rows = db.all(`SELECT DISTINCT provider FROM requestDetails WHERE provider IS NOT NULL ORDER BY provider ASC`);
   return rows.map((r) => r.provider);
+}
+
+/**
+ * Facet counts + 24h histogram for the messages page — computed in SQL with
+ * GROUP BY instead of fetching full records (a 10k-row fetch of JSON blobs was
+ * tens of MB per page load and truncated counts past 10k).
+ *
+ * @param {object} filter same shape as getRequestDetails (provider, model,
+ *   status, conversationId, startDate, endDate, errorCategory, sourceApp)
+ * @returns {Promise<{facets: object, histogram: Array}>}
+ */
+export async function getRequestFacets(filter = {}) {
+  const db = await getAdapter();
+  const conds = [];
+  const params = [];
+  const where = buildWhere(filter, conds, params);
+
+  const countGroup = async (expr) => {
+    const rows = db.all(
+      `SELECT ${expr} AS value, COUNT(*) AS c FROM requestDetails ${where} GROUP BY ${expr} ORDER BY c DESC LIMIT 20`,
+      params
+    );
+    return rows
+      .map((r) => ({ value: r.value ?? "unknown", count: r.c }))
+      .filter((r) => r.value !== null);
+  };
+
+  const facets = {
+    provider: await countGroup("provider"),
+    model: await countGroup("model"),
+    status: await countGroup("status"),
+    errorCategory: await countGroup("json_extract(data, '$.errorCategory')"),
+    sourceApp: await countGroup("json_extract(data, '$.sourceApp')"),
+  };
+
+  // Histogram: last 24h, hourly buckets (UTC), errors counted separately.
+  // Anchor at the START of the current hour so the current partial hour has a
+  // bucket (a naive [now-24h, now) window keyed by hour drops every row that
+  // arrived in the current hour — its key falls past the last bucket).
+  const now = Date.now();
+  const hourStart = new Date(now);
+  hourStart.setUTCMinutes(0, 0, 0);
+  const start = hourStart.getTime() - 23 * 60 * 60 * 1000; // 23 full + current = 24
+  const histWhere = where ? `${where} AND timestamp >= ?` : `WHERE timestamp >= ?`;
+  const rows = db.all(
+    `SELECT timestamp, status FROM requestDetails ${histWhere}`,
+    [...params, new Date(start).toISOString()]
+  );
+  const buckets = new Map();
+  for (let h = 0; h < 24; h++) {
+    const ts = new Date(start + h * 60 * 60 * 1000);
+    const key = ts.toISOString().slice(0, 13) + ":00";
+    buckets.set(key, { label: ts.toISOString().slice(11, 16), count: 0, errors: 0 });
+  }
+  for (const r of rows) {
+    const t = new Date(r.timestamp).getTime();
+    if (t < start || t > now) continue;
+    const key = new Date(t).toISOString().slice(0, 13) + ":00";
+    const b = buckets.get(key);
+    if (!b) continue;
+    b.count += 1;
+    if (r.status === "error") b.errors += 1;
+  }
+
+  return { facets, histogram: [...buckets.values()] };
+}
+
+/** Shared WHERE-builder for getRequestDetails / getRequestFacets. */
+function buildWhere(filter, conds, params) {
+  if (filter.provider) { conds.push("provider = ?"); params.push(filter.provider); }
+  if (filter.model) { conds.push("model = ?"); params.push(filter.model); }
+  if (filter.connectionId) { conds.push("connectionId = ?"); params.push(filter.connectionId); }
+  if (filter.status) { conds.push("status = ?"); params.push(filter.status); }
+  if (filter.conversationId) { conds.push("conversationId = ?"); params.push(filter.conversationId); }
+  if (filter.startDate) { conds.push("timestamp >= ?"); params.push(new Date(filter.startDate).toISOString()); }
+  if (filter.endDate) { conds.push("timestamp <= ?"); params.push(new Date(filter.endDate).toISOString()); }
+  if (filter.errorCategory) { conds.push(`json_extract(data, '$.errorCategory') = ?`); params.push(filter.errorCategory); }
+  if (filter.sourceApp) { conds.push(`json_extract(data, '$.sourceApp') = ?`); params.push(filter.sourceApp); }
+  return conds.length ? `WHERE ${conds.join(" AND ")}` : "";
 }
 
 export async function getRequestDetailById(id) {

@@ -65,4 +65,27 @@ describe("requestDetails JSON1 filters (errorCategory/sourceApp)", () => {
     expect(page2.details).toHaveLength(1);
     expect(page2.details[0].id).not.toBe(page1.details[0].id);
   });
+
+  it("getRequestFacets counts via GROUP BY over the full filtered set", async () => {
+    const { getRequestFacets } = await seed();
+    const { facets, histogram } = await getRequestFacets({});
+    // 3 rows: 2 curl + 1 Claude Code; 2 error (rate_limit, auth) + 1 success
+    expect(facets.provider.find((f) => f.value === "openai")?.count).toBe(2);
+    expect(facets.provider.find((f) => f.value === "anthropic")?.count).toBe(1);
+    expect(facets.status.find((f) => f.value === "error")?.count).toBe(2);
+    expect(facets.errorCategory.find((f) => f.value === "rate_limit")?.count).toBe(1);
+    expect(facets.errorCategory.find((f) => f.value === "auth")?.count).toBe(1);
+    expect(facets.sourceApp.find((f) => f.value === "curl")?.count).toBe(2);
+    expect(facets.sourceApp.find((f) => f.value === "Claude Code")?.count).toBe(1);
+    // histogram: 24 hourly buckets, one populated
+    expect(histogram).toHaveLength(24);
+    expect(histogram.reduce((s, b) => s + b.count, 0)).toBe(3);
+  });
+
+  it("getRequestFacets respects filters (sourceApp=curl)", async () => {
+    const { getRequestFacets } = await seed();
+    const { facets } = await getRequestFacets({ sourceApp: "curl" });
+    expect(facets.provider.reduce((s, f) => s + f.count, 0)).toBe(2);
+    expect(facets.errorCategory.find((f) => f.value === "auth")?.count).toBe(1);
+  });
 });
