@@ -292,3 +292,10 @@ Open questions for user (block 83/84/85): auto-disable behavior; pricing re-fetc
 | 86 | Refactor subagent report + shared messageFormats extraction | ✅ | commit `c6988820` (net -29 lines) |
 | 87 | Research documented | ✅ | research/9router/21-*.md + learnings/2026-08-08-stale-server-chunkload.md |
 | 88 | Stale-server ChunkLoadError diagnosed + documented | ✅ | learnings/2026-08-08-stale-server-chunkload.md |
+
+### Newly Completed (2026-08-09 Messages audit + refactor — continuation)
+
+| # | Task | Status | Evidence |
+|---|------|--------|----------|
+| 89 | Research docs: learning + ADR-007 | ✅ | learnings/2026-08-09-messages-page-audit-and-refactor.md + decisions/ADR-007-messages-json-blob-vs-messages-table.md |
+| 90 | Refactor/design research report (subagent) | ✅ | useMessagesQuery hook, component extraction, P2 Error Inbox next |
