@@ -325,13 +325,18 @@ function InfoCell({ label, value }) {
 // load on expand via onExpand(conversation) when they aren't already present
 // (single-conversation filter embeds the full thread server-side).
 function ConversationView({ conversation, onSelect, onExpand }) {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(() => Array.isArray(conversation?.messages) && conversation.messages.length > 0);
   const [loading, setLoading] = useState(false);
+  const openRef = useRef(open);
+  openRef.current = open;
   if (!conversation) return null;
   const hasMessages = Array.isArray(conversation.messages) && conversation.messages.length > 0;
 
   const toggle = async () => {
-    const next = !open;
+    // Read the LATEST open state via ref — the closure `open` goes stale across
+    // rapid clicks (the old code computed `!open` twice → a fast double-click
+    // never fetched the thread, just closed and re-closed).
+    const next = !openRef.current;
     setOpen(next);
     if (next && !hasMessages && onExpand) {
       setLoading(true);
@@ -418,7 +423,9 @@ export default function MessagesPage() {
     const key = conv.conversationId ?? "(none)";
     if (threads[key] !== undefined) return;
     try {
-      const q = new URLSearchParams({ view: "conversations", pageSize: "500" });
+      // pageSize is capped at 100 by the API route validation (400 above it);
+      // the repo's getConversationMessages caps the thread at 500 internally.
+      const q = new URLSearchParams({ view: "conversations", pageSize: "100" });
       q.set("conversationId", conv.conversationId ?? "(none)");
       const res = await fetch(`/api/messages?${q}`);
       if (!res.ok) return;
