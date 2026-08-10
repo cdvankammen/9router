@@ -308,3 +308,9 @@ Open questions for user (block 83/84/85): auto-disable behavior; pricing re-fetc
 | 92 | Researched compact-mode sidebar scroll issue (browser-verified root cause) | ✅ | learnings/2026-08-09-compact-sidebar-scroll-fix.md |
 | 93 | Fixed mobile drawer overflow (overflow-y-auto on wrapper + h-full on aside) | ✅ | committed in `7ec60ad8`; browser-verified nav scrolls (maxScroll 282) |
 | 94 | Verified desktop sidebar no regression at 1024×320 | ✅ | nav scrolls (maxScroll 362) |
+
+### Newly Completed (2026-08-09 full-text search)
+
+| # | Task | Status | Evidence |
+|---|------|--------|----------|
+| 95 | Full-text search over request payloads (FTS5 + LIKE fallback) | ✅ | commits `7ec60ad8` (feature) + `e582859a` (backup FTS exclusion): `filter.search` in requestDetailsRepo (`requestDetails_fts` virtual table populated in flush, janitor keeps it in sync, `searchMode` fts/like reported), `/api/messages` `search` param, debounced Messages search input with FTS/LIKE tag; 9 tests in `tests/unit/search.test.js`; full suite 1760 pass / 86 fail (baseline budget ≤ 89), no touched-area failures |

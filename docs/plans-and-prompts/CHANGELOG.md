@@ -556,3 +556,53 @@ research/9router/21/22/23 + TASK-LOG 93-102 + this changelog. Commit `2f8c????` 
 ### docs
 - `learnings/2026-08-09-compact-sidebar-scroll-fix.md` — root cause, fix,
   verification, general pattern for fixed-position scroll containers
+
+---
+
+## UPDATE 2026-08-09 (full-text search over request payloads)
+
+### feat(messages): full-text search (FTS5 with LIKE fallback) — commit `7ec60ad8`
+- **Repo** (`src/lib/db/repos/requestDetailsRepo.js`): `filter.search` in
+  `buildWhere` (now async) → `getSearchCondition(term)`:
+  - **FTS5 path**: lazily probes `CREATE VIRTUAL TABLE IF NOT EXISTS
+    requestDetails_fts USING fts5(id UNINDEXED, conversationId, provider, model,
+    status, content)`; probe result cached per process. On sql.js (no FTS5
+    module) the CREATE fails → module falls back to LIKE. Query is
+    `id IN (SELECT id FROM requestDetails_fts WHERE requestDetails_fts MATCH ?)`.
+  - **LIKE fallback**: `(provider LIKE ? ESCAPE '\' OR model LIKE ? ESCAPE '\' OR
+    data LIKE ? ESCAPE '\' OR conversationId LIKE ? ESCAPE '\')` with `%term%`;
+    `%`/`_`/`\` in the term are escaped so they match literally.
+  - **Escaping**: `sanitizeFtsTerm` strips FTS5 operator chars (`* : " ^ ~ ( ) [ ]
+    { }`), collapses whitespace, wraps in double quotes (literal phrase); terms
+    shorter than 2 chars skip FTS entirely (LIKE). MATCH failures belt-and-braces
+    fall back to LIKE.
+  - **Index population**: `flushToDatabase` upserts (delete+insert — FTS5 has no
+    UNIQUE target for ON CONFLICT) `extractFtsContent(record)` = request messages
+    text + response content + thinking + error, capped at 20KB/row.
+  - **Janitor sync**: retention delete is followed by
+    `DELETE FROM requestDetails_fts WHERE id NOT IN (SELECT id FROM requestDetails)`
+    (repairs drift too).
+  - `getRequestDetails` returns `searchMode: "fts" | "like"` (undefined when no
+    search term).
+- **API** (`src/app/api/messages/route.js`): accepts `search` query param, passes
+  to filter, surfaces `searchMode` in the response.
+- **UI** (Messages page): debounced (~300ms) search input in the filter bar
+  (search prompts & responses), page resets to 1 on settled term, green
+  `FTS` / amber `LIKE` mode tag next to the input, Clear resets it.
+- **Backup fix** (`src/lib/db/backup.js`, commit `e582859a`): safety backups now
+  exclude `requestDetails_fts` AND its FTS5 shadow tables
+  (`*_data/_idx/_content/_docsize/_config` — name-reserved by SQLite, and the
+  virtual-table CREATE can't be re-prefixed to the bak schema).
+- Known limitation: rows captured before this feature are not backfilled into the
+  FTS index (LIKE fallback still finds them); a lazy backfill is a possible
+  follow-up.
+
+### Tests
+- `tests/unit/search.test.js` — 9 tests: request-text match, response-text match,
+  no-match → zero totals, escaping (quotes/`*`/colon never throw, match literally),
+  short/empty terms force LIKE, search+status combined, pagination totals,
+  FTS index existence + orphan-cleanup sync, retention janitor keeps FTS in sync
+  (fresh adapter via `global._dbAdapter` reset).
+- Full suite: 1760 pass / 86 fail (≤ 89 baseline budget) — 86 == documented
+  baseline, zero failures in touched areas (search/requestDetails/backup).
+  `unit/search.test.js` passes in the full run.
