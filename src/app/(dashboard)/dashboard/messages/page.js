@@ -374,6 +374,8 @@ export default function MessagesPage() {
   const [provider, setProvider] = useState("");
   const [status, setStatus] = useState("");
   const [conversationId, setConversationId] = useState("");
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [page, setPage] = useState(1);
   const [pageSize] = useState(50);
 
@@ -395,6 +397,7 @@ export default function MessagesPage() {
       if (provider) params.set("provider", provider);
       if (status) params.set("status", status);
       if (conversationId) params.set("conversationId", conversationId);
+      if (debouncedSearch) params.set("search", debouncedSearch);
       const res = await fetch(`/api/messages?${params}`, { signal: controller.signal });
       if (!res.ok) throw new Error("Failed to load messages");
       const json = await res.json();
@@ -406,7 +409,17 @@ export default function MessagesPage() {
     } finally {
       if (loadAbortRef.current === controller) setLoading(false);
     }
-  }, [page, pageSize, provider, status, conversationId]);
+  }, [page, pageSize, provider, status, conversationId, debouncedSearch]);
+
+  // Debounce the search input (~300ms) so every keystroke doesn't fire a
+  // query; page resets to 1 once the term settles.
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setDebouncedSearch(search.trim());
+      setPage(1);
+    }, 300);
+    return () => clearTimeout(t);
+  }, [search]);
 
   // Fetch on mount + whenever filters change. The initial fetch is triggered
   // by the effect; subsequent calls come from filter/pagination handlers.
@@ -487,6 +500,24 @@ export default function MessagesPage() {
       <Card padding="sm">
         <div className="flex flex-wrap items-center gap-2">
           <input
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); }}
+            placeholder="Search prompts & responses…"
+            aria-label="Search request content"
+            className="h-8 min-w-40 flex-1 rounded-lg border border-black/10 dark:border-white/10 bg-transparent px-2 text-xs text-text-main outline-none focus:border-primary"
+          />
+          {data?.searchMode && (
+            <span
+              title={data.searchMode === "fts"
+                ? "Full-text index (FTS5)"
+                : "LIKE substring fallback (this SQLite build has no FTS5)"}
+              className={cn("inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium",
+                data.searchMode === "fts" ? "bg-green-500/10 text-green-600 dark:text-green-400" : "bg-amber-500/10 text-amber-600 dark:text-amber-400")}
+            >
+              {data.searchMode === "fts" ? "FTS" : "LIKE"}
+            </span>
+          )}
+          <input
             value={conversationId}
             onChange={(e) => { setConversationId(e.target.value); setPage(1); }}
             placeholder="Conversation ID…"
@@ -514,7 +545,7 @@ export default function MessagesPage() {
             <option value="partial">partial</option>
             <option value="cancelled">cancelled</option>
           </select>
-          <Button size="sm" variant="ghost" onClick={() => { setProvider(""); setStatus(""); setConversationId(""); setPage(1); }}>
+          <Button size="sm" variant="ghost" onClick={() => { setProvider(""); setStatus(""); setConversationId(""); setSearch(""); setPage(1); }}>
             Clear
           </Button>
         </div>

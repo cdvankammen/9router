@@ -1,5 +1,6 @@
 import { getAdapter } from "../driver.js";
 import { parseJson, stringifyJson } from "../helpers/jsonCol.js";
+import { extractText } from "@/shared/messageFormats.js";
 
 const DEFAULT_MAX_RECORDS = 200;
 const DEFAULT_BATCH_SIZE = 20;
@@ -94,6 +95,105 @@ function truncateField(obj, maxSize) {
   return obj || {};
 }
 
+// ── Full-text search (FTS5 with LIKE fallback) ──────────────────────────────
+// Search over captured request payloads. When the SQLite build supports FTS5
+// (better-sqlite3 / node:sqlite / bun:sqlite all ship it), we maintain a
+// lightweight `requestDetails_fts` virtual table — id + metadata + extracted
+// text — and MATCH against it. sql.js has NO FTS5 extension ("no such module:
+// fts5"), so on that driver we fall back to LIKE over the JSON blob.
+// The probe result is cached for the process lifetime.
+let ftsAvailable = null; // null = untested, true/false after first probe
+
+const FTS_TABLE = "requestDetails_fts";
+const FTS_CREATE_SQL = `CREATE VIRTUAL TABLE IF NOT EXISTS ${FTS_TABLE} USING fts5(id UNINDEXED, conversationId, provider, model, status, content)`;
+
+/** Probe FTS5 support once (CREATE fails on sql.js) and cache the result. */
+async function ensureFtsTable(db) {
+  if (ftsAvailable !== null) return ftsAvailable;
+  try {
+    db.run(FTS_CREATE_SQL);
+    ftsAvailable = true;
+  } catch (e) {
+    ftsAvailable = false;
+    console.warn(`[requestDetailsRepo] FTS5 unavailable (${e.message}) — search falls back to LIKE`);
+  }
+  return ftsAvailable;
+}
+
+/**
+ * Lightweight text extraction for the FTS index: request message text +
+ * response text (+ thinking + error), capped so one huge row can't balloon
+ * the index. The full fidelity lives in `data`; this is just searchable text.
+ */
+function extractFtsContent(record) {
+  const parts = [];
+  const reqMsgs = record.request?.messages || record.request?.input;
+  if (Array.isArray(reqMsgs)) {
+    for (const msg of reqMsgs) {
+      if (msg?.content != null) parts.push(extractText(msg.content));
+    }
+  }
+  const resp = record.response?.content || record.providerResponse?.choices?.[0]?.message?.content;
+  if (resp != null) parts.push(extractText(resp));
+  if (record.response?.thinking) parts.push(String(record.response.thinking));
+  const err = record.response?.error;
+  if (err) parts.push(typeof err === "string" ? err : JSON.stringify(err));
+  return parts.join("\n").slice(0, 20000);
+}
+
+/**
+ * Turn a raw search term into an FTS5 MATCH phrase, or null when the term
+ * can't be used with FTS (empty / single-char / operator-only → caller uses
+ * LIKE). FTS5 operator chars ( * : " ^ ~ ( ) [ ] { } ) are stripped so a
+ * user-typed query can never produce an FTS syntax error, then the remainder
+ * is wrapped in double quotes to match as a literal phrase.
+ */
+export function sanitizeFtsTerm(term) {
+  const cleaned = String(term || "")
+    .replace(/["*:^~()[\]{}]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (cleaned.length < 2) return null;
+  return `"${cleaned}"`;
+}
+
+/**
+ * LIKE fallback condition (also used for short/operator-heavy terms and on
+ * drivers without FTS5). `%`/`_`/`\` in the term are escaped so they match
+ * literally. Exported for tests.
+ */
+export function buildLikeCondition(term) {
+  const escaped = String(term || "").replace(/[\\%_]/g, (m) => "\\" + m);
+  const like = `%${escaped}%`;
+  return {
+    cond: `(provider LIKE ? ESCAPE '\\' OR model LIKE ? ESCAPE '\\' OR data LIKE ? ESCAPE '\\' OR conversationId LIKE ? ESCAPE '\\')`,
+    param: like,
+    mode: "like",
+  };
+}
+
+/**
+ * Build the search WHERE fragment: prefers FTS5 MATCH (id subquery), falls
+ * back to LIKE. Returns { cond, params, mode } where mode is "fts" | "like".
+ */
+async function getSearchCondition(term) {
+  const like = buildLikeCondition(term);
+  const ftsTerm = sanitizeFtsTerm(term);
+  if (!ftsTerm) return { ...like, params: Array(4).fill(like.param) }; // 4 placeholders
+  const db = await getAdapter();
+  if (!(await ensureFtsTable(db))) return { ...like, params: Array(4).fill(like.param) };
+  try {
+    return {
+      cond: `id IN (SELECT id FROM ${FTS_TABLE} WHERE ${FTS_TABLE} MATCH ?)`,
+      params: [ftsTerm],
+      mode: "fts",
+    };
+  } catch (e) {
+    // Belt-and-braces: a MATCH failure (weird term on some tokenizer) → LIKE.
+    return { ...like, params: Array(4).fill(like.param) };
+  }
+}
+
 async function flushToDatabase() {
   if (isFlushing) return;
   if (writeBuffer.length === 0) return;
@@ -104,6 +204,9 @@ async function flushToDatabase() {
       const items = writeBuffer.splice(0, writeBuffer.length);
       const db = await getAdapter();
       const config = await getObservabilityConfig();
+      // Resolve FTS support BEFORE the transaction: probing (CREATE VIRTUAL
+      // TABLE) must not run inside the sync transaction body.
+      const fts = await ensureFtsTable(db);
 
       db.transaction(() => {
         for (const item of items) {
@@ -141,6 +244,16 @@ async function flushToDatabase() {
             `INSERT INTO requestDetails(id, timestamp, provider, model, connectionId, status, data, conversationId) VALUES(?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET timestamp = excluded.timestamp, provider = excluded.provider, model = excluded.model, connectionId = excluded.connectionId, status = excluded.status, data = excluded.data, conversationId = excluded.conversationId`,
             [record.id, record.timestamp, record.provider, record.model, record.connectionId, record.status, stringifyJson(record), record.conversationId]
           );
+
+          // Keep the FTS index in sync (delete+insert = upsert; FTS5 has no
+          // UNIQUE constraint to target with ON CONFLICT).
+          if (fts) {
+            db.run(`DELETE FROM ${FTS_TABLE} WHERE id = ?`, [record.id]);
+            db.run(
+              `INSERT INTO ${FTS_TABLE}(id, conversationId, provider, model, status, content) VALUES(?, ?, ?, ?, ?, ?)`,
+              [record.id, record.conversationId, record.provider, record.model, record.status, extractFtsContent(record)]
+            );
+          }
         }
 
         const cnt = db.get(`SELECT COUNT(*) as c FROM requestDetails`);
@@ -151,6 +264,12 @@ async function flushToDatabase() {
             `DELETE FROM requestDetails WHERE id IN (SELECT id FROM requestDetails ORDER BY timestamp ASC LIMIT ?)`,
             [dropCount]
           );
+          // Retention janitor: purge the same ids from the FTS index. The
+          // NOT IN form is the safest — it also repairs any drift from
+          // earlier bugs (e.g. rows deleted while FTS was unavailable).
+          if (fts) {
+            db.run(`DELETE FROM ${FTS_TABLE} WHERE id NOT IN (SELECT id FROM requestDetails)`);
+          }
         }
       });
     }
@@ -184,7 +303,7 @@ export async function getRequestDetails(filter = {}) {
   const db = await getAdapter();
   const conds = [];
   const params = [];
-  const where = buildWhere(filter, conds, params);
+  const { where, searchMode } = await buildWhere(filter, conds, params);
 
   const cntRow = db.get(`SELECT COUNT(*) as c FROM requestDetails ${where}`, params);
   const totalItems = cntRow ? cntRow.c : 0;
@@ -203,6 +322,10 @@ export async function getRequestDetails(filter = {}) {
   return {
     details,
     pagination: { page, pageSize, totalItems, totalPages, hasNext: page < totalPages, hasPrev: page > 1 },
+    // "fts" when the query used the FTS5 index, "like" for the LIKE
+    // fallback, undefined when no search term was given. Surfaced by the API
+    // so the UI can show which mode served the results.
+    searchMode,
   };
 }
 
@@ -225,7 +348,7 @@ export async function getRequestFacets(filter = {}) {
   const db = await getAdapter();
   const conds = [];
   const params = [];
-  const where = buildWhere(filter, conds, params);
+  const { where } = await buildWhere(filter, conds, params);
 
   const countGroup = async (expr) => {
     const rows = db.all(
@@ -277,8 +400,19 @@ export async function getRequestFacets(filter = {}) {
   return { facets, histogram: [...buckets.values()] };
 }
 
-/** Shared WHERE-builder for getRequestDetails / getRequestFacets. */
-function buildWhere(filter, conds, params) {
+/**
+ * Shared WHERE-builder for getRequestDetails / getRequestFacets.
+ * Mutates conds/params (caller-owned), returns { where, searchMode }.
+ * Async because the FTS probe + MATCH need the adapter.
+ */
+async function buildWhere(filter, conds, params) {
+  let searchMode;
+  if (filter.search) {
+    const sc = await getSearchCondition(filter.search);
+    conds.push(sc.cond);
+    params.push(...sc.params);
+    searchMode = sc.mode;
+  }
   if (filter.provider) { conds.push("provider = ?"); params.push(filter.provider); }
   if (filter.model) { conds.push("model = ?"); params.push(filter.model); }
   if (filter.connectionId) { conds.push("connectionId = ?"); params.push(filter.connectionId); }
@@ -288,7 +422,7 @@ function buildWhere(filter, conds, params) {
   if (filter.endDate) { conds.push("timestamp <= ?"); params.push(new Date(filter.endDate).toISOString()); }
   if (filter.errorCategory) { conds.push(`json_extract(data, '$.errorCategory') = ?`); params.push(filter.errorCategory); }
   if (filter.sourceApp) { conds.push(`json_extract(data, '$.sourceApp') = ?`); params.push(filter.sourceApp); }
-  return conds.length ? `WHERE ${conds.join(" AND ")}` : "";
+  return { where: conds.length ? `WHERE ${conds.join(" AND ")}` : "", searchMode };
 }
 
 export async function getRequestDetailById(id) {

@@ -6,12 +6,13 @@ import { getRequestDetails, getRequestFacets } from "@/lib/usageDb";
  * List captured request messages with filters + conversation grouping.
  *
  * Query parameters: page, pageSize (1-100), provider, model, status,
- * errorCategory, conversationId, startDate, endDate
+ * errorCategory, conversationId, startDate, endDate, search
  *
  * Response:
  * {
  *   messages: [...],            // flat list (newest first), each = requestDetails.data
  *   conversations: [...],       // grouped: { conversationId, messages: [...], tokens, cost, messageCount }
+ *   searchMode: "fts"|"like",  // present when a search term was applied
  *   pagination: { page, pageSize, totalItems, totalPages, hasNext, hasPrev }
  * }
  */
@@ -29,6 +30,7 @@ export async function GET(request) {
     const errorCategory = searchParams.get("errorCategory");
     const sourceApp = searchParams.get("sourceApp");
     const conversationId = searchParams.get("conversationId");
+    const search = searchParams.get("search");
     const startDate = searchParams.get("startDate");
     const endDate = searchParams.get("endDate");
 
@@ -46,6 +48,7 @@ export async function GET(request) {
     if (errorCategory) filter.errorCategory = errorCategory;
     if (sourceApp) filter.sourceApp = sourceApp;
     if (conversationId) filter.conversationId = conversationId;
+    if (search) filter.search = search;
     if (startDate) filter.startDate = startDate;
     if (endDate) filter.endDate = endDate;
 
@@ -97,6 +100,7 @@ export async function GET(request) {
       conversations,
       facets,
       histogram,
+      searchMode: result.searchMode,
       pagination: result.pagination,
     });
   } catch (error) {
