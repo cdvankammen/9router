@@ -538,3 +538,21 @@ research/9router/21/22/23 + TASK-LOG 93-102 + this changelog. Commit `2f8c????` 
 ### Tests
 - `tests/unit/cost-capture.test.js` — 18 tests: exact MODEL_PRICING / provider override / vendor-prefix stripping; token variants (input/output, cached discount, cache_creation, reasoning); pattern → estimated; unknown/absent → unavailable; fail-open (throwing token getter); buildRequestDetail integration + storage round-trip
 - Full suite: 1751 pass / 86 fail (≤ 89 baseline budget), no new failures in touched areas
+
+---
+
+## UPDATE 2026-08-09 (compact-mode sidebar scroll fix)
+
+### fix(layout): mobile sidebar drawer scrollable in compact mode
+- Root cause: mobile drawer wrapper (`fixed inset-y-0`) had `overflow: visible`;
+  `Sidebar` aside `min-h-full` grew past viewport (682px in 400px drawer) → nav's
+  `overflow-y-auto` never engaged → content unreachable
+- Fix: `overflow-y-auto custom-scrollbar` on drawer wrapper + `h-full` on aside
+  (nav scrolls internally, logo/traffic lights stay fixed)
+- Browser-verified: drawer nav scrolls (maxScroll 282); desktop sidebar no
+  regression at 1024×320 (maxScroll 362)
+- Committed in `7ec60ad8` (swept in with FTS5 work)
+
+### docs
+- `learnings/2026-08-09-compact-sidebar-scroll-fix.md` — root cause, fix,
+  verification, general pattern for fixed-position scroll containers

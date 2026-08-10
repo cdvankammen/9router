@@ -655,3 +655,31 @@ P2; fallback-view pick (D8).
 - ChunkLoadError from stale server (fixed: kill+restart after rebuild)
 - Build corruption from interrupted build (fixed: rm -rf .next)
 - sourceApp=None (fixed: threading + repo persistence)
+
+---
+
+## UPDATE 2026-08-09 (compact-mode sidebar scroll fix)
+
+User reported: in compact mode the sidebar is not scrollable — content goes off
+the page. Researched + fixed + verified.
+
+### Research (browser-verified)
+- Desktop sidebar (≥1024px): nav scrolls correctly at short heights (flex parent
+  constrains it) — no bug
+- Mobile drawer (<1024px): `fixed inset-y-0` wrapper has `overflow: visible`;
+  aside `min-h-full` grows past viewport (682px in 400px drawer); nav's
+  `overflow-y-auto` never engages → drawer content unreachable
+
+### Fix
+- `DashboardLayout.js`: drawer wrapper + `overflow-y-auto custom-scrollbar`
+- `Sidebar.js`: aside + `h-full` (nav scrolls internally, chrome stays fixed)
+- Committed in `7ec60ad8` (parallel agent swept it in with FTS5 work)
+
+### Verification
+- 800×500 drawer: nav scrolls (maxScroll 282); 1024×320 desktop: maxScroll 362
+- No regression on desktop sidebar
+
+### Errors encountered
+- Stale server after rebuild (20131 serving old build → 404 static chunks) —
+  fixed: kill + restart from `.next/standalone` after `copy-standalone-assets`
+- `.next/standalone` missing after parallel rebuild — rebuilt + copied assets

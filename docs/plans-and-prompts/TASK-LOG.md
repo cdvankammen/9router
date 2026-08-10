@@ -300,3 +300,11 @@ Open questions for user (block 83/84/85): auto-disable behavior; pricing re-fetc
 | 89 | Research docs: learning + ADR-007 | ✅ | learnings/2026-08-09-messages-page-audit-and-refactor.md + decisions/ADR-007-messages-json-blob-vs-messages-table.md |
 | 90 | Refactor/design research report (subagent) | ✅ | useMessagesQuery hook, component extraction, P2 Error Inbox next |
 | 91 | Per-request cost capture with provenance labels | ✅ | `computeCost` in requestDetail.js (exact/estimated/unavailable) + Messages Cost column + repo persistence fix; 18 tests; see CHANGELOG |
+
+### Newly Completed (2026-08-09 compact-mode sidebar fix)
+
+| # | Task | Status | Evidence |
+|---|------|--------|----------|
+| 92 | Researched compact-mode sidebar scroll issue (browser-verified root cause) | ✅ | learnings/2026-08-09-compact-sidebar-scroll-fix.md |
+| 93 | Fixed mobile drawer overflow (overflow-y-auto on wrapper + h-full on aside) | ✅ | committed in `7ec60ad8`; browser-verified nav scrolls (maxScroll 282) |
+| 94 | Verified desktop sidebar no regression at 1024×320 | ✅ | nav scrolls (maxScroll 362) |
