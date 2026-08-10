@@ -279,3 +279,16 @@ Open questions for user (block 83/84/85): auto-disable behavior; pricing re-fetc
 
 ### Still open (documented, deferred)
 - B3 conversation grouping page-scoped; B4 cURL URL capture; 4.3/4.4 (user-owned); Error Inbox P2; user's fallback-rule view pick (D8).
+
+### Newly Completed (2026-08-08 goal-mode: verify + audit + refactor + research)
+
+| # | Task | Status | Evidence |
+|---|------|--------|----------|
+| 81 | Verified all 5 Messages view tabs in browser (real data) | ✅ | List/Timeline/Trace/Board render with 10 records on 20131 |
+| 82 | Fixed sourceApp/userAgent persistence (2 drops) | ✅ | sub-handlers + repo record; verified app=curl |
+| 83 | Fixed build-blockers from parallel work (useCallback, url dup) | ✅ | providers/page.js + providers models route |
+| 84 | Code audit subagent (20+ findings) + main-session verification | ✅ | research/9router/21-messages-audit-refactor-design.md |
+| 85 | Fixed 6 audit bugs (BoardView, fetch race, curl export, TimelineView, drop, tokens) | ✅ | commit `330d7230` |
+| 86 | Refactor subagent report + shared messageFormats extraction | ✅ | commit `c6988820` (net -29 lines) |
+| 87 | Research documented | ✅ | research/9router/21-*.md + learnings/2026-08-08-stale-server-chunkload.md |
+| 88 | Stale-server ChunkLoadError diagnosed + documented | ✅ | learnings/2026-08-08-stale-server-chunkload.md |

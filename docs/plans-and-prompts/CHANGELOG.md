@@ -503,3 +503,22 @@ UA fingerprinting, D8 5-view consolidation pending user pick.
 
 ### Docs per conventions
 research/9router/21/22/23 + TASK-LOG 93-102 + this changelog. Commit `2f8c????` pending.
+
+---
+
+## UPDATE 2026-08-08 (goal-mode: audit + refactor + research)
+
+### fix(messages): audit-found bugs — commit `330d7230`
+- BoardView: moves-map + derived columns (no setState-during-render, stale-safe)
+- conversation.tokens null-safety; fetch race AbortController; curl export placeholder+truncated; TimelineView body-only segments; drop-on-column
+
+### refactor(messages): shared messageFormats — commit `c6988820`
+- src/shared/messageFormats.js (prettyJson/buildCurl/extractText/buildMarkdown)
+- Page + export route dedupe (net -29 lines); extractText depth guard
+
+### fix(observability): sourceApp/userAgent persisted end-to-end
+- Sub-handlers + repo record now forward sourceApp/userAgent (verified app=curl)
+
+### Research
+- research/9router/21-messages-audit-refactor-design.md — audit findings, refactor decisions, real-world patterns (Sentry/Langfuse/Datadog)
+- learnings/2026-08-08-stale-server-chunkload.md — stale-server + build corruption diagnosis

@@ -627,3 +627,31 @@ refactor decisions rooted in researched stuff... /goal"
 ### Remaining (documented, deferred by design)
 B3 conversation grouping; B4 cURL URL capture; 4.3/4.4 user-owned; Error Inbox
 P2; fallback-view pick (D8).
+
+---
+
+## UPDATE 2026-08-08 (goal-mode: verify → audit → refactor → research)
+
+### Phase 1 — Verify all previous Messages work
+- Restarted both servers (tray 20130, test 20131); fixed corrupted standalone build
+- Fixed 2 build-blockers from parallel work (useCallback import, url dup)
+- Verified all 5 view tabs render with real data (10 records: success/rate_limit/network)
+- Found + fixed sourceApp/userAgent persistence gap (2 drops: sub-handlers + repo record)
+
+### Phase 2 — Code audit (subagent + main verification)
+- 20+ findings across React/data/race/perf/UX/API
+- Fixed 6: BoardView reconciliation, tokens null-safety, fetch race, curl export, TimelineView, drop-on-column (commit 330d7230)
+
+### Phase 3 — Refactor (subagent report + implementation)
+- Extracted shared messageFormats.js (commit c6988820, net -29 lines)
+- Decisions: no messages-table migration now; extract useMessagesQuery hook; P2 next; keep tabs + sourceApp
+
+### Phase 4 — Research documented
+- research/9router/21-messages-audit-refactor-design.md
+- learnings/2026-08-08-stale-server-chunkload.md
+- TASK-LOG #81-88, CHANGELOG updated
+
+### Errors recorded
+- ChunkLoadError from stale server (fixed: kill+restart after rebuild)
+- Build corruption from interrupted build (fixed: rm -rf .next)
+- sourceApp=None (fixed: threading + repo persistence)

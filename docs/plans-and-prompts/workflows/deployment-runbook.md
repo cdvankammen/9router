@@ -76,4 +76,4 @@ curl -s http://127.0.0.1:20130/api/health/providers                     # health
 - Ports: this machine 20130, mini2 20128 (avoid clashing with the local dev
   server on 20130 when both run).
 - HA/failover between the two is researched separately — see
-  `research/9router/24-ha-failover-options.md`.
+  `research/9router/24-ha-mini-backup-nodes.md`.
