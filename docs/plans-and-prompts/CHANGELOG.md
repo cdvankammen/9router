@@ -527,7 +527,7 @@ research/9router/21/22/23 + TASK-LOG 93-102 + this changelog. Commit `2f8c????` 
 
 ## UPDATE 2026-08-09 (per-request cost capture with provenance labels)
 
-### feat(observability): per-request cost capture — commit (see git log)
+### feat(observability): per-request cost capture — commit `2867fbb9`
 - `open-sse/handlers/chatCore/requestDetail.js`: new exported `computeCost(provider, model, tokens)` — cost in USD via `getPricingForModel` + `calculateCostFromTokens` (pricing lib, dependency-free), fully **fail-open** (any error → cost 0 / provenance `unavailable`, capture never breaks)
 - `buildRequestDetail` now sets `cost` (number, USD) + `costProvenance` + `pricingModel` from the final merged tokens; explicit `overrides.cost` is honored as-is
 - Provenance contract: `exact` (concrete PROVIDER_PRICING/MODEL_PRICING entry, reference-verified), `estimated` (PATTERN_PRICING glob fallback, e.g. `grok-*`), `unavailable` (no match or error)
