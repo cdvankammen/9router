@@ -35,8 +35,9 @@ at the bottom of each workflow doc to see if it needs updating.
 |------|--------|---------------|
 | `e2e-testing-workflow.md` | Streaming, [DONE] sentinel, combos, smart router, fallback chains, Dialagram | `245845cf` |
 | `ui-testing-workflow.md` | Dashboard pages, combos UI, fallback builder, providers, usage | `245845cf` |
-| `dialagram-setup-workflow.md` | Dialagram provider node + connection + smart router integration | `245845cf` |
-| `fallback-chain-testing-workflow.md` | Retry loops, 429/500 fallback, per-model overrides, all-fail error | `245845cf` |
+| `dialagram-setup-workflow.md` | Dialagram provider node + connection + smart router integration | `31413a21` |
+| `fallback-chain-testing-workflow.md` | Retry loops, 429/500 fallback, per-model overrides, all-fail error | `31413a21` |
+| `smart-router-testing-workflow.md` | Task classification, stickiness, allowedModels filter, disable/enable | `245845cf` |
 | `smart-router-testing-workflow.md` | Task classification, stickiness, allowedModels filter, disable/enable | `245845cf` |
 
 ## Quick Reference: Files → Workflows
