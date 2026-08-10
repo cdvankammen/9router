@@ -278,7 +278,8 @@ Open questions for user (block 83/84/85): auto-disable behavior; pricing re-fetc
 | 102 | Refactor decisions (research-grounded) | ✅ | `research/9router/23-refactor-decisions.md` — D1–D8 (circuit breaker, SQL facets, merge semantics, retry policy, etc.) |
 
 ### Still open (documented, deferred)
-- B3 conversation grouping page-scoped; B4 cURL URL capture; 4.3/4.4 (user-owned); Error Inbox P2; user's fallback-rule view pick (D8).
+- B4 cURL URL capture; 4.3/4.4 (user-owned); Error Inbox P2; user's fallback-rule view pick (D8).
+- (B3 conversation grouping page-scoped — resolved 2026-08-09, DB-level aggregation, see completed §102-104)
 
 ### Newly Completed (2026-08-08 goal-mode: verify + audit + refactor + research)
 
@@ -325,3 +326,11 @@ Open questions for user (block 83/84/85): auto-disable behavior; pricing re-fetc
 | 99 | Real-world failover both directions (mini-2 ↔ mini2) | ✅ | killed each node's app; proxy on down node served peer (requireLogin identity proof); endpoint continuity via /v1/chat/completions (doc 25 §8b) |
 | 100 | Post-implementation scrutiny | ✅ | S11–S16: 3 real bugs (2 crash, 1 stale-probe race) + header hygiene, fixed + re-verified (doc 25 §9) |
 | 101 | Redeploy hardened proxy both machines | ✅ | final matrix 200/200/200/200 |
+
+### Newly Completed (2026-08-09 DB-level conversation aggregation + keyset pagination)
+
+| # | Task | Status | Evidence |
+|---|------|--------|----------|
+| 102 | B3: DB-level conversation aggregation | ✅ | `getConversationSummary` (SQL GROUP BY over full filtered set — counts/tokens/cost correct for multi-page conversations, NULL conv → `(none)`) + `getConversationMessages` (full thread ASC, pageSize cap 500); `/api/messages?view=conversations` uses summary, `conversationId` param attaches full thread; Messages page lazy-loads threads on expand; commit `feat(messages): DB-level conversation aggregation + keyset pagination` (v1, 2026-08-09) |
+| 103 | Keyset pagination for getRequestDetails | ✅ | opaque `timestamp|id` base64url cursor, `ORDER BY timestamp DESC, id DESC` with `(timestamp < ? OR (timestamp = ? AND id < ?))`, page-size+1 lookahead for hasNext, `nextCursor` in response + API `cursor` param; page-number mode kept (anchors a nextCursor too); commit `feat(messages): DB-level conversation aggregation + keyset pagination` (v1, 2026-08-09) |
+| 104 | Conversation + keyset tests | ✅ | `tests/unit/conversation-keyset.test.js` — 12 tests: 3 conversations (25/2/3 rows incl. timestamp ties + NULL conv), summary counts/tokens/cost/order/`(none)`/pagination, full thread ASC, keyset walk pageSize=10 → all 30 rows exactly once (no dupes/gaps), page-param backward compat; full suite 1772 pass / 86 fail (budget ≤ 89), no touched-area failures; commit `feat(messages): DB-level conversation aggregation + keyset pagination` (v1, 2026-08-09) |

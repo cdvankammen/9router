@@ -319,20 +319,36 @@ function InfoCell({ label, value }) {
 }
 
 // ── Conversation tree node ──────────────────────────────────────────────────
-function ConversationView({ conversation, onSelect }) {
+// The API's conversationSummary returns aggregates WITHOUT the full thread
+// (counts/tokens/cost are SQL GROUP BY over the full dataset — B3). Messages
+// load on expand via onExpand(conversation) when they aren't already present
+// (single-conversation filter embeds the full thread server-side).
+function ConversationView({ conversation, onSelect, onExpand }) {
   const [open, setOpen] = useState(true);
+  const [loading, setLoading] = useState(false);
   if (!conversation) return null;
+  const hasMessages = Array.isArray(conversation.messages) && conversation.messages.length > 0;
+
+  const toggle = async () => {
+    const next = !open;
+    setOpen(next);
+    if (next && !hasMessages && onExpand) {
+      setLoading(true);
+      try { await onExpand(conversation); } finally { setLoading(false); }
+    }
+  };
+
   return (
     <div className="rounded-lg border border-black/5 dark:border-white/5">
       <button
         type="button"
-        onClick={() => setOpen(!open)}
+        onClick={toggle}
         className="flex w-full items-center gap-2 p-2 text-left hover:bg-black/[0.02] dark:hover:bg-white/[0.02]"
       >
         <span className="material-symbols-outlined text-sm text-text-muted transition-transform" style={{ transform: open ? "rotate(90deg)" : "none" }}>
           chevron_right
         </span>
-        <code className="min-w-0 flex-1 truncate font-mono text-xs">{conversation.conversationId}</code>
+        <code className="min-w-0 flex-1 truncate font-mono text-xs">{conversation.conversationId || "(none)"}</code>
         <span className="text-[10px] text-text-muted">{conversation.messageCount} msgs</span>
         <span className="text-[10px] text-text-muted">
           {fmtTokens((conversation.tokens?.prompt || 0) + (conversation.tokens?.completion || 0))} tok
@@ -341,22 +357,30 @@ function ConversationView({ conversation, onSelect }) {
       </button>
       {open && (
         <div className="border-t border-black/5 dark:border-white/5 p-1">
-          {conversation.messages.map((m, i) => (
-            <button
-              key={m.id || m._id || i}
-              type="button"
-              onClick={() => onSelect(m)}
-              className="flex w-full items-center gap-2 rounded-lg px-2 py-1 text-left text-xs hover:bg-black/[0.02] dark:hover:bg-white/[0.02]"
-            >
-              <span className="w-14 shrink-0 font-mono text-[10px] text-text-muted">
-                {String(m.timestamp || "").slice(11, 19)}
-              </span>
-              <StatusBadge status={m.status} category={m.errorCategory} />
-              <span className="min-w-0 flex-1 truncate font-mono text-text-main">
-                {m.model || "?"}
-              </span>
-            </button>
-          ))}
+          {loading ? (
+            <div className="p-2 text-[11px] text-text-muted">Loading thread…</div>
+          ) : hasMessages ? (
+            conversation.messages.map((m, i) => (
+              <button
+                key={m.id || m._id || i}
+                type="button"
+                onClick={() => onSelect(m)}
+                className="flex w-full items-center gap-2 rounded-lg px-2 py-1 text-left text-xs hover:bg-black/[0.02] dark:hover:bg-white/[0.02]"
+              >
+                <span className="w-14 shrink-0 font-mono text-[10px] text-text-muted">
+                  {String(m.timestamp || "").slice(11, 19)}
+                </span>
+                <StatusBadge status={m.status} category={m.errorCategory} />
+                <span className="min-w-0 flex-1 truncate font-mono text-text-main">
+                  {m.model || "?"}
+                </span>
+              </button>
+            ))
+          ) : (
+            <div className="p-2 text-[11px] text-text-muted">
+              {conversation.messageCount > 0 ? "Click to load the full thread" : "No captured messages for this conversation."}
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -384,6 +408,23 @@ export default function MessagesPage() {
   const [selected, setSelected] = useState(null);
   const loadAbortRef = useRef(null);
 
+  // Full threads loaded lazily per conversation (conversationSummary returns
+  // aggregates only; threads fetch on expand). Keyed by conversationId with
+  // "(none)" for the null-conversation group.
+  const [threads, setThreads] = useState({});
+  const loadThread = useCallback(async (conv) => {
+    const key = conv.conversationId ?? "(none)";
+    if (threads[key] !== undefined) return;
+    try {
+      const q = new URLSearchParams({ view: "conversations", pageSize: "500" });
+      q.set("conversationId", conv.conversationId ?? "(none)");
+      const res = await fetch(`/api/messages?${q}`);
+      if (!res.ok) return;
+      const json = await res.json();
+      setThreads((t) => ({ ...t, [key]: json.messages || [] }));
+    } catch { /* ignore */ }
+  }, [threads]);
+
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -394,6 +435,7 @@ export default function MessagesPage() {
     loadAbortRef.current = controller;
     try {
       const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
+      if (viewMode === "conversations") params.set("view", "conversations");
       if (provider) params.set("provider", provider);
       if (status) params.set("status", status);
       if (conversationId) params.set("conversationId", conversationId);
@@ -401,7 +443,14 @@ export default function MessagesPage() {
       const res = await fetch(`/api/messages?${params}`, { signal: controller.signal });
       if (!res.ok) throw new Error("Failed to load messages");
       const json = await res.json();
-      setData(json);
+      // Conversations view pages by number (SQL GROUP BY over the full set) —
+      // append later pages so earlier ones stay visible ("Load more").
+      setData((prev) => {
+        if (viewMode !== "conversations" || page <= 1 || !prev) return json;
+        const seen = new Set((prev.conversations || []).map((c) => c.conversationId));
+        const fresh = (json.conversations || []).filter((c) => !seen.has(c.conversationId));
+        return { ...json, conversations: [...(prev.conversations || []), ...fresh] };
+      });
     } catch (e) {
       // Ignore aborts (a newer request superseded this one)
       if (e.name === "AbortError") return;
@@ -409,7 +458,7 @@ export default function MessagesPage() {
     } finally {
       if (loadAbortRef.current === controller) setLoading(false);
     }
-  }, [page, pageSize, provider, status, conversationId, debouncedSearch]);
+  }, [page, pageSize, provider, status, conversationId, debouncedSearch, viewMode]);
 
   // Debounce the search input (~300ms) so every keystroke doesn't fire a
   // query; page resets to 1 once the term settles.
@@ -460,35 +509,35 @@ export default function MessagesPage() {
         <div className="flex items-center gap-1 rounded-lg bg-black/5 dark:bg-white/5 p-1">
           <button
             type="button"
-            onClick={() => setViewMode("list")}
+            onClick={() => { setViewMode("list"); setPage(1); }}
             className={cn("rounded-md px-3 py-1 text-xs font-medium transition-colors", viewMode === "list" ? "bg-surface text-text-main shadow-sm" : "text-text-muted")}
           >
             List
           </button>
           <button
             type="button"
-            onClick={() => setViewMode("conversations")}
+            onClick={() => { setViewMode("conversations"); setPage(1); }}
             className={cn("rounded-md px-3 py-1 text-xs font-medium transition-colors", viewMode === "conversations" ? "bg-surface text-text-main shadow-sm" : "text-text-muted")}
           >
             Conversations
           </button>
           <button
             type="button"
-            onClick={() => setViewMode("timeline")}
+            onClick={() => { setViewMode("timeline"); setPage(1); }}
             className={cn("rounded-md px-3 py-1 text-xs font-medium transition-colors", viewMode === "timeline" ? "bg-surface text-text-main shadow-sm" : "text-text-muted")}
           >
             Timeline
           </button>
           <button
             type="button"
-            onClick={() => setViewMode("trace")}
+            onClick={() => { setViewMode("trace"); setPage(1); }}
             className={cn("rounded-md px-3 py-1 text-xs font-medium transition-colors", viewMode === "trace" ? "bg-surface text-text-main shadow-sm" : "text-text-muted")}
           >
             Trace
           </button>
           <button
             type="button"
-            onClick={() => setViewMode("board")}
+            onClick={() => { setViewMode("board"); setPage(1); }}
             className={cn("rounded-md px-3 py-1 text-xs font-medium transition-colors", viewMode === "board" ? "bg-surface text-text-main shadow-sm" : "text-text-muted")}
           >
             Board
@@ -629,8 +678,20 @@ export default function MessagesPage() {
         ) : viewMode === "conversations" ? (
           <div className="flex flex-col gap-2 p-3">
             {conversations.map((conv) => (
-              <ConversationView key={conv.conversationId} conversation={conv} onSelect={(m) => openDetail(m.id || m._id)} />
+              <ConversationView
+                key={conv.conversationId ?? "(none)"}
+                conversation={{ ...conv, messages: threads[conv.conversationId ?? "(none)"] || conv.messages }}
+                onSelect={(m) => openDetail(m.id || m._id)}
+                onExpand={loadThread}
+              />
             ))}
+            {pagination?.hasNext && (
+              <div className="flex justify-center pt-1">
+                <Button size="sm" variant="ghost" onClick={() => setPage((p) => p + 1)}>
+                  Load more conversations
+                </Button>
+              </div>
+            )}
           </div>
         ) : viewMode === "timeline" ? (
           <TimelineView
@@ -654,7 +715,12 @@ export default function MessagesPage() {
         ) : (
           <div className="flex flex-col gap-2 p-3">
             {conversations.map((conv) => (
-              <ConversationView key={conv.conversationId} conversation={conv} onSelect={(m) => openDetail(m.id || m._id)} />
+              <ConversationView
+                key={conv.conversationId ?? "(none)"}
+                conversation={conv}
+                onSelect={(m) => openDetail(m.id || m._id)}
+                onExpand={loadThread}
+              />
             ))}
           </div>
         )}

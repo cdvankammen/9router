@@ -66,6 +66,7 @@ export {
 export {
   saveRequestDetail, getRequestDetails, getRequestDetailById, getDistinctProviders,
   getRequestFacets, getDroppedRecordsCount,
+  getConversationSummary, getConversationMessages,
 } from "./repos/requestDetailsRepo.js";
 
 // Export/import full DB

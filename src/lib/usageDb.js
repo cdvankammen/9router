@@ -5,4 +5,5 @@ export {
   appendRequestLog, getRecentLogs,
   saveRequestDetail, getRequestDetails, getRequestDetailById,
   getRequestFacets, getDroppedRecordsCount,
+  getConversationSummary, getConversationMessages,
 } from "@/lib/db/index.js";

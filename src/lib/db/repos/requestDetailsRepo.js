@@ -299,6 +299,25 @@ export async function saveRequestDetail(detail) {
   }
 }
 
+// ── Keyset pagination helpers ──────────────────────────────────────────────
+// Opaque cursor: base64url("timestamp|id") of the last row of the previous
+// page. Ordering is (timestamp DESC, id DESC) — id breaks ties for rows with
+// identical timestamps (a real risk with batch writes and coarse clocks).
+function encodeCursor(timestamp, id) {
+  return Buffer.from(`${timestamp}|${id}`, "utf8").toString("base64url");
+}
+
+function decodeCursor(cursor) {
+  try {
+    const raw = Buffer.from(String(cursor), "base64url").toString("utf8");
+    const sep = raw.indexOf("|");
+    if (sep <= 0 || sep === raw.length - 1) return null;
+    return { timestamp: raw.slice(0, sep), id: raw.slice(sep + 1) };
+  } catch {
+    return null;
+  }
+}
+
 export async function getRequestDetails(filter = {}) {
   const db = await getAdapter();
   const conds = [];
@@ -308,20 +327,78 @@ export async function getRequestDetails(filter = {}) {
   const cntRow = db.get(`SELECT COUNT(*) as c FROM requestDetails ${where}`, params);
   const totalItems = cntRow ? cntRow.c : 0;
 
-  const page = filter.page || 1;
   const pageSize = filter.pageSize || 50;
   const totalPages = Math.ceil(totalItems / pageSize);
-  const offset = (page - 1) * pageSize;
+  const ORDER_SQL = `ORDER BY timestamp DESC, id DESC`;
 
-  const rows = db.all(
-    `SELECT data FROM requestDetails ${where} ORDER BY timestamp DESC LIMIT ? OFFSET ?`,
-    [...params, pageSize, offset]
-  );
+  let rows;
+  let page = filter.page || 1;
+  let nextCursor = null;
+
+  if (filter.cursor) {
+    // Keyset pagination: opaque cursor from the last row of the previous
+    // page. Stable under inserts (no OFFSET scan, no page drift).
+    const decoded = decodeCursor(filter.cursor);
+    if (decoded) {
+      const keysetWhere = conds.length
+        ? `${where} AND (timestamp < ? OR (timestamp = ? AND id < ?))`
+        : `WHERE (timestamp < ? OR (timestamp = ? AND id < ?))`;
+      // Fetch pageSize+1 rows to know definitively whether a next page
+      // exists (hasNext) and to build the next cursor.
+      const raw = db.all(
+        `SELECT id, timestamp, data FROM requestDetails ${keysetWhere} ${ORDER_SQL} LIMIT ?`,
+        [...params, decoded.timestamp, decoded.timestamp, decoded.id, pageSize + 1]
+      );
+      rows = raw.slice(0, pageSize);
+      if (raw.length > pageSize) {
+        const last = rows[rows.length - 1];
+        nextCursor = encodeCursor(last.timestamp, last.id);
+      }
+    } else {
+      // Unparseable cursor → fall back to offset math (page 1).
+      page = 1;
+      rows = db.all(
+        `SELECT id, timestamp, data FROM requestDetails ${where} ${ORDER_SQL} LIMIT ? OFFSET ?`,
+        [...params, pageSize, 0]
+      );
+      // Still anchor a valid next cursor so the UI can switch to keyset on
+      // the next page ("Load more") even after a bad cursor.
+      if (rows.length > 0 && page < totalPages) {
+        const last = rows[rows.length - 1];
+        nextCursor = encodeCursor(last.timestamp, last.id);
+      }
+    }
+  } else {
+    // Page-number mode (backward compat with the page-number UI). Uses the
+    // same (timestamp DESC, id DESC) order as keyset so both agree. The
+    // returned page also anchors a nextCursor so callers can chain into
+    // keyset pagination on the following page.
+    const offset = (page - 1) * pageSize;
+    rows = db.all(
+      `SELECT id, timestamp, data FROM requestDetails ${where} ${ORDER_SQL} LIMIT ? OFFSET ?`,
+      [...params, pageSize, offset]
+    );
+    if (rows.length > 0 && page < totalPages) {
+      const last = rows[rows.length - 1];
+      nextCursor = encodeCursor(last.timestamp, last.id);
+    }
+  }
+
   const details = rows.map((r) => parseJson(r.data, {}));
 
   return {
     details,
-    pagination: { page, pageSize, totalItems, totalPages, hasNext: page < totalPages, hasPrev: page > 1 },
+    pagination: {
+      page, pageSize, totalItems, totalPages,
+      // In keyset mode `page` stays 1 (the cursor defines position), so
+      // hasNext must be driven by nextCursor alone; page-number mode keeps
+      // the classic comparison.
+      hasNext: filter.cursor ? nextCursor !== null : page < totalPages,
+      hasPrev: page > 1,
+    },
+    // Opaque cursor for the next keyset page (null when no more rows). The
+    // UI can pass it back as ?cursor= for drift-free forward pagination.
+    nextCursor,
     // "fts" when the query used the FTS5 index, "like" for the LIKE
     // fallback, undefined when no search term was given. Surfaced by the API
     // so the UI can show which mode served the results.
@@ -418,6 +495,9 @@ async function buildWhere(filter, conds, params) {
   if (filter.connectionId) { conds.push("connectionId = ?"); params.push(filter.connectionId); }
   if (filter.status) { conds.push("status = ?"); params.push(filter.status); }
   if (filter.conversationId) { conds.push("conversationId = ?"); params.push(filter.conversationId); }
+  // Explicit null → rows with no conversation (the "(none)" group). A falsy
+  // undefined means "no conversation filter".
+  else if (filter.conversationId === null) { conds.push("conversationId IS NULL"); }
   if (filter.startDate) { conds.push("timestamp >= ?"); params.push(new Date(filter.startDate).toISOString()); }
   if (filter.endDate) { conds.push("timestamp <= ?"); params.push(new Date(filter.endDate).toISOString()); }
   if (filter.errorCategory) { conds.push(`json_extract(data, '$.errorCategory') = ?`); params.push(filter.errorCategory); }
@@ -429,6 +509,107 @@ export async function getRequestDetailById(id) {
   const db = await getAdapter();
   const row = db.get(`SELECT data FROM requestDetails WHERE id = ?`, [id]);
   return row ? parseJson(row.data, null) : null;
+}
+
+// ── Conversation aggregation (B3) ──────────────────────────────────────────
+// Aggregates are computed in SQL (GROUP BY) over the FULL filtered dataset,
+// not over the current page's rows — so conversation counts/tokens/cost are
+// correct for conversations that span multiple pages, and the UI can page
+// through conversations without losing a session thread.
+
+/**
+ * Per-conversation aggregates over the full filtered dataset.
+ *
+ * Same filter contract as getRequestDetails, EXCEPT conversationId (grouping
+ * happens BY conversation, so a conversation filter would collapse the
+ * query). Rows with NULL conversationId group under "(none)".
+ *
+ * @param {object} filter provider/model/status/startDate/endDate/search/…
+ *   plus page/pageSize for paginating the conversation LIST
+ * @returns {Promise<{conversations: Array, pagination: object, totals: object}>}
+ *   conversations: [{ conversationId, messageCount, tokens:{prompt,completion},
+ *   cost, lastTimestamp, firstTimestamp }] ordered by lastTimestamp DESC
+ */
+export async function getConversationSummary(filter = {}) {
+  const db = await getAdapter();
+  const conds = [];
+  const params = [];
+  const { where } = await buildWhere({ ...filter, conversationId: undefined }, conds, params);
+
+  // Totals for pagination: distinct conversations in the filtered set.
+  const totalRow = db.get(
+    `SELECT COUNT(DISTINCT COALESCE(conversationId, '(none)')) AS c FROM requestDetails ${where}`,
+    params
+  );
+  const totalItems = totalRow ? totalRow.c : 0;
+
+  const page = filter.page || 1;
+  const pageSize = filter.pageSize || 50;
+  const totalPages = Math.ceil(totalItems / pageSize);
+  const offset = (page - 1) * pageSize;
+
+  // Token sums mirror the JS fallback used by the Messages page
+  // (prompt_tokens || input_tokens) so Claude-style rows count too.
+  const rows = db.all(
+    `SELECT COALESCE(conversationId, '(none)') AS conversationKey,
+            COUNT(*) AS messageCount,
+            COALESCE(SUM(COALESCE(json_extract(data, '$.tokens.prompt_tokens'), json_extract(data, '$.tokens.input_tokens'))), 0) AS promptTokens,
+            COALESCE(SUM(COALESCE(json_extract(data, '$.tokens.completion_tokens'), json_extract(data, '$.tokens.output_tokens'))), 0) AS completionTokens,
+            COALESCE(SUM(COALESCE(json_extract(data, '$.cost'), 0)), 0) AS cost,
+            MAX(timestamp) AS lastTimestamp,
+            MIN(timestamp) AS firstTimestamp
+     FROM requestDetails ${where}
+     GROUP BY COALESCE(conversationId, '(none)')
+     ORDER BY lastTimestamp DESC
+     LIMIT ? OFFSET ?`,
+    [...params, pageSize, offset]
+  );
+
+  return {
+    conversations: rows.map((r) => ({
+      conversationId: r.conversationKey === "(none)" ? null : r.conversationKey,
+      messageCount: r.messageCount,
+      tokens: { prompt: r.promptTokens, completion: r.completionTokens },
+      cost: r.cost,
+      lastTimestamp: r.lastTimestamp,
+      firstTimestamp: r.firstTimestamp,
+    })),
+    pagination: { page, pageSize, totalItems, totalPages, hasNext: page < totalPages, hasPrev: page > 1 },
+    totals: { conversationCount: totalItems },
+  };
+}
+
+/**
+ * All rows for one conversation, ASC by timestamp — a FULL session thread
+ * regardless of the page window. Pass conversationId=null for the "(none)"
+ * group (rows with no conversation).
+ *
+ * @param {string|null} conversationId conversation key, or null for the
+ *   no-conversation group
+ * @param {object} filter other filters (provider/status/dates/search/…) plus
+ *   page/pageSize; pageSize is capped at 500 for safety
+ * @returns {Promise<Array>} parsed requestDetails.data rows, ASC
+ */
+export async function getConversationMessages(conversationId, filter = {}) {
+  const db = await getAdapter();
+  const conds = [];
+  const params = [];
+  if (conversationId === null || conversationId === undefined) {
+    conds.push("conversationId IS NULL");
+  } else {
+    conds.push("conversationId = ?");
+    params.push(conversationId);
+  }
+  await buildWhere({ ...filter, conversationId: undefined }, conds, params);
+
+  const pageSize = Math.min(filter.pageSize || 500, 500); // safety cap
+  const offset = ((filter.page || 1) - 1) * pageSize;
+
+  const rows = db.all(
+    `SELECT data FROM requestDetails WHERE ${conds.join(" AND ")} ORDER BY timestamp ASC, id ASC LIMIT ? OFFSET ?`,
+    [...params, pageSize, offset]
+  );
+  return rows.map((r) => parseJson(r.data, {}));
 }
 
 const _shutdownHandler = async () => {
