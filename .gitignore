@@ -101,3 +101,13 @@ graphify-out/*
 .start-dev.ps1
 start-dev-silent.cjs
 debug.log
+
+# Branch-specific ignores
+/.ua
+/open-sse
+/open-sse/providers
+/.feeder
+
+# Secrets / local-only notes — never commit (contains live API keys)
+/docs/plans-and-prompts/temp/
+/docs/plans-and-prompts/temp/**
