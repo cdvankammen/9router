@@ -14,7 +14,14 @@ import { timestampSlug, getAppVersion } from "./version.js";
 const KEEP_BACKUPS = 3;
 
 // Tables excluded from safety backups (large, non-critical, reproducible).
-const BACKUP_EXCLUDE_TABLES = ["requestDetails"];
+// requestDetails_fts is derived data (full-text index over requestDetails) —
+// it must never be copied: its CREATE VIRTUAL TABLE sql can't be re-prefixed
+// to the bak schema, it's reproducible from the main table anyway, and its
+// FTS5 shadow tables (*_data/_idx/_content/_docsize/_config) are name-
+// reserved so recreating them in the backup DB is rejected by SQLite.
+const BACKUP_EXCLUDE_TABLES = ["requestDetails", "requestDetails_fts"];
+const isExcludedTable = (name) =>
+  BACKUP_EXCLUDE_TABLES.includes(name) || BACKUP_EXCLUDE_TABLES.some((t) => name.startsWith(t + "_"));
 
 export function makeBackupDir(label) {
   ensureDirs();
@@ -43,10 +50,9 @@ export function backupDbLite(adapter, destDir, destName = "data.sqlite") {
 
   adapter.exec(`ATTACH DATABASE '${escaped}' AS bak`);
   try {
-    const excluded = new Set(BACKUP_EXCLUDE_TABLES);
     const tables = adapter
       .all(`SELECT name, sql FROM main.sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'`)
-      .filter((t) => !excluded.has(t.name));
+      .filter((t) => !isExcludedTable(t.name));
 
     adapter.transaction(() => {
       for (const t of tables) {
