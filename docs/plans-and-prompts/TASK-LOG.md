@@ -385,3 +385,16 @@ Open questions for user (block 83/84/85): auto-disable behavior; pricing re-fetc
 | 113 | **FIX: Inbox empty-state ordering** | ✅ | `16d81223` — InboxView branch moved before messages-empty check; errors view rendered wrong "No messages" empty state when error groups existed (errors>0, messages=0) |
 | 114 | **FIX: provider-name object → React #31** | ✅ | `16d81223` — providerNames mixes AI_PROVIDERS config OBJECTS + node name strings; rendering object as child crashed all views. `resolveProviderName()` helper (string \| .name \| fallback) added to InboxView/BoardView/TimelineView |
 | 115 | Browser-verified all 6 tabs | ✅ | List/Conversations/Timeline/Trace/Board/Inbox render real data: OpenAI + OpenAI Codex resolved, rate_limit group ×62 with triage columns |
+
+### Newly Completed (2026-08-10 failover production hardening)
+
+| # | Task | Status | Evidence |
+|---|------|--------|----------|
+| 106 | Automated failover proxy test suite | ✅ | `tests/unit/failover-proxy.test.js` — 6 tests (spawns real proxy, T1–T6), 6/6 ×3 runs |
+| 107 | Bug A: failover never engaged under launchd | ✅ | mDNS fe80:: + macOS Local-Network TCC blocks LAN for launchd jobs → switched peers to Tailscale IPs (100.96.109.61/100.77.55.46); verified from launchd job; doc 25 §10 |
+| 108 | Bug B: no auto-restart (app+proxy died overnight) | ✅ | launchd agents `com.9router.{app,failover}` on BOTH machines (KeepAlive); kill→respawn→200 in <12s verified |
+| 109 | End-to-end failover verification (launchd-managed) | ✅ | sustained outage failover+failback both directions (identity-proven via requireLogin); final matrix 200/200/200/200; runbook updated |
+
+### Still open (documented, deferred)
+- **mini (3rd node) unreachable** — no ping/SSH (off or off-network); SSH key-auth blocked. Needs user action to join as node 3.
+- 4.3/4.4 (user-owned); D8 fallback-rule view pick; L1 in-app peerNodes.

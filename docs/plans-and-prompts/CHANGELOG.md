@@ -712,3 +712,21 @@ Full suite **1794 pass / 86 fail** (within 88-baseline budget). Feature tests: c
 - **Browser-verified** all 6 tabs (List/Conversations/Timeline/Trace/Board/
   Inbox): OpenAI + OpenAI Codex resolved, rate_limit group ×62 with triage
   columns (Open/Acknowledged/Resolved/Dismissed).
+
+### fix(failover): production hardening — launchd + Tailscale peers (2026-08-10)
+- Automated test suite: `tests/unit/failover-proxy.test.js` — spawns the real
+  proxy, T1–T6 (local-pref, failover, failback, loop protection, both-down,
+  abort-survival), 6/6 green ×3.
+- **Bug A (CRITICAL, found in production): failover never engaged under
+  launchd.** mDNS `mini2-9.local` → link-local `fe80::` (EHOSTUNREACH), and
+  macOS 15 Local-Network TCC blocks LAN IPs (10.2.0.x) for launchd jobs →
+  `peerUp` always false → app death looked like "both down" → 502 to dead
+  local. Fixed by switching both proxies to **Tailscale IP peers**
+  (100.96.109.61 / 100.77.55.46 — exempt from TCC, <20ms). Verified from a
+  launchd job.
+- **Bug B (CRITICAL): no auto-restart.** App+proxy died overnight, nothing
+  recovered them. Now launchd agents (`com.9router.app` + `com.9router.failover`,
+  KeepAlive+RunAtLoad) on BOTH machines; verified kill→respawn→200 in <12s.
+- Verified end-to-end: sustained-outage failover+failback both directions
+  (identity-proven), auto-restart both machines, matrix 200/200/200/200.
+- Doc 25 §10 + deployment-runbook updated (peer table, ops, verification).
