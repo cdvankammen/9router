@@ -29,11 +29,24 @@ function statusDot(status) {
   return colors[status] || "bg-gray-500";
 }
 
-export default function TraceTreeView({ conversations = [], providerNames, onSelect }) {
+export default function TraceTreeView({ conversations = [], providerNames, onSelect, onExpand }) {
   const [selectedConv, setSelectedConv] = useState(null);
   const [selectedMsgId, setSelectedMsgId] = useState(null);
+  const [loading, setLoading] = useState(false);
 
   const conv = conversations.find((c) => c.conversationId === selectedConv) || null;
+  // Conversation summaries from the API carry aggregates only — the thread
+  // (messages) loads lazily via onExpand (same as the Conversations view).
+  const messages = Array.isArray(conv?.messages) ? conv.messages : [];
+
+  const selectConv = async (c) => {
+    setSelectedConv(c.conversationId);
+    setSelectedMsgId(null);
+    if (!Array.isArray(c.messages) && onExpand) {
+      setLoading(true);
+      try { await onExpand(c); } finally { setLoading(false); }
+    }
+  };
 
   return (
     <div className="flex min-h-0 flex-1 gap-3 p-3">
@@ -49,7 +62,7 @@ export default function TraceTreeView({ conversations = [], providerNames, onSel
           <button
             key={c.conversationId}
             type="button"
-            onClick={() => { setSelectedConv(c.conversationId); setSelectedMsgId(null); }}
+            onClick={() => selectConv(c)}
             className={cn(
               "flex w-full flex-col gap-0.5 border-b border-black/5 dark:border-white/5 p-2 text-left hover:bg-black/[0.02] dark:hover:bg-white/[0.02]",
               selectedConv === c.conversationId && "bg-primary/5"
@@ -70,10 +83,18 @@ export default function TraceTreeView({ conversations = [], providerNames, onSel
         </div>
         {conv && (
           <div className="p-2">
-            {conv.messages.map((m, i) => (
+            {loading && (
+              <div className="p-2 text-[11px] text-text-muted">Loading thread…</div>
+            )}
+            {!loading && messages.length === 0 && (
+              <div className="p-2 text-[11px] text-text-muted">
+                No messages in this conversation.
+              </div>
+            )}
+            {messages.map((m, i) => (
               <div key={m.id || m._id || i} className="relative flex items-start gap-2 pb-3 pl-4">
                 {/* vertical connector */}
-                {i < conv.messages.length - 1 && (
+                {i < messages.length - 1 && (
                   <span className="absolute left-[5px] top-3 h-full w-px bg-black/10 dark:bg-white/10" />
                 )}
                 <span className={cn("relative mt-1.5 h-2 w-2 shrink-0 rounded-full", statusDot(m.status))} />

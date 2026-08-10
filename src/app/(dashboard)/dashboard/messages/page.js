@@ -739,6 +739,7 @@ export default function MessagesPage() {
             conversations={conversations}
             providerNames={providerNames}
             onSelect={(m) => openDetail(m.id || m._id)}
+            onExpand={loadThread}
           />
         ) : viewMode === "board" ? (
           <BoardView
