@@ -18,12 +18,14 @@ export function prettyJson(obj) {
 
 /**
  * Reconstruct a cURL command for a captured request.
- * The capture path never stores the upstream URL, so we emit a placeholder
- * endpoint as a usable template. Truncated payloads are detected and noted.
+ * Uses the captured upstream URL when available (task B4); falls back to a
+ * placeholder endpoint as a usable template for legacy rows. Truncated
+ * payloads are detected and noted.
  */
 export function buildCurl(detail) {
   const body = detail.providerRequest || detail.request || {};
-  const lines = [`curl -X POST "<provider-endpoint>/v1/chat/completions"`];
+  const url = detail.url || "<provider-endpoint>/v1/chat/completions";
+  const lines = [`curl -X POST "${url}"`];
   if (body && typeof body === "object" && Object.keys(body).length > 0) {
     lines.push('  -H "Content-Type: application/json"');
     lines.push('  -H "Authorization: Bearer YOUR_API_KEY"');

@@ -232,6 +232,9 @@ async function flushToDatabase() {
             errorCategory: item.errorCategory || null,
             sourceApp: item.sourceApp || undefined,
             userAgent: item.userAgent || undefined,
+            // Upstream URL captured at request time (task B4) — used by
+            // buildCurl for the exported cURL command. Absent on legacy rows.
+            url: item.url || undefined,
             // Per-request cost capture (computed in buildRequestDetail) —
             // carried in `data` so the Messages page + conversation
             // aggregates can render it. Absent on legacy rows.

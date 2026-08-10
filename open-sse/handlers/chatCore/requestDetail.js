@@ -139,6 +139,7 @@ export function buildRequestDetail(base, overrides = {}) {
     errorCategory: base.errorCategory || undefined,
     sourceApp: base.sourceApp || undefined,
     userAgent: base.userAgent || undefined,
+    url: base.url || undefined,
     ...overrides
   };
 
