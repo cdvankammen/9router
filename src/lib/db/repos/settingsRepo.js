@@ -35,6 +35,11 @@ const DEFAULT_SETTINGS = {
     intervalHours: 12,
   },
   analyzeErrorModel: "oc/mimo-v2.5-free",
+  // Error Inbox (P2) triage assignments: { [errorFingerprint]: columnKey }.
+  // Coarse fingerprint key = provider|model|errorCategory (Sentry-style) —
+  // see requestDetailsRepo.getErrorSummary. Stored with MAP_REPLACE semantics
+  // (sender owns the full map).
+  boardColumns: {},
   markdownLogEnabled: false,
   markdownLogFlushIntervalMin: 5,
   modelFallbacks: {},
@@ -138,6 +143,7 @@ const MAP_REPLACE_KEYS = new Set([
   "providerStrategies",
   "quotaVisibility",
   "dnsToolEnabled",
+  "boardColumns",
 ]);
 
 const NESTED_KEYS = new Set([...CONFIG_MERGE_KEYS, ...MAP_REPLACE_KEYS]);

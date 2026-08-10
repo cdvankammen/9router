@@ -11,6 +11,7 @@ import { useCopyToClipboard } from "@/shared/hooks/useCopyToClipboard";
 import TimelineView from "./components/TimelineView";
 import TraceTreeView from "./components/TraceTreeView";
 import BoardView from "./components/BoardView";
+import InboxView from "./components/InboxView";
 import { prettyJson, buildCurl, extractText } from "@/shared/messageFormats";
 
 // ── Provider name resolution (mirrors RequestDetailsTab) ────────────────────
@@ -397,6 +398,7 @@ export default function MessagesPage() {
   // Filters
   const [provider, setProvider] = useState("");
   const [status, setStatus] = useState("");
+  const [errorCategory, setErrorCategory] = useState("");
   const [conversationId, setConversationId] = useState("");
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -404,7 +406,7 @@ export default function MessagesPage() {
   const [pageSize] = useState(50);
 
   // View mode
-  const [viewMode, setViewMode] = useState("list"); // "list" | "conversations"
+  const [viewMode, setViewMode] = useState("list"); // "list" | "conversations" | "timeline" | "trace" | "board" | "errors"
   const [selected, setSelected] = useState(null);
   const loadAbortRef = useRef(null);
 
@@ -436,8 +438,10 @@ export default function MessagesPage() {
     try {
       const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
       if (viewMode === "conversations") params.set("view", "conversations");
+      if (viewMode === "errors") params.set("view", "errors");
       if (provider) params.set("provider", provider);
       if (status) params.set("status", status);
+      if (errorCategory) params.set("errorCategory", errorCategory);
       if (conversationId) params.set("conversationId", conversationId);
       if (debouncedSearch) params.set("search", debouncedSearch);
       const res = await fetch(`/api/messages?${params}`, { signal: controller.signal });
@@ -458,7 +462,7 @@ export default function MessagesPage() {
     } finally {
       if (loadAbortRef.current === controller) setLoading(false);
     }
-  }, [page, pageSize, provider, status, conversationId, debouncedSearch, viewMode]);
+  }, [page, pageSize, provider, status, errorCategory, conversationId, debouncedSearch, viewMode]);
 
   // Debounce the search input (~300ms) so every keystroke doesn't fire a
   // query; page resets to 1 once the term settles.
@@ -485,6 +489,7 @@ export default function MessagesPage() {
 
   const messages = data?.messages || [];
   const conversations = data?.conversations || [];
+  const errors = data?.errors || [];
   const pagination = data?.pagination;
 
   const openDetail = useCallback(async (id) => {
@@ -542,6 +547,13 @@ export default function MessagesPage() {
           >
             Board
           </button>
+          <button
+            type="button"
+            onClick={() => { setViewMode("errors"); setPage(1); }}
+            className={cn("rounded-md px-3 py-1 text-xs font-medium transition-colors", viewMode === "errors" ? "bg-surface text-text-main shadow-sm" : "text-text-muted")}
+          >
+            Inbox
+          </button>
         </div>
       </div>
 
@@ -578,7 +590,7 @@ export default function MessagesPage() {
             className="h-8 rounded-lg border border-black/10 dark:border-white/10 bg-transparent px-2 text-xs text-text-main outline-none"
           >
             <option value="">All providers</option>
-            {messages.map((m) => m.provider).filter((p, i, a) => p && a.indexOf(p) === i).map((p) => (
+            {[...messages, ...errors].map((m) => m.provider).filter((p, i, a) => p && a.indexOf(p) === i).map((p) => (
               <option key={p} value={p}>{getProviderName(p, providerNames)}</option>
             ))}
           </select>
@@ -606,6 +618,10 @@ export default function MessagesPage() {
           <div className="flex items-center justify-center p-10 text-sm text-text-muted">Loading…</div>
         ) : error ? (
           <div className="p-10 text-center text-sm text-red-500">{error}</div>
+        ) : viewMode === "errors" && errors.length === 0 ? (
+          <div className="p-10 text-center text-sm text-text-muted">
+            No errors match the current filters. The Inbox groups captured failures by provider / model / error category.
+          </div>
         ) : messages.length === 0 ? (
           <div className="p-10 text-center text-sm text-text-muted">
             No messages captured yet. Send a request through 9Router to populate this view.
@@ -711,6 +727,17 @@ export default function MessagesPage() {
             messages={messages}
             providerNames={providerNames}
             onSelect={(m) => openDetail(m.id || m._id)}
+          />
+        ) : viewMode === "errors" ? (
+          <InboxView
+            errors={errors}
+            providerNames={providerNames}
+            onSelect={(detailId) => openDetail(detailId)}
+            errorCategory={errorCategory}
+            onErrorCategoryChange={(v) => { setErrorCategory(v); setPage(1); }}
+            categoryFacets={data?.facets?.errorCategory || []}
+            pagination={pagination}
+            onLoadMore={() => setPage((p) => p + 1)}
           />
         ) : (
           <div className="flex flex-col gap-2 p-3">

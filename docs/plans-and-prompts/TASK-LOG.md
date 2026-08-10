@@ -347,3 +347,20 @@ Open questions for user (block 83/84/85): auto-disable behavior; pricing re-fetc
 ### Still open (documented, deferred)
 - Error Inbox P2 (server-side fingerprint aggregation + triage persistence — design decision needed: coarse `provider|model|errorCategory` key vs raw-text fingerprint; see research)
 - 4.3/4.4 (user-owned); user's fallback-rule view pick (D8)
+
+### Updated (2026-08-09 — status reconciliation)
+
+| # | Task | Status | Evidence |
+|---|------|--------|----------|
+| 87 | Detail drawer overflows off-screen in compact/narrow windows | ✅ RESOLVED (was ⏳ deferred) | fixed in `79c457e6` (`Drawer.js` width presets `w-[min(800px,100vw)]`); re-verified 2026-08-09 by browser subagent at 240px–1024px viewports incl. 375px/800×500 — drawer rect always on-screen |
+| 88 | Detail payload `pre` not visibly scrollable | ✅ RESOLVED (was ⏳ deferred) | `min-h-0` flex chain + `pre overflow-auto` in page.js (FormatTabs); browser-verified scrollH>clientH + wrap/no-wrap toggle works |
+| 89 | Vision-assisted QA of drawer at 375px | ✅ RESOLVED | covered by the same browser subagent verification (no vision needed — DOM probes at exact viewports) |
+| 96 | B4: capture upstream URL in all 8 buildRequestDetail sites | ✅ | commit `a6ffda90` (parallel session); verified in-tree |
+| 97 | B4: persist url in repo whitelist + buildCurl uses it | ✅ | commit `a6ffda90`; placeholder fallback for legacy rows |
+| 98 | B4 tests | ✅ | b4-curl-url-capture.test.js (5 tests pass, 2026-08-09) |
+
+### In Progress (2026-08-09 Error Inbox P2 — design → implementation)
+
+| # | Task | Status | Evidence |
+|---|------|--------|----------|
+| 105 | Error Inbox P2: server-side `view=errors` aggregation + coarse-fingerprint triage (settings-KV) | 🔄 in progress | design: `research/9router/25-error-inbox-p2-design.md` (coarse `provider\|model\|errorCategory` key, reuse `/api/analyze-error`, settings-KV persistence, defer inboxIssues table) |

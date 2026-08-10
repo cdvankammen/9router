@@ -615,6 +615,111 @@ export async function getConversationMessages(conversationId, filter = {}) {
   return rows.map((r) => parseJson(r.data, {}));
 }
 
+// ── Error Inbox aggregation (P2) ───────────────────────────────────────────
+// Server-side fingerprint grouping over the FULL filtered set — the BoardView
+// groups by a client-side fingerprint over the page window only, which
+// undercounts errors that span pages. The coarse Sentry-style key
+// (provider|model|errorCategory) keeps tiny error-text variations from
+// fragmenting groups; error text is DISPLAY ONLY, never part of the key.
+
+/** Group key columns for the error aggregation (provider, model, JSON1 category). */
+const ERROR_GROUP_EXPRS = "provider, model, json_extract(data, '$.errorCategory')";
+
+/**
+ * Stable coarse fingerprint for an error group: provider|model|errorCategory.
+ * This is the key used for triage persistence (settings `boardColumns` map),
+ * so it must stay stable across message-text variations. 'unknown' fills null
+ * members so the key is deterministic regardless of capture completeness.
+ *
+ * @param {string|null|undefined} provider upstream provider id
+ * @param {string|null|undefined} model upstream model id
+ * @param {string|null|undefined} errorCategory categorizeError output
+ * @returns {string} `${provider}|${model}|${errorCategory}`
+ */
+export function errorFingerprint(provider, model, errorCategory) {
+  return `${provider || "unknown"}|${model || "unknown"}|${errorCategory || "unknown"}`;
+}
+
+/**
+ * Error-fingerprint aggregates over the full filtered dataset (Error Inbox P2).
+ *
+ * Same filter contract as getConversationSummary, EXCEPT status is forced to
+ * 'error' — the inbox IS the error view, so a stale/omitted status filter can
+ * never widen the set to successes. Grouping happens in SQL (window
+ * functions over the raw rows AFTER the WHERE, so every filter — including
+ * JSON1 errorCategory/startDate/endDate — is honored before aggregation) and
+ * each group's representative row is its LATEST record (timestamp DESC, id
+ * DESC), whose id becomes `detailId` for drill-in.
+ *
+ * @param {object} filter provider/model/errorCategory/startDate/endDate/
+ *   sourceApp/search/… plus page/pageSize for paginating the group LIST
+ * @returns {Promise<{errors: Array, pagination: object, totals: object}>}
+ *   errors: [{ fingerprint, provider, model, errorCategory, count,
+ *   firstTimestamp, lastTimestamp, cost, sampleError, detailId }] ordered by
+ *   count DESC, lastTimestamp DESC
+ */
+export async function getErrorSummary(filter = {}) {
+  const db = await getAdapter();
+  const conds = [];
+  const params = [];
+  const { where } = await buildWhere({ ...filter, status: "error" }, conds, params);
+
+  // Totals for pagination: distinct fingerprint groups in the filtered set.
+  const totalRow = db.get(
+    `SELECT COUNT(*) AS c FROM (SELECT 1 FROM requestDetails ${where} GROUP BY ${ERROR_GROUP_EXPRS})`,
+    params
+  );
+  const totalItems = totalRow ? totalRow.c : 0;
+
+  const page = filter.page || 1;
+  const pageSize = filter.pageSize || 50;
+  const totalPages = Math.ceil(totalItems / pageSize);
+  const offset = (page - 1) * pageSize;
+
+  // Window functions over the filtered rows: COUNT/MIN/MAX/SUM span the whole
+  // partition (the group), ROW_NUMBER picks the latest row as the group's
+  // representative (carries `detailId` + the live row's fields). COALESCE
+  // keeps display strings stable so the JS fingerprint matches triage keys.
+  const rows = db.all(
+    `SELECT provider, model, errorCategory, count, firstTimestamp, lastTimestamp, cost, sampleError, detailId
+     FROM (
+       SELECT
+         COALESCE(provider, 'unknown') AS provider,
+         COALESCE(model, 'unknown') AS model,
+         COALESCE(json_extract(data, '$.errorCategory'), 'unknown') AS errorCategory,
+         COUNT(*) OVER (PARTITION BY ${ERROR_GROUP_EXPRS}) AS count,
+         MIN(timestamp) OVER (PARTITION BY ${ERROR_GROUP_EXPRS}) AS firstTimestamp,
+         MAX(timestamp) OVER (PARTITION BY ${ERROR_GROUP_EXPRS}) AS lastTimestamp,
+         COALESCE(SUM(COALESCE(json_extract(data, '$.cost'), 0)) OVER (PARTITION BY ${ERROR_GROUP_EXPRS}), 0) AS cost,
+         MIN(json_extract(data, '$.response.error')) OVER (PARTITION BY ${ERROR_GROUP_EXPRS}) AS sampleError,
+         id AS detailId,
+         ROW_NUMBER() OVER (PARTITION BY ${ERROR_GROUP_EXPRS} ORDER BY timestamp DESC, id DESC) AS rn
+       FROM requestDetails ${where}
+     )
+     WHERE rn = 1
+     ORDER BY count DESC, lastTimestamp DESC
+     LIMIT ? OFFSET ?`,
+    [...params, pageSize, offset]
+  );
+
+  return {
+    errors: rows.map((r) => ({
+      fingerprint: errorFingerprint(r.provider, r.model, r.errorCategory),
+      provider: r.provider,
+      model: r.model,
+      errorCategory: r.errorCategory,
+      count: r.count,
+      firstTimestamp: r.firstTimestamp,
+      lastTimestamp: r.lastTimestamp,
+      cost: r.cost,
+      sampleError: r.sampleError,
+      detailId: r.detailId,
+    })),
+    pagination: { page, pageSize, totalItems, totalPages, hasNext: page < totalPages, hasPrev: page > 1 },
+    totals: { errorGroupCount: totalItems },
+  };
+}
+
 const _shutdownHandler = async () => {
   if (flushTimer) { clearTimeout(flushTimer); flushTimer = null; }
   if (writeBuffer.length > 0) await flushToDatabase();

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import {
   getRequestDetails, getRequestFacets,
   getConversationSummary, getConversationMessages,
+  getErrorSummary,
 } from "@/lib/usageDb";
 
 /**
@@ -9,13 +10,14 @@ import {
  * List captured request messages with filters + conversation grouping.
  *
  * Query parameters: page, pageSize (1-100), cursor (opaque keyset cursor),
- * view=conversations, provider, model, status, errorCategory, conversationId,
- * startDate, endDate, search
+ * view=conversations|errors, provider, model, status, errorCategory,
+ * conversationId, startDate, endDate, search
  *
  * Response:
  * {
  *   messages: [...],            // flat list (newest first), each = requestDetails.data
  *   conversations: [...],       // grouped: { conversationId, messages: [...], tokens, cost, messageCount }
+ *   errors: [...],              // view=errors: fingerprint groups { fingerprint, provider, model, errorCategory, count, firstTimestamp, lastTimestamp, cost, sampleError, detailId }
  *   searchMode: "fts"|"like",  // present when a search term was applied
  *   pagination: { page, pageSize, totalItems, totalPages, hasNext, hasPrev, nextCursor }
  * }
@@ -62,21 +64,46 @@ export async function GET(request) {
     // errorCategory/sourceApp are filtered in SQL (JSON1) so pagination math
     // stays correct — client-side filtering after pagination would produce
     // wrong totals and empty pages with matches on later pages.
-    const result = await getRequestDetails(filter);
+    // The errors view never uses the flat list — its aggregation runs in SQL
+    // over the FULL filtered set (see getErrorSummary), so skip the page fetch.
+    const result = view === "errors"
+      ? { details: [], searchMode: undefined }
+      : await getRequestDetails(filter);
 
     let messages = result.details || [];
     // Keyset cursor for the next page of the flat list (null at the end).
     const pagination = { ...result.pagination, nextCursor: result.nextCursor || null };
 
-    // ── Conversation aggregation (B3) ───────────────────────────────────────
-    // view=conversations → DB-level GROUP BY over the FULL filtered set, so
-    // counts/tokens/cost are correct for conversations spanning pages. When a
-    // specific conversation is selected (conversationId param), its full
-    // thread is attached regardless of the page window.
-    let conversations;
-    if (view === "conversations") {
+    // Conversation grouping — assigned in every view branch below
+    // (default/list, conversations, errors). Declared here so all branches
+    // can assign without a ReferenceError.
+    let conversations = [];
+
+    // ── Error Inbox aggregation (P2) ───────────────────────────────────────
+    // view=errors → SQL fingerprint grouping (provider|model|errorCategory)
+    // over the FULL filtered set, so counts/costs are correct for error
+    // groups spanning pages. Coarse Sentry-style key — the error TEXT is
+    // display only (sampleError), never part of the key. Each group carries
+    // its latest detailId for drill-in. Facets are scoped to status=error so
+    // the category filter counts match what the view shows.
+    let errors;
+    if (view === "errors") {
+      const summary = await getErrorSummary(filter);
+      errors = summary.errors;
+      // Pagination now refers to the error GROUP list.
+      pagination.page = summary.pagination.page;
+      pagination.pageSize = summary.pagination.pageSize;
+      pagination.totalItems = summary.pagination.totalItems;
+      pagination.totalPages = summary.pagination.totalPages;
+      pagination.hasNext = summary.pagination.hasNext;
+      pagination.hasPrev = summary.pagination.hasPrev;
+      pagination.nextCursor = null; // errors page by number, not cursor
+      messages = [];
+      conversations = [];
+    } else if (view === "conversations") {
       const summary = await getConversationSummary(filter);
       conversations = summary.conversations;
+      errors = [];
       // Pagination now refers to the conversation LIST (distinct convs).
       pagination.page = summary.pagination.page;
       pagination.pageSize = summary.pagination.pageSize;
@@ -97,6 +124,7 @@ export async function GET(request) {
       // Default / list / trace views: lightweight projection from the page's
       // rows (only conversations whose rows appear in this page's window).
       conversations = [];
+      errors = [];
       const byConversation = new Map();
       for (const m of messages) {
         const key = m.conversationId || "no-conversation";
@@ -139,12 +167,15 @@ export async function GET(request) {
 
     // ── Facets: counts per dimension for the filter sidebar ────────────────
     // Computed in SQL (GROUP BY) over the FULL filtered set — no row payloads,
-    // correct counts at any scale, stable across pages.
-    const { facets, histogram } = await getRequestFacets(filter);
+    // correct counts at any scale, stable across pages. The errors view scopes
+    // facets to status=error so category/provider counts match the view.
+    const facetFilter = view === "errors" ? { ...filter, status: "error" } : filter;
+    const { facets, histogram } = await getRequestFacets(facetFilter);
 
     return NextResponse.json({
       messages,
       conversations,
+      errors,
       facets,
       histogram,
       searchMode: result.searchMode,
