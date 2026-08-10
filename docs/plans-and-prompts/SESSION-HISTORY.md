@@ -716,3 +716,26 @@ Both nodes + both proxies healthy (200/200/200/200).
 **Open decisions for user:** proxy port convention (20142), L1 in-app
 `peerNodes` (degraded-node coverage) — implement now or L2-only first, launchd
 KeepAlive for the proxy, `mini` host SSH fix for a 3rd node.
+
+## 2026-08-09 (late) — Deferred-item closure: B4 + Error Inbox P2 (+ parallel-session reconciliation)
+
+**Context:** two Copilot sessions worked the same repo in parallel; changes
+interleaved safely (all committed on v1). This session's subagent dispatch
+covered the deferred backlog items.
+
+**Done:**
+1. Drawer UI issues §12.1/§12.2 (TASK-LOG 87/88): browser subagent verified they
+   were ALREADY fixed (`79c457e6` — `w-[min(800px,100vw)]` + `min-h-0` chain) at
+   240px–1024px viewports → marked resolved.
+2. B4 cURL URL capture: implemented in-session (8 call sites + repo whitelist +
+   buildCurl), verified the parallel session had landed the same fix (`a6ffda90`)
+   → reconciled, 5 tests pass. Commits `a6ffda90`, `9a217338`.
+3. Error Inbox P2: research subagent produced `25-error-inbox-p2-design.md`
+   (coarse fingerprint decision + settings-KV triage), then implementation
+   subagent built it: `getErrorSummary` (window-function GROUP BY, full filtered
+   set), `/api/messages?view=errors`, InboxView with triage columns + Analyze
+   reuse + drawer drill-in, `boardColumns` settings KV. 17 new tests + 53
+   regression green. Commit `3cddabec`.
+
+**Still open:** 4.3/4.4 (user-owned); user's fallback-rule view pick (D8);
+L1 in-app peerNodes; launchd KeepAlive for failover proxy; `mini` SSH fix.

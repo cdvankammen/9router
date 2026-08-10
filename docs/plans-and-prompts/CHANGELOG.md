@@ -643,3 +643,33 @@ research/9router/21/22/23 + TASK-LOG 93-102 + this changelog. Commit `2f8c????` 
 - **Keyset pagination**: `getRequestDetails` now accepts `filter.cursor` (opaque base64url of `timestamp|id`) with `ORDER BY timestamp DESC, id DESC` and `(timestamp < ? OR (timestamp = ? AND id < ?))` — stable under inserts, no OFFSET scan/drift. Page-number mode kept (same order, backward compat) and anchors a `nextCursor` so both UIs chain into keyset; `pageSize+1` lookahead drives hasNext definitively; unparseable cursors fall back to offset page 1. API surfaces `cursor` param + `nextCursor` in pagination.
 - **Tests**: `tests/unit/conversation-keyset.test.js` — 12 tests (temp DATA_DIR): 3 conversations (25 rows, 2 rows, 3 NULL-conv rows with timestamp ties), summary aggregates/order/`(none)`/pagination totals, full thread ASC + pageSize, keyset walk pageSize=10 → all 30 rows exactly once (no dupes/gaps), page-param agreement. Full suite: 1772 pass / 86 fail (budget ≤ 89), no touched-area failures.
 - **Fixes found by tests**: offset/fallback paths now emit `nextCursor`; `hasNext` in keyset mode driven by `nextCursor` alone (page stays 1).
+
+### feat(messages): B4 — upstream URL capture in cURL export (2026-08-09)
+- `buildRequestDetail` carries `url` (base passthrough, overrides win); all 8
+  capture call sites persist it: chatCore error paths (`providerUrl`),
+  streaming/non-streaming/sseToJson handlers (`providerResponse.url`).
+- repo flush record carries `url` in `data` (additive JSON — no DDL; absent on
+  legacy rows).
+- `buildCurl` uses the captured URL, placeholder fallback for legacy rows.
+- `extractText` moved to `src/lib/extractText.js` (server-safe, no "use client"
+  — requestDetailsRepo imports it for the FTS index); messageFormats re-exports.
+- Tests: `tests/unit/b4-curl-url-capture.test.js` (5 pass). Commits: `a6ffda90` +
+  `9a217338`.
+
+### feat(messages): Error Inbox P2 — server-side error aggregation + triage (2026-08-09) `3cddabec`
+- Design: `research/9router/25-error-inbox-p2-design.md` — coarse Sentry-style
+  fingerprint `provider|model|errorCategory` (error text display-only),
+  server-side aggregation over the FULL filtered set (fixes BoardView's
+  page-window undercount), settings-KV triage, `inboxIssues` table deferred.
+- `requestDetailsRepo.getErrorSummary`: SQL window-function GROUP BY with
+  `status='error'` forced (indexed column) + JSON1 filters; counts, cost sum,
+  first/last seen, sample error, latest `detailId` for drill-in; exported
+  `errorFingerprint()`.
+- `/api/messages?view=errors`: mirrors `view=conversations`; facets scoped to
+  `status=error`; skips the unused flat-list fetch.
+- `InboxView`: 4 triage columns (Open/Acknowledged/Resolved/Dismissed), category
+  pills mirroring errorCategorizer taxonomy, Analyze reuses `/api/analyze-error`,
+  View opens the shared detail drawer; triage persisted via settings KV
+  `boardColumns` (MAP_REPLACE_KEYS — survives reload, deletes honored).
+- Tests: `tests/unit/error-inbox.test.js` (17 pass); regressions green (53 in 5
+  related suites incl. conversation-keyset, search, b4).
