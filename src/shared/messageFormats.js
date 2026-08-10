@@ -43,23 +43,13 @@ export function buildCurl(detail) {
   return lines.join(" \\\n");
 }
 
-/** Extract plain text from a content value of any shape (string/array/blocks). */
-export function extractText(content, depth = 0) {
-  if (content == null) return "";
-  if (typeof content === "string") return content;
-  if (depth > 10) return ""; // guard against deep/circular structures
-  if (Array.isArray(content)) {
-    return content
-      .map((b) => {
-        if (typeof b === "string") return b;
-        if (b?.text) return b.text;
-        if (b?.content) return extractText(b.content, depth + 1);
-        return "";
-      })
-      .join("\n");
-  }
-  return "";
-}
+/**
+ * Extract plain text from a content value of any shape (string/array/blocks).
+ * Re-exported from the server-safe pure module so the client page, the export
+ * route, AND the requestDetails repo all share ONE implementation (the repo
+ * must NOT import this "use client" module directly).
+ */
+export { extractText } from "@/lib/extractText.js";
 
 /** Render a captured request as a Markdown transcript. */
 export function buildMarkdown(detail) {
