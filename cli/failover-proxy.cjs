@@ -53,10 +53,13 @@ function probe(url) {
 }
 
 async function tick() {
+  const seq = ++tickSeq; // guard against stale ticks overwriting newer state
   const [l, p] = await Promise.all([probe(LOCAL), probe(PEER)]);
+  if (seq !== tickSeq) return; // a newer tick already landed — discard stale results
   state.localUp = l;
   state.peerUp = p;
 }
+let tickSeq = 0;
 setInterval(tick, PROBE_MS);
 tick();
 
@@ -76,26 +79,52 @@ const server = http.createServer((req, res) => {
   }
 
   const headers = { ...req.headers, "x-9r-failover": "1" };
-  delete headers["host"];
-  delete headers["x-forwarded-for"];
-  delete headers["x-real-ip"];
+  // RFC 7230 §6.1 hop-by-hop headers must not be forwarded; Node sets its own
+  // framing/connection semantics on the upstream request.
+  for (const h of ["host", "connection", "keep-alive", "proxy-connection",
+    "transfer-encoding", "te", "trailer", "upgrade",
+    "x-forwarded-for", "x-real-ip"]) {
+    delete headers[h];
+  }
 
+  let pres;
   const preq = http.request(target + req.url, {
     method: req.method,
     headers,
     timeout: UPSTREAM_TIMEOUT_MS,
-  }, (pres) => {
-    res.writeHead(pres.statusCode, pres.headers);
-    pres.pipe(res);
+  }, (p) => {
+    pres = p;
+    res.writeHead(p.statusCode, p.headers);
+    p.pipe(res);
+    // Upstream reset mid-stream (app killed while streaming): must not crash.
+    p.on("error", () => res.destroy());
   });
   preq.on("timeout", () => preq.destroy(new Error("upstream timeout")));
   preq.on("error", (e) => {
     const detail = e.code || e.message || e.name || "unknown";
-    if (!res.headersSent) {
+    if (!res.headersSent && !res.destroyed) {
       res.writeHead(502, { "Content-Type": "application/json" });
       res.end(JSON.stringify({ error: "failover proxy upstream error: " + detail }));
     } else {
       res.destroy(e);
+    }
+  });
+  // Client aborted mid-request (cancelled stream): tear down the upstream pair
+  // instead of crashing the proxy on the unhandled ECONNRESET.
+  req.on("error", () => {
+    preq.destroy();
+    if (pres) pres.destroy();
+  });
+  res.on("error", () => {
+    preq.destroy();
+    if (pres) pres.destroy();
+  });
+  req.on("close", () => {
+    // Client vanished without an error event (e.g. body half-sent) — stop
+    // forwarding so upstream work isn't wasted.
+    if (!req.complete) {
+      preq.destroy();
+      if (pres) pres.destroy();
     }
   });
   req.pipe(preq);

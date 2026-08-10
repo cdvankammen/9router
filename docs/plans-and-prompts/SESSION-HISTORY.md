@@ -683,3 +683,36 @@ the page. Researched + fixed + verified.
 - Stale server after rebuild (20131 serving old build → 404 static chunks) —
   fixed: kill + restart from `.next/standalone` after `copy-standalone-assets`
 - `.next/standalone` missing after parallel rebuild — rebuilt + copied assets
+
+## 2026-08-09 — Node Failover (HA) — mini-2 ↔ mini2
+
+**Objective (user):** research implementing node failover in code, implement +
+test, then rebuild and do real-world testing between the machines so endpoints
+stay reachable when one node goes down ("9router node fallback protection" vs
+existing provider fallback protection).
+
+**Done:**
+1. Doc 25: L0 (peer as OpenAI-compatible provider — exists), L1 (in-app peer
+   forwarding via `settings.peerNodes`), L2 (standalone failover proxy) with
+   prototype + self-scrutiny S1–S10.
+2. Implemented `cli/failover-proxy.cjs` (zero deps): 2s health probes
+   (`/api/health`, <500 = up), local-preferred/peer-backup, `x-9r-failover`
+   loop protection, SSE-safe piping, 120s timeout, both-down fail-open.
+3. Local harness (echo servers): T1–T5 green.
+4. Real world: deployed to mini-2 (:20142 → local :20130 / peer mini2 :20128)
+   and mini2 (:20142 → local :20128 / peer 192.168.1.154:20130). Killed each
+   node's app in turn — the down node's proxy kept serving from the peer
+   (identity-attributed via `/api/settings/require-login`). `/v1/chat/completions`
+   through the proxy during kills returned structured app errors (endpoint
+   continuity, no connection refused). Failback verified on both restores.
+5. Scrutiny pass (user requested) found 3 real bugs: unhandled `error` on
+   client req (crash on abort), unhandled `error` on upstream res (crash on
+   app-killed-mid-stream), stale-probe race. Fixed + header hygiene (RFC 7230
+   §6.1 hop-by-hop), re-verified matrix + crash tests, redeployed.
+
+**Result:** 9Router now has node-DOWN fallback protection in both directions.
+Both nodes + both proxies healthy (200/200/200/200).
+
+**Open decisions for user:** proxy port convention (20142), L1 in-app
+`peerNodes` (degraded-node coverage) — implement now or L2-only first, launchd
+KeepAlive for the proxy, `mini` host SSH fix for a 3rd node.

@@ -606,3 +606,34 @@ research/9router/21/22/23 + TASK-LOG 93-102 + this changelog. Commit `2f8c????` 
 - Full suite: 1760 pass / 86 fail (≤ 89 baseline budget) — 86 == documented
   baseline, zero failures in touched areas (search/requestDetails/backup).
   `unit/search.test.js` passes in the full run.
+
+## v1 — Node Failover (L2 proxy) — `bb55d754` (2026-08-09)
+
+### feat(failover): node-DOWN protection proxy — `bb55d754`
+- `cli/failover-proxy.cjs` (new, zero deps): health-probes local+peer every 2s
+  (`/api/health`, `<500` = up), routes local-preferred / peer-backup, `x-9r-failover`
+  loop protection, SSE-safe bidirectional piping, 120s upstream timeout,
+  both-down → fail-open to local with the app's real error.
+- docs: `research/9router/25-node-failover-implementation.md` (L0/L1/L2 design,
+  scrutiny S1–S10, test plan).
+
+### Verification (real world, mini-2 ↔ mini2)
+- Local harness: failover/failback/loop-protection/both-down all green.
+- Real world: killed each node's app in turn — the proxy on the down node kept
+  serving from the peer (attributed via `requireLogin` identity marker);
+  `/v1/chat/completions` through the proxy returned structured app errors (not
+  connection refused); failback verified after both restores.
+- Both proxies deployed on :20142 (mini-2 → local :20130/peer mini2 :20128;
+  mini2 → local :20128/peer 192.168.1.154:20130).
+
+### fix(failover): post-implementation scrutiny — 3 real bugs (2026-08-09)
+- S11/S12 CRITICAL: unhandled `'error'` on client request + upstream response —
+  client abort or app-killed-mid-stream crashed the proxy. Now tears down the
+  upstream pair instead.
+- S13 HIGH: stale-probe race (slow tick overwriting newer state) → monotonic
+  `tickSeq` guard.
+- S14 MEDIUM: hop-by-hop headers forwarded (RFC 7230 §6.1) → stripped.
+- S15 MEDIUM: client closed mid-body → teardown on incomplete `close`.
+- S16 LOW: empty 502 detail on Node 22 → `e.code || e.message || e.name`.
+- Re-verified: T1–T5 matrix + C1/C2 crash-resilience tests pass; hardened build
+  redeployed to both machines (final matrix 200/200/200/200).

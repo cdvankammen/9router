@@ -206,6 +206,64 @@ if (isV1 && !state.localUp && state.peerUp && !req.headers["x-9r-failover"]) {
 3. **Endpoint continuity:** `POST /v1/chat/completions` with a real API key —
    must succeed identically through the proxy during a node kill.
 
+## 8. Verification results (2026-08-09) ✅ ALL PASS
+
+Implemented `cli/failover-proxy.cjs` (zero deps, node built-ins) and ran the
+full plan. **Identity marker used for proofs:** `/api/settings/require-login`
+differs per machine (mini-2 app = `false`, mini2 app = `true`), so responses
+through the proxies are attributable to the exact upstream node.
+
+### 8a. Local harness (proxy :20141 → local :20170 / peer :20171, echo servers)
+
+| Test | Result |
+|---|---|
+| T1 both up → local | `{"node":"LOCAL-A"}` ✅ |
+| T2 kill local → peer | `{"node":"PEER-B"}` ✅ (flip ≤ 4 s incl. probe interval) |
+| T3 restart local → local | `{"node":"LOCAL-A"}` ✅ (failback) |
+| T4 loop protection | `{"error":"failover loop detected"}` 502 ✅ |
+| T5 both down → fail-open | 502 `ECONNREFUSED` detail, proxy process survives ✅ |
+
+### 8b. Real world (mini-2 :20142 ↔ mini2 :20142, both apps real)
+
+| Scenario | Proof |
+|---|---|
+| Both up | proxy-here → `requireLogin:false` (mini-2), proxy-mini2 → `requireLogin:true` (mini2) ✅ |
+| **Kill mini-2 app** | proxy-here keeps answering — now `requireLogin:true` (mini2) ✅ direct :20130 refused, mini2 :20128 200 |
+| **Kill mini2 app** | proxy-mini2 keeps answering — now `requireLogin:false` (mini-2) ✅ direct :20128 refused, mini-2 :20130 200 |
+| **Both restored** | both proxies fail back to local identity ✅ all 4 endpoints 200 |
+| Endpoint continuity | `POST /v1/chat/completions` via proxy during kill → structured app error (`API key required…`, `No active credentials…`), NOT connection refused ✅ |
+| Streaming | SSE request through proxy → clean streamed response, no hang ✅ |
+
+### 8c. Gotchas found during testing
+
+- `lsof -ti :port` matches the proxy's OWN outbound connection to that port —
+  killing by that PID kills the proxy too. Use `lsof -tiTCP:<port> -sTCP:LISTEN`.
+- Killing both echo servers at once (same process) only proves both-down; the
+  meaningful local-dead/peer-alive test needs SEPARATE processes.
+- mini2 restart needs `env PORT=20128` (bare `node custom-server.js` falls back
+  to port 3000 — same gotcha as the runbook).
+- Terminal `\;` escaping can append a literal `;` to curl URLs → Next.js 404
+  page. Use script files for multi-command sequences.
+
+## 9. Post-implementation scrutiny (2026-08-09) — 3 real bugs found & fixed
+
+Re-read the proxy after the real-world run (user: "scrutinize the code again").
+Found and fixed in `cli/failover-proxy.cjs`:
+
+| # | Severity | Bug | Fix |
+|---|---|---|---|
+| S11 | **CRITICAL** | `req` (client IncomingMessage) had no `'error'` handler. A client disconnecting mid-request (streaming cancellations!) emits ECONNRESET → unhandled stream error **crashes the proxy** — the exact failure this proxy exists to prevent | `req.on("error")` → destroy upstream `preq`/`pres` |
+| S12 | **CRITICAL** | `pres` (upstream response) had no `'error'` handler. App killed while streaming (the failover scenario itself!) → reset mid-stream → crash | `pres.on("error")` → `res.destroy()` |
+| S13 | **HIGH** | Stale-probe race: `tick()` can run 3s (probe timeout) on a 2s interval; a slow tick resolving after a fast one overwrites newer state (e.g. routes to peer while local is actually back) | monotonic `tickSeq` guard — only the latest tick writes state |
+| S14 | MEDIUM | Hop-by-hop headers (`connection`, `transfer-encoding`, `upgrade`, `te`, `trailer`, `keep-alive`, `proxy-connection`) forwarded per RFC 7230 §6.1 — double chunked framing, broken h2c passthrough | strip them; Node re-frames upstream |
+| S15 | MEDIUM | Client closed mid-body without error (`close` with `!req.complete`) left upstream work running | teardown upstream pair on incomplete close |
+| S16 | LOW | 502 detail had empty message for ECONNREFUSED on Node 22 | `e.code \|\| e.message \|\| e.name` |
+
+**Regression re-verified after fixes** (local harness): T1–T5 matrix still green,
+plus C1 client-abort-mid-stream (proxy survives), C2 upstream-killed-mid-stream
+(proxy survives), C3 still functional after both. Redeployed hardened build to
+both machines — final matrix 200/200/200/200.
+
 ## 7. Open decisions for user
 1. Proxy client-facing ports (20140 default; or repoint 20130 → proxy and move
    app to 20128) — keeping 20130 on the app avoids breaking existing clients;

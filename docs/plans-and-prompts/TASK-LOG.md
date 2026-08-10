@@ -314,3 +314,14 @@ Open questions for user (block 83/84/85): auto-disable behavior; pricing re-fetc
 | # | Task | Status | Evidence |
 |---|------|--------|----------|
 | 95 | Full-text search over request payloads (FTS5 + LIKE fallback) | ✅ | commits `7ec60ad8` (feature) + `e582859a` (backup FTS exclusion): `filter.search` in requestDetailsRepo (`requestDetails_fts` virtual table populated in flush, janitor keeps it in sync, `searchMode` fts/like reported), `/api/messages` `search` param, debounced Messages search input with FTS/LIKE tag; 9 tests in `tests/unit/search.test.js`; full suite 1760 pass / 86 fail (baseline budget ≤ 89), no touched-area failures |
+
+### Newly Completed (2026-08-09 node failover)
+
+| # | Task | Status | Evidence |
+|---|------|--------|----------|
+| 96 | HA research doc (Proxmox analogy, options) | ✅ | research/9router/24-ha-mini-backup-nodes.md |
+| 97 | Node failover implementation doc + L2 proxy prototype | ✅ | research/9router/25-node-failover-implementation.md, committed `bb55d754` |
+| 98 | Local harness failover matrix (T1–T5) | ✅ | failover/failback/loop-protection/both-down green (doc 25 §8a) |
+| 99 | Real-world failover both directions (mini-2 ↔ mini2) | ✅ | killed each node's app; proxy on down node served peer (requireLogin identity proof); endpoint continuity via /v1/chat/completions (doc 25 §8b) |
+| 100 | Post-implementation scrutiny | ✅ | S11–S16: 3 real bugs (2 crash, 1 stale-probe race) + header hygiene, fixed + re-verified (doc 25 §9) |
+| 101 | Redeploy hardened proxy both machines | ✅ | final matrix 200/200/200/200 |
