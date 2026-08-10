@@ -522,3 +522,19 @@ research/9router/21/22/23 + TASK-LOG 93-102 + this changelog. Commit `2f8c????` 
 ### Research
 - research/9router/21-messages-audit-refactor-design.md — audit findings, refactor decisions, real-world patterns (Sentry/Langfuse/Datadog)
 - learnings/2026-08-08-stale-server-chunkload.md — stale-server + build corruption diagnosis
+
+---
+
+## UPDATE 2026-08-09 (per-request cost capture with provenance labels)
+
+### feat(observability): per-request cost capture — commit (see git log)
+- `open-sse/handlers/chatCore/requestDetail.js`: new exported `computeCost(provider, model, tokens)` — cost in USD via `getPricingForModel` + `calculateCostFromTokens` (pricing lib, dependency-free), fully **fail-open** (any error → cost 0 / provenance `unavailable`, capture never breaks)
+- `buildRequestDetail` now sets `cost` (number, USD) + `costProvenance` + `pricingModel` from the final merged tokens; explicit `overrides.cost` is honored as-is
+- Provenance contract: `exact` (concrete PROVIDER_PRICING/MODEL_PRICING entry, reference-verified), `estimated` (PATTERN_PRICING glob fallback, e.g. `grok-*`), `unavailable` (no match or error)
+- **Persistence fix**: `requestDetailsRepo.flushToDatabase` record whitelist dropped `cost`/`costProvenance`/`pricingModel` — round-trip test caught it; fields now carried in `data` (legacy rows unaffected, show "—")
+- Messages page: **Cost column** in the list table (between Latency and Conversation, provenance-aware: `(est.)` / `(unavail.)` suffixes), drawer Cost InfoCell shows `(exact)/(estimated)/(unavailable)` + `pricingModel` tooltip, conversation aggregate cost in Conversations view
+- `/api/messages` conversation grouping already sums `m.cost || 0` — works for new captures, no change needed
+
+### Tests
+- `tests/unit/cost-capture.test.js` — 18 tests: exact MODEL_PRICING / provider override / vendor-prefix stripping; token variants (input/output, cached discount, cache_creation, reasoning); pattern → estimated; unknown/absent → unavailable; fail-open (throwing token getter); buildRequestDetail integration + storage round-trip
+- Full suite: 1751 pass / 86 fail (≤ 89 baseline budget), no new failures in touched areas

@@ -129,6 +129,12 @@ async function flushToDatabase() {
             errorCategory: item.errorCategory || null,
             sourceApp: item.sourceApp || undefined,
             userAgent: item.userAgent || undefined,
+            // Per-request cost capture (computed in buildRequestDetail) —
+            // carried in `data` so the Messages page + conversation
+            // aggregates can render it. Absent on legacy rows.
+            cost: typeof item.cost === "number" ? item.cost : undefined,
+            costProvenance: item.costProvenance || undefined,
+            pricingModel: item.pricingModel || undefined,
           };
 
           db.run(

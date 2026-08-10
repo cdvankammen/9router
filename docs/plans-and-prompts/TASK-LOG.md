@@ -299,3 +299,4 @@ Open questions for user (block 83/84/85): auto-disable behavior; pricing re-fetc
 |---|------|--------|----------|
 | 89 | Research docs: learning + ADR-007 | ✅ | learnings/2026-08-09-messages-page-audit-and-refactor.md + decisions/ADR-007-messages-json-blob-vs-messages-table.md |
 | 90 | Refactor/design research report (subagent) | ✅ | useMessagesQuery hook, component extraction, P2 Error Inbox next |
+| 91 | Per-request cost capture with provenance labels | ✅ | `computeCost` in requestDetail.js (exact/estimated/unavailable) + Messages Cost column + repo persistence fix; 18 tests; see CHANGELOG |

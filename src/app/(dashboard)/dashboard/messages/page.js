@@ -75,6 +75,14 @@ function fmtCost(n) {
   return "$" + n.toFixed(4);
 }
 
+// Cost with a compact provenance suffix: "exact" rows show plain cost,
+// pattern-estimated rows get "(est.)", unknown pricing gets "(unavail.)".
+function costProvenanceSuffix(provenance) {
+  if (provenance === "estimated") return "(est.)";
+  if (provenance && provenance !== "exact") return "(unavail.)";
+  return "";
+}
+
 function fmtLatency(latency) {
   if (!latency) return "—";
   const total = latency.total ?? latency.totalMs;
@@ -275,7 +283,17 @@ function MessageDetailDrawer({ message, onClose }) {
           <InfoCell label="Status" value={message.status} />
           <InfoCell label="Latency" value={fmtLatency(message.latency)} />
           <InfoCell label="Tokens" value={`${fmtTokens(message.tokens?.prompt_tokens ?? message.tokens?.input_tokens)} / ${fmtTokens(message.tokens?.completion_tokens ?? message.tokens?.output_tokens)}`} />
-          <InfoCell label="Cost" value={fmtCost(message.cost)} />
+          <InfoCell
+            label="Cost"
+            value={
+              <span title={message.pricingModel ? `pricing: ${message.pricingModel}` : undefined}>
+                {fmtCost(message.cost)}
+                {message.costProvenance && (
+                  <span className="ml-1 text-[10px] font-normal text-text-muted">({message.costProvenance})</span>
+                )}
+              </span>
+            }
+          />
         </div>
 
         {message.conversationId && (
@@ -319,6 +337,7 @@ function ConversationView({ conversation, onSelect }) {
         <span className="text-[10px] text-text-muted">
           {fmtTokens((conversation.tokens?.prompt || 0) + (conversation.tokens?.completion || 0))} tok
         </span>
+        <span className="text-[10px] text-text-muted">{fmtCost(conversation.cost)}</span>
       </button>
       {open && (
         <div className="border-t border-black/5 dark:border-white/5 p-1">
@@ -521,6 +540,7 @@ export default function MessagesPage() {
                   <th className="p-2 text-left text-xs font-semibold text-text-muted">Status</th>
                   <th className="p-2 text-left text-xs font-semibold text-text-muted">Tokens</th>
                   <th className="p-2 text-left text-xs font-semibold text-text-muted">Latency</th>
+                  <th className="p-2 text-left text-xs font-semibold text-text-muted">Cost</th>
                   <th className="p-2 text-left text-xs font-semibold text-text-muted">Conversation</th>
                   <th className="p-2 text-right text-xs font-semibold text-text-muted">Action</th>
                 </tr>
@@ -545,6 +565,13 @@ export default function MessagesPage() {
                       {fmtTokens(m.tokens?.prompt_tokens ?? m.tokens?.input_tokens)} / {fmtTokens(m.tokens?.completion_tokens ?? m.tokens?.output_tokens)}
                     </td>
                     <td className="p-2 font-mono text-xs text-text-muted">{fmtLatency(m.latency)}</td>
+                    <td
+                      className="whitespace-nowrap p-2 font-mono text-xs text-text-muted"
+                      title={m.pricingModel ? `pricing: ${m.pricingModel}` : undefined}
+                    >
+                      {fmtCost(m.cost)}
+                      <span className="text-[10px] text-text-muted/70">{costProvenanceSuffix(m.costProvenance)}</span>
+                    </td>
                     <td className="max-w-40 truncate p-2 font-mono text-[11px] text-text-muted">
                       {m.conversationId || "—"}
                     </td>
