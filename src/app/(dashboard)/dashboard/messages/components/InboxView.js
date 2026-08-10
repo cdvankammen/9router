@@ -59,6 +59,18 @@ function fmtSampleError(err) {
   return s.length > 220 ? `${s.slice(0, 220)}…` : s;
 }
 
+// providerNames is a mix of id→display-name strings (provider nodes) and
+// id→provider-config objects (AI_PROVIDERS). Never render the object as a
+// React child — always reduce to a string.
+function resolveProviderName(providerId, providerNames) {
+  if (!providerId) return providerId;
+  if (!providerNames) return providerId;
+  const cached = providerNames[providerId];
+  if (typeof cached === "string") return cached;
+  if (cached?.name) return cached.name;
+  return providerId;
+}
+
 export default function InboxView({
   errors = [],
   providerNames,
@@ -222,7 +234,7 @@ export default function InboxView({
                       className="mb-1 truncate font-mono text-[11px] text-text-main"
                       title={`${g.provider}/${g.model}`}
                     >
-                      {providerNames?.[g.provider] || g.provider} / {g.model}
+                      {resolveProviderName(g.provider, providerNames)} / {g.model}
                     </div>
                     {fmtSampleError(g.sampleError) && (
                       <div

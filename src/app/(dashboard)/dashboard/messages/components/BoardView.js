@@ -44,6 +44,18 @@ function normalizeError(m) {
   return err.message || JSON.stringify(err).slice(0, 100);
 }
 
+// providerNames is a mix of id→display-name strings (provider nodes) and
+// id→provider-config objects (AI_PROVIDERS). Never render the object as a
+// React child — always reduce to a string.
+function resolveProviderName(providerId, providerNames) {
+  if (!providerId) return providerId;
+  if (!providerNames) return providerId;
+  const cached = providerNames[providerId];
+  if (typeof cached === "string") return cached;
+  if (cached?.name) return cached.name;
+  return providerId;
+}
+
 export default function BoardView({ messages = [], providerNames, onSelect }) {
   // Local column assignment per fingerprint (no persistence yet — P2).
   // `columns` holds ONLY user moves (drag assignments); fingerprints not
@@ -148,7 +160,7 @@ export default function BoardView({ messages = [], providerNames, onSelect }) {
                 </div>
                 <div className="flex items-center justify-between gap-2">
                   <span className="truncate font-mono text-[10px] text-text-muted">
-                    {providerNames?.[g.provider] || g.provider}
+                    {resolveProviderName(g.provider, providerNames)}
                   </span>
                   <button
                     type="button"

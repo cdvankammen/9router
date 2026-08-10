@@ -622,6 +622,17 @@ export default function MessagesPage() {
           <div className="p-10 text-center text-sm text-text-muted">
             No errors match the current filters. The Inbox groups captured failures by provider / model / error category.
           </div>
+        ) : viewMode === "errors" ? (
+          <InboxView
+            errors={errors}
+            providerNames={providerNames}
+            onSelect={(detailId) => openDetail(detailId)}
+            errorCategory={errorCategory}
+            onErrorCategoryChange={(v) => { setErrorCategory(v); setPage(1); }}
+            categoryFacets={data?.facets?.errorCategory || []}
+            pagination={pagination}
+            onLoadMore={() => setPage((p) => p + 1)}
+          />
         ) : messages.length === 0 ? (
           <div className="p-10 text-center text-sm text-text-muted">
             No messages captured yet. Send a request through 9Router to populate this view.
@@ -727,17 +738,6 @@ export default function MessagesPage() {
             messages={messages}
             providerNames={providerNames}
             onSelect={(m) => openDetail(m.id || m._id)}
-          />
-        ) : viewMode === "errors" ? (
-          <InboxView
-            errors={errors}
-            providerNames={providerNames}
-            onSelect={(detailId) => openDetail(detailId)}
-            errorCategory={errorCategory}
-            onErrorCategoryChange={(v) => { setErrorCategory(v); setPage(1); }}
-            categoryFacets={data?.facets?.errorCategory || []}
-            pagination={pagination}
-            onLoadMore={() => setPage((p) => p + 1)}
           />
         ) : (
           <div className="flex flex-col gap-2 p-3">

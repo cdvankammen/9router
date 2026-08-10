@@ -41,6 +41,18 @@ function statusColor(status) {
   return STATUS_COLORS[status] || "#6b7280";
 }
 
+// providerNames is a mix of id→display-name strings (provider nodes) and
+// id→provider-config objects (AI_PROVIDERS). Never render the object as a
+// React child — always reduce to a string.
+function resolveProviderName(providerId, providerNames) {
+  if (!providerId) return providerId;
+  if (!providerNames) return providerId;
+  const cached = providerNames[providerId];
+  if (typeof cached === "string") return cached;
+  if (cached?.name) return cached.name;
+  return providerId;
+}
+
 // Compute waterfall metrics: ttft (time-to-first-token) and total latency.
 // If latency is missing, fall back to 0s bars with a "—" marker.
 function latencyMetrics(m) {
@@ -132,7 +144,7 @@ export default function TimelineView({ histogram = [], messages = [], providerNa
                     <td className="p-2">
                       <div className="truncate font-mono text-xs text-text-main">{m.model || "?"}</div>
                       <div className="truncate text-[10px] text-text-muted">
-                        {providerNames ? (providerNames[m.provider] || m.provider) : m.provider}
+                        {resolveProviderName(m.provider, providerNames)}
                       </div>
                     </td>
                     <td className="p-2">
