@@ -62,9 +62,10 @@ export function extractText(content, depth = 0) {
 /** Render a captured request as a Markdown transcript. */
 export function buildMarkdown(detail) {
   const out = [];
-  out.push(`## ${detail.timestamp} — ${detail.provider}/${detail.model} [${detail.status}]`);
+  out.push(`## ${detail.timestamp || "unknown"} — ${detail.provider || "unknown"}/${detail.model || "unknown"} [${detail.status || "unknown"}]`);
   out.push("");
   if (detail.conversationId) out.push(`- **Conversation:** \`${detail.conversationId}\``);
+  if (detail.connectionId) out.push(`- **Account:** \`${detail.connectionId}\``);
   if (detail.errorCategory) out.push(`- **Category:** \`${detail.errorCategory}\``);
   const lat = detail.latency;
   if (lat) out.push(`- **Latency:** ttft=${lat.ttft ?? "?"}ms total=${lat.total ?? "?"}ms`);
