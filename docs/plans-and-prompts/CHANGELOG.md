@@ -673,3 +673,24 @@ research/9router/21/22/23 + TASK-LOG 93-102 + this changelog. Commit `2f8c????` 
   `boardColumns` (MAP_REPLACE_KEYS — survives reload, deletes honored).
 - Tests: `tests/unit/error-inbox.test.js` (17 pass); regressions green (53 in 5
   related suites incl. conversation-keyset, search, b4).
+
+---
+
+## UPDATE 2026-08-10 (goal-mode: Messages architecture completion)
+
+### What landed (all 4 goal requirements + 2 E2E-caught bugs)
+1. **Cost capture + provenance** — `computeCost(provider, model, tokens)` in requestDetail.js (fail-open; provenance exact/estimated/unavailable + pricingModel); repo whitelist fixed to persist cost fields; Cost column + drawer provenance. E2E: `cost=0.00001575, provenance=exact, pricingModel=gpt-4o-mini`.
+2. **FTS5 search + LIKE fallback** — `requestDetails_fts` virtual table populated in flush (delete+insert upsert), `sanitizeFtsTerm`, LIKE fallback on sql.js (no FTS5 module), `searchMode` fts/like, debounced search box. E2E: search "banana" → 2 rows, FTS tag.
+3. **DB-level conversation aggregation (B3)** — `getConversationSummary` GROUP BY over full filtered set (NULL→(none)), `getConversationMessages` full thread; conversations view uses summary.
+4. **Keyset pagination** — opaque `timestamp|id` base64url cursor, `(timestamp < ? OR (timestamp = ? AND id < ?))`, pageSize+1 lookahead for hasNext, nextCursor; page-number mode backward-compatible.
+
+### Bugs found & fixed during E2E
+- **P1**: `flushToDatabase` imported `extractText` from `"use client"` messageFormats → every batch write threw silently → requestDetails never persisted. Fixed via server-safe `src/lib/extractText.js` (repo imports it; messageFormats re-exports).
+- **P1**: messages route `ReferenceError: conversations is not defined` (missing declaration) → search API 500'd. Fixed with `let conversations = []`.
+
+### Also landed (by other agents, same window)
+- B4 upstream URL capture (real URLs in curl export) — `a6ffda90`/`9a217338`
+- Error Inbox P2 — server-side error aggregation + triage — `3cddabec`
+
+### Regression
+Full suite **1794 pass / 86 fail** (within 88-baseline budget). Feature tests: cost-capture 18/18, search 9/9, conversation-keyset 12/12.

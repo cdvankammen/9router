@@ -364,3 +364,16 @@ Open questions for user (block 83/84/85): auto-disable behavior; pricing re-fetc
 | # | Task | Status | Evidence |
 |---|------|--------|----------|
 | 105 | Error Inbox P2: server-side `view=errors` aggregation + coarse-fingerprint triage (settings-KV) | 🔄 in progress | design: `research/9router/25-error-inbox-p2-design.md` (coarse `provider\|model\|errorCategory` key, reuse `/api/analyze-error`, settings-KV persistence, defer inboxIssues table) |
+
+### Newly Completed (2026-08-10 goal-mode: Messages architecture completion)
+
+| # | Task | Status | Evidence |
+|---|------|--------|----------|
+| 105 | Per-request cost capture + provenance (B6) | ✅ | `computeCost` in requestDetail.js (exact/estimated/unavailable + pricingModel), repo whitelist persists cost fields, Cost column + drawer provenance + conversation cost; commits `2867fbb9`/`738a2fe2`; 18 tests |
+| 106 | Full-text search FTS5 + LIKE fallback | ✅ | `requestDetails_fts` virtual table, sanitizeFtsTerm, LIKE fallback for sql.js, searchMode tag, debounced UI search; commits `7ec60ad8`/`e582859a`/`8bdff46c`; 9 tests |
+| 107 | DB-level conversation aggregation (B3) | ✅ | `getConversationSummary` (GROUP BY full dataset, NULL→(none)) + `getConversationMessages` (full thread); `/api/messages?view=conversations`; commit `ad0a241a`; 12 tests |
+| 108 | Keyset pagination | ✅ | opaque timestamp\|id cursor, ORDER BY timestamp/id DESC, pageSize+1 lookahead, nextCursor; page-number mode kept; commit `ad0a241a` |
+| 109 | **FIX: extractText client/server boundary** | ✅ | `src/lib/extractText.js` server-safe module; requestDetailsRepo imports it; messageFormats re-exports; **E2E-verified capture persists** (was silently dropping every row) |
+| 110 | **FIX: conversations ReferenceError** | ✅ | `let conversations = []` declared in messages route (was 500ing search API); E2E-verified search + cost column |
+| 111 | B4 upstream URL capture + Error Inbox P2 | ✅ | by other agents (`a6ffda90`/`9a217338`/`3cddabec`) — real URLs in curl, server-side error triage |
+| 112 | Full-suite regression | ✅ | **1794 pass / 86 fail** (within 88 baseline); search 9/9, cost 18/18, keyset 12/12 |
