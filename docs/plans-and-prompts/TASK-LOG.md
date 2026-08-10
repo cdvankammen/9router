@@ -409,3 +409,15 @@ Open questions for user (block 83/84/85): auto-disable behavior; pricing re-fetc
 | 119 | **FIX: Trace view crash** | ✅ | `b2fe901f` — conv.messages undefined crash; guarded + onExpand wired to loadThread |
 | 120 | Browser functional QA (all 6 tabs) | ✅ | List filters/drawer/formats, Conversations expand, Timeline chart, Board drag (New→Investigating verified), Inbox triage persists across reload |
 | 121 | Visual QA via qwen-3.5-omni-plus | ✅ | dialagram/qwen-3.5-omni-plus vision: List/Inbox/Timeline/Board reviewed — no real layout bugs (API-key-as-node-name is data config, not code) |
+
+### Newly Completed (2026-08-10 L1 peer forwarding + remaining work)
+
+| # | Task | Status | Evidence |
+|---|------|--------|----------|
+| 122 | **L1 in-app peer forwarding (settings.peerNodes)** | ✅ | `1be5e96c` — custom-server.js hook: /v1* + local degraded + healthy peer → forward (streaming-safe, loop-protected); local probe uses actual port (fixed env-PORT bug); 5/5 decision tests + E2E forward verified |
+| 123 | No local model loading confirmed | ✅ | Only Hermes MCP watchdogs on this Mac; vision used remote dialagram gateway; mini2 (100.96.109.61) reachable + serving 20128/20142 |
+| 124 | Failover doc updated (L1 marked implemented) | ✅ | research/9router/25-node-failover-implementation.md §9.2 |
+
+### Still open (documented, deferred)
+- **mini (3rd node) unreachable** — needs user action (off/off-network)
+- 4.3/4.4 (user-owned); D8 fallback-rule view pick

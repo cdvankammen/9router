@@ -269,8 +269,13 @@ both machines — final matrix 200/200/200/200.
    app to 20128) — keeping 20130 on the app avoids breaking existing clients;
    new port means clients must switch. Recommend: keep app ports as-is; proxies
    on 20140; document.
-2. L1 `peerNodes` setting — implement now or L2-only first? (L2 alone answers
-   the ask; L1 adds in-app degraded-node coverage.)
+2. L1 `peerNodes` setting — ✅ **IMPLEMENTED (2026-08-10, commit `1be5e96c`)**:
+   `settings.peerNodes` array + `custom-server.js` hook — for `/v1*` requests,
+   when the local node is degraded (health probe failing) AND a healthy peer is
+   configured, forward to the peer (streaming-safe, `x-9r-failover` loop
+   protection). Local probe uses the actual listening port (not env PORT).
+   Tested: 5/5 decision cases + E2E forward path. Covers "node up but
+   unusable" (DB lock / provider meltdown / hung) — complements L2.
 3. launchd/KeepAlive for the proxy (auto-start + restart) — recommend yes.
 
 ## 10. Production hardening (2026-08-10) — launchd + two REAL bugs found & fixed

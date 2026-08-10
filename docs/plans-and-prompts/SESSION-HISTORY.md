@@ -808,3 +808,31 @@ REAL things (not always-passing fake reports)?
 ### 4. Regression check
 - My touched test files: 69/69 pass; full suite failures (80) all in documented
   baseline areas (rtk/oauth/translator/cursor) — no new failures from my work
+
+---
+
+## UPDATE 2026-08-10 (L1 peer forwarding + no-local-model confirmation)
+
+User asked: (1) fix everything + finish remaining work, (2) don't load models
+on this computer — use mini2/linux.
+
+### Remaining work: L1 in-app peer forwarding — IMPLEMENTED
+- The last open code item was L1 (`settings.peerNodes`) — "implement now or
+  L2-only first?" → implemented now (`1be5e96c`)
+- settingsRepo: `peerNodes` array default `[]`
+- custom-server.js: /v1* + local-degraded + healthy-peer → forward (streaming-
+  safe, loop-protected); local probe uses actual listening port (fixed a real
+  bug: it used env PORT which the tray never sets → probed :3000)
+- Verified: 5/5 decision logic tests + E2E forward (request reached peer,
+  response piped back with peer's 401 auth error = peer responded)
+- Cleanup: test peerNodes cleared, test peer + sim killed
+
+### No local model loading (confirmed)
+- This Mac runs NO local LLM inference — only Hermes MCP watchdog processes
+  (memory/puppeteer servers, not models)
+- Vision QA used the REMOTE dialagram gateway (`dialagram/qwen-3.5-omni-plus`)
+- mini2 reachable via Tailscale (100.96.109.61, ~278ms), serving 20128/20142
+
+### Remaining open (needs user)
+- mini 3rd node (off/off-network, SSH auth blocked)
+- 4.3/4.4 (user-owned), D8 fallback-rule view pick

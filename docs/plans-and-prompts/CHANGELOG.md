@@ -757,3 +757,25 @@ Full suite **1794 pass / 86 fail** (within 88-baseline budget). Feature tests: c
   Conversations expand, Timeline chart, Board drag, Inbox triage persists)
 - Vision QA via `dialagram/qwen-3.5-omni-plus`: List/Inbox/Timeline/Board
   reviewed — no real layout bugs (API-key-as-node-name is user data config)
+
+---
+
+## UPDATE 2026-08-10 (L1 in-app peer forwarding)
+
+### feat(failover): L1 in-app peer forwarding — `1be5e96c`
+- `settings.peerNodes` (default `[]`): array of peer base URLs
+- `custom-server.js`: for `/v1*` requests, when LOCAL health probe fails AND a
+  healthy peer is configured → forward to peer (streaming-safe, no buffering,
+  `x-9r-failover` loop protection)
+- Fixed real bug: local probe used `process.env.PORT || 3000` but the tray/CLI
+  doesn't set PORT env → probe hit :3000; now uses `server.address().port`
+- Covers "node up but unusable" (DB lock / provider meltdown / hung) —
+  complements L2 standalone proxy (node-DOWN)
+- Tested: 5/5 decision cases (forward/local-first/non-v1/loop/no-peer) + E2E
+  forward path (request reaches peer, response pipes back)
+- Doc: `research/9router/25-node-failover-implementation.md` §9.2 updated
+
+### Note: no local model loading
+- Vision QA used remote `dialagram/qwen-3.5-omni-plus` via gateway; this Mac
+  runs no local LLM inference (only Hermes MCP watchdogs); mini2 reachable
+  (100.96.109.61) serving 20128/20142
