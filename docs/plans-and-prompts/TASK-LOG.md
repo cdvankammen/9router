@@ -334,3 +334,16 @@ Open questions for user (block 83/84/85): auto-disable behavior; pricing re-fetc
 | 102 | B3: DB-level conversation aggregation | ✅ | `getConversationSummary` (SQL GROUP BY over full filtered set — counts/tokens/cost correct for multi-page conversations, NULL conv → `(none)`) + `getConversationMessages` (full thread ASC, pageSize cap 500); `/api/messages?view=conversations` uses summary, `conversationId` param attaches full thread; Messages page lazy-loads threads on expand; commit `feat(messages): DB-level conversation aggregation + keyset pagination` (v1, 2026-08-09) |
 | 103 | Keyset pagination for getRequestDetails | ✅ | opaque `timestamp|id` base64url cursor, `ORDER BY timestamp DESC, id DESC` with `(timestamp < ? OR (timestamp = ? AND id < ?))`, page-size+1 lookahead for hasNext, `nextCursor` in response + API `cursor` param; page-number mode kept (anchors a nextCursor too); commit `feat(messages): DB-level conversation aggregation + keyset pagination` (v1, 2026-08-09) |
 | 104 | Conversation + keyset tests | ✅ | `tests/unit/conversation-keyset.test.js` — 12 tests: 3 conversations (25/2/3 rows incl. timestamp ties + NULL conv), summary counts/tokens/cost/order/`(none)`/pagination, full thread ASC, keyset walk pageSize=10 → all 30 rows exactly once (no dupes/gaps), page-param backward compat; full suite 1772 pass / 86 fail (budget ≤ 89), no touched-area failures; commit `feat(messages): DB-level conversation aggregation + keyset pagination` (v1, 2026-08-09) |
+
+### Newly Completed (2026-08-09 B4 upstream URL capture)
+
+| # | Task | Status | Evidence |
+|---|------|--------|----------|
+| 95 | Research subagent: B3/B4/Error Inbox P2 status | ✅ | B3 already done (DB-level conv aggregation); B4 feasible; P2 = server-side aggregation + coarse fingerprint |
+| 96 | B4: capture upstream URL in all 8 buildRequestDetail sites | ✅ | commit `a6ffda90` — providerUrl threaded through chatCore + 5 sub-handler destructures |
+| 97 | B4: persist url in repo whitelist + buildCurl uses it | ✅ | commit `a6ffda90` — placeholder fallback for legacy rows |
+| 98 | B4 tests | ✅ | b4-curl-url-capture.test.js (5 tests pass) |
+
+### Still open (documented, deferred)
+- Error Inbox P2 (server-side fingerprint aggregation + triage persistence — design decision needed: coarse `provider|model|errorCategory` key vs raw-text fingerprint; see research)
+- 4.3/4.4 (user-owned); user's fallback-rule view pick (D8)
