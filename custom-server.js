@@ -15,6 +15,117 @@ process.env.NINEROUTER_PEER_TOKEN = PEER_TOKEN;
 
 let backgroundRefreshStarted = false;
 
+// ── L1 in-app peer forwarding (node failover) ───────────────────────────────
+// When the LOCAL node is up but degraded (health probe failing), /v1* requests
+// are forwarded to the first healthy peer from settings.peerNodes. Complements
+// the L2 standalone proxy (cli/failover-proxy.cjs) which covers node-DOWN.
+// This hook lives in the process layer so it works for tray/CLI deployments.
+const L1 = {
+  enabled: false,
+  peers: [],            // [{ url, up }]
+  localUp: true,        // optimistic at boot (avoids startup flap)
+  localPort: null,      // set from the actual listening socket
+  probeMs: 5000,
+  probeTimeoutMs: 2000,
+  upstreamTimeoutMs: 120000,
+  timer: null,
+  settingsLoaded: false,
+};
+
+function l1Probe(url) {
+  return new Promise((resolve) => {
+    const req = http.request(url + "/api/health", { method: "GET", timeout: L1.probeTimeoutMs }, (res) => {
+      res.resume(); // drain so the socket can be reused
+      resolve(res.statusCode < 500); // 401 = alive, just auth-gated
+    });
+    req.on("error", () => resolve(false));
+    req.on("timeout", () => { req.destroy(); resolve(false); });
+    req.end();
+  });
+}
+
+async function l1Tick() {
+  if (!L1.enabled || L1.peers.length === 0) return;
+  const localUrl = "http://127.0.0.1:" + (L1.localPort || process.env.PORT || 3000);
+  const results = await Promise.all([
+    l1Probe(localUrl),
+    ...L1.peers.map((p) => l1Probe(p.url)),
+  ]);
+  L1.localUp = results[0];
+  L1.peers.forEach((p, i) => { p.up = results[i + 1]; });
+}
+
+async function l1LoadSettings() {
+  try {
+    const modPath = path.join(__dirname, "src", "lib", "db", "repos", "settingsRepo.js");
+    const { getSettings } = await import(pathToFileURL(modPath).href);
+    const settings = await getSettings();
+    const peers = Array.isArray(settings.peerNodes) ? settings.peerNodes : [];
+    L1.enabled = peers.length > 0;
+    L1.peers = peers.map((url) => ({ url: String(url).replace(/\/+$/, ""), up: false }));
+    L1.settingsLoaded = true;
+    if (L1.enabled && !L1.timer) {
+      L1.timer = setInterval(l1Tick, L1.probeMs);
+      l1Tick();
+    } else if (!L1.enabled && L1.timer) {
+      clearInterval(L1.timer);
+      L1.timer = null;
+    }
+  } catch (e) {
+    // Expected in published CLI standalone (src/ not on disk) — L1 stays off.
+    if (process.env.DEBUG_L1_PEER_FORWARD) {
+      console.error("[L1] settings load failed:", e && e.message ? e.message : e);
+    }
+  }
+}
+
+// Forward a /v1* request to a healthy peer (same logic as the L2 proxy).
+function l1Forward(req, res, peerUrl) {
+  const headers = { ...req.headers, "x-9r-failover": "1" };
+  for (const h of ["host", "connection", "keep-alive", "proxy-connection",
+    "transfer-encoding", "te", "trailer", "upgrade",
+    "x-forwarded-for", "x-real-ip"]) {
+    delete headers[h];
+  }
+  let pres;
+  const preq = http.request(peerUrl + req.url, {
+    method: req.method,
+    headers,
+    timeout: L1.upstreamTimeoutMs,
+  }, (p) => {
+    pres = p;
+    res.writeHead(p.statusCode, p.headers);
+    p.pipe(res);
+    p.on("error", () => res.destroy());
+  });
+  preq.on("timeout", () => preq.destroy(new Error("upstream timeout")));
+  preq.on("error", (e) => {
+    const detail = e.code || e.message || e.name || "unknown";
+    if (!res.headersSent && !res.destroyed) {
+      res.writeHead(502, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: "L1 peer forward failed: " + detail }));
+    } else {
+      res.destroy(e);
+    }
+  });
+  req.on("error", () => { preq.destroy(); if (pres) pres.destroy(); });
+  res.on("error", () => { preq.destroy(); if (pres) pres.destroy(); });
+  req.pipe(preq);
+}
+
+// Decide whether to forward this request to a peer. Returns true if handled.
+function l1MaybeForward(req, res) {
+  if (!L1.enabled || L1.peers.length === 0) return false;
+  if (req.headers["x-9r-failover"] === "1") return false; // loop protection
+  const isV1 = req.url && (req.url.startsWith("/v1") || req.url.startsWith("/v1beta"));
+  if (!isV1) return false;
+  if (L1.localUp) return false; // local healthy — serve normally
+  const peer = L1.peers.find((p) => p.up);
+  if (!peer) return false; // no healthy peer — fail locally with the app's real error
+  l1Forward(req, res, peer.url);
+  return true;
+}
+
 function startBackgroundTokenRefreshFromCustomServer() {
   if (backgroundRefreshStarted) return;
   backgroundRefreshStarted = true;
@@ -54,6 +165,9 @@ http.createServer = (...args) => {
   const rest = args.filter((a) => typeof a !== "function");
   if (!handler) return origCreate(...args);
   const wrapped = (req, res) => {
+    // L1 peer forwarding: local degraded + healthy peer configured → forward
+    // /v1* requests before the inner handler runs (no buffering, streaming-safe).
+    if (l1MaybeForward(req, res)) return;
     const socketIp = req.socket && req.socket.remoteAddress ? req.socket.remoteAddress : "";
     const xff = req.headers["x-forwarded-for"];
     const xRealIp = req.headers["x-real-ip"];
@@ -74,7 +188,10 @@ http.createServer = (...args) => {
   };
   const server = origCreate(...rest, wrapped);
   server.once("listening", () => {
+    const addr = server.address();
+    if (addr && typeof addr === "object") L1.localPort = addr.port;
     startBackgroundTokenRefreshFromCustomServer();
+    l1LoadSettings();
   });
   const origEmit = server.emit;
   // JBR 25 sends h2c upgrades that the HTTP/1.1 server would otherwise close.

@@ -35,6 +35,11 @@ const DEFAULT_SETTINGS = {
     intervalHours: 12,
   },
   analyzeErrorModel: "oc/mimo-v2.5-free",
+  // L1 in-app peer forwarding (node failover): array of peer base URLs
+  // (e.g. ["http://mini2-9.local:20128"]). When the LOCAL node is up but
+  // degraded (health probe failing / all providers dead), /v1* requests are
+  // forwarded to the first healthy peer. Empty = feature off.
+  peerNodes: [],
   // Error Inbox (P2) triage assignments: { [errorFingerprint]: columnKey }.
   // Coarse fingerprint key = provider|model|errorCategory (Sentry-style) —
   // see requestDetailsRepo.getErrorSummary. Stored with MAP_REPLACE semantics
