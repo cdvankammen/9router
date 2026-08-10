@@ -377,3 +377,11 @@ Open questions for user (block 83/84/85): auto-disable behavior; pricing re-fetc
 | 110 | **FIX: conversations ReferenceError** | ✅ | `let conversations = []` declared in messages route (was 500ing search API); E2E-verified search + cost column |
 | 111 | B4 upstream URL capture + Error Inbox P2 | ✅ | by other agents (`a6ffda90`/`9a217338`/`3cddabec`) — real URLs in curl, server-side error triage |
 | 112 | Full-suite regression | ✅ | **1794 pass / 86 fail** (within 88 baseline); search 9/9, cost 18/18, keyset 12/12 |
+
+### Newly Completed (2026-08-10 Inbox render + provider-name crash fixes)
+
+| # | Task | Status | Evidence |
+|---|------|--------|----------|
+| 113 | **FIX: Inbox empty-state ordering** | ✅ | `16d81223` — InboxView branch moved before messages-empty check; errors view rendered wrong "No messages" empty state when error groups existed (errors>0, messages=0) |
+| 114 | **FIX: provider-name object → React #31** | ✅ | `16d81223` — providerNames mixes AI_PROVIDERS config OBJECTS + node name strings; rendering object as child crashed all views. `resolveProviderName()` helper (string \| .name \| fallback) added to InboxView/BoardView/TimelineView |
+| 115 | Browser-verified all 6 tabs | ✅ | List/Conversations/Timeline/Trace/Board/Inbox render real data: OpenAI + OpenAI Codex resolved, rate_limit group ×62 with triage columns |

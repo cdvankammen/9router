@@ -739,3 +739,34 @@ covered the deferred backlog items.
 
 **Still open:** 4.3/4.4 (user-owned); user's fallback-rule view pick (D8);
 L1 in-app peerNodes; launchd KeepAlive for failover proxy; `mini` SSH fix.
+
+---
+
+## UPDATE 2026-08-10 (Inbox render fix + provider-name crash)
+
+### Found via browser QA (tray 20130)
+- Error Inbox tab (P2, committed by parallel agent `3cddabec`) rendered the
+  wrong empty state: "No messages captured yet" instead of the error groups.
+  Root cause: `viewMode === "errors"` branch sat AFTER the
+  `messages.length === 0` check in the render chain — with error groups present
+  (errors>0) but the flat list empty (normal for view=errors), the wrong branch
+  fired.
+- Clicking Inbox/Board/Timeline crashed with React #31 ("Objects are not valid
+  as a React child") — provider config OBJECTS from `AI_PROVIDERS` were in
+  `providerNames` and rendered directly.
+
+### Fixed (`16d81223`)
+- Moved InboxView branch before the messages-empty check.
+- `resolveProviderName()` helper in InboxView/BoardView/TimelineView.
+
+### Verification
+- All 6 tabs render real data on the tray: OpenAI / OpenAI Codex resolved,
+  rate_limit group ×62 with triage, Timeline waterfall, Trace tree, List table
+  with costs.
+
+### Errors recorded
+- React #31 provider-object child (fixed — helper resolves string|.name|id)
+- Duplicate `resolveProviderName` during parallel-agent race (deduped before
+  build; build was failing "already declared")
+- Stale `.next/standalone` missing after interrupted build → clean rebuild +
+  copy-standalone-assets (recurring; see learnings/2026-08-08-stale-server-*)

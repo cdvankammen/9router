@@ -694,3 +694,21 @@ research/9router/21/22/23 + TASK-LOG 93-102 + this changelog. Commit `2f8c????` 
 
 ### Regression
 Full suite **1794 pass / 86 fail** (within 88-baseline budget). Feature tests: cost-capture 18/18, search 9/9, conversation-keyset 12/12.
+
+---
+
+## UPDATE 2026-08-10 (Inbox render + provider-name crash fixes)
+
+### fix(messages): `16d81223`
+- **Inbox empty-state ordering**: `InboxView` branch moved before the
+  `messages.length === 0` check — the errors view rendered the wrong
+  "No messages captured yet" empty state whenever error groups existed but the
+  flat message list was empty (which is the normal case for view=errors).
+- **provider-name object → React #31**: `providerNames` mixes provider-config
+  OBJECTS (`AI_PROVIDERS`) and display-name strings (provider nodes). Rendering
+  the object as a React child crashed every view that hit a config-object
+  provider (e.g. `openai`). Added `resolveProviderName()` helper
+  (string → `.name` → fallback id) to `InboxView`, `BoardView`, `TimelineView`.
+- **Browser-verified** all 6 tabs (List/Conversations/Timeline/Trace/Board/
+  Inbox): OpenAI + OpenAI Codex resolved, rate_limit group ×62 with triage
+  columns (Open/Acknowledged/Resolved/Dismissed).
