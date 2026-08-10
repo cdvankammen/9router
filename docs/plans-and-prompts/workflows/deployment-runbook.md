@@ -126,6 +126,15 @@ Both machines run the app + failover proxy as **launchd user agents**
 
 Plists: `~/Library/LaunchAgents/com.9router.{app,failover}.plist` on each box.
 
+**Proxy ships INSIDE the bundle** (`cli/app/failover-proxy.cjs`, copied by the
+build step) — launchd points at the bundle path, so `rsync --delete` cannot
+orphan the proxy:
+- this Mac: `/Users/chris/Documents/GitHub/9router/cli/app/failover-proxy.cjs`
+- mini2: `/tmp/9r-deploy-new/failover-proxy.cjs`
+- Deploy step includes it automatically (rsync of `cli/app/`); no manual scp.
+  If you ever change the proxy, rebuild the bundle (`node cli/scripts/build-cli.js`)
+  or re-copy the file before rsync.
+
 **CRITICAL: peers MUST be Tailscale IPs (100.x), not hostnames or LAN IPs.**
 - `mini2-9.local` (mDNS) resolves to link-local `fe80::` → EHOSTUNREACH.
 - LAN IPs (10.2.0.x) are blocked for launchd jobs by macOS 15 Local-Network
