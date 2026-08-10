@@ -398,3 +398,14 @@ Open questions for user (block 83/84/85): auto-disable behavior; pricing re-fetc
 ### Still open (documented, deferred)
 - **mini (3rd node) unreachable** — no ping/SSH (off or off-network); SSH key-auth blocked. Needs user action to join as node 3.
 - 4.3/4.4 (user-owned); D8 fallback-rule view pick; L1 in-app peerNodes.
+
+### Newly Completed (2026-08-10 test authenticity + browser QA fixes)
+
+| # | Task | Status | Evidence |
+|---|------|--------|----------|
+| 116 | Test-suite authenticity audit (subagent) | ✅ | 7 files audited: NO fake/tautological tests — all real code + real SQLite + hand-computed assertions; one weak spot (token helpers tested a copy) |
+| 117 | **FIX: token helpers drift** | ✅ | `3843de58` — extracted to src/shared/tokenHelpers.js; component + test both import real module (drift impossible) |
+| 118 | **FIX: conversation thread expand (stale closure + pageSize)** | ✅ | `754aa60e` — openRef toggle + start-closed + pageSize 500→100 (API rejects >100) |
+| 119 | **FIX: Trace view crash** | ✅ | `b2fe901f` — conv.messages undefined crash; guarded + onExpand wired to loadThread |
+| 120 | Browser functional QA (all 6 tabs) | ✅ | List filters/drawer/formats, Conversations expand, Timeline chart, Board drag (New→Investigating verified), Inbox triage persists across reload |
+| 121 | Visual QA via qwen-3.5-omni-plus | ✅ | dialagram/qwen-3.5-omni-plus vision: List/Inbox/Timeline/Board reviewed — no real layout bugs (API-key-as-node-name is data config, not code) |

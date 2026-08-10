@@ -730,3 +730,30 @@ Full suite **1794 pass / 86 fail** (within 88-baseline budget). Feature tests: c
 - Verified end-to-end: sustained-outage failover+failback both directions
   (identity-proven), auto-restart both machines, matrix 200/200/200/200.
 - Doc 25 §10 + deployment-runbook updated (peer table, ops, verification).
+
+---
+
+## UPDATE 2026-08-10 (test authenticity + browser QA fixes)
+
+### test: token helpers test the REAL code — `3843de58`
+- Subagent audit: no fake/tautological tests in the 7 audited files (real SQLite,
+  hand-computed assertions); one weak spot — `request-details-tab.test.js`
+  duplicated the component's token helpers (tests could pass while the real
+  logic drifted)
+- Extracted `getCachedTokens/getCacheCreationTokens/getInputTokens` to
+  `src/shared/tokenHelpers.js`; component + test import the same module
+
+### fix(messages): conversation thread expand — `754aa60e`
+- Stale-closure toggle (`!open` twice on fast clicks never fetched) → openRef
+- Conversations start closed when thread not loaded (one click opens + fetches)
+- loadThread pageSize 500 → 100 (API rejects >100 with 400)
+
+### fix(messages): Trace view crash — `b2fe901f`
+- `conv.messages.map` on undefined (API summaries carry aggregates only)
+- Guarded + onExpand wired to loadThread; Loading/No-messages states
+
+### QA
+- Browser functional: all 6 tabs verified (List filters/drawer/formats,
+  Conversations expand, Timeline chart, Board drag, Inbox triage persists)
+- Vision QA via `dialagram/qwen-3.5-omni-plus`: List/Inbox/Timeline/Board
+  reviewed — no real layout bugs (API-key-as-node-name is user data config)

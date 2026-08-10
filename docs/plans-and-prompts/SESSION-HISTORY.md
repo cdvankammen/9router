@@ -770,3 +770,41 @@ L1 in-app peerNodes; launchd KeepAlive for failover proxy; `mini` SSH fix.
   build; build was failing "already declared")
 - Stale `.next/standalone` missing after interrupted build → clean rebuild +
   copy-standalone-assets (recurring; see learnings/2026-08-08-stale-server-*)
+
+---
+
+## UPDATE 2026-08-10 (test authenticity + browser/vision QA fixes)
+
+User asked: did we test every feature, use qwen-3.5-omni-plus for visuals, use
+the IDE internal browser, fix issues as they came up, and ensure tests test
+REAL things (not always-passing fake reports)?
+
+### 1. Test authenticity audit (subagent) — VERIFIED REAL
+- 7 test files audited (cost-capture, b4-curl, search, conversation-keyset,
+  error-category, request-details-tab, failover-proxy)
+- ZERO mocks of the module under test; all DB tests run real SQLite (temp
+  DATA_DIR); assertions on hand-computed values (costs, token sums, row sets);
+  failover-proxy spawns real child processes
+- One weak spot: token helpers tested a LOCAL COPY (could drift)
+- FIXED `3843de58`: extracted to src/shared/tokenHelpers.js — component + test
+  import the real module
+
+### 2. Browser functional QA (internal browser, tray 20130)
+- List: filters (status=error), detail drawer (Pretty/Raw/Headers/cURL/Markdown
+  + copy/wrap) all work
+- Conversations: expand loads thread — FOUND+FIXED stale-closure toggle +
+  pageSize 500→100 (`754aa60e`)
+- Timeline: histogram chart (SVG) + waterfall rows render
+- Trace: FOUND+FIXED crash (conv.messages undefined) — guarded + loadThread
+  wired (`b2fe901f`)
+- Board: drag New→Investigating verified via HTML5 DnD simulation
+- Inbox: triage select persists across reload (settings KV) — verified
+
+### 3. Visual QA via qwen-3.5-omni-plus
+- dialagram/qwen-3.5-omni-plus via gateway: List/Inbox/Timeline/Board reviewed
+- Findings: no real layout bugs; long API-key-as-node-name in List is a data
+  config issue (user's provider node named with the API key), not a code bug
+
+### 4. Regression check
+- My touched test files: 69/69 pass; full suite failures (80) all in documented
+  baseline areas (rtk/oauth/translator/cursor) — no new failures from my work
