@@ -113,3 +113,31 @@ curl -s -o /dev/null -w '%{http_code}\n' http://localhost:20130/login
 - **Startup warmup**: first curl after restart may return 404/000 — wait 5–6s.
 - **`mini` host (mini.local)**: SSH key-auth blocked — user must add `~/.ssh/config` entry / keys. Ping answers but no SSH.
 - **FTS5 backup gotcha**: `requestDetails_fts` shadow tables must be excluded from DB backups (fixed `e582859a`).
+
+## Failover proxy — launchd-managed (2026-08-10)
+
+Both machines run the app + failover proxy as **launchd user agents**
+(KeepAlive, auto-start on boot, auto-restart on crash):
+
+| Machine | App agent | Proxy agent | Local | Peer (Tailscale) |
+|---|---|---|---|---|
+| mini-2 (this Mac) | `com.9router.app` (:20130) | `com.9router.failover` (:20142) | `http://localhost:20130` | `http://100.96.109.61:20128` (mini2) |
+| mini2 | `com.9router.app` (:20128) | `com.9router.failover` (:20142) | `http://localhost:20128` | `http://100.77.55.46:20130` (mini-2) |
+
+Plists: `~/Library/LaunchAgents/com.9router.{app,failover}.plist` on each box.
+
+**CRITICAL: peers MUST be Tailscale IPs (100.x), not hostnames or LAN IPs.**
+- `mini2-9.local` (mDNS) resolves to link-local `fe80::` → EHOSTUNREACH.
+- LAN IPs (10.2.0.x) are blocked for launchd jobs by macOS 15 Local-Network
+  privacy (TCC) → EHOSTUNREACH in 1ms. Tailscale (100.x) is exempt.
+- Shell runs (manual) work with hostnames/LAN — launchd does NOT. When in
+  doubt: `launchctl print gui/$(id -u)/com.9router.failover` and check the
+  startup line in `/tmp/9r-launchd-failover.log`.
+
+Ops:
+- Restart: `launchctl kickstart -k gui/$(id -u)/com.9router.app` (or `.failover`)
+- Logs: `/tmp/9r-launchd-app.log`, `/tmp/9r-launchd-failover.log`
+- Verify failover: kill the app process (`lsof -tiTCP:20130 -sTCP:LISTEN | xargs kill`)
+  → within 2s `curl localhost:20142/api/settings/require-login` must flip to the
+  peer's identity (mini2=`requireLogin:true`, mini-2=`false`).
+- Automated test: `cd tests && npx vitest run unit/failover-proxy.test.js`

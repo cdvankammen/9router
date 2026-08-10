@@ -272,3 +272,52 @@ both machines — final matrix 200/200/200/200.
 2. L1 `peerNodes` setting — implement now or L2-only first? (L2 alone answers
    the ask; L1 adds in-app degraded-node coverage.)
 3. launchd/KeepAlive for the proxy (auto-start + restart) — recommend yes.
+
+## 10. Production hardening (2026-08-10) — launchd + two REAL bugs found & fixed
+
+Automated test (`tests/unit/failover-proxy.test.js`, 6 tests) added; then
+deployed under launchd on both machines. Two real bugs surfaced:
+
+### Bug A (CRITICAL): failover never engages under launchd — mDNS + macOS Local-Network TCC
+- Symptom: with the app killed, the launchd-run proxy returned
+  `502 ECONNREFUSED` (routed to dead LOCAL) instead of failing over to mini2.
+  The same binary started manually failed over fine.
+- Root cause chain:
+  1. `mini2-9.local` (mDNS) resolves to a **link-local IPv6 `fe80::…`** — no
+     route without a zone scope → peer probe `EHOSTUNREACH`.
+  2. Even with the LAN IP `10.2.0.11`, the launchd-context probe got
+     `EHOSTUNREACH in 1ms`: macOS 15 **Local Network privacy (TCC)** blocks
+     launchd jobs from LAN addresses (shell processes have user consent).
+  3. `peerUp` stayed false → app death made BOTH flags false → `pickTarget()`
+     fail-open-to-LOCAL → 502. The proxy's "both down" safety net masked the
+     peer outage.
+- Fix: **Tailscale IPs as peers** (100.x range is exempt from the Local
+  Network TCC). Verified from a launchd job: `100.96.109.61` (mini2) and
+  `100.77.55.46` (this machine) both probe HTTP 200 in <20ms. Local proxies
+  re-pointed:
+  - this machine: `--peer http://100.96.109.61:20128`
+  - mini2: `--peer http://100.77.55.46:20130`
+
+### Bug B (CRITICAL): no auto-restart — failover died with the app
+- This machine's app+proxy had died overnight; nothing brought them back.
+- Fix: launchd agents on BOTH machines (app + failover proxy, KeepAlive,
+  RunAtLoad): `~/Library/LaunchAgents/com.9router.app.plist` +
+  `com.9router.failover.plist`. Verified: kill app+proxy → respawned with new
+  PIDs → healthy in <12s.
+
+### Verified end-to-end (2026-08-10, both machines, launchd-managed)
+| Test | Result |
+|---|---|
+| Sustained outage (app down 12s+), this machine | proxy-here served mini2 (`requireLogin:true`) for all 6 polls — failover ≤2s ✅ |
+| Restore app | failback to local ✅ |
+| Sustained outage, mini2 (its app killed) | proxy-mini2 served this machine (`requireLogin:false`) ✅ |
+| Restore mini2 app | failback to mini2 ✅ |
+| Auto-restart both machines | kill app+proxy → launchd respawn → 200/200 ✅ |
+| Final matrix (Tailscale) | 200/200/200/200 ✅ |
+| Automated suite | `tests/unit/failover-proxy.test.js` 6/6 ✅ (3 consecutive runs) |
+
+### Operational notes
+- **mini (3rd node) still unreachable** (no ping/SSH — off or off-network);
+  SSH key-auth was already blocked. Node join requires user action.
+- launchd agent logs: `/tmp/9r-launchd-app.log`, `/tmp/9r-launchd-failover.log`
+- Restart commands: `launchctl kickstart -k gui/$(id -u)/com.9router.{app,failover}`
