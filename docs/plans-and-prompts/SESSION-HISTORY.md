@@ -935,3 +935,31 @@ use mini2 and linux box."
 - runbook STATUS 2026-08-11; plan 2026-08-10-mini2-install-and-test-plan →
   completed; TASK-LOG #125-127; CHANGELOG; workspace memory
   `9router-install-semantics.md`
+
+---
+
+## UPDATE 2026-08-11 (post-install verification — model routing + L1 forward)
+
+### Verified (continuation of mini2 install)
+- **Model-serving policy applied on this Mac**: launchd plist has
+  `OLLAMA_LOCAL_DEFAULT_HOST=http://100.96.109.61:11434` (mini2's ollama);
+  bare `qwen2.5:3b` request → responded "Hello." (routed to mini2); NO local
+  inference processes on this Mac (control plane confirmed)
+- **mini2 ollama serving**: llama-server + ollama serve running, models
+  llama3.2:1b / nomic-embed-text / qwen2.5:3b
+- **L1 forward verified** (parallel agent sandbox): peerNodes →
+  mini2:20128, forwarded request captured in mini2 requestDetails
+  (ollama-local/qwen2.5:3b, url http://localhost:11434/api/chat)
+- **Health matrix**: LOCAL app 200, MINI2 app 200, proxies 307 (login
+  redirect = healthy), identities local=false / mini2=true
+
+### Parallel agent commits reviewed (all committed)
+- `24a50108` fix(cli): bundle full L1 settings closure
+- `fdf82774` feat(models): remote-only model serving (ollama on mini2)
+- `d17efe41` docs: model-serving policy (27) + tracking
+- `3b705585`/`66fdbe82` test(baseline): verify-no-regression judge fix
+
+### Errors/notes
+- L1 sandbox (/tmp/9r-l1-final) died with /tmp cleanup — L1 already verified
+  via mini2 records; production apps unaffected
+- curl backslash-mangling recurring — use quoted URLs

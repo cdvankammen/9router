@@ -445,3 +445,15 @@ Open questions for user (block 83/84/85): auto-disable behavior; pricing re-fetc
 
 ### Still open (documented, deferred)
 - mini (3rd node) unreachable; 4.3/4.4 (user-owned); D8 fallback-rule view pick
+
+### Newly Completed (2026-08-11 post-install verification)
+
+| # | Task | Status | Evidence |
+|---|------|--------|----------|
+| 128 | Model routing verified (this Mac → mini2 ollama) | ✅ | plist OLLAMA_LOCAL_DEFAULT_HOST=100.96.109.61:11434; bare qwen2.5:3b → "Hello." from mini2; no local inference procs |
+| 129 | L1 forward verified (parallel sandbox) | ✅ | peerNodes→mini2:20128; forwarded req captured in mini2 requestDetails |
+| 130 | Health matrix + identities | ✅ | LOCAL 200 / MINI2 200 / proxies 307; local=false mini2=true |
+| 131 | Parallel commits reviewed | ✅ | 24a50108 (L1 closure), fdf82774 (remote-only models), d17efe41 (policy doc), baseline judge fixes |
+
+### Still open (documented, deferred)
+- mini (3rd node) unreachable; 4.3/4.4 (user-owned); D8 fallback-rule view pick
