@@ -471,3 +471,14 @@ Open questions for user (block 83/84/85): auto-disable behavior; pricing re-fetc
 | 79 | Configure local peerNodes (mutual L1) | ✅ | local `[]` → `["http://100.96.109.61:20128"]`; mini2 already had local |
 | 80 | Real-world failover both directions | ✅ | kill local → proxy serves mini2; kill mini2 → proxy serves local; respawn <12s; matrix 200/200/200/200 |
 | 81 | Verify mini2 has latest code | ✅ | mini2 npm app (01:32) ≥ local cli/app (01:29); both have L1; proxies identical MD5 |
+
+### Newly Completed (2026-08-11 final verification — L1 auth root cause + Phase 4.7)
+
+| # | Task | Status | Evidence |
+|---|------|--------|----------|
+| 132 | L1 live-forward auth root-caused | ✅ | mini2 rejected the forwarded local key with `API key required for remote API access`; root cause: keys validate against the **node's own apiKeys table** — the local key isn't in mini2's DB. mini2's own key (`sk-27fdade3183df58f-49xrit-9d777d52`, machineId `27fdade3183df58f`) → direct remote 200 "OK" |
+| 133 | L1 live-forward FINAL proof (end-to-end) | ✅ | sandbox peerNodes=[mini2:20128] + mini2 key → 200 "OK"; mini2 requestDetails **14→15**, newest row `ollama-local\|qwen2.5:3b\|2026-08-11T19:12:35`. Negative control (peerNodes=[], OLLAMA_LOCAL_DEFAULT_HOST) → 200 served locally, mini2 count unchanged (15). DB restored peerNodes=`[]` |
+| 134 | Phase 4.7 live feature tests (subagent) | ✅ | 7/7: cli-tools all-statuses (14 tools), models CRUD round-trip + alias-collision 400, usage providers/history/request-logs 200, console-logs GET/DELETE/GET, health+providers 200, unit 27/27, regression judge exit 0 — **0 NEW** (86 known) |
+
+### Still open (documented, deferred)
+- mini (3rd node) unreachable; 4.3/4.4 (user-owned); D8 fallback-rule view pick

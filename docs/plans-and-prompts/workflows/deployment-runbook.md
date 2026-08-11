@@ -1,16 +1,21 @@
-# Deployment Runbook — mini-2 + mini2 (2026-08-08)
+# Deployment Runbook — mini-2 + mini2 (2026-08-08, updated 2026-08-11)
 
 **Date:** 2026-08-08
 **Author:** GitHub Copilot agent
 **Status:** active
-**Tags:** #workflow #deployment #mini #mini2 #runbook
+**Tags:** #workflow #deployment #mini #mini2 #runbook #failover
 
 ## Machine map
 
 | Machine | Hostname | Role | 9Router | Ollama |
 |---------|----------|------|---------|--------|
-| **mini-2** (this Mac) | `mini-2.local` | dev + primary app — **control plane, NEVER runs inference** | `cli/app` bundle → port **20130**, data `~/.9router` | ❌ none |
-| **mini2** | `mini2-9.local` (SSH host `mini2`) | backup node + **model server** | `cli/app` bundle → port **20128**, data `~/.9router` | ✅ **:11434** — `qwen2.5:3b` via launchd `com.9router.ollama` |
+| **mini-2** (this Mac) | `mini-2.local` | dev + primary app — **control plane, NEVER runs inference** | `cli/app` bundle → port **20130**, data `~/.9router`, launchd `com.9router.app` | ❌ none |
+| **mini2** | `mini2-9.local` (SSH host `mini2`) | backup node + **model server** | **npm-global 9router** (`~/.local/lib/node_modules/9router/app/custom-server.js`) → port **20128**, data `~/.9router`, launchd `com.9router.app` | ✅ **:11434** — `qwen2.5:3b` via launchd `com.9router.ollama` |
+
+> **mini2 runs the npm-installed 9router package** (`npm install -g 9router`),
+> NOT a rsync'd `cli/app` copy. Update it with `npm pack` + `install -g` (below).
+> The proxy (`failover-proxy.cjs`) ships inside the same app folder on both
+> machines; launchd points at the bundle paths.
 
 ## Build pipeline (run from this Mac, repo root)
 
@@ -113,6 +118,70 @@ curl -s -o /dev/null -w '%{http_code}\n' http://localhost:20130/login
 - **Startup warmup**: first curl after restart may return 404/000 — wait 5–6s.
 - **`mini` host (mini.local)**: SSH key-auth blocked — user must add `~/.ssh/config` entry / keys. Ping answers but no SSH.
 - **FTS5 backup gotcha**: `requestDetails_fts` shadow tables must be excluded from DB backups (fixed `e582859a`).
+
+---
+
+## STATUS 2026-08-11 — launchd-managed + npm-global mini2 + L1 verified
+
+| Node | Host | Port | App | Proxy | Data | Status |
+|------|------|------|-----|-------|------|--------|
+| **mini-2 (this Mac)** | `100.77.55.46` | 20130 | `cli/app` bundle (launchd `com.9router.app`) | `:20142` (launchd `com.9router.failover`, local→20130 / peer→`100.96.109.61:20128`) | `~/.9router` | ✅ health 200, require-login **false** |
+| **mini2** | `100.96.109.61` | 20128 | **npm-global** `9router` (launchd `com.9router.app`, updated via `npm pack` + `install -g`) | `:20142` (local→20128 / peer→`100.77.55.46:20130`) | `~/.9router` | ✅ health 200, require-login **true** |
+
+### Update mini2 (npm-global install — CURRENT method)
+
+```bash
+# 1. Build root + cli bundle from this Mac
+cd /Users/chris/Documents/GitHub/9router
+npm run build && node scripts/copy-standalone-assets.mjs
+node cli/scripts/build-cli.js          # → cli/app
+cd cli && npm pack                     # → 9router-0.5.50.tgz
+scp 9router-0.5.50.tgz mini2:/tmp/
+
+# 2. Install globally on mini2 + restart launchd
+ssh mini2 'export PATH=$HOME/.local/bin:$PATH && \
+  npm install -g /tmp/9r-0.5.50.tgz && \
+  launchctl kickstart -k gui/$(id -u)/com.9router.app'
+```
+
+### L1 (in-app forwarding) — bundle closure requirement
+
+L1 lives in `custom-server.js` (reads `settings.peerNodes` at boot, probes every
+5s, forwards `/v1` requests when the local app is down). **The cli bundle MUST
+contain the full `src/lib/db` tree** — the build step copies the whole tree +
+`src/lib/dataDir.js` + `src/lib/extractText.js` and rewrites the only `@/`
+aliases (`paths.js` → `../dataDir.js`, `requestDetailsRepo.js` →
+`../../extractText.js`). A partial copy throws at boot and silently poisons the
+shared `global._dbAdapter` (require-login falls back to `true`, `/api/settings`
+401s, `/v1` goes empty). See commit `24a50108`.
+
+### API keys are per-node (critical for failover auth)
+
+- API keys validate against the **node's own `apiKeys` table** — a key created
+  on one machine is NOT valid on another unless inserted there too.
+- mini2 requires API keys for remote `/v1` (`requireApiKey:true`); its own key
+  is `sk-27fdade3183df58f-49xrit-9d777d52` (machineId `27fdade3183df58f`).
+- Clients that may fail over to mini2 must use **mini2's key** (or a key
+  inserted into mini2's DB), otherwise mini2 answers
+  `API key required for remote API access`.
+- Both nodes must share the same `API_KEY_SECRET`/`MACHINE_ID_SALT` so CRCs
+  match (mini2's plist had a custom secret → CRC mismatch → 401; fixed).
+
+### L1 live-forward verified (2026-08-11)
+
+```text
+POSITIVE (peerNodes=[mini2], mini2 key): 200 OK; mini2 requestDetails 14→15,
+  newest row ollama-local|qwen2.5:3b — request truly served by mini2's app+ollama
+NEGATIVE (peerNodes=[], local ollama host): 200 OK served locally; mini2 count
+  unchanged — no forward
+```
+
+### Model serving (remote-only on the control plane)
+
+- mini-2 NEVER runs inference: launchd plist sets
+  `OLLAMA_LOCAL_DEFAULT_HOST=http://100.96.109.61:11434` so `qwen2.5*`/`llama3*`
+  routes to mini2's ollama; registry entry is `category:"free"` + `noAuth:true`
+  (keyless). See `research/9router/27-model-serving-policy.md`.
 
 ## Failover proxy — launchd-managed (2026-08-10)
 

@@ -991,3 +991,47 @@ use mini2 and linux box."
 - Kill mini2 app → mini2 proxy serves from local (`MINI2-PROXY-FAILED-OVER`)
 - launchd respawns both apps (<12s); final matrix 200/200/200/200
 - Failover unit tests 6/6; mini2 has latest code (npm app 01:32 ≥ local 01:29)
+
+---
+
+## UPDATE 2026-08-11 (final — L1 auth root cause, L1 live proof, Phase 4.7)
+
+### The last blocker: per-node API keys
+- L1 forwarding worked mechanically (request reached mini2 — its own auth error
+  was returned), but mini2 rejected the forwarded key with
+  `API key required for remote API access`.
+- Root cause: keys validate against the **node's own `apiKeys` table** — the
+  local key isn't in mini2's DB. mini2's own key
+  (`sk-27fdade3183df58f-49xrit-9d777d52`, machineId `27fdade3183df58f`) works
+  remotely (direct curl 200 "OK").
+- This is by design (keys are machine-bound, generated with
+  `generateApiKeyWithMachine`) — clients that may fail over to mini2 must use a
+  key that exists in mini2's DB.
+
+### L1 live-forward FINAL proof (end-to-end, 2026-08-11 19:12 UTC)
+```text
+POSITIVE (sandbox peerNodes=[http://100.96.109.61:20128], mini2 key):
+  200 OK "Reply with exactly: OK"; mini2 requestDetails 14 → 15,
+  newest row = ollama-local | qwen2.5:3b | 2026-08-11T19:12:35
+  → request truly forwarded through L1 and served by mini2's app + ollama
+NEGATIVE (peerNodes=[], OLLAMA_LOCAL_DEFAULT_HOST=mini2:11434):
+  200 OK served locally; mini2 count unchanged (15) → no forward
+CLEANUP: sandbox removed; real DB peerNodes restored to []
+```
+
+### Phase 4.7 live feature tests (subagent) — 7/7 PASS
+1. cli-tools all-statuses → 200, 14 tools (claude, codex, opencode, …)
+2. models CRUD → alias add/revert round-trip + collision 400 "Alias already in use"
+3. usage providers/history/request-logs → 200 (32 requests, cost $0.023)
+4. console-logs → GET/DELETE/GET (buffer cleared)
+5. health + health/providers → 200
+6. unit tests (models/usage) → 27/27
+7. full regression judge → exit 0, **0 NEW failures** (86 known, 0 stale)
+
+### Final state
+- mini-2 (control plane): app :20130 launchd, proxy :20142, require-login=false,
+  peerNodes=`[]`, NO inference.
+- mini2: npm-global 9router :20128 launchd, proxy :20142, require-login=true,
+  ollama :11434 (qwen2.5:3b), peerNodes=[http://100.77.55.46:20130].
+- Docs updated: runbook (npm-global deploy, L1 closure, per-node keys),
+  TASK-LOG #132-134, CHANGELOG Unreleased, this file.
