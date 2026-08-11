@@ -123,6 +123,8 @@ export async function getModelInfoCore(modelStr, aliasesOrGetter) {
 }
 
 // Config-driven prefix → provider inference (first match wins, fallback "openai").
+// Ollama-local models are served REMOTELY (model-serving policy: never on the
+// control-plane Mac — see OLLAMA_LOCAL_DEFAULT_HOST in config/providers.js).
 const MODEL_PREFIX_PROVIDERS = [
   // Codex CLI sends this bare virtual model for auto-review - keep it on OAuth Codex (#1398).
   [/^codex-auto-review$/, "codex"],
@@ -142,6 +144,8 @@ const MODEL_PREFIX_PROVIDERS = [
   [/^gpt-/, "openai"],
   [/^o[134]/, "openai"],
   [/^deepseek-/, "openrouter"],
+  [/^qwen2\.5/, "ollama-local"],
+  [/^llama3\./, "ollama-local"],
 ];
 
 /**

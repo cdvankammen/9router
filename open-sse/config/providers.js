@@ -4,9 +4,15 @@ export { PROVIDERS, PROVIDER_OAUTH } from "../providers/index.js";
 
 export const OLLAMA_LOCAL_DEFAULT_HOST = "http://localhost:11434";
 
+// Model-serving policy: this machine is the CONTROL PLANE — local model
+// inference must NOT run here. The default Ollama host is overridable via
+// env (used by launchd agents on nodes that serve models remotely, e.g.
+// mini2 / a Linux box over Tailscale). Per-credential
+// `providerSpecificData.baseUrl` still wins when set.
 export function resolveOllamaLocalHost(credentials) {
   const raw = credentials?.providerSpecificData?.baseUrl?.trim();
-  return (raw || OLLAMA_LOCAL_DEFAULT_HOST).replace(/\/$/, "");
+  const env = process.env.OLLAMA_LOCAL_DEFAULT_HOST?.trim();
+  return (raw || env || OLLAMA_LOCAL_DEFAULT_HOST).replace(/\/$/, "");
 }
 
 // Region URLs single-source from registry xiaomi-tokenplan.transport
