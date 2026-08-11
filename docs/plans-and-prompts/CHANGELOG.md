@@ -948,3 +948,22 @@ model inference. Model serving runs on **mini2** (macOS, Ollama) and ideally a
 - Verified: 6/6 unit tests; live --ipv6 proxy binds IPv6 dual-stack and serves;
   hostname peer (mini2-9.local) resolves + forwards; final failover suite 7/7
   (normal, forward, reverse-via-LAN, health 200/200/200/200).
+
+---
+
+## UPDATE 2026-08-11 (IP-environment tests + single-URL verification)
+
+### test(failover): dedicated IP-environment test suite
+- `tests/unit/failover-proxy-ip.test.js` (7 tests): IPv4-only default (IPv6
+  peer rejected, IPv4-only bind), --ipv6 mode (IPv6 peer accepted + dual-stack
+  bind + IPv6 failover), hostname peer (localhost), malformed URL handling.
+- Real local servers bound to ::1 (IPv6) + 127.0.0.1 (IPv4) — no mocks needed;
+  IPv6 cases skip gracefully if the machine lacks IPv6.
+- Result: 7/7 pass alongside existing 6/6 failover-proxy.test.js.
+
+### verified: single-URL auto-routing (no client-side logic)
+- ONE URL `http://mini-3.local:20142` (mDNS, any network): both-up → local;
+  kill local → SAME URL auto-routes to mini2 (200); streaming SSE works through
+  it; local recovers → fails back. Client never changes endpoints.
+- The multi-peer proxy IS the single-URL answer: each node's :20142 has
+  Tailscale+LAN+mDNS peers, so one URL on either machine handles node failure.
