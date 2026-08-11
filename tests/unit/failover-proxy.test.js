@@ -15,6 +15,18 @@ const LOCAL_PORT = 20260;
 const PEER_PORT = 20261;
 const PROXY_PORT = 20262;
 
+// Allocate an ephemeral port (OS-assigned, never collides across parallel runs).
+function freePort() {
+  return new Promise((resolve, reject) => {
+    const s = http.createServer();
+    s.listen(0, "127.0.0.1", () => {
+      const p = s.address().port;
+      s.close(() => resolve(p));
+    });
+    s.on("error", reject);
+  });
+}
+
 function makeServer(port, name) {
   return http.createServer((req, res) => {
     if (req.url === "/api/health") { res.writeHead(200); return res.end("ok-" + name); }
@@ -146,4 +158,96 @@ describe("failover-proxy (L2) — node-DOWN protection", () => {
     const r = await request(PROXY_PORT, { method: "GET", path: "/api/health" });
     expect({ status: r.status, body: r.body.slice(0, 200) }).toEqual({ status: 200, body: "ok" });
   });
+
+  it("T7: UPSTREAM dies mid-stream → proxy survives, client sees clean disconnect", async () => {
+    // Isolate: a SEPARATE proxy on ephemeral ports, so it never touches the
+    // shared local/peer used by T1-T6/T8 or collides across runs.
+    const S_LOCAL = await freePort();
+    const S_PROXY = await freePort();
+    const sockets = new Set();
+    const srv = http.createServer((req, res) => {
+      if (req.url === "/api/health") { res.writeHead(200); return res.end("ok"); }
+      res.writeHead(200, { "Content-Type": "text/event-stream" });
+      const iv = setInterval(() => res.write("data: chunk\n\n"), 100);
+      req.on("close", () => clearInterval(iv));
+    });
+    srv.on("connection", (s) => { sockets.add(s); s.on("close", () => sockets.delete(s)); });
+    await new Promise((resolve, reject) => { srv.on("error", reject); srv.listen(S_LOCAL, "127.0.0.1", resolve); });
+
+    const sProxy = spawn(process.execPath, [PROXY,
+      "--listen", String(S_PROXY),
+      "--local", `http://localhost:${S_LOCAL}`,
+      "--peer", `http://localhost:${PEER_PORT}`,
+    ], { stdio: "ignore" });
+    await waitFor(S_PROXY);
+
+    let gotData = false;
+    await new Promise((resolve) => {
+      const req = http.request({ host: "127.0.0.1", port: S_PROXY, path: "/stream", method: "GET" }, (res) => {
+        res.once("data", () => {
+          gotData = true;
+          for (const s of sockets) s.destroy(); // kill upstream mid-stream
+          resolve();
+        });
+      });
+      req.on("error", () => resolve());
+      req.end();
+    });
+    await wait(1500);
+    expect(gotData).toBe(true);
+    expect(sProxy.exitCode).toBeNull(); // proxy did NOT crash
+    const h = await request(S_PROXY, { method: "GET", path: "/api/health" });
+    expect(h.status).toBe(200); // proxy recovered
+    sProxy.kill();
+    await new Promise((r) => srv.close(r));
+  }, 20000);
+
+  it("T8: upstream dies mid-stream → next request fails over to peer", async () => {
+    // Isolated proxy: local + peer on separate ports. Kill local's CONNECTION
+    // mid-stream, then verify the NEXT request goes to the peer (failover
+    // still works after an upstream mid-stream death).
+    const T8_LOCAL = await freePort();
+    const T8_PEER = await freePort();
+    const T8_PROXY = await freePort();
+    const t8sockets = new Set();
+
+    const t8local = http.createServer((req, res) => {
+      if (req.url === "/api/health") { res.writeHead(200); return res.end("ok-L8"); }
+      res.writeHead(200, { "Content-Type": "text/event-stream" });
+      const iv = setInterval(() => res.write("data: chunk\n\n"), 100);
+      req.on("close", () => clearInterval(iv));
+    });
+    t8local.on("connection", (s) => { t8sockets.add(s); s.on("close", () => t8sockets.delete(s)); });
+    await new Promise((resolve, reject) => { t8local.on("error", reject); t8local.listen(T8_LOCAL, "127.0.0.1", resolve); });
+
+    const t8peer = await listen(T8_PEER, "T8-PEER");
+
+    const t8Proxy = spawn(process.execPath, [PROXY,
+      "--listen", String(T8_PROXY),
+      "--local", `http://127.0.0.1:${T8_LOCAL}`,
+      "--peer", `http://127.0.0.1:${T8_PEER}`,
+    ], { stdio: "ignore" });
+    await waitFor(T8_PROXY);
+    await new Promise((resolve) => {
+      const req = http.request({ host: "127.0.0.1", port: T8_PROXY, path: "/stream", method: "GET" }, (res) => {
+        res.once("data", () => { for (const s of t8sockets) s.destroy(); resolve(); });
+      });
+      req.on("error", () => resolve());
+      req.end();
+    });
+    await wait(1500);
+    expect(t8Proxy.exitCode).toBeNull();
+    // Kill the local SERVER entirely so the health probe fails → proxy flips
+    // to the peer (destroying just the stream socket isn't enough).
+    await new Promise((r) => t8local.close(r));
+    await wait(4000); // probe interval 2s + margin for the flip
+    const r = await request(T8_PROXY, { timeoutMs: 10000 });
+    expect(r.status).toBe(200);
+    // makeServer names any non-LOCAL_PORT peer "PEER-B" — that IS the T8 peer.
+    expect(JSON.parse(r.body).node).toBe("PEER-B");
+
+    t8Proxy.kill();
+    await new Promise((r) => t8local.close(r));
+    await new Promise((r) => t8peer.close(r));
+  }, 25000);
 });

@@ -140,6 +140,9 @@ function probe(url) {
   return new Promise((resolve) => {
     const req = http.request(url + HEALTH_PATH, { method: "GET", timeout: PROBE_TIMEOUT_MS }, (res) => {
       res.resume(); // drain so the socket can be reused
+      // Upstream socket can be destroyed mid-probe (node killed while probing)
+      // → the response stream emits 'error'; without a handler Node crashes.
+      res.on("error", () => resolve(false));
       resolve(res.statusCode < 500);
     });
     req.on("error", () => resolve(false));

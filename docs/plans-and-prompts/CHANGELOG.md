@@ -986,3 +986,20 @@ model inference. Model serving runs on **mini2** (macOS, Ollama) and ideally a
   15/15 failover tests pass (6 core + 7 IP-env + 2 discovery).
 - Verified live: both-up → local; kill local → SAME proxy auto-routes to mini2
   via discovered peer (200); local restores.
+
+---
+
+## UPDATE 2026-08-11 (mid-stream cutout tests + probe hardening)
+
+### test(failover): upstream-dies-mid-stream coverage (T7/T8)
+- T7: upstream killed mid-stream → proxy survives (no crash), client gets
+  clean disconnect, proxy still serves health.
+- T8: upstream killed mid-stream → NEXT request fails over to the peer (200).
+- Both use ephemeral ports (freePort) so parallel test files never collide.
+- Total failover tests: 17/17 (6 core + 7 IP-env + 2 discovery + 2 mid-stream).
+
+### fix(failover): probe response-stream error handler
+- `probe()` in cli/failover-proxy.cjs now handles `res.on("error")` — an
+  upstream socket destroyed mid-probe (node killed while probing) previously
+  emitted an unhandled 'error' on the response stream, crashing the proxy.
+  Found by T8 during mid-stream testing.
