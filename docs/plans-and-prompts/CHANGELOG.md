@@ -892,3 +892,25 @@ model inference. Model serving runs on **mini2** (macOS, Ollama) and ideally a
 - Kill local app → local proxy serves from mini2 (`FAILOVER-WORKS`)
 - Kill mini2 app → mini2 proxy serves from local (`MINI2-PROXY-FAILED-OVER`)
 - launchd respawns both apps (<12s); final matrix 200/200/200/200
+
+---
+
+## UPDATE 2026-08-11 (full app + tray on mini2)
+
+### feat(deploy): mini2 now runs the FULL application (tray icon) on latest build
+- Rebuilt `cli/app` from HEAD (`npm run build` + `node cli/scripts/build-cli.js`,
+  13:11) → rsync'd to mini2 `~/.local/lib/node_modules/9router/app` (replacing
+  the 01:32 bundle). Both nodes: v0.5.50, `custom-server.js` MD5 identical
+  (8204b864...), L1 retry fix present.
+- mini2 launchd `com.9router.app` now runs the FULL app:
+  `node .../9router/cli.js --tray --port 20128 --skip-update` (GUI session).
+- **Root cause of "no tray icon on mini2"**: the systray icon binary
+  (`tray_darwin_release`) is x86_64-only; mini2 is arm64 and had NO Rosetta →
+  `spawn error -86 (Bad CPU type)`. The server ran fine (arm64 node) but the
+  menu-bar icon couldn't spawn. NOT a copy/deploy problem — the bundle was
+  identical.
+- **Fix**: `softwareupdate --install-rosetta --agree-to-license` on mini2
+  (no sudo needed) → restart `com.9router.app` → icon registers.
+- Verified: `cli.js --tray` + `next-server` (:20128, 200) + `tray_darwin_release`
+  (icon running) + failover proxy (:20142, 200) + ollama (:11434). Same
+  topology as this Mac.
