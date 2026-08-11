@@ -222,3 +222,61 @@ Preferred: systemd unit (`ExecStart=/usr/local/bin/ollama serve`,
 `OLLAMA_LOCAL_DEFAULT_HOST=http://<linux-tailscale-ip>:11434` in this Mac's
 app plist (or a credential's `baseUrl`). Full recipe +
 NDJSON-vs-SSE rationale: `research/9router/27-model-serving-policy.md`.
+
+---
+
+## STATUS 2026-08-11 — PROPER PACKAGED INSTALL on mini2 (full test matrix PASSED)
+
+Per user directive: install 9Router from this codebase onto mini2 as a proper
+**application install** (packaged CLI, not just a raw bundle rsync), then fully
+test every setting + functionality. All phases verified.
+
+### Install (the correct "application folder" flow)
+
+```bash
+# 1. Build + pack the CLI on this machine
+cd /Users/chris/Documents/GitHub/9router
+rm -rf .next && npm run build && node scripts/copy-standalone-assets.mjs
+cd cli && npm run build && npm run pack:cli    # → 9router-0.5.50.tgz (14MB)
+
+# 2. Install the package on mini2 (user-local global)
+scp ../9router-0.5.50.tgz chris@mini2:/tmp/
+ssh chris@mini2 'npm install -g /tmp/9router-0.5.50.tgz'
+# → ~/.local/lib/node_modules/9router/ (cli.js + app/ bundle) + ~/.local/bin/9router
+#   postinstall self-heals sqlite deps into ~/.9router/runtime/node_modules
+
+# 3. launchd app plist → /Users/chris/.local/lib/node_modules/9router/app/custom-server.js
+#    (WorkingDirectory = that app dir; env: PORT=20128, HOSTNAME=0.0.0.0,
+#     INITIAL_PASSWORD, API_KEY_SECRET, MACHINE_ID_SALT, JWT_SECRET=~/.9router/jwt-secret)
+```
+
+NOTE: `failover-proxy.cjs` is NOT bundled by build-cli — copy it separately to
+`~/9router-app/` (the rsync'd bundle dir) which the failover launchd agent uses.
+
+### Full test matrix — ALL PASSED on mini2 (2026-08-11)
+
+| Area | Result |
+|---|---|
+| Auth: login / key / bad-key 401 / requireApiKey | ✅ |
+| /v1 chat non-stream + stream (qwen2.5:3b ollama-LOCAL on mini2) | ✅ SSE chunks flow |
+| /v1 api/chat, responses, count_tokens, models | ✅ 200 |
+| /v1 models/info (needs ?id), embeddings (no embedding model) | ✅ correct 400s |
+| Dashboard pages (providers/combos/usage/quota/token-saver/messages/console-log/cli-tools/skills/proxy-pools/profile/endpoint/basic-chat/media/translator) | ✅ all 200 |
+| Messages 6 views (list/conversations/timeline/errors/search) | ✅ real data |
+| Settings surface (smartRouter/rtk/comboStrategy/obsMaxRecords/peerNodes) | ✅ PATCH→GET reflects |
+| Observability (enabled, records captured) | ✅ currentCount 3+ |
+| **L2 failover**: kill mini2 app → proxy flips to peer (this Mac), chat via proxy serves from peer, restore → failback | ✅ identity-verified |
+| Loop protection (x-9r-failover → 502) | ✅ |
+| Models CRUD (custom add), cli-tools settings, proxy-pools, export, headroom | ✅ |
+| KeepAlive respawn (kill → 200 in <12s) | ✅ |
+| Launchd runs app from installed package path (persists reboot) | ✅ |
+
+### Key learnings (this install)
+- **The packaged CLI install** (`npm install -g 9router` tarball) is the proper
+  "application folder" flow — the app runs from
+  `~/.local/lib/node_modules/9router/app` (cwd verified).
+- **Ollama models live on mini2** (qwen2.5:3b) — this Mac (mini-2) is the
+  control plane and NEVER runs inference.
+- **peerNodes L1**: `["http://100.77.55.46:20130"]` set + code present in the
+  running app; local requests still serve locally (correct).
+- `/tmp/9r-deploy-new` (old install) removed after backup — macOS purges /tmp.

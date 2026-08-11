@@ -895,3 +895,43 @@ SSH key access denied on `exo` (100.80.99.11) and `hass` (100.127.34.40). Once
 SSH works: install ollama-linux tar, `ollama serve` + `ollama pull qwen2.5:3b`
 (systemd unit preferred), set `OLLAMA_LOCAL_DEFAULT_HOST` (or a credential's
 baseUrl) to its Tailscale IP. Exact commands: research doc §5.
+
+---
+
+## UPDATE 2026-08-11 (mini2 proper install + full test — goal d8beb497)
+
+User: "install 9router from this codebase onto mini2 — don't stop until it is
+on there and fully tested working with every setting and every functionality.
+Make a full plan for tracking it." Also: "don't load models on this computer —
+use mini2 and linux box."
+
+### What "install on mini2" means (now in workspace memory)
+- The **application folder** = `cli/app` (built by build-cli.js) — but the
+  PROPER install is the **packaged CLI**: `npm run pack:cli` → tarball →
+  `npm install -g` → `~/.local/lib/node_modules/9router/` (cli.js + app
+  bundle) + `~/.local/bin/9router` symlink + postinstall self-heal
+- The app runs from the INSTALLED app folder (cwd verified), launchd-managed,
+  persists reboot
+
+### What was done
+1. Recon mini2: macOS 26.6 arm64, node ~/.local/bin, existing v0.5.50 at
+   /tmp/9r-deploy-new, launchd agents, ollama with qwen2.5:3b
+2. Built + packed + installed: 9router-0.5.50.tgz → npm install -g on mini2
+3. Updated launchd app plist → installed package path; KeepAlive verified
+4. Full test matrix (all PASSED): auth, /v1 gateway (chat stream+non-stream
+   via ollama-local), dashboard pages, Messages 6 views, settings surface,
+   observability, L2 failover (kill→peer→failback), loop protection, models
+   CRUD, cli-tools, proxy-pools, export, headroom
+5. Ollama models on mini2 confirmed (this Mac never runs inference)
+
+### Errors encountered
+- failover-proxy.cjs NOT bundled by build-cli — copied separately to
+  ~/9router-app (the rsync bundle dir) for the failover launchd agent
+- launchd KeepAlive respawned mini2's app faster than the failover probe →
+  had to bootout launchd to test failover properly
+- Subagent model failure (no choices) → ran remaining tests in main session
+
+### Docs
+- runbook STATUS 2026-08-11; plan 2026-08-10-mini2-install-and-test-plan →
+  completed; TASK-LOG #125-127; CHANGELOG; workspace memory
+  `9router-install-semantics.md`

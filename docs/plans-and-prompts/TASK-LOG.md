@@ -434,3 +434,14 @@ Open questions for user (block 83/84/85): auto-disable behavior; pricing re-fetc
 | 130 | Same dashboard API key on both nodes | ✅ | one Bearer key works on mini-2 + mini2 (DB synced) — authenticates the whole failover chain |
 | 131 | E2E: ollama path verified end-to-end | ✅ | non-stream + stream via this Mac app (:20130), via failover proxy (:20142), on mini2's app (:20128); ultimate failover (local app killed → proxy → mini2 app → mini2 ollama) OK; targeted tests 18/18 |
 | 132 | Linux box join | ⏳ deferred | SSH key access denied on `exo` (100.80.99.11) and `hass` (100.127.34.40); exact commands documented in research/9router/27-model-serving-policy.md §5 + runbook |
+
+### Newly Completed (2026-08-11 mini2 proper install + full test)
+
+| # | Task | Status | Evidence |
+|---|------|--------|----------|
+| 125 | **PROPER packaged install on mini2** | ✅ | `npm run pack:cli` → 9router-0.5.50.tgz → `npm install -g` on mini2 → app runs from `~/.local/lib/node_modules/9router/app` (launchd-managed, persists reboot); postinstall self-heal ran |
+| 126 | Full test matrix on mini2 | ✅ | auth, /v1 (chat stream+non-stream via ollama-local qwen2.5:3b, api/chat, responses, count_tokens, models), all dashboard pages 200, Messages 6 views, settings surface, observability, L2 failover (kill→peer→failback), loop protection, models CRUD, cli-tools, proxy-pools, export, headroom, KeepAlive respawn |
+| 127 | Install semantics documented | ✅ | workspace memory `9router-install-semantics.md` + runbook updated + plan completed |
+
+### Still open (documented, deferred)
+- mini (3rd node) unreachable; 4.3/4.4 (user-owned); D8 fallback-rule view pick

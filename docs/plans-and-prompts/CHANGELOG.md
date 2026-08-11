@@ -818,3 +818,34 @@ model inference. Model serving runs on **mini2** (macOS, Ollama) and ideally a
   mini2 app → mini2 Ollama → OK); targeted tests 18/18.
 - Docs: `research/9router/27-model-serving-policy.md` (policy + install recipe
   + linux join), deployment-runbook "Model serving (Ollama)" section.
+
+---
+
+## UPDATE 2026-08-11 (mini2 proper packaged install + full test)
+
+### deploy: 9Router installed on mini2 as proper application (packaged CLI)
+- `npm run pack:cli` → `9router-0.5.50.tgz` → scp → `npm install -g` on mini2
+  → `~/.local/lib/node_modules/9router/` (cli.js + app bundle) +
+  `~/.local/bin/9router` symlink + postinstall self-heal into
+  `~/.9router/runtime/node_modules`
+- launchd `com.9router.app` now runs the INSTALLED package path
+  (`~/.local/lib/node_modules/9router/app/custom-server.js`) — persists reboot
+- Old `/tmp/9r-deploy-new` backed up + removed (macOS purges /tmp)
+
+### verified (full test matrix, all PASSED)
+- Auth (login/key/401), /v1 chat stream+non-stream via ollama-local
+  qwen2.5:3b (models on mini2, NOT this Mac), api/chat, responses,
+  count_tokens, models
+- All dashboard pages 200; Messages 6 views with real data; settings
+  surface PATCH→GET; observability capture
+- L2 failover: kill mini2 app → proxy flips to peer (identity-verified),
+  chat via proxy serves from peer, restore → failback
+- Loop protection 502, models CRUD, cli-tools, proxy-pools, export,
+  headroom, KeepAlive respawn (<12s)
+- L1 peerNodes set + code present; local requests serve locally
+
+### docs
+- `workflows/deployment-runbook.md` STATUS 2026-08-11 section
+- `plans/2026-08-10-mini2-install-and-test-plan.md` → completed
+- workspace memory: `9router-install-semantics.md` (what "install 9router
+  on a computer" means)
