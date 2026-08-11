@@ -30,6 +30,7 @@ const L1 = {
   upstreamTimeoutMs: 120000,
   timer: null,
   settingsLoaded: false,
+  loadAttempts: 0,      // settings-load retry counter (DB may not be ready at boot)
 };
 
 function l1Probe(url) {
@@ -72,9 +73,19 @@ async function l1LoadSettings() {
       L1.timer = null;
     }
   } catch (e) {
-    // Expected in published CLI standalone (src/ not on disk) — L1 stays off.
-    if (process.env.DEBUG_L1_PEER_FORWARD) {
-      console.error("[L1] settings load failed:", e && e.message ? e.message : e);
+    // DB adapter may not be ready at boot (Next app initializes it lazily).
+    // Retry with backoff instead of silently staying off — L1 must activate
+    // once the app is up. Give up after ~30s (published CLI standalone has no
+    // src/ on disk, so this is expected there and L1 stays off).
+    const delay = Math.min(1000 * 2 ** (L1.loadAttempts || 0), 5000);
+    L1.loadAttempts = (L1.loadAttempts || 0) + 1;
+    if (L1.loadAttempts <= 10) {
+      if (process.env.DEBUG_L1_PEER_FORWARD) {
+        console.error(`[L1] settings load failed (attempt ${L1.loadAttempts}, retry in ${delay}ms):`, e && e.message ? e.message : e);
+      }
+      setTimeout(l1LoadSettings, delay);
+    } else if (process.env.DEBUG_L1_PEER_FORWARD) {
+      console.error("[L1] settings load gave up after 10 attempts:", e && e.message ? e.message : e);
     }
   }
 }

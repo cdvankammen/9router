@@ -963,3 +963,31 @@ use mini2 and linux box."
 - L1 sandbox (/tmp/9r-l1-final) died with /tmp cleanup — L1 already verified
   via mini2 records; production apps unaffected
 - curl backslash-mangling recurring — use quoted URLs
+
+---
+
+## UPDATE 2026-08-11 (late — failover gap fixes + cleanup)
+
+### What was found
+- **"4 instances"** = app (:20130) + proxy (:20142) + tray + L1 test sandbox
+  (/tmp/9r-l1-final, already gone). Plus a stale hermes npm install (v0.4.71)
+  referenced by a disabled `com.9router.autostart` agent.
+- **Failover was broken in production:** (1) mini2's plist had a custom
+  `API_KEY_SECRET` → the shared API key's CRC failed on mini2 → a failover
+  to mini2 would 401 the harness; (2) L1 in-app forwarding never activated
+  because `l1LoadSettings` ran before the DB was ready and the error was
+  swallowed; (3) local `peerNodes` was `[]` (one-way only).
+
+### What was fixed
+- mini2 plist: removed custom secret/salt → both nodes use defaults; synced
+  the `vscode` key into mini2's `apiKeys` table.
+- `custom-server.js`: L1 settings load now retries with backoff (1s→5s, 10
+  attempts) instead of silently staying off.
+- Local `peerNodes` set to `["http://100.96.109.61:20128"]` → mutual L1.
+- Cleanup: removed stale hermes install + disabled autostart agent.
+
+### Verified (real-world, both directions)
+- Kill local app → local proxy serves from mini2 (`FAILOVER-WORKS`)
+- Kill mini2 app → mini2 proxy serves from local (`MINI2-PROXY-FAILED-OVER`)
+- launchd respawns both apps (<12s); final matrix 200/200/200/200
+- Failover unit tests 6/6; mini2 has latest code (npm app 01:32 ≥ local 01:29)

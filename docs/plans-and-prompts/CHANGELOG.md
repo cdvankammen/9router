@@ -849,3 +849,46 @@ model inference. Model serving runs on **mini2** (macOS, Ollama) and ideally a
 - `plans/2026-08-10-mini2-install-and-test-plan.md` → completed
 - workspace memory: `9router-install-semantics.md` (what "install 9router
   on a computer" means)
+
+---
+
+## UPDATE 2026-08-11 (late — failover gap fixes + cleanup)
+
+### fix(failover): L1 settings-load retry — L1 now activates in production
+- **Root cause:** `l1LoadSettings()` in `custom-server.js` ran once at
+  `listening`, before the Next app initialized the SQLite adapter →
+  `[DB] No SQLite driver available` → catch swallowed it silently → L1
+  stayed OFF forever (peerNodes never loaded).
+- **Fix:** retry with exponential backoff (1s→5s, max 10 attempts ≈ 30s)
+  until the DB is ready; debug-logged under `DEBUG_L1_PEER_FORWARD`.
+- Verified: new boot has no L1 error; settings load path reads
+  `peerNodes` correctly from the bundle; failover unit tests 6/6.
+
+### fix(failover): API key parity between nodes (the real failover blocker)
+- **Root cause:** mini2's launchd plist set `API_KEY_SECRET=mini2-test-secret`
+  + `MACHINE_ID_SALT=mini2-salt`; this Mac runs the defaults. API keys embed
+  a CRC computed with `API_KEY_SECRET`, so the same key string validated on
+  this Mac but was rejected on mini2 (`401 Invalid API key`) — a failover
+  to mini2 would have rejected the harness's key.
+- **Fix:** removed the custom secret/salt from mini2's plist → both nodes
+  use the default `endpoint-proxy-api-key-secret`; also synced the local
+  `vscode` key (`sk-c1e0216ea80d385a-ztagjz-adb74521`) into mini2's
+  `apiKeys` table (mini2 had a different keyId for the same machineId).
+- Verified: direct mini2 chat 200, via proxy 200, both directions.
+
+### feat(failover): local `peerNodes` configured → mutual L1
+- mini2 already had `peerNodes=["http://100.77.55.46:20130"]`; this Mac had
+  `[]`. Set local to `["http://100.96.109.61:20128"]` → L1 in-app peer
+  forwarding now mutual (degraded-local → peer).
+
+### chore(cleanup): single app instance in the application folder
+- Removed stale `~/.hermes/node/lib/node_modules/9router` (v0.4.71, unused)
+  and disabled `com.9router.autostart` launchd agent (pointed at it, not
+  running). Now: one app (`cli/app` → :20130), one proxy (:20142), tray.
+- The earlier "4 instances" were: app + proxy + tray + an L1 test sandbox
+  in `/tmp/9r-l1-final` (already gone).
+
+### verified (real-world failover, both directions)
+- Kill local app → local proxy serves from mini2 (`FAILOVER-WORKS`)
+- Kill mini2 app → mini2 proxy serves from local (`MINI2-PROXY-FAILED-OVER`)
+- launchd respawns both apps (<12s); final matrix 200/200/200/200

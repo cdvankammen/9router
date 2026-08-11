@@ -457,3 +457,17 @@ Open questions for user (block 83/84/85): auto-disable behavior; pricing re-fetc
 
 ### Still open (documented, deferred)
 - mini (3rd node) unreachable; 4.3/4.4 (user-owned); D8 fallback-rule view pick
+
+---
+
+## UPDATE 2026-08-11 (late — failover gap fixes + cleanup)
+
+| # | Task | Status | Evidence |
+|---|------|--------|----------|
+| 75 | Diagnose "why 4 9router instances" | ✅ | app (:20130) + proxy (:20142) + tray + L1 sandbox (/tmp/9r-l1-final, already gone) |
+| 76 | Cleanup: single app in application folder | ✅ | removed stale hermes install (v0.4.71) + disabled com.9router.autostart; one app + proxy + tray remain |
+| 77 | Fix API key parity (failover blocker) | ✅ | mini2 plist had custom API_KEY_SECRET → CRC mismatch → 401 on failover; removed custom secret + synced key; direct+proxy 200 |
+| 78 | Fix L1 settings-load boot failure | ✅ | l1LoadSettings ran before DB ready → silent off; added retry w/ backoff; new boot clean; tests 6/6 |
+| 79 | Configure local peerNodes (mutual L1) | ✅ | local `[]` → `["http://100.96.109.61:20128"]`; mini2 already had local |
+| 80 | Real-world failover both directions | ✅ | kill local → proxy serves mini2; kill mini2 → proxy serves local; respawn <12s; matrix 200/200/200/200 |
+| 81 | Verify mini2 has latest code | ✅ | mini2 npm app (01:32) ≥ local cli/app (01:29); both have L1; proxies identical MD5 |
