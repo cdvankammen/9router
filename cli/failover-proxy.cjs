@@ -23,10 +23,14 @@
  */
 "use strict";
 const http = require("http");
+const net = require("net");
 
 function arg(name, def) {
   const i = process.argv.indexOf("--" + name);
   return i > 0 && process.argv[i + 1] ? process.argv[i + 1] : def;
+}
+function hasFlag(name) {
+  return process.argv.includes("--" + name);
 }
 
 const LISTEN_PORT = Number(arg("listen", 20140));
@@ -40,9 +44,42 @@ const PROBE_TIMEOUT_MS = 3000;
 const UPSTREAM_TIMEOUT_MS = 120000;
 const HEALTH_PATH = "/api/health";
 
+// IPv6 toggle (SECURITY): default OFF — IPv4 + hostname only (reduces attack
+// surface on untrusted networks: no link-local exposure, no RA/DNS-leak vectors,
+// and the app binds IPv4-only 0.0.0.0 anyway). With --ipv6, IPv6 peer literals
+// are allowed AND the listener binds dual-stack :: so IPv6 clients can connect.
+// Research (docs/plans-and-prompts): Node http.request already handles IPv6 URLs
+// ([::1] bracket form) + hostnames (mDNS returns A+AAAA, autoSelectFamily=true
+// in Node 20+ handles dual-stack). IPv4+hostname is sufficient for the 2-Mac
+// LAN/Tailscale setup; IPv6 is opt-in for future IPv6-only/NAT64 networks and
+// Tailscale fd7a:115c:a1e0::/48 as an extra peer path.
+const IPV6_ENABLED = hasFlag("ipv6");
+
+// Parse a peer URL into { url, isIpv6Literal } — reject malformed URLs and
+// IPv6 literals when the toggle is off (security).
+function parsePeer(raw) {
+  const url = String(raw).replace(/\/+$/, "");
+  try {
+    const u = new URL(url);
+    if (!/^https?:$/.test(u.protocol)) return null;
+    const host = u.hostname; // WHATWG: IPv6 literals come back as "[::1]" in hostname? No — hostname is "::1" (no brackets) for IPv6.
+    const isIpv6 = host.includes(":") && !host.startsWith("[");
+    if (isIpv6 && !IPV6_ENABLED) return null; // IPv6 peer blocked when toggle off
+    return { url, isIpv6Literal: isIpv6 };
+  } catch {
+    return null;
+  }
+}
+
+const peers = PEERS.map(parsePeer).filter(Boolean);
+if (peers.length === 0 && PEERS.length > 0) {
+  console.warn(`[9r-failover] all --peer values invalid or IPv6 without --ipv6 — using defaults`);
+}
+const PEERS_FINAL = peers.length > 0 ? peers : [{ url: "http://mini2-9.local:20128", isIpv6Literal: false }];
+
 // Optimistic: local is probably up at boot (avoids a startup flap to peer).
 // peers: [{ url, up }] — the first UP peer wins.
-const state = { localUp: true, peers: PEERS.map((url) => ({ url: String(url).replace(/\/+$/, ""), up: false })) };
+const state = { localUp: true, peers: PEERS_FINAL.map((p) => ({ ...p, up: false })) };
 
 function probe(url) {
   return new Promise((resolve) => {
@@ -137,6 +174,10 @@ const server = http.createServer((req, res) => {
   req.pipe(preq);
 });
 
-server.listen(LISTEN_PORT, "0.0.0.0", () => {
-  console.log(`[9r-failover] :${LISTEN_PORT} → local=${LOCAL} peers=[${state.peers.map((p) => p.url).join(", ")}]`);
+// Bind IPv4-only by default (0.0.0.0, security default — not reachable over
+// IPv6, reduces attack surface). With --ipv6, bind :: (dual-stack) so IPv6
+// clients can reach the proxy too.
+const BIND_HOST = IPV6_ENABLED ? "::" : "0.0.0.0";
+server.listen(LISTEN_PORT, BIND_HOST, () => {
+  console.log(`[9r-failover] :${LISTEN_PORT} (${IPV6_ENABLED ? "ipv6 dual-stack" : "ipv4-only"}) → local=${LOCAL} peers=[${state.peers.map((p) => p.url).join(", ")}]`);
 });

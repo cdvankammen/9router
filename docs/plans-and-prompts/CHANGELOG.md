@@ -928,3 +928,23 @@ model inference. Model serving runs on **mini2** (macOS, Ollama) and ideally a
   - mini2: peers = `100.77.55.46:20130, 10.2.0.22:20130, mini-3.local:20130`
 - Verified: failover over LAN (10.2.0.11:20142 → local) and mDNS both work;
   forward + reverse failover with 3 peers each; final health 200/200/200/200.
+
+---
+
+## UPDATE 2026-08-11 (IPv6 toggle + hostname handling)
+
+### feat(failover): --ipv6 security toggle + hostname/IPv4/IPv6 peer handling
+- `cli/failover-proxy.cjs`:
+  - `--ipv6` flag, **default OFF** (security): binds IPv4-only `0.0.0.0`,
+    rejects IPv6 peer literals. ON: binds dual-stack `::`, allows IPv6 peers.
+  - Peer URLs validated via `new URL()` (hostnames, IPv4, IPv6 `[::1]` bracket
+    form all handled); malformed/IPv6-without-toggle peers filtered out.
+  - Research (docs/plans-and-prompts): Node http.request already handles IPv6
+    URLs + mDNS hostnames (A+AAAA, autoSelectFamily). IPv4+hostname sufficient
+    for the 2-Mac LAN/Tailscale setup; IPv6 opt-in for IPv6-only/NAT64 networks
+    and Tailscale fd7a::/48 as an extra path. IPv6 disabled by default because
+    the app binds 0.0.0.0 anyway (not IPv6-reachable) and IPv6 link-local/RA/
+    DNS-leak vectors are avoided on untrusted networks.
+- Verified: 6/6 unit tests; live --ipv6 proxy binds IPv6 dual-stack and serves;
+  hostname peer (mini2-9.local) resolves + forwards; final failover suite 7/7
+  (normal, forward, reverse-via-LAN, health 200/200/200/200).
