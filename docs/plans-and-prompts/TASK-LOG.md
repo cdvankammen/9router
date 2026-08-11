@@ -421,3 +421,16 @@ Open questions for user (block 83/84/85): auto-disable behavior; pricing re-fetc
 ### Still open (documented, deferred)
 - **mini (3rd node) unreachable** — needs user action (off/off-network)
 - 4.3/4.4 (user-owned); D8 fallback-rule view pick
+
+### Newly Completed (2026-08-10 model-serving policy — remote-only inference)
+
+| # | Task | Status | Evidence |
+|---|------|--------|----------|
+| 125 | Model-serving policy: control-plane Mac never runs inference | ✅ | `fdf82774` — `OLLAMA_LOCAL_DEFAULT_HOST` env override in `config/providers.js` (per-credential baseUrl wins); this Mac's launchd app plist sets it to `http://100.96.109.61:11434` (mini2 Tailscale IP, launchd-safe) |
+| 126 | Bare `qwen2.5*`/`llama3*` names infer provider `ollama-local` | ✅ | `fdf82774` — `MODEL_PREFIX_PROVIDERS` in `services/model.js` (previously fell back to openai) |
+| 127 | Keyless virtual `ollama-local` provider | ✅ | `fdf82774` — registry category `free` + `noAuth: true` → auth.js `FREE_PROVIDERS` injection (mirrors `9router` provider pattern) |
+| 128 | Streaming via OpenAI-compatible endpoint | ✅ | `fdf82774` — executor: stream → `{host}/v1/chat/completions` (real SSE) + `responseFormat:"openai"`; non-stream → native `/api/chat` (NDJSON blocked by SSE pipeline) |
+| 129 | Ollama 0.32.7 installed on mini2 | ✅ | standalone binary `~/.local/bin/ollama` — extract WHOLE `ollama-darwin.tgz` (flat layout incl. llama-server + libggml dylibs; missing runtime → "llama-server binary not found"); launchd `com.9router.ollama` (`OLLAMA_HOST=0.0.0.0:11434`, KeepAlive); `qwen2.5:3b` pulled (1.93 GB, Q4_K_M) |
+| 130 | Same dashboard API key on both nodes | ✅ | one Bearer key works on mini-2 + mini2 (DB synced) — authenticates the whole failover chain |
+| 131 | E2E: ollama path verified end-to-end | ✅ | non-stream + stream via this Mac app (:20130), via failover proxy (:20142), on mini2's app (:20128); ultimate failover (local app killed → proxy → mini2 app → mini2 ollama) OK; targeted tests 18/18 |
+| 132 | Linux box join | ⏳ deferred | SSH key access denied on `exo` (100.80.99.11) and `hass` (100.127.34.40); exact commands documented in research/9router/27-model-serving-policy.md §5 + runbook |

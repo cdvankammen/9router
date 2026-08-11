@@ -836,3 +836,62 @@ on this computer — use mini2/linux.
 ### Remaining open (needs user)
 - mini 3rd node (off/off-network, SSH auth blocked)
 - 4.3/4.4 (user-owned), D8 fallback-rule view pick
+
+---
+
+## UPDATE 2026-08-10 (model-serving policy — remote-only inference)
+
+User requirement (evolved from "don't load models on this computer"): **this
+Mac (mini-2) is the control plane and must NEVER run local model inference.**
+Model serving happens on **mini2** (macOS, now running Ollama) and ideally a
+**Linux box** — both over Tailscale.
+
+### Implemented — commit `fdf82774`
+
+- **Env override** — `open-sse/config/providers.js`: `OLLAMA_LOCAL_DEFAULT_HOST`
+  (default `http://localhost:11434`); `resolveOllamaLocalHost()` precedence =
+  per-credential `providerSpecificData.baseUrl` → env → default. This Mac's
+  launchd app plist sets it to mini2's Tailscale IP
+  `http://100.96.109.61:11434` (launchd-safe; LAN IPs TCC-blocked).
+- **Model inference** — `open-sse/services/model.js`: bare `qwen2.5*` /
+  `llama3*` names → provider `ollama-local` (was: fell back to openai).
+- **Keyless provider** — registry `ollama-local.js`: `category: "free"` +
+  `noAuth: true` → auth.js `FREE_PROVIDERS` virtual connection (mirrors the
+  `9router` provider pattern); no credential needed.
+- **Streaming** — executor: stream → `{host}/v1/chat/completions`
+  (OpenAI-compatible, real SSE) + `responseFormat: "openai"`; non-stream →
+  native `{host}/api/chat`. Rationale: native `/api/chat` streaming emits
+  NDJSON which the SSE pipeline blocks.
+
+### Ollama on mini2 (verified live)
+
+- Version 0.32.7, binary `~/.local/bin/ollama` — **install gotcha**: extract
+  the WHOLE `ollama-darwin.tgz` (flat layout: `ollama` + `llama-server` +
+  `libggml*.dylib` beside each other); missing runtime → "llama-server binary
+  not found".
+- launchd agent `com.9router.ollama` (`OLLAMA_HOST=0.0.0.0:11434`,
+  `OLLAMA_KEEP_ALIVE=30m`, KeepAlive; logs `/tmp/9r-ollama.log`).
+- Model pulled: `qwen2.5:3b` (1.93 GB, Q4_K_M, 3.1B params, ctx 32768);
+  `curl http://100.96.109.61:11434/api/tags` returns it from this Mac.
+
+### Auth
+
+Same dashboard API key synced to mini2's DB → one Bearer key authenticates
+both nodes and the whole failover chain.
+
+### E2E verification (2026-08-10)
+
+- Non-stream + stream via this Mac app (:20130), via failover proxy (:20142),
+  and on mini2's app (:20128) — bare model `qwen2.5:3b` routes to mini2's
+  Ollama.
+- **Ultimate failover**: local app killed → proxy → mini2 app → mini2 Ollama
+  → response OK.
+- Targeted tests 18/18; docs updated (research/9router/27-model-serving-policy.md,
+  deployment-runbook, TASK-LOG, CHANGELOG).
+
+### Deferred: Linux box join (needs user)
+
+SSH key access denied on `exo` (100.80.99.11) and `hass` (100.127.34.40). Once
+SSH works: install ollama-linux tar, `ollama serve` + `ollama pull qwen2.5:3b`
+(systemd unit preferred), set `OLLAMA_LOCAL_DEFAULT_HOST` (or a credential's
+baseUrl) to its Tailscale IP. Exact commands: research doc §5.

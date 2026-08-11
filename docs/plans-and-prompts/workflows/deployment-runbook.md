@@ -7,10 +7,10 @@
 
 ## Machine map
 
-| Machine | Hostname | Role | 9Router |
-|---------|----------|------|---------|
-| **mini-2** (this Mac) | `mini-2.local` | dev + primary app | `cli/app` bundle → port **20130**, data `~/.9router` |
-| **mini2** | `mini2-9.local` (SSH host `mini2`) | backup node | `cli/app` bundle → port **20128**, data `~/.9router` |
+| Machine | Hostname | Role | 9Router | Ollama |
+|---------|----------|------|---------|--------|
+| **mini-2** (this Mac) | `mini-2.local` | dev + primary app — **control plane, NEVER runs inference** | `cli/app` bundle → port **20130**, data `~/.9router` | ❌ none |
+| **mini2** | `mini2-9.local` (SSH host `mini2`) | backup node + **model server** | `cli/app` bundle → port **20128**, data `~/.9router` | ✅ **:11434** — `qwen2.5:3b` via launchd `com.9router.ollama` |
 
 ## Build pipeline (run from this Mac, repo root)
 
@@ -150,3 +150,75 @@ Ops:
   → within 2s `curl localhost:20142/api/settings/require-login` must flip to the
   peer's identity (mini2=`requireLogin:true`, mini-2=`false`).
 - Automated test: `cd tests && npx vitest run unit/failover-proxy.test.js`
+
+---
+
+## Model serving (Ollama) — 2026-08-10 (`fdf82774`)
+
+**Policy: this Mac (mini-2) is the control plane and NEVER runs local model
+inference. Models are served on mini2 (Ollama) and ideally a Linux box,
+reachable over Tailscale (100.x).**
+
+Node table (updated):
+
+| Node | Ollama | Model |
+|------|--------|-------|
+| **mini-2** (this Mac) | ❌ none — control plane | — |
+| **mini2** | ✅ `http://100.96.109.61:11434` (launchd `com.9router.ollama`, `OLLAMA_HOST=0.0.0.0:11434`) | `qwen2.5:3b` (pulled) |
+
+### How the app finds Ollama
+
+- `open-sse/config/providers.js`: `resolveOllamaLocalHost()` precedence =
+  per-credential `providerSpecificData.baseUrl` → env
+  `OLLAMA_LOCAL_DEFAULT_HOST` → default `http://localhost:11434`.
+- This Mac's launchd app plist (`~/Library/LaunchAgents/com.9router.app.plist`)
+  sets `OLLAMA_LOCAL_DEFAULT_HOST = http://100.96.109.61:11434` (mini2's
+  Tailscale IP — launchd-safe; LAN IPs are TCC-blocked). After editing the
+  plist: `launchctl kickstart -k gui/$(id -u)/com.9router.app`.
+- Bare model names `qwen2.5*` / `llama3*` → provider `ollama-local` (keyless,
+  `noAuth`). Streaming uses OpenAI-compatible `/v1/chat/completions` (real
+  SSE); non-stream uses native `/api/chat`.
+
+### Verification commands
+
+```bash
+# Ollama reachable + model list (from this Mac, via Tailscale)
+curl -s http://100.96.109.61:11434/api/tags
+
+# Chat via 9Router (bare model name → ollama-local), non-stream
+curl -s http://127.0.0.1:20130/v1/chat/completions \
+  -H "Authorization: Bearer <same-key-as-mini2>" \
+  -d '{"model":"qwen2.5:3b","messages":[{"role":"user","content":"hi"}],"stream":false}'
+
+# Same via the failover proxy
+curl -s http://127.0.0.1:20142/v1/chat/completions \
+  -H "Authorization: Bearer <key>" -H 'Content-Type: application/json' \
+  -d '{"model":"qwen2.5:3b","messages":[{"role":"user","content":"hi"}],"stream":true}'
+
+# On mini2: ollama service state
+ssh mini2 '~/.local/bin/ollama --version && launchctl print gui/$(id -u)/com.9router.ollama | head -5'
+# Logs: /tmp/9r-ollama.log (+ .err.log) on mini2
+```
+
+Note: the same dashboard API key is synced to both nodes' DBs, so one Bearer
+key authenticates the whole chain (local app → proxy → peer app → peer Ollama).
+
+### Joining a Linux box (deferred — SSH access required)
+
+SSH key access is currently denied on `exo` (`100.80.99.11`) and `hass`
+(`100.127.34.40`). Once SSH works (user action), on the Linux box:
+
+```bash
+curl -fsSL https://ollama.com/download/ollama-linux-arm64.tgz -o ollama-linux.tgz
+sudo tar -C /usr/local -xzf ollama-linux.tgz     # flat layout: ollama + llama-server + libggml*.so
+nohup env OLLAMA_HOST=0.0.0.0:11434 ollama serve > /tmp/ollama.log 2>&1 &
+ollama pull qwen2.5:3b
+curl -s http://localhost:11434/api/tags
+```
+
+Preferred: systemd unit (`ExecStart=/usr/local/bin/ollama serve`,
+`Environment=OLLAMA_HOST=0.0.0.0:11434`, `Restart=always`) then
+`systemctl enable --now ollama`. Point 9Router at it via
+`OLLAMA_LOCAL_DEFAULT_HOST=http://<linux-tailscale-ip>:11434` in this Mac's
+app plist (or a credential's `baseUrl`). Full recipe +
+NDJSON-vs-SSE rationale: `research/9router/27-model-serving-policy.md`.

@@ -779,3 +779,42 @@ Full suite **1794 pass / 86 fail** (within 88-baseline budget). Feature tests: c
 - Vision QA used remote `dialagram/qwen-3.5-omni-plus` via gateway; this Mac
   runs no local LLM inference (only Hermes MCP watchdogs); mini2 reachable
   (100.96.109.61) serving 20128/20142
+
+---
+
+## UPDATE 2026-08-10 (model-serving policy — remote-only inference)
+
+### feat(models): remote-only model serving — `fdf82774`
+
+Policy: this Mac (mini-2) is the **control plane** and must NEVER run local
+model inference. Model serving runs on **mini2** (macOS, Ollama) and ideally a
+**Linux box**, both over Tailscale.
+
+- `open-sse/config/providers.js` — `OLLAMA_LOCAL_DEFAULT_HOST` env override
+  (default `http://localhost:11434`); `resolveOllamaLocalHost()` precedence:
+  per-credential `providerSpecificData.baseUrl` → env → default. This Mac's
+  launchd app plist sets it to mini2's Tailscale IP
+  `http://100.96.109.61:11434` (launchd-safe; LAN IPs are TCC-blocked).
+- `open-sse/services/model.js` — bare names `qwen2.5*` / `llama3*` now infer
+  provider `ollama-local` via `MODEL_PREFIX_PROVIDERS` (previously fell back
+  to openai).
+- `open-sse/providers/registry/ollama-local.js` — category `apikey` → `free`,
+  `noAuth: true` → keyless virtual connection injected by auth.js via
+  `FREE_PROVIDERS` (mirrors the `9router` provider pattern).
+- `open-sse/executors/ollama-local.js` — streaming uses Ollama's
+  OpenAI-compatible `POST {host}/v1/chat/completions` (real SSE) with
+  `responseFormat: "openai"`; non-streaming keeps native
+  `POST {host}/api/chat`. (Native `/api/chat` streaming returns NDJSON which
+  the SSE pipeline blocks — see research doc §2.5.)
+- Ollama 0.32.7 on mini2: standalone binary + runtime in `~/.local/bin`
+  (extract the WHOLE `ollama-darwin.tgz` — flat layout with llama-server +
+  libggml dylibs beside the binary; missing runtime → "llama-server binary
+  not found"); launchd agent `com.9router.ollama` (`OLLAMA_HOST=0.0.0.0:11434`,
+  `OLLAMA_KEEP_ALIVE=30m`, KeepAlive); model pulled `qwen2.5:3b`.
+- Same dashboard API key synced to mini2's DB — one Bearer key works on both
+  nodes (authenticates the failover chain).
+- E2E verified: non-stream + stream via this Mac app, via failover proxy
+  (:20142), and on mini2's app; ultimate failover (local app killed → proxy →
+  mini2 app → mini2 Ollama → OK); targeted tests 18/18.
+- Docs: `research/9router/27-model-serving-policy.md` (policy + install recipe
+  + linux join), deployment-runbook "Model serving (Ollama)" section.
