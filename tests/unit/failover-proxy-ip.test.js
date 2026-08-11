@@ -182,3 +182,48 @@ describe("failover-proxy (L2) — IP environments (IPv4/IPv6/hostname)", () => {
     p.kill();
   });
 });
+
+describe("failover-proxy — dynamic auto-discovery (no hardcoded IPs)", () => {
+  let discProxy, discLocal, discPeer;
+
+  beforeAll(async () => {
+    discLocal = await listen(20280, "127.0.0.1", "DISC-LOCAL");
+    discPeer = await listen(20282, "127.0.0.1", "DISC-PEER");
+    // Bare hostname "localhost" → auto-discovered. Local and peer are DIFFERENT
+    // ports so we can kill local without killing the discovered peer.
+    discProxy = spawn(process.execPath, [PROXY,
+      "--listen", "20281",
+      "--local", "http://localhost:20280",
+      "--peer", "localhost", // bare hostname → discovery resolves it
+      "--peer-port", "20282", // peer runs on a different port than local
+    ], { stdio: "ignore" });
+    await waitFor(20281, 30, 250);
+  }, 20000);
+
+  afterAll(() => {
+    if (discProxy) discProxy.kill();
+    if (discLocal) discLocal.close();
+    if (discPeer) discPeer.close();
+  });
+
+  it("D1: bare hostname peer is auto-discovered and routes to local", async () => {
+    // localhost resolves to 127.0.0.1 — discovery must include the LOCAL url
+    // (which is preferred when up) and the peer.
+    const r = await request(20281, { timeoutMs: 10000 });
+    expect(r.status).toBe(200);
+    expect(r.body).toContain("ok-DISC-LOCAL");
+  });
+
+  it("D2: auto-discovery fails over to discovered peer when local dies", async () => {
+    // Kill local (port 20280) — proxy must fail over to the DISCOVERED peer
+    // (port 20282, same hostname "localhost").
+    await new Promise((r) => discLocal.close(r));
+    await wait(4000);
+    const r = await request(20281, { timeoutMs: 10000 });
+    expect(r.status).toBe(200);
+    expect(r.body).toContain("ok-DISC-PEER");
+    // restore
+    discLocal = await listen(20280, "127.0.0.1", "DISC-LOCAL");
+    await wait(4000);
+  }, 20000);
+});

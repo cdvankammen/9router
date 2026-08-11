@@ -967,3 +967,22 @@ model inference. Model serving runs on **mini2** (macOS, Ollama) and ideally a
   it; local recovers → fails back. Client never changes endpoints.
 - The multi-peer proxy IS the single-URL answer: each node's :20142 has
   Tailscale+LAN+mDNS peers, so one URL on either machine handles node failure.
+
+---
+
+## UPDATE 2026-08-11 (dynamic peer auto-discovery — no hardcoded IPs)
+
+### feat(failover): proxy auto-discovers all network addresses (no hardcoding)
+- `cli/failover-proxy.cjs` --peer now takes a bare HOSTNAME (e.g. mini2-9.local)
+  — resolves it to ALL addresses (dns.lookup all:true) + enumerates local
+  interfaces + the hostname itself, and re-discovers every 15s (adapts to
+  WiFi→LAN→Tailscale changes at runtime). No IPs in config.
+- `--peer-port` added (peer can run on a different port than local:
+  local=20130, mini2=20128).
+- Explicit URLs (http://...) still supported (legacy exact control).
+- launchd both nodes now use hostname-only peers: local → mini2-9.local:20128;
+  mini2 → mini-3.local:20130.
+- Tests: added D1/D2 (bare-hostname discovery + failover to discovered peer).
+  15/15 failover tests pass (6 core + 7 IP-env + 2 discovery).
+- Verified live: both-up → local; kill local → SAME proxy auto-routes to mini2
+  via discovered peer (200); local restores.

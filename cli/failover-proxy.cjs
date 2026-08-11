@@ -23,7 +23,8 @@
  */
 "use strict";
 const http = require("http");
-const net = require("net");
+const dns = require("dns");
+const os = require("os");
 
 function arg(name, def) {
   const i = process.argv.indexOf("--" + name);
@@ -35,25 +36,85 @@ function hasFlag(name) {
 
 const LISTEN_PORT = Number(arg("listen", 20140));
 const LOCAL = arg("local", "http://localhost:20130");
-// Multi-peer: accept comma-separated --peer (e.g. "http://ts:20128,http://lan:20128,http://mdns:20128")
-// so failover works on ANY network path (Tailscale, LAN, mDNS) — tries each in order.
-const PEERS = (arg("peer", "http://mini2-9.local:20128") || "")
+// Peer can be:
+//   - a bare HOSTNAME (e.g. "mini2-9.local") → auto-discover ALL its addresses
+//     (LAN, WiFi, Tailscale, mDNS, IPv6) dynamically — no hardcoded IPs.
+//   - an explicit URL (e.g. "http://10.0.0.5:20128") → used as-is (legacy).
+// Comma-separated allowed. Fallback hostname: "mini2-9.local" (mDNS).
+const PEER_HOSTS = (arg("peer", "mini2-9.local") || "")
   .split(",").map((s) => s.trim()).filter(Boolean);
 const PROBE_MS = 2000;
 const PROBE_TIMEOUT_MS = 3000;
 const UPSTREAM_TIMEOUT_MS = 120000;
 const HEALTH_PATH = "/api/health";
+// Peer port for auto-discovered hostnames. Defaults to the LOCAL port (same-port
+// deployments), but can differ (e.g. local=20130, peer mini2=20128) via --peer-port.
+const PEER_PORT = Number(arg("peer-port", new URL(LOCAL).port)) || new URL(LOCAL).port;
 
 // IPv6 toggle (SECURITY): default OFF — IPv4 + hostname only (reduces attack
 // surface on untrusted networks: no link-local exposure, no RA/DNS-leak vectors,
-// and the app binds IPv4-only 0.0.0.0 anyway). With --ipv6, IPv6 peer literals
-// are allowed AND the listener binds dual-stack :: so IPv6 clients can connect.
-// Research (docs/plans-and-prompts): Node http.request already handles IPv6 URLs
-// ([::1] bracket form) + hostnames (mDNS returns A+AAAA, autoSelectFamily=true
-// in Node 20+ handles dual-stack). IPv4+hostname is sufficient for the 2-Mac
-// LAN/Tailscale setup; IPv6 is opt-in for future IPv6-only/NAT64 networks and
-// Tailscale fd7a:115c:a1e0::/48 as an extra peer path.
+// and the app binds IPv4-only 0.0.0.0 anyway). With --ipv6, IPv6 addresses from
+// DNS/local interfaces are also probed AND the listener binds dual-stack ::.
 const IPV6_ENABLED = hasFlag("ipv6");
+
+// ── Dynamic peer discovery ────────────────────────────────────────────────
+// No hardcoded IPs: resolve each peer hostname to ALL its addresses (dns.lookup
+// with all:true → 127.0.0.1-style v4 + fe80/fdxx v6) AND enumerate local
+// interfaces to catch the same-machine case. Refresh periodically so a network
+// change (WiFi→LAN, Tailscale up/down) is picked up without a restart.
+const discovered = new Map(); // hostname → [{url, family}]
+
+function listLocalAddresses() {
+  const addrs = new Set();
+  for (const ifaces of Object.values(os.networkInterfaces())) {
+    for (const i of ifaces || []) {
+      if (!i.internal && (IPV6_ENABLED || i.family === "IPv4")) addrs.add(i.address);
+    }
+  }
+  return [...addrs];
+}
+
+function resolveHost(host) {
+  return new Promise((resolve) => {
+    dns.lookup(host, { all: true, verbatim: true }, (err, addrs) => {
+      if (err || !addrs || !addrs.length) return resolve([]);
+      resolve(addrs
+        .map((a) => a.address)
+        .filter((a) => IPV6_ENABLED || !a.includes(":"))); // drop v6 unless --ipv6
+    });
+  });
+}
+
+function buildPeerUrls(host, port) {
+  return [host, ...listLocalAddresses()].map((h) => {
+    // IPv6 literal → bracket form; hostname stays as-is.
+    const fmt = h.includes(":") && !h.startsWith("[") ? `[${h}]` : h;
+    return `http://${fmt}:${port}`;
+  });
+}
+
+async function refreshPeers() {
+  const urls = [];
+  for (const entry of PEER_HOSTS) {
+    // Explicit URL (http://...) → use as-is (legacy, exact control).
+    if (/^https?:\/\//i.test(entry)) {
+      urls.push(entry.replace(/\/+$/, ""));
+      continue;
+    }
+    // Bare hostname → hostname itself + all its resolved addresses + local
+    // interfaces (adapts to whatever network is present). Uses PEER_PORT.
+    const host = entry.replace(/\/+$/, "");
+    const resolved = await resolveHost(host);
+    urls.push(...buildPeerUrls(host, PEER_PORT));
+    for (const a of resolved) urls.push(`http://${a.includes(":") && !a.startsWith("[") ? `[${a}]` : a}:${PEER_PORT}`);
+  }
+  // Dedupe, keep order (hostname first, then discovered addresses).
+  const seen = new Set();
+  const unique = urls.filter((u) => { if (seen.has(u)) return false; seen.add(u); return true; });
+  // Replace peer list if it changed (preserves up-state for unchanged URLs).
+  const existing = new Map(state.peers.map((p) => [p.url, p.up]));
+  state.peers = unique.map((url) => ({ url, up: existing.has(url) ? existing.get(url) : false }));
+}
 
 // Parse a peer URL into { url, isIpv6Literal } — reject malformed URLs and
 // IPv6 literals when the toggle is off (security).
@@ -62,8 +123,8 @@ function parsePeer(raw) {
   try {
     const u = new URL(url);
     if (!/^https?:$/.test(u.protocol)) return null;
-    const host = u.hostname; // WHATWG: IPv6 literals come back as "[::1]" in hostname? No — hostname is "::1" (no brackets) for IPv6.
-    const isIpv6 = host.includes(":") && !host.startsWith("[");
+    const host = u.hostname;
+    const isIpv6 = host.includes(":");
     if (isIpv6 && !IPV6_ENABLED) return null; // IPv6 peer blocked when toggle off
     return { url, isIpv6Literal: isIpv6 };
   } catch {
@@ -71,15 +132,9 @@ function parsePeer(raw) {
   }
 }
 
-const peers = PEERS.map(parsePeer).filter(Boolean);
-if (peers.length === 0 && PEERS.length > 0) {
-  console.warn(`[9r-failover] all --peer values invalid or IPv6 without --ipv6 — using defaults`);
-}
-const PEERS_FINAL = peers.length > 0 ? peers : [{ url: "http://mini2-9.local:20128", isIpv6Literal: false }];
-
 // Optimistic: local is probably up at boot (avoids a startup flap to peer).
 // peers: [{ url, up }] — the first UP peer wins.
-const state = { localUp: true, peers: PEERS_FINAL.map((p) => ({ ...p, up: false })) };
+const state = { localUp: true, peers: [] };
 
 function probe(url) {
   return new Promise((resolve) => {
@@ -104,6 +159,10 @@ async function tick() {
 let tickSeq = 0;
 setInterval(tick, PROBE_MS);
 tick();
+// Re-discover addresses periodically (network changes: WiFi→LAN, Tailscale up).
+const DISCOVER_MS = 15000;
+setInterval(refreshPeers, DISCOVER_MS);
+refreshPeers(); // initial discovery
 
 function pickTarget() {
   if (state.localUp) return LOCAL;
