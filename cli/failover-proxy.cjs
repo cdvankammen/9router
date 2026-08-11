@@ -31,14 +31,18 @@ function arg(name, def) {
 
 const LISTEN_PORT = Number(arg("listen", 20140));
 const LOCAL = arg("local", "http://localhost:20130");
-const PEER = arg("peer", "http://mini2-9.local:20128");
+// Multi-peer: accept comma-separated --peer (e.g. "http://ts:20128,http://lan:20128,http://mdns:20128")
+// so failover works on ANY network path (Tailscale, LAN, mDNS) — tries each in order.
+const PEERS = (arg("peer", "http://mini2-9.local:20128") || "")
+  .split(",").map((s) => s.trim()).filter(Boolean);
 const PROBE_MS = 2000;
 const PROBE_TIMEOUT_MS = 3000;
 const UPSTREAM_TIMEOUT_MS = 120000;
 const HEALTH_PATH = "/api/health";
 
 // Optimistic: local is probably up at boot (avoids a startup flap to peer).
-const state = { localUp: true, peerUp: false };
+// peers: [{ url, up }] — the first UP peer wins.
+const state = { localUp: true, peers: PEERS.map((url) => ({ url: String(url).replace(/\/+$/, ""), up: false })) };
 
 function probe(url) {
   return new Promise((resolve) => {
@@ -54,10 +58,11 @@ function probe(url) {
 
 async function tick() {
   const seq = ++tickSeq; // guard against stale ticks overwriting newer state
-  const [l, p] = await Promise.all([probe(LOCAL), probe(PEER)]);
+  const localResult = await probe(LOCAL);
+  const peerResults = await Promise.all(state.peers.map((p) => probe(p.url)));
   if (seq !== tickSeq) return; // a newer tick already landed — discard stale results
-  state.localUp = l;
-  state.peerUp = p;
+  state.localUp = localResult;
+  state.peers.forEach((p, i) => { p.up = peerResults[i]; });
 }
 let tickSeq = 0;
 setInterval(tick, PROBE_MS);
@@ -65,7 +70,9 @@ tick();
 
 function pickTarget() {
   if (state.localUp) return LOCAL;
-  if (state.peerUp) return PEER;
+  // First healthy peer path (network-agnostic — tries Tailscale/LAN/mDNS in order).
+  const peer = state.peers.find((p) => p.up);
+  if (peer) return peer.url;
   return LOCAL; // both down — fail locally with the app's real error
 }
 
@@ -131,5 +138,5 @@ const server = http.createServer((req, res) => {
 });
 
 server.listen(LISTEN_PORT, "0.0.0.0", () => {
-  console.log(`[9r-failover] :${LISTEN_PORT} → local=${LOCAL} peer=${PEER}`);
+  console.log(`[9r-failover] :${LISTEN_PORT} → local=${LOCAL} peers=[${state.peers.map((p) => p.url).join(", ")}]`);
 });

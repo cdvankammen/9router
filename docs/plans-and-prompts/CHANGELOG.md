@@ -914,3 +914,17 @@ model inference. Model serving runs on **mini2** (macOS, Ollama) and ideally a
 - Verified: `cli.js --tray` + `next-server` (:20128, 200) + `tray_darwin_release`
   (icon running) + failover proxy (:20142, 200) + ollama (:11434). Same
   topology as this Mac.
+
+---
+
+## UPDATE 2026-08-11 (multi-network failover)
+
+### feat(failover): proxy now multi-peer — works on ANY network path
+- `cli/failover-proxy.cjs`: `--peer` accepts comma-separated URLs; probes each
+  every 2s, forwards to the first healthy peer (Tailscale → LAN → mDNS order).
+  No more single hardcoded peer.
+- launchd `com.9router.failover` on both nodes:
+  - local: peers = `100.96.109.61:20128, 10.2.0.11:20128, mini2-9.local:20128`
+  - mini2: peers = `100.77.55.46:20130, 10.2.0.22:20130, mini-3.local:20130`
+- Verified: failover over LAN (10.2.0.11:20142 → local) and mDNS both work;
+  forward + reverse failover with 3 peers each; final health 200/200/200/200.
