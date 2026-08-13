@@ -88,7 +88,7 @@ drift if a `messages`/`inboxIssues` table lands later.
 
 ## Related
 
-- ADR-007 (`decisions/ADR-007-messages-json-blob-vs-messages-table.md`) — the
+- ADR-007 (`../../tracking/decisions/ADR-007-messages-json-blob-vs-messages-table.md`) — the
   10k-row threshold that gates the real inbox schema
 - `open-sse/utils/errorCategorizer.js` — the category taxonomy
 - `src/app/api/analyze-error/route.js` — the per-issue analyze hook

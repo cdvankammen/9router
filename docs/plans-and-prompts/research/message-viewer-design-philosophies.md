@@ -4,7 +4,7 @@
 **Author:** GitHub Copilot agent
 **Status:** active (research complete — no code changed)
 **Tags:** research, observability, messages, design, filter-dimensions, ui
-**Sources:** live docs of Sentry, Langfuse, LangSmith, Datadog, Helicone, OpenRouter, OpenAI SDK, Grafana Loki; 9Router codebase audit (messages page, requestDetailsRepo, usageRepo, chat.js, custom-server.js); `plans/messages-page-feature-spec.md`
+**Sources:** live docs of Sentry, Langfuse, LangSmith, Datadog, Helicone, OpenRouter, OpenAI SDK, Grafana Loki; 9Router codebase audit (messages page, requestDetailsRepo, usageRepo, chat.js, custom-server.js); `../planning/messages-page-feature-spec.md`
 
 ---
 
@@ -337,7 +337,7 @@ Each view is a *rendering of the same data model* (Linear/Notion "views, not mod
 ## Appendix — quick references
 
 - **9Router current capture:** `requestDetails` (schema.js:140) + `usageHistory` (schema.js:104, incl. `apiKey`, `meta.taskType`, `conversationId`) + `apiKeys` (schema.js:78). Buffered writer `requestDetailsRepo.js`, `saveRequestUsage` in `usageRepo.js:241`.
-- **Spec to extend:** `plans/messages-page-feature-spec.md` (§4 list features, §5 detail, §6 error inbox, §7 conversation tree, §9 privacy).
+- **Spec to extend:** `../planning/messages-page-feature-spec.md` (§4 list features, §5 detail, §6 error inbox, §7 conversation tree, §9 privacy).
 - **Trusted IP already computed:** `custom-server.js:38-61` → `x-9r-real-ip` (socket-derived, strips client XFF).
 - **SDK UA formats:** openai-node `OpenAI/JS <version>` (client.ts `getUserAgent()`); openai-python `OpenAI/Python <version>`; 9Router already special-cases `droid`/`codex-cli` UAs (streamingHandler.js).
 - **Header conventions:** OpenRouter `HTTP-Referer` + `X-OpenRouter-Title` (app attribution); Helicone `Helicone-User-Id` / `Helicone-Session-Id` / `Helicone-Property-*` (from Helicone/helicone source); `x-conversation-id` already read by 9Router (chat.js:334).

@@ -4,7 +4,7 @@
 **Author:** GitHub Copilot agent
 **Status:** active (research-gap analysis — implementation not started)
 **Tags:** research, gaps, risks, decision-log, messages-page, error-inbox, effort-estimate
-**Sources:** `learnings/2026-08-07-research-synthesis.md` (synthesis) · `plans/messages-page-feature-spec.md` (spec) · `research/message-capture-v4-deep-pass.md` (v4)
+**Sources:** `../tracking/learnings/2026-08-07-research-synthesis.md` (synthesis) · `../planning/messages-page-feature-spec.md` (spec) · `message-capture-v4-deep-pass.md` (v4)
 
 ---
 

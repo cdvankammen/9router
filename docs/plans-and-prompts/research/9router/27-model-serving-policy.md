@@ -234,5 +234,5 @@ jobs on macOS (see `26-node-failover-networking-options.md`).
 
 - `24-ha-mini-backup-nodes.md`, `25-node-failover-implementation.md`,
   `26-node-failover-networking-options.md` — failover/networking context
-- `workflows/deployment-runbook.md` — "Model serving (Ollama)" ops section
+- `../../operations/deployment-runbook.md` — "Model serving (Ollama)" ops section
 - Commit: `fdf82774` (branch `v1`)

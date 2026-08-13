@@ -5,30 +5,28 @@
 
 ## Purpose
 
-This folder is the centralized knowledge base for:
-
-- Research notes and findings
-- Project plans and roadmaps
-- Meeting notes and discussions
-- Architecture decisions and ADRs
-- Lessons learned and postmortems
-- Prompt engineering artifacts
-- Temporary working documents
-
-**Everything that isn't source code lives here.** If you produce a document, note, plan, or research artifact — it belongs in this folder.
+This folder is the centralized knowledge base for research, plans, decisions, learnings, architecture, connections, security, UI/UX, and operations documentation. **Everything that isn't source code lives here.** If you produce a document, note, plan, or research artifact — it belongs in this folder.
 
 ## Folder Structure
 
 | Folder | Contents |
 |--------|----------|
-| `research/` | Deep-dive research notes, competitive analysis, API exploration, protocol specs, ecosystem mapping |
-| `plans/` | Project plans, feature specs, implementation roadmaps, sprint plans, task breakdowns |
-| `meetings/` | Meeting notes, discussion summaries, stakeholder conversations, decision logs from syncs |
-| `decisions/` | Architecture Decision Records (ADRs), trade-off analyses, technology choices with rationale |
-| `learnings/` | Postmortems, debugging insights, patterns discovered, things that didn't work and why |
-| `architecture/` | System design docs, diagrams, data flow descriptions, component relationships |
-| `prompts/` | Prompt templates, system prompts, evaluation results, prompt engineering experiments |
-| `temp/` | Scratch space, WIP drafts, ephemeral notes. Clean up periodically. |
+| `architecture/` | System design docs, diagrams, component relationships. Start at `ARCHITECTURE.md` — a map into the authoritative `docs/ARCHITECTURE.md`, plus narrower design notes. |
+| `connections/` | Provider-connection runbook: credential storage, OAuth/token refresh, adding a provider, diagnosing a broken connection. Start at `CONNECTIONS.md`. |
+| `security/` | Secrets/env contract, IP-trust boundary, the one hard rule (see below). Start at `SECURITY.md`. |
+| `ui-ux/` | Dashboard UI/UX conventions and design decisions. Start at `UI-UX.md`. |
+| `operations/` | Runbooks, living test-workflow plans, release process. Start at `OPERATIONS.md` (day-to-day commands), `TESTING.md` (test-workflow index). |
+| `planning/` | Project plans, feature specs, roadmaps, task breakdowns. |
+| `research/` | Deep-dive research notes, code-tour write-ups, competitive/ecosystem analysis. Repo-specific work goes under `research/<repo>/`. |
+| `tracking/` | The durable historical record: `TASKS.md`, `CHANGELOG.md`, `SESSION-HISTORY.md`, `SESSION-NARRATIVE.md`, `CODE-CHANGES.md`, `DECISIONS.md`/`decisions/` (ADRs), `FINDINGS.md`/`learnings/` (postmortems), `meetings/`. Start at `tracking/README.md`. |
+| `templates/` | Reusable skeletons (`WORK-ITEM-TEMPLATE.md`, `RESEARCH-NOTE-TEMPLATE.md`) and prompt-engineering artifacts. |
+| `temp/` | Scratch space, WIP drafts, ephemeral notes. Gitignored. Clean up periodically — **not** part of the durable taxonomy above, and never a place to assume secrets are "safe." |
+
+Every folder above has its own `README.md` — read it before adding to that category.
+
+## The one rule that overrides everything else
+
+**Never include a real API key, token, password, private URL, or personal data in a doc, template, screenshot, or commit message.** Not even in `temp/`. See `security/SECURITY.md`.
 
 ## Conventions
 
@@ -38,7 +36,7 @@ This folder is the centralized knowledge base for:
 - Be descriptive: `gemini-thinking-block-translation-research.md`, not `notes.md`
 
 ### Document Structure
-Every document should start with a YAML frontmatter or markdown header block:
+Every document should start with a frontmatter/header block:
 
 ```markdown
 # Title
@@ -50,38 +48,24 @@ Every document should start with a YAML frontmatter or markdown header block:
 ```
 
 ### Cross-Repository Notes
-This workspace will contain multiple repositories over time. When documenting something that spans repos:
-- Create a subfolder named after the repo or project: `research/9router/`, `research/some-other-project/`
-- Use the top-level folders for cross-cutting concerns that apply to the whole workspace
+This workspace may hold multiple repositories over time. When documenting something that spans repos, use a subfolder named after the repo inside the relevant category (`research/9router/`, `research/some-other-project/`). Use the top-level category folders for cross-cutting concerns.
 
 ### Agent Contributions
-All agents are encouraged to:
 1. **Read existing docs first** — avoid duplicating research or decisions already documented
 2. **Write everything down** — if you discover something useful, document it here
-3. **Update, don't just append** — if new information supersedes an old doc, update the old doc and note what changed
+3. **Update, don't just append** — if new information supersedes an old doc, update it and note what changed
 4. **Link liberally** — reference other docs in this folder using relative paths
 5. **Tag your work** — use the Status field so others know if a doc is WIP or finalized
+6. **Update `tracking/` in the same commit** as any meaningful feature/fix — `CHANGELOG.md`, `TASKS.md`, and (if non-obvious) a new ADR or learnings doc
 
 ### What NOT to Put Here
-- Secrets, API keys, passwords, or tokens (use `.env` or a secrets manager)
+- Secrets, API keys, passwords, or tokens (use `.env` or a secrets manager) — see `security/SECURITY.md`
 - Generated build artifacts or compiled output
 - Large binary files (link to them instead)
 - Anything that changes on every build (use CI artifacts)
 
-## Multi-Repo Workspace
+## Relationship to other docs in this repo
 
-As additional repositories are added to this workspace, extend this structure:
-
-```
-docs/plans-and-prompts/
-├── README.md              ← this file (workspace-level conventions)
-├── research/
-│   ├── 9router/           ← repo-specific research
-│   └── other-project/     ← another repo's research
-├── plans/
-│   ├── 9router/
-│   └── other-project/
-└── ...
-```
-
-Cross-cutting docs (e.g., shared infrastructure decisions) stay at the top level without a repo subfolder.
+- `docs/ARCHITECTURE.md` (repo root, referenced by `CLAUDE.md`) — the authoritative whole-system architecture doc. Not duplicated here; `architecture/ARCHITECTURE.md` maps into it.
+- `open-sse/AGENTS.md` — code-adjacent conventions for the routing engine, deliberately colocated with that code. Out of scope for this folder.
+- Repo root `CHANGELOG.md` — the real, user-facing release changelog. Distinct from `tracking/CHANGELOG.md`, which is this knowledge base's internal dev/session changelog. See `operations/VERSIONING.md`.

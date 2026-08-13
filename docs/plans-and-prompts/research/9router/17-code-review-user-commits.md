@@ -138,5 +138,5 @@ confirmed baseline). No code was changed during this review.
 
 ## Related docs
 
-- `workflows/browser-control-workflow.md` (how the live verification was driven)
+- `../../operations/browser-control-workflow.md` (how the live verification was driven)
 - `research/9router/16-ux-research-*.md` (earlier UX research)
