@@ -48,6 +48,11 @@ const DEFAULT_SETTINGS = {
   markdownLogEnabled: false,
   markdownLogFlushIntervalMin: 5,
   modelFallbacks: {},
+  // User-set per-model capability overrides: { [fullModelId]: { vision: true, audioInput: false, ... } }.
+  // Merged over static capabilities so users can mark custom/unknown models as
+  // vision/audio-capable (or correct a wrong static flag). Only the fields the
+  // user explicitly set are stored; resolution merges over DEFAULT_CAPABILITIES.
+  modelCapOverrides: {},
   capacityAdapter: {
     vision: { enabled: true, roundRobin: false, models: [] },
     pdf: { enabled: false, roundRobin: false, models: [] },

@@ -552,13 +552,17 @@ export async function GET(request, { params }) {
         return NextResponse.json({ error: "No base URL configured for OpenAI compatible provider" }, { status: 400 });
       }
       const url = `${baseUrl.replace(/\/$/, "")}/models`;
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
       const response = await fetch(url, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${connection.apiKey}`,
         },
+        signal: controller.signal,
       });
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -591,6 +595,8 @@ export async function GET(request, { params }) {
       }
 
       const url = `${baseUrl}/models`;
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
       const response = await fetch(url, {
         method: "GET",
         headers: {
@@ -599,7 +605,9 @@ export async function GET(request, { params }) {
           "anthropic-version": "2023-06-01",
           "Authorization": `Bearer ${connection.apiKey}`
         },
+        signal: controller.signal,
       });
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -661,9 +669,12 @@ export async function GET(request, { params }) {
     }
 
     // Make request
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
     const fetchOptions = {
       method: config.method,
-      headers
+      headers,
+      signal: controller.signal
     };
 
     if (config.body && config.method === "POST") {
@@ -671,6 +682,7 @@ export async function GET(request, { params }) {
     }
 
     const response = await fetch(modelsUrl, fetchOptions);
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       const errorText = await response.text();

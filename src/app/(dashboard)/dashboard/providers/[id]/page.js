@@ -21,9 +21,12 @@ import ConnectionRow from "./ConnectionRow";
 import AddApiKeyModal from "./AddApiKeyModal";
 import EditCompatibleNodeModal from "./EditCompatibleNodeModal";
 import AddCustomModelModal from "./AddCustomModelModal";
+import ComboFormModal from "@/app/(dashboard)/dashboard/combos/page.js";
 import BulkImportCodexModal from "./BulkImportCodexModal";
 import BulkImportGrokCliModal from "./BulkImportGrokCliModal";
 import CustomConfigCard from "./CustomConfigCard";
+import ProviderUsageCard from "./ProviderUsageCard";
+import ProviderErrorPanel from "./ProviderErrorPanel";
 
 const ONE_BY_ONE_DELAY_MS = 1000;
 
@@ -40,7 +43,7 @@ export default function ProviderDetailPage() {
   const params = useParams();
   const router = useRouter();
   const providerId = params.id;
-  const { getCaps } = useModelCaps();
+  const { getCaps, refresh: refreshModelCaps } = useModelCaps();
   const [connections, setConnections] = useState([]);
   const [loading, setLoading] = useState(true);
   const [providerNode, setProviderNode] = useState(null);
@@ -86,6 +89,12 @@ export default function ProviderDetailPage() {
   const stopOneByOneRef = useRef(false);
   const [importingQoderModels, setImportingQoderModels] = useState(false);
   const [importingClineModels, setImportingClineModels] = useState(false);
+  const [importingModels, setImportingModels] = useState(false);
+  const [importModelsProgress, setImportModelsProgress] = useState(null);
+  const [providerErrors, setProviderErrors] = useState([]);
+  const [providerErrorsLoading, setProviderErrorsLoading] = useState(false);
+  const [devMode, setDevMode] = useState(false);
+  const [showCreateCombo, setShowCreateCombo] = useState(false);
   const { copied, copy } = useCopyToClipboard();
 
   const AG_RISK_STORAGE_KEY = "ag_risk_confirmed";
@@ -443,6 +452,55 @@ export default function ProviderDetailPage() {
     saveThinkingConfig(mode);
   };
 
+  // Persist a per-model vision/audio capability override. Keyed by
+  // `${providerId}/${modelId}` (the same key /api/models accepts as either the
+  // full or routed model id) into settings.modelCapOverrides, then refresh the
+  // shared model-caps cache so ModelRow badges and the combo vision/audio
+  // pickers reflect it immediately.
+  const handleToggleCap = async (modelId, key, value) => {
+    const fullModel = `${providerId}/${modelId}`;
+    try {
+      const settingsRes = await fetch("/api/settings", { cache: "no-store" });
+      const settingsData = settingsRes.ok ? await settingsRes.json() : {};
+      const current = settingsData.modelCapOverrides || {};
+      const modelOverride = { ...(current[fullModel] || {}), [key]: value };
+      const updated = { ...current, [fullModel]: modelOverride };
+      await fetch("/api/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ modelCapOverrides: updated }),
+      });
+      await refreshModelCaps();
+    } catch (error) {
+      console.log("Error saving capability override:", error);
+    }
+  };
+
+  // Provider-level error/log fetch — drives both the Errors & Logs panel and the
+  // per-model error chips (grouped fingerprints from getErrorSummary via
+  // /api/messages?view=errors). System B (requestDetails), not the lastError chip.
+  const fetchProviderErrors = useCallback(async () => {
+    if (!providerId) return;
+    setProviderErrorsLoading(true);
+    try {
+      const res = await fetch(
+        `/api/messages?view=errors&provider=${encodeURIComponent(providerId)}&pageSize=100`,
+        { cache: "no-store" },
+      );
+      const data = res.ok ? await res.json() : {};
+      setProviderErrors(Array.isArray(data.errors) ? data.errors : []);
+    } catch (error) {
+      console.log("Error fetching provider errors:", error);
+      setProviderErrors([]);
+    } finally {
+      setProviderErrorsLoading(false);
+    }
+  }, [providerId]);
+
+  useEffect(() => {
+    fetchProviderErrors();
+  }, [fetchProviderErrors]);
+
   const saveAutoPing = async (next) => {
     const autoPingSettingsKey = AUTO_PING_SETTINGS_KEYS[providerId];
     if (!autoPingSettingsKey) return;
@@ -520,6 +578,11 @@ export default function ProviderDetailPage() {
     if (!fetcher) return;
     fetchSuggestedModels(fetcher).then(setSuggestedModels);
   }, [providerId]);
+
+  // Fetch settings for devMode flag
+  useEffect(() => {
+    fetch("/api/settings").then(r => r.json()).then(d => setDevMode(!!d.devMode)).catch(() => {});
+  }, []);
 
   const handleSetAlias = async (modelId, alias, providerAliasOverride = providerAlias) => {
     const fullModel = `${providerAliasOverride}/${modelId}`;
@@ -614,7 +677,8 @@ export default function ProviderDetailPage() {
       for (const model of models) {
         const modelId = model.id || model.name;
         if (!modelId) continue;
-        
+
+
         // Qoder model ID format may be "qoder/auto", "qoder-cn/auto" or "auto",
         // need to remove the provider prefix before storing.
         const cleanModelId = modelId.replace(/^(qoder-cn|qoder)\//, "");
@@ -628,7 +692,7 @@ export default function ProviderDetailPage() {
         await handleAddCustomModel(cleanModelId, "llm", providerStorageAlias);
         importedCount += 1;
       }
-      
+
       if (importedCount === 0) {
         alert(translate("All models already exist, no new models added"));
       } else {
@@ -686,6 +750,115 @@ export default function ProviderDetailPage() {
       alert(translate("Error fetching models") + ": " + error.message);
     } finally {
       setImportingClineModels(false);
+    }
+  };
+
+  // Generic model auto-fill: fetch this provider's live /models list (via the
+  // backend model-discovery route, which resolves ~40 providers incl. OAuth
+  // token-refresh) and add any not-yet-present models as custom models. Mirrors
+  // handleImportQoderModels but without the qoder-specific prefix stripping, so
+  // provider-scoped IDs like "openai/gpt-4o" (OpenRouter) stay intact.
+  // Uses the connection-keyed /api/providers/[id]/models route — no arbitrary
+  // URL fetch, so it doesn't touch the suggested-models SSRF surface.
+  const handleImportModels = async () => {
+    if (importingModels) return;
+    const activeConnection = connections.find((conn) => conn.isActive !== false);
+    if (!activeConnection) {
+      alert(translate("Please add an active connection first"));
+      return;
+    }
+
+    setImportingModels(true);
+    try {
+      // ?refresh=1 busts the smart-router node-models cache so freshly imported
+      // models are visible to routing immediately.
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout
+      const res = await fetch(`/api/providers/${activeConnection.id}/models?refresh=1`, { signal: controller.signal });
+      clearTimeout(timeoutId);
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || translate("Failed to fetch models"));
+        return;
+      }
+      const models = data.models || [];
+      if (models.length === 0) {
+        alert(translate("No models returned"));
+        return;
+      }
+
+      // Filter down to the models we actually need to add before doing any
+      // network I/O. `customModels`/`modelAliases` are a snapshot from when
+      // the button was clicked — mid-loop refetches wouldn't change this
+      // closure anyway, so checking once up front loses nothing.
+      const toAdd = [];
+      for (const model of models) {
+        const modelId = model.id || model.name || model.model;
+        if (!modelId) continue;
+        // Skip non-llm entries (embedding/tts/image) — they have dedicated pages.
+        const kind = model.kind || model.type || "llm";
+        if (kind !== "llm") continue;
+        const alreadyExists =
+          customModels.some(
+            (entry) => entry.providerAlias === providerStorageAlias && entry.id === modelId && (entry.kind || entry.type || "llm") === "llm"
+          ) ||
+          Object.values(modelAliases).includes(`${providerStorageAlias}/${modelId}`);
+        if (alreadyExists) continue;
+        toAdd.push(modelId);
+      }
+
+      // Providers like OpenRouter return 400+ models. Adding them one at a
+      // time and awaiting a full customModels refetch after each one (the
+      // old behavior via handleAddCustomModel) meant 2x sequential round
+      // trips per model — 800+ serial requests that could take minutes and
+      // looked identical to a hang. Add directly with bounded concurrency
+      // and only refetch/broadcast once at the end.
+      let importedCount = 0;
+      const CONCURRENCY = 8;
+      setImportModelsProgress({ done: 0, total: toAdd.length });
+      let cursor = 0;
+      const addOne = async (modelId) => {
+        try {
+          const res = await fetch("/api/models/custom", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ providerAlias: providerStorageAlias, id: modelId, type: "llm" }),
+          });
+          if (res.ok) importedCount += 1;
+        } catch (error) {
+          console.log("Error adding custom model:", modelId, error);
+        } finally {
+          setImportModelsProgress((prev) => prev && { done: prev.done + 1, total: prev.total });
+        }
+      };
+      const workers = Array.from({ length: Math.min(CONCURRENCY, toAdd.length) }, async () => {
+        while (cursor < toAdd.length) {
+          const modelId = toAdd[cursor++];
+          await addOne(modelId);
+        }
+      });
+      await Promise.all(workers);
+
+      if (importedCount > 0) {
+        await fetchCustomModels();
+        if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent("customModelChanged"));
+      }
+
+      if (importedCount === 0) {
+        alert(translate("All models already exist, no new models added"));
+      } else {
+        alert(translate("Successfully added") + ` ${importedCount} ` + translate("models"));
+      }
+    } catch (error) {
+      console.log("Error importing models:", error);
+      if (error.name === 'AbortError') {
+        alert(translate("Request timed out") + " — " + translate("provider API is slow or unresponsive"));
+      } else {
+        alert(translate("Error fetching models") + ": " + error.message);
+      }
+    } finally {
+      setImportingModels(false);
+      setImportModelsProgress(null);
     }
   };
 
@@ -1184,6 +1357,16 @@ export default function ProviderDetailPage() {
       type: "llm",
     });
 
+    // Group provider errors by bare model id (DB stores model.id, not the alias)
+    // so each ModelRow can surface its own error chip.
+    const errorsByModel = new Map();
+    for (const g of providerErrors) {
+      if (!g || !g.model) continue;
+      const list = errorsByModel.get(g.model) || [];
+      list.push(g);
+      errorsByModel.set(g.model, list);
+    }
+
     return (
       <div className="flex flex-wrap gap-3">
         {/* Custom models first */}
@@ -1209,7 +1392,9 @@ export default function ProviderDetailPage() {
             isCustom
             isFree={false}
             caps={getCaps(`${providerId}/${model.id}`)}
+            onToggleCap={(key, value) => handleToggleCap(model.id, key, value)}
             thinkingSuffix={resolveThinkingSuffix(model.id)}
+            errorGroups={errorsByModel.get(model.id) || []}
           />
         ))}
 
@@ -1235,7 +1420,9 @@ export default function ProviderDetailPage() {
               isFree={model.isFree}
               onDisable={() => handleDisableModel(model.id)}
               caps={getCaps(`${providerId}/${model.id}`)}
+              onToggleCap={(key, value) => handleToggleCap(model.id, key, value)}
               thinkingSuffix={resolveThinkingSuffix(model.id)}
+              errorGroups={errorsByModel.get(model.id) || []}
             />
           );
         })}
@@ -1248,6 +1435,18 @@ export default function ProviderDetailPage() {
           <span className="material-symbols-outlined text-sm">add</span>
           Add Model
         </button>
+
+        {/* Create Combo from this provider's models (dev mode only) */}
+        {devMode && displayModels.length > 0 && (
+          <button
+            onClick={() => setShowCreateCombo(true)}
+            className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-purple-500/40 px-3 py-2 text-xs text-purple-600 dark:text-purple-400 transition-colors hover:border-purple-500 hover:bg-purple-500/5 sm:w-auto"
+            title="Create a combo with this provider's models pre-selected"
+          >
+            <span className="material-symbols-outlined text-[13px]">layers</span>
+            {translate("Create Combo")}
+          </button>
+        )}
 
         {/* Import Qoder models button — only show for qoder/qoder-cn provider */}
         {(providerId === "qoder" || providerId === "qoder-cn") && connections.some((conn) => conn.isActive !== false) && (
@@ -1274,6 +1473,25 @@ export default function ProviderDetailPage() {
               {importingClineModels ? "progress_activity" : "download"}
             </span>
             {importingClineModels ? translate("Fetching...") : translate("Import from /models")}
+          </button>
+        )}
+
+        {/* Generic auto-fill — fetch this provider's live /models and add any
+            missing ones. Qoder/Cline have their own buttons above. */}
+        {providerId !== "qoder" && providerId !== "qoder-cn" && providerId !== "cline" && providerId !== "clinepass" && connections.some((conn) => conn.isActive !== false) && (
+          <button
+            onClick={handleImportModels}
+            disabled={importingModels}
+            className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-blue-500/40 px-3 py-2 text-xs text-blue-600 dark:text-blue-400 transition-colors hover:border-blue-500 hover:bg-blue-500/5 sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <span className="material-symbols-outlined text-sm" style={importingModels ? { animation: "spin 1s linear infinite" } : undefined}>
+              {importingModels ? "progress_activity" : "download"}
+            </span>
+            {importingModels
+              ? (importModelsProgress
+                  ? `${translate("Importing")} ${importModelsProgress.done}/${importModelsProgress.total}...`
+                  : translate("Fetching..."))
+              : translate("Refresh Models")}
           </button>
         )}
 
@@ -1824,6 +2042,15 @@ export default function ProviderDetailPage() {
         {renderModelsSection()}
       </Card>
 
+      <ProviderUsageCard providerId={providerId} />
+
+      <ProviderErrorPanel
+        providerId={providerId}
+        errors={providerErrors}
+        loading={providerErrorsLoading}
+        onRefresh={fetchProviderErrors}
+      />
+
       {bulkActionModal}
 
       {/* Modals */}
@@ -1964,6 +2191,34 @@ export default function ProviderDetailPage() {
         message={confirmState?.message}
         variant="danger"
       />
+
+      {/* Create Combo Modal (dev mode) — pre-selects this provider's models */}
+      {showCreateCombo && (
+        <ComboFormModal
+          isOpen={showCreateCombo}
+          onClose={() => setShowCreateCombo(false)}
+          onSave={async (data) => {
+            try {
+              const res = await fetch("/api/combos", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(data),
+              });
+              if (res.ok) {
+                setShowCreateCombo(false);
+                alert(`Combo "${data.name}" created`);
+              } else {
+                const err = await res.json();
+                alert(err.error || "Failed to create combo");
+              }
+            } catch (error) {
+              console.log("Error creating combo:", error);
+            }
+          }}
+          activeProviders={activeConnections}
+          kindFilter="llm"
+        />
+      )}
     </div>
   );
 }

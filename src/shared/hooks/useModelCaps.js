@@ -37,6 +37,13 @@ function loadModelCaps() {
   return inflight;
 }
 
+// Drop the shared cache so the next loadModelCaps() re-fetches /api/models.
+// Called after a capability override is saved so vision/audio pickers reflect it.
+export function invalidateModelCaps() {
+  cache = null;
+  inflight = null;
+}
+
 // Resolve caps from a "provider/model" string or a bare model id.
 function resolveCaps(byFull, byId, key) {
   if (!key) return null;
@@ -51,6 +58,7 @@ function resolveCaps(byFull, byId, key) {
     reasoning: c.reasoning,
     contextWindow: c.contextWindow,
     maxOutput: c.maxOutput,
+    audioInput: c.audioInput,
   };
 }
 
@@ -85,5 +93,15 @@ export function useModelCaps() {
     [byFull, byId],
   );
 
-  return { getCaps };
+  // Force a re-fetch of /api/models (after a capability override is saved).
+  const refresh = useCallback(() => {
+    invalidateModelCaps();
+    return loadModelCaps().then((maps) => {
+      setByFull(maps.byFull);
+      setById(maps.byId);
+      return maps;
+    });
+  }, []);
+
+  return { getCaps, refresh };
 }

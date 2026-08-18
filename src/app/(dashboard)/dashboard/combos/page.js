@@ -386,6 +386,34 @@ export default function CombosPage() {
     });
   };
 
+  // Duplicate a combo: POST a new combo with the same models/kind and a
+  // "-copy" (or "-copy-N") suffix so users don't have to rebuild from scratch.
+  const handleDuplicate = async (combo) => {
+    try {
+      const base = combo.name;
+      let name = `${base}-copy`;
+      let n = 2;
+      const existingNames = new Set(combos.map((c) => c.name));
+      while (existingNames.has(name)) {
+        name = `${base}-copy-${n}`;
+        n += 1;
+      }
+      const res = await fetch("/api/combos", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, models: combo.models || [], kind: combo.kind || null }),
+      });
+      if (res.ok) {
+        await fetchData();
+      } else {
+        const err = await res.json();
+        alert(err.error || "Failed to duplicate combo");
+      }
+    } catch (error) {
+      console.log("Error duplicating combo:", error);
+    }
+  };
+
   // Merge a per-combo strategy patch into settings.comboStrategies. Passing an empty
   // patch (strategy back to default "fallback") drops the entry entirely.
   const handleSetComboStrategy = async (comboName, patch) => {
@@ -575,6 +603,7 @@ export default function CombosPage() {
                   copied={copied}
                   onCopy={copy}
                   onEdit={() => setEditingCombo(combo)}
+                  onDuplicate={() => handleDuplicate(combo)}
                   onDelete={() => handleDelete(combo.id)}
                   strategy={comboStrategies[combo.name] || {}}
                   onSetStrategy={(patch) => handleSetComboStrategy(combo.name, patch)}
@@ -662,7 +691,7 @@ const fmtK = (n) => {
   return `${Math.round(n / 1000)}k`;
 };
 
-function ComboCard({ combo, getCaps, comboByName = {}, activeProviders = [], copied, onCopy, onEdit, onDelete, strategy = {}, onSetStrategy, selected = false, onToggleSelect }) {
+function ComboCard({ combo, getCaps, comboByName = {}, activeProviders = [], copied, onCopy, onEdit, onDuplicate, onDelete, strategy = {}, onSetStrategy, selected = false, onToggleSelect }) {
   const [showJudgeSelect, setShowJudgeSelect] = useState(false);
   const current = strategy.fallbackStrategy || "fallback";
   const judge = strategy.judgeModel || "";
@@ -755,7 +784,7 @@ function ComboCard({ combo, getCaps, comboByName = {}, activeProviders = [], cop
             />
           </div>
 
-          <div className="grid grid-cols-3 gap-1 sm:flex">
+          <div className="grid grid-cols-4 gap-1 sm:flex">
             <button
               onClick={(e) => { e.stopPropagation(); onCopy(combo.name, `combo-${combo.id}`); }}
               className="flex flex-col items-center rounded px-2 py-1 text-text-muted transition-colors hover:bg-black/5 hover:text-primary dark:hover:bg-white/5"
@@ -765,6 +794,14 @@ function ComboCard({ combo, getCaps, comboByName = {}, activeProviders = [], cop
                 {copied === `combo-${combo.id}` ? "check" : "content_copy"}
               </span>
               <span className="text-[10px] leading-tight">Copy</span>
+            </button>
+            <button
+              onClick={onDuplicate}
+              className="flex flex-col items-center rounded px-2 py-1 text-text-muted transition-colors hover:bg-black/5 hover:text-primary dark:hover:bg-white/5"
+              title="Duplicate combo"
+            >
+              <span className="material-symbols-outlined text-[18px]">copy_all</span>
+              <span className="text-[10px] leading-tight">Duplicate</span>
             </button>
             <button
               onClick={onEdit}
@@ -2679,7 +2716,7 @@ function ModelItem({ id, index, model, isFirst, isLast, onEdit, onMoveUp, onMove
   );
 }
 
-function ComboFormModal({ isOpen, combo, onClose, onSave, activeProviders, kindFilter = null }) {
+export function ComboFormModal({ isOpen, combo, onClose, onSave, activeProviders, kindFilter = null }) {
   // Initialize state with combo values - key prop on parent handles reset on remount
   const [name, setName] = useState(combo?.name || "");
   const [models, setModels] = useState(combo?.models || []);

@@ -468,9 +468,11 @@ export default function ModelSelectModal({
     return [...added, ...rest];
   };
 
-  // Filter models by search query
+  // Filter + sort models by search query. Connected providers float to the top.
   const filteredGroups = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
+    // Set of connected provider IDs for sorting
+    const connectedIds = new Set(filteredActiveProviders.map(p => p.provider));
 
     const filtered = {};
     Object.entries(groupedModels).forEach(([providerId, group]) => {
@@ -482,21 +484,40 @@ export default function ModelSelectModal({
       }
       if (query) {
         const providerNameMatches = group.name.toLowerCase().includes(query);
-        models = models.filter(
-          (m) =>
-            m.name.toLowerCase().includes(query) ||
-            m.id.toLowerCase().includes(query)
-        );
-        if (models.length === 0 && !providerNameMatches) return;
+        const providerAliasMatches = (group.alias || "").toLowerCase().includes(query);
+        const groupMatches = providerNameMatches || providerAliasMatches;
+        if (groupMatches) {
+          models = sortModels(models);
+        } else {
+          models = models.filter(
+            (m) =>
+              m.name.toLowerCase().includes(query) ||
+              m.id.toLowerCase().includes(query)
+          );
+          if (models.length === 0) return;
+        }
+      } else {
+        models = sortModels(models);
       }
       filtered[providerId] = {
         ...group,
-        models: sortModels(models),
+        models,
+        isConnected: connectedIds.has(providerId),
       };
     });
 
-    return filtered;
-  }, [groupedModels, searchQuery, addedModelValues]);
+    // Sort: connected providers first, then alphabetical by name
+    const sorted = {};
+    const entries = Object.entries(filtered);
+    const connected = entries.filter(([, g]) => g.isConnected);
+    const unconnected = entries.filter(([, g]) => !g.isConnected);
+    connected.sort((a, b) => a[1].name.localeCompare(b[1].name));
+    unconnected.sort((a, b) => a[1].name.localeCompare(b[1].name));
+    for (const [id, group] of [...connected, ...unconnected]) {
+      sorted[id] = group;
+    }
+    return sorted;
+  }, [groupedModels, searchQuery, addedModelValues, filteredActiveProviders]);
 
   const handleSelect = (model) => {
     const value = model?.value || model?.name || model;
