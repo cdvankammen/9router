@@ -34,12 +34,12 @@ export async function createNodeSqliteAdapter(filePath) {
 
   // Periodic WAL checkpoint to keep -wal/-shm small
   const checkpointTimer = setInterval(() => {
-    try { db.exec("PRAGMA wal_checkpoint(TRUNCATE)"); } catch {}
+    try { db.exec("PRAGMA wal_checkpoint(PASSIVE)"); } catch {}
   }, CHECKPOINT_INTERVAL_MS);
   if (typeof checkpointTimer.unref === "function") checkpointTimer.unref();
 
   function gracefulClose() {
-    try { db.exec("PRAGMA wal_checkpoint(TRUNCATE)"); } catch {}
+    try { db.exec("PRAGMA wal_checkpoint(PASSIVE)"); } catch {}
     try { stmtCache.clear(); } catch {}
     try { db.close(); } catch {}
   }
@@ -74,7 +74,7 @@ export async function createNodeSqliteAdapter(filePath) {
         throw e;
       }
     },
-    checkpoint() { try { db.exec("PRAGMA wal_checkpoint(TRUNCATE)"); } catch {} },
+    checkpoint() { try { db.exec("PRAGMA wal_checkpoint(PASSIVE)"); } catch {} },
     close() {
       clearInterval(checkpointTimer);
       gracefulClose();
