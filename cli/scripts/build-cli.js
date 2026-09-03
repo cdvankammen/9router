@@ -221,6 +221,15 @@ function buildCliPackage() {
     process.exit(1);
   }
 
+  // Step 3a1: Copy the per-IP rate limiter (custom-server.js requires it at boot).
+  const rateLimiterSrc = path.join(appDir, "custom-server.rate-limiter.js");
+  if (fs.existsSync(rateLimiterSrc)) {
+    fs.copyFileSync(rateLimiterSrc, path.join(cliAppDir, "custom-server.rate-limiter.js"));
+    console.log("✅ Copied custom-server.rate-limiter.js\n");
+  } else {
+    console.warn("⚠️  custom-server.rate-limiter.js not found — per-IP rate limiting disabled\n");
+  }
+
   // Step 3a2: Bundle the L1 in-app peer-forwarding settings modules.
   // custom-server.js dynamic-imports src/lib/db/repos/settingsRepo.js at
   // startup to read settings.peerNodes, but the Next standalone build does
