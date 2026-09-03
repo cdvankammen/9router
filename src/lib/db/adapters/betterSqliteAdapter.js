@@ -22,12 +22,12 @@ export function createBetterSqliteAdapter(filePath) {
 
   // Truncate WAL periodically so file stays small for backup/copy
   const checkpointTimer = setInterval(() => {
-    try { db.pragma("wal_checkpoint(TRUNCATE)"); } catch {}
+    try { db.pragma("wal_checkpoint(PASSIVE)"); } catch {}
   }, CHECKPOINT_INTERVAL_MS);
   if (typeof checkpointTimer.unref === "function") checkpointTimer.unref();
 
   function gracefulClose() {
-    try { db.pragma("wal_checkpoint(TRUNCATE)"); } catch {}
+    try { db.pragma("wal_checkpoint(PASSIVE)"); } catch {}
     try { stmtCache.clear(); } catch {}
     try { db.close(); } catch {}
   }
@@ -45,7 +45,7 @@ export function createBetterSqliteAdapter(filePath) {
     all(sql, params = []) { return prepare(sql).all(...params); },
     exec(sql) { return db.exec(sql); },
     transaction(fn) { return db.transaction(fn)(); },
-    checkpoint() { try { db.pragma("wal_checkpoint(TRUNCATE)"); } catch {} },
+    checkpoint() { try { db.pragma("wal_checkpoint(PASSIVE)"); } catch {} },
     close() {
       clearInterval(checkpointTimer);
       gracefulClose();
