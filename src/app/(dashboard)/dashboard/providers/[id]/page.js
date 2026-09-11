@@ -27,6 +27,7 @@ import BulkImportGrokCliModal from "./BulkImportGrokCliModal";
 import CustomConfigCard from "./CustomConfigCard";
 import ProviderUsageCard from "./ProviderUsageCard";
 import ProviderErrorPanel from "./ProviderErrorPanel";
+import { useNotificationStore } from "@/store/notificationStore";
 
 const ONE_BY_ONE_DELAY_MS = 1000;
 
@@ -45,6 +46,7 @@ export default function ProviderDetailPage() {
   const providerId = params.id;
   const { getCaps, refresh: refreshModelCaps } = useModelCaps();
   const [connections, setConnections] = useState([]);
+  const [fetchError, setFetchError] = useState(null);
   const [loading, setLoading] = useState(true);
   const [providerNode, setProviderNode] = useState(null);
   const [proxyPools, setProxyPools] = useState([]);
@@ -1562,7 +1564,31 @@ export default function ProviderDetailPage() {
     );
   };
 
-  if (loading) {
+  if (fetchError) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-4 py-20">
+        <span className="material-symbols-outlined text-red-500 text-[48px]">cloud_off</span>
+        <div className="text-center">
+          <p className="text-sm font-medium text-text-main">Unable to load provider</p>
+          <p className="mt-1 text-xs text-text-muted max-w-sm">{fetchError}</p>
+        </div>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => {
+            setFetchError(null);
+            setLoading(true);
+            // Re-trigger the fetch effect by forcing a remount-style reload
+            fetch(`/api/providers/${id}`)
+              .then(() => window.location.reload())
+              .catch(() => window.location.reload());
+          }}
+        >
+          Retry
+        </Button>
+      </div>
+    );
+  }
     return (
       <div className="flex flex-col gap-8">
         <CardSkeleton />

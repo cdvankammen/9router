@@ -15,7 +15,6 @@ import { OAUTH_PROVIDERS, APIKEY_PROVIDERS } from "@/shared/constants/config";
 import {
   FREE_PROVIDERS,
   FREE_TIER_PROVIDERS,
-  WEB_COOKIE_PROVIDERS,
   OPENAI_COMPATIBLE_PREFIX,
   ANTHROPIC_COMPATIBLE_PREFIX,
 } from "@/shared/constants/providers";
@@ -100,6 +99,7 @@ export default function ProvidersPage() {
   const [connections, setConnections] = useState([]);
   const [providerNodes, setProviderNodes] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState(null);
   const [showAllApikey, setShowAllApikey] = useState(false);
   const [showAddCompatibleModal, setShowAddCompatibleModal] = useState(false);
   const [showAddAnthropicCompatibleModal, setShowAddAnthropicCompatibleModal] =
@@ -162,8 +162,12 @@ export default function ProvidersPage() {
         if (connectionsRes.ok)
           setConnections(connectionsData.connections || []);
         if (nodesRes.ok) setProviderNodes(nodesData.nodes || []);
+        if (!connectionsRes.ok && !nodesRes.ok) {
+          setFetchError("Failed to load providers. Check that the server is running.");
+        }
       } catch (error) {
-        console.log("Error fetching data:", error);
+        setFetchError(`Failed to connect to server: ${error.message || "network error"}`);
+        notify.error("Failed to load providers");
       } finally {
         setLoading(false);
       }
@@ -270,8 +274,9 @@ export default function ProvidersPage() {
         else notify.warning(`${passed}/${total} passed, ${failed} failed`);
       }
     } catch (error) {
-      setTestResults({ error: "Test request failed" });
-      notify.error("Provider test failed");
+      const detail = error.message || "unknown error";
+      setTestResults({ error: `Test request failed: ${detail}` });
+      notify.error(`Provider test failed: ${detail}`);
     } finally {
       setTestingMode(null);
     }
@@ -386,6 +391,32 @@ export default function ProvidersPage() {
       <div className="flex flex-col gap-8">
         <CardSkeleton />
         <CardSkeleton />
+      </div>
+    );
+  }
+
+  if (fetchError) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-4 py-20">
+        <span className="material-symbols-outlined text-red-500 text-[48px]">cloud_off</span>
+        <div className="text-center">
+          <p className="text-sm font-medium text-text-main">Unable to load providers</p>
+          <p className="mt-1 text-xs text-text-muted max-w-sm">{fetchError}</p>
+        </div>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => {
+            setFetchError(null);
+            setLoading(true);
+            // Re-trigger the fetch effect by forcing a remount-style reload
+            fetch("/api/providers")
+              .then(() => window.location.reload())
+              .catch(() => window.location.reload());
+          }}
+        >
+          Retry
+        </Button>
       </div>
     );
   }
@@ -673,27 +704,6 @@ export default function ProvidersPage() {
         )}
       </div>
       )}
-
-      {/* Web Cookie Providers — use browser subscription cookie instead of API key */}
-      {/* <div className="flex flex-col gap-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl font-semibold flex items-center gap-2">
-            Web Cookie Providers{" "}
-          </h2>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {Object.entries(WEB_COOKIE_PROVIDERS).map(([key, info]) => (
-            <ApiKeyProviderCard
-              key={key}
-              providerId={key}
-              provider={info}
-              stats={getProviderStats(key, "apikey")}
-              authType="apikey"
-              onToggle={(active) => handleToggleProvider(key, "apikey", active)}
-            />
-          ))}
-        </div>
-      </div> */}
 
       <AddCompatibleModal
         variant="openai"
