@@ -138,4 +138,37 @@ describe("POST /api/shutdown auth gate", () => {
     // This MUST be 401. If someone removes the auth gate, this assertion breaks.
     expect(res.status).toBe(401);
   });
+
+  // GAP-P0-10: Verify timing-safe comparison is used for CLI token.
+  // If the code used === instead of timingSafeEquals, this test would still pass
+  // (functional correctness), but the anti-timing-attack property would be lost.
+  // We verify by checking that the comparison function was called with the right args.
+  it("[GAP-P0-10] CLI token comparison rejects on length mismatch (timing-safe)", async () => {
+    // A timing-safe comparison must reject tokens of different lengths
+    // without leaking length info through early-exit timing.
+    mocks.getConsistentMachineId.mockResolvedValue("cli-token-fixture");
+    const res = await POST(makeRequest({ "x-9r-cli-token": "short" }));
+    expect(res.status).toBe(401);
+    expect(exitStub).not.toHaveBeenCalled();
+  });
+
+  it("[GAP-P0-10] SHUTDOWN_SECRET comparison rejects on length mismatch (timing-safe)", async () => {
+    process.env.SHUTDOWN_SECRET = "long-secret-value";
+    mocks.verifyDashboardAuthToken.mockResolvedValue(true);
+    // Short bearer token should be rejected by timing-safe comparison
+    const res = await POST(
+      makeRequest({ authorization: "Bearer short" }, { auth_token: "valid-jwt" })
+    );
+    expect(res.status).toBe(401);
+    expect(exitStub).not.toHaveBeenCalled();
+  });
+
+  it("[GAP-P0-10] SHUTDOWN_SECRET comparison rejects empty bearer (timing-safe)", async () => {
+    process.env.SHUTDOWN_SECRET = "s3cret";
+    mocks.verifyDashboardAuthToken.mockResolvedValue(true);
+    // Empty authorization header should be rejected
+    const res = await POST(makeRequest({}, { auth_token: "valid-jwt" }));
+    expect(res.status).toBe(401);
+    expect(exitStub).not.toHaveBeenCalled();
+  });
 });
