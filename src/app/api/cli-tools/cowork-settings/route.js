@@ -98,7 +98,7 @@ const resolveAppRootForRead = async () => {
   return candidates[0];
 };
 
-const getWriteRoot = () => getCandidateRoots()[0];
+export const getWriteRoot = () => getCandidateRoots()[0];
 const getConfigDir = async () => path.join(await resolveAppRootForRead(), "configLibrary");
 const getWriteConfigDir = () => path.join(getWriteRoot(), "configLibrary");
 const getMetaPath = async () => path.join(await getConfigDir(), "_meta.json");
@@ -226,11 +226,17 @@ const ensureMeta = async () => {
 };
 
 // Auto-skip approvals for every managed server (no per-tool prompts).
-async function writeSkipApprovals(managedServers) {
+export async function writeSkipApprovals(managedServers) {
   const cfgPath = path.join(getWriteRoot(), "config.json");
   let cfg = {};
   try { cfg = JSON.parse(await fs.readFile(cfgPath, "utf-8")) || {}; }
-  catch (e) { if (e.code !== "ENOENT") return { error: e.code }; }
+  catch (e) {
+    if (e.code !== "ENOENT") {
+      // GAP-P3-33: return structured error so callers can distinguish
+      // permission denied (EACCES) from I/O errors, busy locks, etc.
+      return { error: "config_read_failed", detail: e.message, code: e.code };
+    }
+  }
   const skip = {};
   for (const srv of managedServers) {
     if (srv?.name) skip[srv.name] = true;
