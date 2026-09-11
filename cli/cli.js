@@ -98,9 +98,6 @@ if (args[0] === "connect") {
 // better-sqlite3 is optional. Logs to stderr only on failure.
 try { ensureSqliteRuntime({ silent: true }); } catch (e) { console.error('[sqlite-runtime] self-heal failed:', e.message); }
 
-// Self-heal tray runtime (systray for macOS/Linux only). Windows skipped.
-try { ensureTrayRuntime({ silent: true }); } catch (e) { console.error('[tray-runtime] self-heal failed:', e.message); }
-
 // Configuration constants
 const APP_NAME = pkg.name; // Use from package.json
 const INSTALL_CMD_LATEST = `npm i -g ${APP_NAME}@latest --prefer-online`;
@@ -193,6 +190,21 @@ if (isProdEnv && !process.env.JWT_SECRET) {
 if (skipUpdate && !trayMode && !process.stdin.isTTY) {
   trayMode = true;
   process.env.TRAY_MODE = "1";
+}
+
+// Self-heal tray runtime (systray for macOS/Linux only). Windows skipped.
+// Moved here (after arg parsing) so trayMode is resolved — including the
+// auto-relaunch fallback above. Install is unconditional so the binary is
+// pre-cached for future --tray invocations; errors are logged only when
+// tray was actually requested (otherwise silent — GAP-P3-01).
+try {
+  ensureTrayRuntime({ silent: true });
+} catch (e) {
+  if (trayMode) {
+    console.error(`[tray-runtime] install failed: ${e.message}`);
+    console.error(`   Tray mode was requested but systray2 could not be installed.`);
+    console.error(`   Falling back to headless — tray icon will not appear.`);
+  }
 }
 
 // Always use Node.js runtime with absolute path
