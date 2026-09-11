@@ -42,6 +42,15 @@ function isTraySupported() {
  * @returns {Object|null} tray instance or null if not supported/failed
  */
 function initTray(options) {
+  // macOS needs ActivationPolicy set before tray initialization
+  if (process.platform === 'darwin') {
+    try {
+      const { ensureUIElementPolicy } = require('./tray');
+      ensureUIElementPolicy();
+    } catch (e) {
+      console.error('[tray] ActivationPolicy shim failed:', e.message);
+    }
+  }
   if (!isTraySupported()) {
     return null;
   }

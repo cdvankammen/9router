@@ -797,6 +797,25 @@ function startServer(updatePromise) {
     // Start tray icon alongside TUI
     initTrayIcon();
 
+    // Tray watchdog: restart if frozen
+    let trayHealthy = true;
+    const trayWatchdog = setInterval(() => {
+      try {
+        if (!trayModule.isAlive()) throw new Error('tray not alive');
+        trayHealthy = true;
+      } catch {
+        trayHealthy = false;
+        trayModule.restartTray();
+      }
+    }, 60_000);
+
+    // Clear interval on cleanup
+    const originalCleanup = cleanup;
+    cleanup = () => {
+      clearInterval(trayWatchdog);
+      originalCleanup();
+    };
+
     try {
       while (true) {
         const choice = await showInterfaceMenu(latestVersion);

@@ -86,6 +86,12 @@ graphify-out/*
 .codegraph/
 .PR/
 .next-analyze/*
+/.ua
+
+# Secrets / local-only notes — never commit (contains live API keys)
+/docs/plans-and-prompts/temp/
+/docs/plans-and-prompts/temp/**
+/.feeder
 
 # Kiro local workspace state
 .kiro/
@@ -104,8 +110,6 @@ debug.log
 
 # Branch-specific ignores
 /.ua
-/open-sse
-/open-sse/providers
 /.feeder
 
 # Secrets / local-only notes — never commit (contains live API keys)
