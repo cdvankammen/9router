@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
 import { createProxyPool } from "@/models";
+// Cloudflare API requests must not hang the deploy UI indefinitely
+const CLOUDFLARE_API_TIMEOUT_MS = 30_000;
+
 
 // Relay worker source code deployed to Cloudflare
 const RELAY_WORKER_CODE = `
@@ -76,6 +79,7 @@ export async function POST(request) {
         Authorization: `Bearer ${apiToken}`,
       },
       body: formData,
+      signal: AbortSignal.timeout(CLOUDFLARE_API_TIMEOUT_MS),
     });
 
     if (!uploadRes.ok) {
@@ -95,6 +99,7 @@ export async function POST(request) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ enabled: true }),
+      signal: AbortSignal.timeout(CLOUDFLARE_API_TIMEOUT_MS),
     });
 
     if (!enableSubdomainRes.ok) {
@@ -111,6 +116,7 @@ export async function POST(request) {
         Authorization: `Bearer ${apiToken}`,
         "Content-Type": "application/json",
       },
+      signal: AbortSignal.timeout(CLOUDFLARE_API_TIMEOUT_MS),
     });
 
     if (subdomainRes.ok) {
