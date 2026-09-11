@@ -329,7 +329,7 @@ async function handleSingleModelChat(body, modelStr, clientRawRequest = null, re
       if (pid) {
         refreshedCredentials.projectId = pid;
         // Persist to DB in background so subsequent requests have it immediately
-        updateProviderCredentials(credentials.connectionId, { projectId: pid }).catch(() => { });
+        updateProviderCredentials(credentials.connectionId, { projectId: pid }).catch((e) => log.warn('CHAT', `projectId persist failed for ${credentials.connectionId}: ${e.message}`));
       }
     }
 
