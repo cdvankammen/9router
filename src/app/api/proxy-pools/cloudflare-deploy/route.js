@@ -92,20 +92,24 @@ export async function POST(request) {
     }
 
     // 2. Enable workers.dev subdomain for the script
-    const enableSubdomainRes = await fetch(`${workerScriptUrl}/subdomain`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiToken}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ enabled: true }),
-      signal: AbortSignal.timeout(CLOUDFLARE_API_TIMEOUT_MS),
-    });
+    try {
+      const enableSubdomainRes = await fetch(`${workerScriptUrl}/subdomain`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ enabled: true }),
+        signal: AbortSignal.timeout(CLOUDFLARE_API_TIMEOUT_MS),
+      });
 
-    if (!enableSubdomainRes.ok) {
-      const err = await enableSubdomainRes.json().catch(() => ({}));
-      console.error("Cloudflare subdomain enable error:", err);
-      // We don't fail completely here, just continue
+      if (!enableSubdomainRes.ok) {
+        const err = await enableSubdomainRes.json().catch(() => ({}));
+        console.error("Cloudflare subdomain enable error:", err);
+      }
+    } catch (subdomainEnableErr) {
+      // Non-fatal: timeout or network error here should not block the deploy
+      console.error("Cloudflare subdomain enable failed (non-fatal):", subdomainEnableErr?.message || subdomainEnableErr);
     }
 
     // 3. Get the workers.dev subdomain for the account to construct the final URL
