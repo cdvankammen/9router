@@ -17,7 +17,9 @@ export default function LoginPage() {
   const [samlConfigured, setSamlConfigured] = useState(false);
   const [samlLoginLabel, setSamlLoginLabel] = useState("Sign in with SAML SSO");
   const [mustChange, setMustChange] = useState(false);
+  const [setupRequired, setSetupRequired] = useState(false);
   const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
 
   // Countdown for rate-limit
   useEffect(() => {
@@ -51,6 +53,18 @@ export default function LoginPage() {
           setOidcLoginLabel(data.oidcLoginLabel || "Sign in with OIDC");
           setSamlConfigured(data.samlConfigured === true);
           setSamlLoginLabel(data.samlLoginLabel || "Sign in with SAML SSO");
+
+          // Probe first-run setup state separately (status endpoint does not
+          // expose it to avoid leaking install state to unauthenticated callers).
+          try {
+            const setupRes = await fetch(`${baseUrl}/api/auth/setup`, { signal: controller.signal });
+            if (setupRes.ok) {
+              const setupData = await setupRes.json();
+              setSetupRequired(!!setupData.setupRequired);
+            }
+          } catch {
+            // Non-fatal — login form will still work; setup gate is enforced server-side.
+          }
         } else {
           // Safe fallback on non-OK response to avoid infinite loading state.
           setHasPassword(true);
@@ -120,6 +134,52 @@ export default function LoginPage() {
     }
   };
 
+  // First-run setup: create the initial password from localhost.
+  const handleSetup = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+    try {
+      if (newPassword.length < 6) {
+        setError("Password must be at least 6 characters.");
+        return;
+      }
+      if (newPassword !== confirmPassword) {
+        setError("Passwords do not match.");
+        return;
+      }
+      const res = await fetch("/api/auth/setup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: newPassword }),
+      });
+      if (res.ok) {
+        // Password created; now log in with it so the user lands on the dashboard.
+        const loginRes = await fetch("/api/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ password: newPassword }),
+        });
+        if (loginRes.ok) {
+          window.location.assign("/dashboard");
+        } else {
+          // Setup succeeded but auto-login failed (shouldn't happen) — fall back
+          // to the normal login form so the user can retry.
+          setSetupRequired(false);
+          setNewPassword("");
+          setConfirmPassword("");
+        }
+      } else {
+        const data = await res.json();
+        setError(data.error || "Failed to set password");
+      }
+    } catch (err) {
+      setError("An error occurred. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleOidcLogin = () => {
     window.location.href = "/api/auth/oidc/start";
   };
@@ -166,7 +226,43 @@ export default function LoginPage() {
         </div>
 
         <Card>
-          {mustChange ? (
+          {setupRequired ? (
+            <form onSubmit={handleSetup} className="flex flex-col gap-4">
+              <p className="text-sm text-amber-600 dark:text-amber-400 text-center">
+                First-run setup: create a password to secure this installation.
+              </p>
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-medium">New password</label>
+                <Input
+                  type="password"
+                  placeholder="At least 6 characters"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  required
+                  autoFocus
+                  minLength={6}
+                />
+              </div>
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-medium">Confirm password</label>
+                <Input
+                  type="password"
+                  placeholder="Re-enter password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                  minLength={6}
+                />
+              </div>
+              {error && <p className="text-xs text-red-500">{error}</p>}
+              <Button type="submit" variant="primary" className="w-full" loading={loading} disabled={!newPassword || !confirmPassword}>
+                Create password
+              </Button>
+              <p className="text-xs text-center text-text-muted mt-1">
+                This can only be done from the local machine.
+              </p>
+            </form>
+          ) : mustChange ? (
             <form onSubmit={handleSetNewPassword} className="flex flex-col gap-4">
               <p className="text-sm text-amber-600 dark:text-amber-400 text-center">
                 Set a new password before accessing the dashboard remotely.
@@ -253,7 +349,7 @@ export default function LoginPage() {
                 <p className="text-xs text-center text-text-muted mt-2">
                   Default password is <code className="bg-sidebar px-1 rounded">123456</code>
                 </p>
-                {hasPassword === false && (
+                {hasPassword === false && !setupRequired && (
                   <p className="text-xs text-center text-amber-600 dark:text-amber-400">
                     Security risk: no password set. You will be asked to set one when logging in remotely.
                   </p>
