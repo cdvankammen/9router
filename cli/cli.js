@@ -96,10 +96,10 @@ if (args[0] === "connect") {
 // Self-heal SQLite runtime deps (sql.js + better-sqlite3) into ~/.9router/runtime
 // so the server can resolve them via NODE_PATH. Best-effort — sql.js is required,
 // better-sqlite3 is optional. Logs to stderr only on failure.
-try { ensureSqliteRuntime({ silent: true }); } catch {}
+try { ensureSqliteRuntime({ silent: true }); } catch (e) { console.error('[sqlite-runtime] self-heal failed:', e.message); }
 
 // Self-heal tray runtime (systray for macOS/Linux only). Windows skipped.
-try { ensureTrayRuntime({ silent: true }); } catch {}
+try { ensureTrayRuntime({ silent: true }); } catch (e) { console.error('[tray-runtime] self-heal failed:', e.message); }
 
 // Configuration constants
 const APP_NAME = pkg.name; // Use from package.json
