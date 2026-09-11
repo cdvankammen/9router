@@ -26,7 +26,9 @@ function loadJwtSecret() {
     const file = path.join(DATA_DIR, "jwt-secret");
     try {
       return fs.readFileSync(file, "utf8").trim();
-    } catch {}
+    } catch (e) {
+      console.warn("[JWT] secret file unreadable (%s), regenerating:", e.code);
+    }
     fs.mkdirSync(DATA_DIR, { recursive: true });
     const generated = crypto.randomBytes(32).toString("hex");
     fs.writeFileSync(file, generated, { mode: 0o600 });
