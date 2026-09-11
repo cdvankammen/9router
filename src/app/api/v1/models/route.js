@@ -328,35 +328,35 @@ export async function buildModelsList(kindFilter, options = {}) {
     connections = await getProviderConnections();
     connections = connections.filter(c => c.isActive !== false);
   } catch (e) {
-    console.log("Could not fetch providers, returning all models");
+    console.warn(`[models] getProviderConnections failed:`, e.message);
   }
 
   let combos = [];
   try {
     combos = await getCombos();
   } catch (e) {
-    console.log("Could not fetch combos");
+    console.warn(`[models] getCombos failed:`, e.message);
   }
 
   let customModels = [];
   try {
     customModels = await getCustomModels();
   } catch (e) {
-    console.log("Could not fetch custom models");
+    console.warn(`[models] getCustomModels failed:`, e.message);
   }
 
   let modelAliases = {};
   try {
     modelAliases = await getModelAliases();
   } catch (e) {
-    console.log("Could not fetch model aliases");
+    console.warn(`[models] getModelAliases failed:`, e.message);
   }
 
   let disabledByAlias = {};
   try {
     disabledByAlias = await getDisabledModels();
   } catch (e) {
-    console.log("Could not fetch disabled models");
+    console.warn(`[models] getDisabledModels failed:`, e.message);
   }
   const isDisabled = (alias, modelId) => Array.isArray(disabledByAlias[alias]) && disabledByAlias[alias].includes(modelId);
 
