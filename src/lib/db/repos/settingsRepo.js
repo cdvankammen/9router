@@ -98,10 +98,8 @@ const DEFAULT_SETTINGS = {
   pxpipeAutoInstall: true,
   pxpipeMinChars: 25000,
   pxpipeTimeoutMs: 15000,
-<<<<<<< HEAD
   // Per-provider user header overrides applied at dispatch: { [providerId]: { headers: {..} } }
   providerOverrides: {},
-=======
   // Auto-persist discovered model IDs from compatible providers to kv customModels.
   // Default OFF — users opt in via dashboard settings toggle.
   // First-discovery only (addCustomModel is idempotent). No auto-reap.
@@ -110,7 +108,9 @@ const DEFAULT_SETTINGS = {
     maxModelsPerProvider: 200,
     markSource: true,
   },
->>>>>>> a0650fda (feat(merge-prep): stage all local work for upstream merge)
+  // CORS allowlist for API endpoints. Empty = wildcard (legacy behavior).
+  // When non-empty, only listed origins receive Access-Control-Allow-Origin.
+  corsAllowedOrigins: [],
 };
 
 async function readRaw() {
