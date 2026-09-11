@@ -75,6 +75,14 @@ const RULES = [
       /certificate/i, /self[- ]signed/i, /unable\s*to\s*connect/i,
     ],
   },
+  {
+    category: "empty_response",
+    statuses: [200],
+    patterns: [
+      /empty\s*(stream|response|chunk)/i, /zero\s*content/i,
+      /no\s*content\s*received/i, /stream\s*completed\s*with\s*no/i,
+    ],
+  },
 ];
 
 /**

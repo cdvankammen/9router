@@ -340,6 +340,8 @@ export default function ProviderDetailPage() {
       const autoPingSettingsKey = AUTO_PING_SETTINGS_KEYS[providerId];
       const apCfg = autoPingSettingsKey ? settingsData[autoPingSettingsKey] || {} : {};
       setAutoPing({ enabled: apCfg.enabled === true, connections: apCfg.connections || {} });
+      // Dev mode flag from settings
+      setDevMode(!!settingsData.devMode);
       if (nodesRes.ok) {
         let node = (nodesData.nodes || []).find((entry) => entry.id === providerId) || null;
 
@@ -578,11 +580,6 @@ export default function ProviderDetailPage() {
     if (!fetcher) return;
     fetchSuggestedModels(fetcher).then(setSuggestedModels);
   }, [providerId]);
-
-  // Fetch settings for devMode flag
-  useEffect(() => {
-    fetch("/api/settings").then(r => r.json()).then(d => setDevMode(!!d.devMode)).catch(() => {});
-  }, []);
 
   const handleSetAlias = async (modelId, alias, providerAliasOverride = providerAlias) => {
     const fullModel = `${providerAliasOverride}/${modelId}`;
@@ -2049,6 +2046,7 @@ export default function ProviderDetailPage() {
         errors={providerErrors}
         loading={providerErrorsLoading}
         onRefresh={fetchProviderErrors}
+        connections={connections}
       />
 
       {bulkActionModal}

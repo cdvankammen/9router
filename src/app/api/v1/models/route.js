@@ -8,6 +8,8 @@ import {
 } from "@/shared/constants/providers";
 import { getProviderConnections, getCombos, getCustomModels, getModelAliases } from "@/lib/localDb";
 import { getDisabledModels } from "@/lib/disabledModelsDb";
+import { getSettings } from "@/lib/db/repos/settingsRepo";
+import { addCustomModel, persistDiscoveredModels } from "@/lib/db/repos/aliasRepo";
 import { resolveKiroModels } from "open-sse/services/kiroModels.js";
 import { resolveKimchiModels } from "open-sse/services/kimchiModels.js";
 import { resolveQoderModels, routableQoderModels } from "open-sse/services/qoderModels.js";
@@ -466,6 +468,21 @@ export async function buildModelsList(kindFilter, options = {}) {
 
       if (isCompatibleProvider && rawModelIds.length === 0 && !skipDynamicFetch) {
         rawModelIds = await fetchCompatibleModelIds(conn);
+
+        // Auto-persist discovered models to kv customModels (gated by settings).
+        // Fire-and-forget — don't block the /v1/models response.
+        if (rawModelIds.length > 0) {
+          try {
+            const settings = await getSettings();
+            const persistCfg = settings.modelAutoPersist;
+            if (persistCfg?.enabled && rawModelIds.length <= persistCfg.maxModelsPerProvider) {
+              persistDiscoveredModels(outputAlias, rawModelIds, persistCfg.markSource)
+                .catch((err) => console.error("[AutoPersist] failed:", err?.message));
+            }
+          } catch (err) {
+            console.error("[AutoPersist] settings read failed:", err?.message);
+          }
+        }
       }
 
       // Config-driven live catalog override (e.g. Kiro returns dynamic

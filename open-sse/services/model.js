@@ -29,12 +29,39 @@ export function resolveProviderAlias(aliasOrId) {
 }
 
 /**
+ * Strip known beta/context-window markers appended by clients.
+ * Claude Code 1M-context beta sends e.g. "claude-sonnet-4[1m]"; older betas
+ * used "[200k]". The marker is a client-side hint — we strip it so the model
+ * lookup succeeds, and optionally surface it via the returned `betaMarker`
+ * field so downstream handlers can enable extended-context behaviour.
+ *
+ * Pattern: trailing `[<digits><k|m>]` (case-insensitive), e.g. [1m], [200k].
+ * Only strips when the bracket group sits at the END of the string so we
+ * don't accidentally eat legitimate model-name characters.
+ */
+const BETA_MARKER_RE = /\[(\d+[km])\]$/i;
+
+export function stripBetaMarker(modelStr) {
+  if (!modelStr || typeof modelStr !== "string") return { cleaned: modelStr, betaMarker: null };
+  const m = modelStr.match(BETA_MARKER_RE);
+  if (!m) return { cleaned: modelStr, betaMarker: null };
+  return {
+    cleaned: modelStr.slice(0, -m[0].length),
+    betaMarker: m[1].toLowerCase(), // e.g. "1m", "200k"
+  };
+}
+
+/**
  * Parse model string: "alias/model" or "provider/model" or just alias
  */
 export function parseModel(modelStr) {
   if (!modelStr) {
-    return { provider: null, model: null, isAlias: false, providerAlias: null };
+    return { provider: null, model: null, isAlias: false, providerAlias: null, betaMarker: null };
   }
+
+  // Strip beta context-window markers before any further parsing (#3690)
+  const { cleaned, betaMarker } = stripBetaMarker(modelStr);
+  modelStr = cleaned;
 
   // Check if standard format: provider/model or alias/model
   if (modelStr.includes("/")) {
@@ -42,7 +69,7 @@ export function parseModel(modelStr) {
     const providerOrAlias = modelStr.slice(0, firstSlash);
     const model = modelStr.slice(firstSlash + 1);
     const provider = resolveProviderAlias(providerOrAlias);
-    return { provider, model, isAlias: false, providerAlias: providerOrAlias };
+    return { provider, model, isAlias: false, providerAlias: providerOrAlias, betaMarker };
   }
 
   // Alias format (model alias, not provider alias)
@@ -51,6 +78,7 @@ export function parseModel(modelStr) {
     model: modelStr,
     isAlias: true,
     providerAlias: null,
+    betaMarker,
   };
 }
 
@@ -98,6 +126,7 @@ export async function getModelInfoCore(modelStr, aliasesOrGetter) {
     return {
       provider: parsed.provider,
       model: parsed.model,
+      betaMarker: parsed.betaMarker,
     };
   }
 
@@ -119,6 +148,7 @@ export async function getModelInfoCore(modelStr, aliasesOrGetter) {
   return {
     provider: inferProviderFromModelName(parsed.model),
     model: parsed.model,
+    betaMarker: parsed.betaMarker,
   };
 }
 

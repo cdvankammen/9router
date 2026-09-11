@@ -1,0 +1,66 @@
+# Pre-Merge Baseline Test Run
+**Date:** 2026-09-11 03:32:40 UTC
+**Branch:** fix/sec-3673-settings-mass-assignment
+**Commit:** 34f518e49770dcad52f50b8f605765331dfffe45
+**Upstream:** origin/master (fetched)
+
+---
+
+## Summary
+| Metric | Count |
+|--------|-------|
+| **Test Files** | 211 total |
+| **Passed Files** | 174 |
+| **Failed Files** | 26 |
+| **Skipped Files** | 11 |
+| **Individual Tests** | 2016 total |
+| **Passed Tests** | 1857 |
+| **Failed Tests** | 83 |
+| **Expected Fail** | 17 |
+| **Skipped Tests** | 59 |
+| **Duration** | 27.16s |
+
+---
+
+## Failed Test Files (26)
+
+1. tests/translator/bugs-toClaude-context.test.js
+2. tests/translator/golden-request.test.js
+3. tests/translator/golden-url-header.test.js
+4. tests/unit/claude-header-forwarding.test.js
+5. tests/unit/codex-image-fetch.test.js
+6. tests/unit/combo-autoswitch.test.js
+7. tests/unit/cursor-agent-proto.test.js
+8. tests/unit/cursor-models.test.js
+9. tests/unit/db-benchmark.test.js
+10. tests/unit/db-concurrent.test.js
+11. tests/unit/db-sqlite-vs-lowdb.test.js
+12. tests/unit/embeddings.cloud.test.js
+13. tests/unit/empty-choices.test.js
+14. tests/unit/error-categorizer.test.js
+15. tests/unit/executor-const-guard.test.js
+16. tests/unit/force-stream-config.test.js
+17. tests/unit/image-fetch-hardening.test.js
+18. tests/unit/kimchi-strip-reasoning.test.js
+19. tests/unit/kimchi.test.js
+20. tests/unit/kiro-terminal-integrity.test.js
+21. tests/unit/mimo-free.live.test.js
+22. tests/unit/oauth-cursor-auto-import.test.js
+23. tests/unit/openai-to-claude.test.js
+24. tests/unit/request-details-tab.test.js
+25. tests/unit/translator-request-normalization.test.js
+26. tests/unit/windsurf-executor.test.js
+
+---
+
+## Notes
+- Baseline recorded BEFORE any merge from origin/master
+- Current branch: fix/sec-3673-settings-mass-assignment (local changes present)
+- These failures represent the pre-merge state; post-merge run will compare against this
+- Many failures appear to be pre-existing (golden snapshot mismatches, live API dependencies, protobuf codec issues)
+
+---
+
+## Next Steps
+After merge from origin/master, re-run: `npx vitest run --config tests/vitest.config.js`
+Compare results against this baseline to identify regressions vs. pre-existing failures.

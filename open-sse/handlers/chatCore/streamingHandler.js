@@ -151,8 +151,17 @@ export function buildOnStreamComplete({ provider, model, connectionId, apiKey, r
       ttft: ttftAt ? ttftAt - requestStartTime : Date.now() - requestStartTime,
       total: Date.now() - requestStartTime
     };
+    const isEmptyStream = !contentObj?.totalContentLength || contentObj.totalContentLength === 0;
     const safeContent = contentObj?.content || "[Empty streaming response]";
     const safeThinking = contentObj?.thinking || null;
+
+    // GAP-RETRY-02: Detect empty streaming responses (HTTP 200 + zero content).
+    // Provider returned valid SSE framing but no actual content chunks.
+    // Mark as error so retry/fallback logic can trigger instead of silent success.
+    if (isEmptyStream) {
+      if (log?.errorLine) log.errorLine(reqTag, "✗", `EMPTY STREAM · ${provider}/${model} · ${latency.total}ms · HTTP 200 but zero content received`);
+      else console.warn(`[STREAM] ${provider} | ${model} | EMPTY STREAM: HTTP 200 with zero content (${latency.total}ms)`);
+    }
 
     saveRequestDetail(buildRequestDetail({
       provider, model, connectionId,
@@ -167,7 +176,8 @@ export function buildOnStreamComplete({ provider, model, connectionId, apiKey, r
       sourceApp,
       userAgent,
       url: providerUrl || providerResponse?.url,
-      status: "success"
+      status: isEmptyStream ? "error" : "success",
+      ...(isEmptyStream ? { errorCategory: "empty_response" } : {})
     }, { id: streamDetailId })).catch(err => {
       console.error("[RequestDetail] Failed to update streaming content:", err.message);
     });

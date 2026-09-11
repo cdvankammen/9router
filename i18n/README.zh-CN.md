@@ -960,7 +960,7 @@ export HOSTNAME="0.0.0.0"
 export NODE_ENV="production"
 export NEXT_PUBLIC_BASE_URLhttp://localhost:20128"
 export NEXT_PUBLIC_CLOUD_URL="https://9router.com"
-export API_KEY_SECRET="endpoint-proxy-api-key-secret"
+export API_KEY_SECRET="$(node -e \"console.log(require('crypto').randomBytes(32).toString('hex'))\")"
 export MACHINE_ID_SALT="endpoint-proxy-salt"
 
 # Start

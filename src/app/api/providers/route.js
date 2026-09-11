@@ -5,6 +5,9 @@ import {
   getProviderNodeById,
   getProviderNodes,
   getProxyPoolById,
+  getOrphanConnections,
+  deleteOrphanConnections,
+  cleanupProviderConnections,
 } from "@/models";
 import { APIKEY_PROVIDERS } from "@/shared/constants/config";
 import { AI_PROVIDERS, FREE_TIER_PROVIDERS, WEB_COOKIE_PROVIDERS, isOpenAICompatibleProvider, isAnthropicCompatibleProvider, isCustomEmbeddingProvider } from "@/shared/constants/providers";
@@ -46,9 +49,34 @@ async function normalizeProxyPoolId(proxyPoolId) {
   return { proxyPoolId: normalizedId };
 }
 
-// GET /api/providers - List all connections
-export async function GET() {
+// GET /api/providers - List all connections (or ?action=orphans to list orphan connections)
+export async function GET(request) {
   try {
+    const { searchParams } = new URL(request.url);
+    const action = searchParams.get("action");
+
+    if (action === "orphans") {
+      const orphans = await getOrphanConnections();
+      return NextResponse.json({
+        count: orphans.length,
+        orphans: orphans.map(c => ({
+          id: c.id,
+          provider: c.provider,
+          name: c.name,
+          authType: c.authType,
+          isActive: c.isActive,
+          createdAt: c.createdAt,
+        })),
+      });
+    }
+
+    if (action === "cleanup") {
+      // GET-triggered cleanup (opt-in orphan removal via ?removeOrphans=true)
+      const removeOrphans = searchParams.get("removeOrphans") === "true";
+      const result = await cleanupProviderConnections({ removeOrphans });
+      return NextResponse.json({ success: true, ...result });
+    }
+
     const connections = await getProviderConnections();
 
     // Build nodeNameMap for compatible providers (id → name)

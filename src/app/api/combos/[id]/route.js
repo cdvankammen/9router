@@ -1,6 +1,29 @@
 import { NextResponse } from "next/server";
 import { getComboById, updateCombo, deleteCombo, getComboByName } from "@/lib/localDb";
 import { resetComboRotation } from "open-sse/services/combo.js";
+import { isValidModel } from "@/shared/constants/models";
+import { PROVIDER_ID_TO_ALIAS } from "open-sse/config/providerModels.js";
+
+// Soft-validate model ids against the registry (same logic as POST route).
+function findUnknownModels(models) {
+  if (!Array.isArray(models)) return [];
+  const unknown = [];
+  const aliases = Object.values(PROVIDER_ID_TO_ALIAS);
+  for (const raw of models) {
+    if (typeof raw !== "string" || !raw) continue;
+    const slash = raw.indexOf("/");
+    const provider = slash > 0 ? raw.slice(0, slash) : null;
+    const model = slash > 0 ? raw.slice(slash + 1) : raw;
+    if (!provider) continue;
+    const alias = PROVIDER_ID_TO_ALIAS[provider] || provider;
+    if (aliases.includes(alias) || aliases.includes(provider)) {
+      if (!isValidModel(alias, model) && !isValidModel(provider, model)) {
+        unknown.push(raw);
+      }
+    }
+  }
+  return unknown;
+}
 
 // Validate combo name: only a-z, A-Z, 0-9, -, _
 const VALID_NAME_REGEX = /^[a-zA-Z0-9_.\-]+$/;
@@ -53,7 +76,12 @@ export async function PUT(request, { params }) {
     if (prev?.name) resetComboRotation(prev.name);
     if (combo.name && combo.name !== prev?.name) resetComboRotation(combo.name);
 
-    return NextResponse.json(combo);
+    const unknownModels = findUnknownModels(combo.models || body.models);
+    const warnings = unknownModels.length
+      ? [`Unrecognized model(s): ${unknownModels.join(", ")} — saved anyway (custom provider?)`]
+      : [];
+
+    return NextResponse.json({ ...combo, warnings });
   } catch (error) {
     console.log("Error updating combo:", error);
     return NextResponse.json({ error: "Failed to update combo" }, { status: 500 });

@@ -180,6 +180,15 @@ Commands:
   }
 }
 
+// Production JWT_SECRET validation — fail fast before spawning server
+const isProdEnv = process.env.NODE_ENV === "production";
+if (isProdEnv && !process.env.JWT_SECRET) {
+  console.error("\n❌ JWT_SECRET is required in production.");
+  console.error("   Generate one: openssl rand -hex 32");
+  console.error("   Add it to your .env file or export JWT_SECRET=...\n");
+  process.exit(1);
+}
+
 // Auto-relaunch after update: detached process has no TTY → fallback to tray
 if (skipUpdate && !trayMode && !process.stdin.isTTY) {
   trayMode = true;
@@ -721,6 +730,47 @@ function startServer(updatePromise) {
     }
   };
 
+  // Watchdog to prevent tray freeze (Jetsam) and recover from crashes
+  let trayWatchdogInterval = null;
+  const startTrayWatchdog = () => {
+    if (trayWatchdogInterval) clearInterval(trayWatchdogInterval);
+    
+    // Check every 60 seconds
+    trayWatchdogInterval = setInterval(() => {
+      if (isShuttingDown) {
+        clearInterval(trayWatchdogInterval);
+        return;
+      }
+
+      try {
+        const { isTrayAlive, initTray, killTray } = require("./src/cli/tray/tray");
+        const alive = isTrayAlive();
+        
+        if (!alive) {
+          console.error("[9router] Tray watchdog: tray unresponsive, attempting restart...");
+          killTray().then(() => {
+            // Re-initialize tray
+            initTray({
+              port,
+              onQuit: () => {
+                isShuttingDown = true;
+                console.log("\n👋 Shutting down from tray...");
+                cleanup();
+                setTimeout(() => process.exit(0), 100);
+              },
+              onOpenDashboard: () => openBrowser(url)
+            });
+            console.log("[9router] Tray watchdog: tray restarted successfully.");
+          }).catch(err => {
+            console.error("[9router] Tray watchdog: failed to restart tray:", err.message);
+          });
+        }
+      } catch (err) {
+        console.error("[9router] Tray watchdog error:", err.message);
+      }
+    }, 60000);
+  };
+
   // Tray-only mode: no TUI, just tray icon
   if (trayMode) {
     // Ignore SIGHUP so macOS terminal close doesn't kill the background tray process
@@ -732,6 +782,7 @@ function startServer(updatePromise) {
 
     waitServerReady(port).then(() => {
       initTrayIcon();
+      startTrayWatchdog();
       console.log("\n💡 Router is now running in system tray. Close this terminal if you want.");
       console.log("   Right-click tray icon to open dashboard or quit.\n");
     });
@@ -792,6 +843,9 @@ function startServer(updatePromise) {
             console.log(`🔔 9Router is running in tray (PID: ${process.pid})`);
             console.log(`   Server: http://${displayHost}:${port}`);
             console.log(`\n💡 You can close this terminal. Right-click tray icon to quit.\n`);
+
+            // Start watchdog to prevent Jetsam freeze
+            startTrayWatchdog();
 
             // Tray already init'd at startup — just keep event loop alive.
             return;

@@ -13,6 +13,7 @@ Project plans, feature specs, implementation roadmaps, and task breakdowns (form
 |------|--------|
 | `2026-08-12-combo-duplicate-search-capabilities-plan.md` | Combo duplicate search + capabilities plan |
 | `2026-08-10-mini2-install-and-test-plan.md` | Mini2 node install + test plan |
+| `2026-08-31-context-window-and-hybrid-combo-plan.md` | Per-model & per-combo context window overrides + hybrid round-robin/fallback (5 milestones) |
 | `fallback-rules-ux-plan.md` | Fallback rules UX plan |
 | `hardening-roadmap.md` | Security/hardening roadmap |
 | `messages-page-feature-spec.md` | Messages page feature spec |

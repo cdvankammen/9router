@@ -10,8 +10,10 @@ const { log, err, dumpRequest, createResponseDumper, clearDumpDir } = require(".
 const { IS_DEV, LSOF_BIN, TARGET_HOSTS, URL_PATTERNS, MODEL_SYNONYMS, MODEL_PATTERNS, MODEL_NO_MAP, getToolForHost, isChatRequest, extractModel } = require("./config");
 const { DATA_DIR, MITM_DIR } = require("./paths");
 const { generateCert, getCertForDomain } = require("./cert/generate");
+const { decryptPrivateKey } = require("./cert/keyEncryption");
 const { getMitmAlias } = require("./dbReader");
 const { applyAntigravityIdeVersionOverride } = require("./antigravityIdeVersion");
+const { LEGITIMATE_SERVICES_ALL } = require("../shared/constants/legitimateServices");
 const LOCAL_PORT = 443;
 const IS_WIN = process.platform === "win32";
 const ENABLE_FILE_LOG = IS_DEV;
@@ -62,10 +64,11 @@ try {
     generateCert();
   }
 
-  const rootKey = fs.readFileSync(path.join(MITM_DIR, "rootCA.key"));
+  const rawRootKey = fs.readFileSync(path.join(MITM_DIR, "rootCA.key"), "utf8");
+  const rootKeyPem = decryptPrivateKey(rawRootKey); // decrypts encrypted keys; passes plaintext through
   const rootCert = fs.readFileSync(path.join(MITM_DIR, "rootCA.crt"));
   rootCAPem = rootCert.toString("utf8");
-  sslOptions = { key: rootKey, cert: rootCert, SNICallback: sniCallback };
+  sslOptions = { key: rootKeyPem, cert: rootCert, SNICallback: sniCallback };
 } catch (e) {
   err(`Root CA not found: ${e.message}`);
   process.exit(1);
@@ -342,7 +345,24 @@ const server = https.createServer(sslOptions, async (req, res) => {
   }
 });
 
-// Kill only processes LISTENING on LOCAL_PORT (not outbound connections)
+// M4: Kill only processes LISTENING on LOCAL_PORT with legitimate-service grace.
+// Refuses to kill known web servers unless MITM_FORCE_KILL=1 env var is set.
+const LEGITIMATE_SERVICES = LEGITIMATE_SERVICES_ALL;
+const FORCE_KILL = process.env.MITM_FORCE_KILL === "1" || process.env.MITM_FORCE_KILL === "true";
+
+function getProcessName(pid) {
+  try {
+    if (IS_WIN) {
+      const out = execSync(`tasklist /FI "PID eq ${pid}" /FO CSV /NH`, { encoding: "utf-8", windowsHide: true });
+      const m = out.match(/"([^"]+)"/);
+      return m ? m[1].replace(".exe", "").toLowerCase() : "unknown";
+    } else {
+      const out = execSync(`ps -p ${pid} -o comm=`, { encoding: "utf-8", windowsHide: true });
+      return out.trim().split("/").pop().toLowerCase() || "unknown";
+    }
+  } catch { return "unknown"; }
+}
+
 function killPort(port) {
   try {
     let pidList = [];
@@ -358,15 +378,26 @@ function killPort(port) {
       pidList = out.split("\n").filter(p => p && Number(p) !== process.pid);
     }
     if (pidList.length === 0) return;
-    pidList.forEach(pid => {
+
+    for (const pidStr of pidList) {
+      const pid = Number(pidStr);
+      const name = getProcessName(pid);
+      const isLegitimate = LEGITIMATE_SERVICES.some(svc => name.includes(svc));
+
+      if (isLegitimate && !FORCE_KILL) {
+        err(`⚠️  Port ${port}: refusing to kill legitimate service "${name}" (PID ${pid}). Set MITM_FORCE_KILL=1 to override.`);
+        continue;
+      }
+
       try {
+        if (isLegitimate) log(`⚠️  MITM_FORCE_KILL: killing legitimate service "${name}" (PID ${pid})`);
         if (IS_WIN) execSync(`taskkill /F /PID ${pid}`, { windowsHide: true });
-        else process.kill(Number(pid), "SIGKILL");
+        else process.kill(pid, "SIGKILL");
       } catch (e) {
         err(`Failed to kill PID ${pid}: ${e.message}`);
       }
-    });
-    log(`Killed ${pidList.length} process(es) on port ${port}`);
+    }
+    log(`Processed ${pidList.length} process(es) on port ${port}`);
   } catch (e) {
     if (e.status !== 1) throw e;
   }

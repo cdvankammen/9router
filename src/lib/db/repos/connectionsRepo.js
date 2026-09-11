@@ -301,8 +301,40 @@ export async function reorderProviderConnections(providerId) {
   db.transaction(() => reorderInTx(db, providerId));
 }
 
-export async function cleanupProviderConnections() {
+export async function getOrphanConnections() {
   const db = await getAdapter();
+  const rows = db.all(
+    `SELECT pc.* FROM providerConnections pc
+     LEFT JOIN providerNodes pn ON pc.provider = pn.id
+     WHERE pn.id IS NULL`
+  );
+  return rows.map(rowToConn);
+}
+
+export async function deleteOrphanConnections() {
+  const db = await getAdapter();
+  let deleted = 0;
+  db.transaction(() => {
+    const orphans = db.all(
+      `SELECT pc.id, pc.provider FROM providerConnections pc
+       LEFT JOIN providerNodes pn ON pc.provider = pn.id
+       WHERE pn.id IS NULL`
+    );
+    for (const row of orphans) {
+      db.run(`DELETE FROM providerConnections WHERE id = ?`, [row.id]);
+      deleted++;
+    }
+  });
+  return deleted;
+}
+
+export async function cleanupProviderConnections(opts = {}) {
+  const { removeOrphans = false } = opts;
+  const db = await getAdapter();
+  let orphanCount = 0;
+  if (removeOrphans) {
+    orphanCount = await deleteOrphanConnections();
+  }
   const fieldsToCheck = [
     "displayName", "email", "globalPriority", "defaultModel",
     "accessToken", "refreshToken", "expiresAt", "tokenType",
@@ -329,5 +361,5 @@ export async function cleanupProviderConnections() {
       if (dirty) upsert(db, conn);
     }
   });
-  return cleaned;
+  return { cleaned, orphansRemoved: orphanCount };
 }

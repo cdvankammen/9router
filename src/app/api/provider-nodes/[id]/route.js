@@ -80,7 +80,7 @@ export async function PUT(request, { params }) {
   }
 }
 
-// DELETE /api/provider-nodes/[id] - Delete provider node and its connections
+// DELETE /api/provider-nodes/[id] - Delete provider node and its connections (transactional)
 export async function DELETE(request, { params }) {
   try {
     const { id } = await params;
@@ -90,8 +90,14 @@ export async function DELETE(request, { params }) {
       return NextResponse.json({ error: "Provider node not found" }, { status: 404 });
     }
 
-    await deleteProviderConnectionsByProvider(id);
-    await deleteProviderNode(id);
+    // Transactional cascade delete: both operations in a single transaction
+    // so a crash between them cannot leave orphan connections or a node with zero connections.
+    const { getAdapter } = await import("@/lib/db/driver.js");
+    const db = await getAdapter();
+    db.transaction(() => {
+      db.run(`DELETE FROM providerConnections WHERE provider = ?`, [id]);
+      db.run(`DELETE FROM providerNodes WHERE id = ?`, [id]);
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {

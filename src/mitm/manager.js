@@ -16,6 +16,7 @@ const { isCertExpired } = require("./cert/rootCA");
 const { DATA_DIR, MITM_DIR } = require("./paths");
 const { log, err } = require("./logger");
 const { LSOF_BIN } = require("./config");
+const { LEGITIMATE_SERVICES_LINUX, LEGITIMATE_SERVICES_WIN } = require("../shared/constants/legitimateServices");
 
 const DEFAULT_MITM_ROUTER_BASE = "http://localhost:20128";
 
@@ -256,6 +257,41 @@ async function restoreToolDNS(sudoPassword) {
     } catch (e) {
       err(`DNS ${tool}: restore failed — ${e.message}`);
     }
+  }
+}
+
+/**
+ * M3: Clean stale DNS entries from a previous crashed session.
+ * Called on app startup — if hosts file has tool entries but no MITM is running,
+ * the previous session likely crashed without cleanup. Remove stale entries
+ * so tool domains resolve normally until MITM is explicitly started again.
+ */
+async function cleanupStaleDNS(sudoPassword) {
+  const status = await getMitmStatus();
+  if (status.running) return; // MITM is healthy, DNS is intentional
+
+  const dnsStatus = checkAllDNSStatus();
+  const activeTools = Object.entries(dnsStatus)
+    .filter(([, active]) => active)
+    .map(([tool]) => tool);
+
+  if (activeTools.length === 0) return; // No stale entries
+
+  log(`🌐 DNS: found ${activeTools.length} stale tool DNS entries from previous session (MITM not running)`);
+  log(`🌐 DNS: cleaning stale entries for: ${activeTools.join(", ")}`);
+
+  const password = sudoPassword || getCachedPassword() || await loadEncryptedPassword();
+  for (const tool of activeTools) {
+    try {
+      await removeDNSEntry(tool, password);
+    } catch (e) {
+      err(`DNS ${tool}: failed to clean stale entry — ${e.message}`);
+    }
+  }
+
+  // Reset persisted DNS state so UI reflects reality
+  if (_updateSettings) {
+    try { await _updateSettings({ dnsToolEnabled: {} }); } catch { /* best effort */ }
   }
 }
 
@@ -518,8 +554,22 @@ async function startServer(apiKey, sudoPassword, forceKillPort443 = false) {
         const shortName = owner.name.includes("/")
           ? owner.name.split("/").filter(Boolean).pop()
           : owner.name;
-        if (forceKillPort443) {
-          log(`Killing process on port 443 (PID ${owner.pid}, name=${shortName})...`);
+  // M4: Check if the process is a legitimate service before killing
+        const isLegitimate = LEGITIMATE_SERVICES_LINUX.some(svc => shortName.toLowerCase().includes(svc));
+
+        if (isLegitimate && !forceKillPort443) {
+          log(`⚠️  Port 443 is used by legitimate service "${shortName}" (PID ${owner.pid}).`);
+          log(`⚠️  Refusing to kill. Use --force or stop the service manually.`);
+          const e = new Error(`Port 443 is used by legitimate service "${shortName}" (PID ${owner.pid}). Use --force to override.`);
+          e.code = "PORT_443_LEGITIMATE";
+          e.portOwner = { pid: owner.pid, name: shortName };
+          throw e;
+        } else if (forceKillPort443) {
+          if (isLegitimate) {
+            log(`⚠️  --force specified: killing legitimate service "${shortName}" (PID ${owner.pid})...`);
+          } else {
+            log(`Killing process on port 443 (PID ${owner.pid}, name=${shortName})...`);
+          }
           await killPort443Owner(owner, sudoPassword);
         } else {
           const e = new Error(`Port 443 is already in use by "${shortName}" (PID ${owner.pid}).`);
@@ -587,8 +637,23 @@ async function startServer(apiKey, sudoPassword, forceKillPort443 = false) {
     // Check port 443 — ask user before killing
     const winOwner = await getPort443Owner(sudoPassword);
     if (winOwner) {
-      if (forceKillPort443) {
-        log(`Killing process on port 443 (PID ${winOwner.pid}, name=${winOwner.name})...`);
+      // M4: Check if the process is a legitimate service before killing (Windows)
+      const winShortName = winOwner.name.toLowerCase();
+      const isWinLegitimate = LEGITIMATE_SERVICES_WIN.some(svc => winShortName.includes(svc));
+
+      if (isWinLegitimate && !forceKillPort443) {
+        log(`⚠️  Port 443 is used by legitimate service "${winOwner.name}" (PID ${winOwner.pid}).`);
+        log(`⚠️  Refusing to kill. Use --force or stop the service manually.`);
+        const e = new Error(`Port 443 is used by legitimate service "${winOwner.name}" (PID ${winOwner.pid}). Use --force to override.`);
+        e.code = "PORT_443_LEGITIMATE";
+        e.portOwner = { pid: winOwner.pid, name: winOwner.name };
+        throw e;
+      } else if (forceKillPort443) {
+        if (isWinLegitimate) {
+          log(`⚠️  --force specified: killing legitimate service "${winOwner.name}" (PID ${winOwner.pid})...`);
+        } else {
+          log(`Killing process on port 443 (PID ${winOwner.pid}, name=${winOwner.name})...`);
+        }
         await killPort443Owner(winOwner, sudoPassword);
       } else {
         const e = new Error(`Port 443 is already in use by "${winOwner.name}" (PID ${winOwner.pid}).`);
@@ -878,6 +943,7 @@ module.exports = {
   isSudoPasswordRequired,
   initDbHooks,
   restoreToolDNS,
+  cleanupStaleDNS,
   hasDnsPrivilege,
   removeAllDNSEntriesSync,
 };

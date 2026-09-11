@@ -98,8 +98,19 @@ const DEFAULT_SETTINGS = {
   pxpipeAutoInstall: true,
   pxpipeMinChars: 25000,
   pxpipeTimeoutMs: 15000,
+<<<<<<< HEAD
   // Per-provider user header overrides applied at dispatch: { [providerId]: { headers: {..} } }
   providerOverrides: {},
+=======
+  // Auto-persist discovered model IDs from compatible providers to kv customModels.
+  // Default OFF — users opt in via dashboard settings toggle.
+  // First-discovery only (addCustomModel is idempotent). No auto-reap.
+  modelAutoPersist: {
+    enabled: false,
+    maxModelsPerProvider: 200,
+    markSource: true,
+  },
+>>>>>>> a0650fda (feat(merge-prep): stage all local work for upstream merge)
 };
 
 async function readRaw() {
@@ -141,6 +152,7 @@ const CONFIG_MERGE_KEYS = new Set([
   "smartRouter",
   "capacityAdapter",
   "srComboCleanup",
+  "modelAutoPersist",
 ]);
 
 // Nested MAP keys: the sender owns the full map (replace semantics — deleting

@@ -1,6 +1,7 @@
 import { convertResponsesStreamToJson } from "../../transformer/streamToJsonConverter.js";
 import { restoreToolNames } from "../../utils/opencodeFingerprint.js";
 import { createErrorResult } from "../../utils/error.js";
+import { validateResponseBody } from "../../utils/responseValidator.js";
 import { HTTP_STATUS } from "../../config/runtimeConfig.js";
 import { FORMATS } from "../../translator/formats.js";
 import { PROVIDERS } from "../../config/providers.js";
@@ -102,6 +103,54 @@ function chatCompletionToResponses(responseBody, customToolNames = null) {
       input_tokens: usage.prompt_tokens || usage.input_tokens || 0,
       output_tokens: usage.completion_tokens || usage.output_tokens || 0,
       total_tokens: usage.total_tokens || (usage.prompt_tokens || 0) + (usage.completion_tokens || 0),
+    },
+  };
+}
+
+/**
+ * Convert an OpenAI Chat Completions JSON body into the Anthropic Claude
+ * Message shape. Inlined here (not imported from nonStreamingHandler.js) to
+ * avoid a circular import: nonStreamingHandler already imports
+ * parseSSEToOpenAIResponse from this module.
+ */
+function openAICompletionToClaudeMessage(responseBody) {
+  if (!responseBody?.choices?.[0]) return responseBody;
+  const choice = responseBody.choices[0];
+  const message = choice.message || {};
+  const content = [];
+
+  const reasoning = message.reasoning_content || message.provider_specific_fields?.reasoning_content || "";
+  if (reasoning) {
+    content.push({ type: "thinking", thinking: reasoning });
+  }
+  if (typeof message.content === "string" && message.content.length > 0) {
+    content.push({ type: "text", text: message.content });
+  }
+  for (const toolCall of message.tool_calls || []) {
+    const fn = toolCall.function || {};
+    let toolName = fn.name || toolCall.name || "";
+    if (toolName.startsWith("proxy_")) toolName = toolName.slice("proxy_".length);
+    content.push({
+      type: "tool_use",
+      id: toolCall.id || `toolu_${Date.now()}_${content.length}`,
+      name: toolName,
+      input: parseToolArguments(fn.arguments || toolCall.arguments),
+    });
+  }
+  if (content.length === 0) content.push({ type: "text", text: "" });
+
+  const usage = responseBody.usage || {};
+  return {
+    id: String(responseBody.id || `msg_${Date.now()}`).replace(/^chatcmpl-/, ""),
+    type: "message",
+    role: "assistant",
+    model: responseBody.model || "unknown",
+    content,
+    stop_reason: fromOpenAIFinish(choice.finish_reason, "claude"),
+    stop_sequence: null,
+    usage: {
+      input_tokens: usage.prompt_tokens || usage.input_tokens || 0,
+      output_tokens: usage.completion_tokens || usage.output_tokens || 0,
     },
   };
 }
@@ -313,6 +362,13 @@ export async function handleForcedSSEToJson({ providerResponse, sourceFormat, ta
       );
     }
 
+    // GAP-RETRY-01: semantic validation — SSE→JSON parsed body may have empty
+    // choices array.  Reject so the combo fallback rotates instead of forwarding
+    // an unusable response to the client.
+    if (Array.isArray(parsed?.choices) && parsed.choices.length === 0) {
+      return createErrorResult(HTTP_STATUS.BAD_GATEWAY, "Provider returned empty response: no choices");
+    }
+
     if (onRequestSuccess) await onRequestSuccess();
 
     const usage = parsed.usage || {};
@@ -355,15 +411,20 @@ export async function handleForcedSSEToJson({ providerResponse, sourceFormat, ta
       }
     }
 
-    // A Responses-format client (e.g. Codex) forced this provider to stream,
-    // but wants JSON back. parseSSEToOpenAIResponse yields a Chat Completions
-    // body; convert it to the Responses `output` shape so tool_calls are not
-    // lost on the non-streaming return path. Inlined (not imported from
+    // A Responses-format client (e.g. Codex) or Claude-format client forced this
+    // provider to stream, but wants JSON back. parseSSEToOpenAIResponse yields a
+    // Chat Completions body; convert it to the client's expected format so tool_calls
+    // are not lost on the non-streaming return path. Inlined (not imported from
     // nonStreamingHandler.js) to avoid a circular import: nonStreamingHandler
     // already imports parseSSEToOpenAIResponse from this module.
-    const finalBody = sourceFormat === FORMATS.OPENAI_RESPONSES
-      ? chatCompletionToResponses(parsed, customToolNames)
-      : parsed;
+    let finalBody;
+    if (sourceFormat === FORMATS.OPENAI_RESPONSES) {
+      finalBody = chatCompletionToResponses(parsed, customToolNames);
+    } else if (sourceFormat === FORMATS.CLAUDE) {
+      finalBody = openAICompletionToClaudeMessage(parsed);
+    } else {
+      finalBody = parsed;
+    }
 
     return { success: true, response: new Response(JSON.stringify(restoreToolNames(finalBody, toolNameMap)), { headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } }) };
   } catch (err) {

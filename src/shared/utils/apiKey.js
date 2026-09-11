@@ -1,6 +1,13 @@
 import crypto from "crypto";
 
-const API_KEY_SECRET = process.env.API_KEY_SECRET || "endpoint-proxy-api-key-secret";
+const API_KEY_SECRET = process.env.API_KEY_SECRET;
+
+if (!API_KEY_SECRET) {
+  throw new Error(
+    "FATAL: API_KEY_SECRET environment variable is required. " +
+    "Generate one with: node -e \"console.log(require('crypto').randomBytes(32).toString('hex'))\""
+  );
+}
 
 /**
  * Generate 6-char random keyId

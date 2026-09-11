@@ -11,7 +11,8 @@
     "hooks",
     "app",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "failover-proxy.cjs"
   ],
   "scripts": {
     "dev": "nodemon -I --watch cli.js --watch src --watch hooks --ext js,json cli.js",

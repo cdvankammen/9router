@@ -93,6 +93,20 @@ export function useModelCaps() {
     [byFull, byId],
   );
 
+  // Check if a model string matches any known model in the registry.
+  // Returns true for exact matches (fullModel, routedModel, or bare model id).
+  // Used for soft validation — unknown models may still be valid (custom providers).
+  const isKnownModel = useCallback(
+    (key) => {
+      if (!key) return false;
+      if (byFull[key]) return true;
+      const bare = key.includes("/") ? key.slice(key.indexOf("/") + 1) : key;
+      if (byId[bare]) return true;
+      return false;
+    },
+    [byFull, byId],
+  );
+
   // Force a re-fetch of /api/models (after a capability override is saved).
   const refresh = useCallback(() => {
     invalidateModelCaps();
@@ -103,5 +117,5 @@ export function useModelCaps() {
     });
   }, []);
 
-  return { getCaps, refresh };
+  return { getCaps, isKnownModel, refresh };
 }

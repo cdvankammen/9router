@@ -10,15 +10,34 @@ const DEFAULT_PASSWORD = "123456";
 const SESSION_MAX_AGE_SEC = 24 * 60 * 60;
 
 function loadJwtSecret() {
-  if (process.env.JWT_SECRET) return process.env.JWT_SECRET;
-  const file = path.join(DATA_DIR, "jwt-secret");
-  try {
-    return fs.readFileSync(file, "utf8").trim();
-  } catch {}
-  fs.mkdirSync(DATA_DIR, { recursive: true });
-  const generated = crypto.randomBytes(32).toString("hex");
-  fs.writeFileSync(file, generated, { mode: 0o600 });
-  return generated;
+  // Production: JWT_SECRET must be set explicitly — fail fast if missing
+  const isProd = process.env.NODE_ENV === "production";
+
+  if (process.env.JWT_SECRET) {
+    return process.env.JWT_SECRET;
+  }
+
+  // Dev mode: generate ephemeral secret with warning
+  if (!isProd) {
+    console.warn(
+      "⚠️  [DEV] JWT_SECRET not set — generating ephemeral secret. " +
+      "Set JWT_SECRET in .env for stable sessions across restarts."
+    );
+    const file = path.join(DATA_DIR, "jwt-secret");
+    try {
+      return fs.readFileSync(file, "utf8").trim();
+    } catch {}
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+    const generated = crypto.randomBytes(32).toString("hex");
+    fs.writeFileSync(file, generated, { mode: 0o600 });
+    return generated;
+  }
+
+  // Production: hard fail without JWT_SECRET
+  throw new Error(
+    "JWT_SECRET is required in production. Set it in your environment or .env file. " +
+    "Generate one with: openssl rand -hex 32"
+  );
 }
 
 const SECRET = new TextEncoder().encode(loadJwtSecret());

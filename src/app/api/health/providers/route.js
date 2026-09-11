@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getProviderConnections } from "@/lib/db/repos/connectionsRepo.js";
+import { getOrphanConnections } from "@/lib/db/repos/connectionsRepo.js";
 import { getEarliestModelLockUntil } from "open-sse/services/accountFallback.js";
 import { getCredentialExpiryMs } from "open-sse/services/oauthCredentialManager.js";
 
@@ -71,14 +72,23 @@ export async function GET() {
       (p) => p.auth === "expired" || p.auth === "needs-reauth" || p.locked === p.active || p.lastError
     );
 
+    // Orphan detection: connections referencing non-existent provider nodes
+    let orphanCount = 0;
+    try {
+      const orphans = await getOrphanConnections();
+      orphanCount = orphans.length;
+    } catch { /* best effort */ }
+
     return NextResponse.json({
       generatedAt: new Date().toISOString(),
       providers,
       needsAttention: needsAttention.map((p) => p.provider),
+      orphanConnections: orphanCount,
       summary: {
         providerCount: providers.length,
         totalConnections: connections.length,
         attentionCount: needsAttention.length,
+        orphanCount,
       },
     });
   } catch (error) {

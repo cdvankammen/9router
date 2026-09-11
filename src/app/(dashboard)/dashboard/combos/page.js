@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import Link from "next/link";
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy, rectSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -67,6 +68,7 @@ export default function CombosPage() {
   const [srComboCleanup, setSrComboCleanup] = useState({ enabled: false, ttlHours: 24, intervalHours: 12 });
   const [markdownLog, setMarkdownLog] = useState({ enabled: false, intervalMin: 5 });
   const [modelFallbacks, setModelFallbacks] = useState({});
+  const [modelAutoPersist, setModelAutoPersist] = useState({ enabled: false, maxModelsPerProvider: 200, markSource: true });
   const { getCaps } = useModelCaps();
   const [confirmState, setConfirmState] = useState(null);
   const [presetLoading, setPresetLoading] = useState(null); // "cursor" | "claude" | null
@@ -202,6 +204,11 @@ export default function CombosPage() {
         intervalMin: settingsData.markdownLogFlushIntervalMin ?? 5,
       });
       setModelFallbacks(settingsData.modelFallbacks || {});
+      setModelAutoPersist({
+        enabled: !!settingsData.modelAutoPersist?.enabled,
+        maxModelsPerProvider: settingsData.modelAutoPersist?.maxModelsPerProvider ?? 200,
+        markSource: settingsData.modelAutoPersist?.markSource !== false,
+      });
     } catch (error) {
       console.log("Error fetching data:", error);
     } finally {
@@ -271,6 +278,19 @@ export default function CombosPage() {
       });
     } catch (error) {
       console.log("Error updating model fallbacks:", error);
+    }
+  };
+
+  const handleSetModelAutoPersist = async (next) => {
+    setModelAutoPersist(next);
+    try {
+      await fetch("/api/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ modelAutoPersist: next }),
+      });
+    } catch (error) {
+      console.log("Error updating model auto-persist:", error);
     }
   };
 
@@ -638,6 +658,12 @@ export default function CombosPage() {
         onChange={handleSetMarkdownLog}
       />
 
+      {/* Auto-Persist Discovered Models */}
+      <ModelAutoPersistSection
+        modelAutoPersist={modelAutoPersist}
+        onChange={handleSetModelAutoPersist}
+      />
+
       {/* Per-Model / Per-Provider Fallbacks */}
       <ModelFallbacksSection
         modelFallbacks={modelFallbacks}
@@ -682,6 +708,7 @@ export default function CombosPage() {
   );
 }
 
+<<<<<<< HEAD
 const fmtK = (n) => {
   if (!n) return "?";
   if (n >= 1000000) {
@@ -690,6 +717,64 @@ const fmtK = (n) => {
   }
   return `${Math.round(n / 1000)}k`;
 };
+=======
+// Fusion tuning row — numeric inputs for panel quorum, straggler grace, and hard timeout.
+// Only rendered when strategy is "fusion". On-change callback gets a patch object that
+// gets merged into the combo's strategy.fusionTuning and persisted to settings.
+function FusionTuningRow({ tuning = {}, onChange }) {
+  const [expanded, setExpanded] = useState(false);
+  const hasCustom = !!tuning.minPanel || !!tuning.stragglerGraceMs || !!tuning.panelHardTimeoutMs;
+  return (
+    <div className="mt-1.5">
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="inline-flex items-center gap-1 text-[11px] font-medium text-text-muted hover:text-primary transition-colors"
+        title="Fusion tuning overrides"
+      >
+        <span className="material-symbols-outlined text-[13px]">{expanded ? "expand_less" : "expand_more"}</span>
+        Tuning {hasCustom ? <span className="text-[9px] px-1 rounded bg-primary/10 text-primary">customized</span> : null}
+      </button>
+      {expanded && (
+        <div className="mt-1.5 flex flex-wrap items-end gap-2 rounded border border-black/5 dark:border-white/5 bg-black/[0.02] dark:bg-white/[0.02] p-2">
+          <label className="flex flex-col gap-0.5">
+            <span className="text-[10px] font-medium text-text-muted">Min Panel</span>
+            <input type="number" min="2" max="20" value={tuning.minPanel || 2}
+              onChange={(e) => onChange({ minPanel: Math.max(2, parseInt(e.target.value, 10) || 2) })}
+              className="w-16 rounded border border-black/10 dark:border-white/10 bg-white dark:bg-black/20 px-1.5 py-1 font-mono text-[11px] text-text-main outline-none focus:border-primary" />
+            <span className="text-[9px] text-text-muted">Answers before grace</span>
+          </label>
+          <label className="flex flex-col gap-0.5">
+            <span className="text-[10px] font-medium text-text-muted">Grace (ms)</span>
+            <input type="number" min="1000" max="60000" step="1000" value={tuning.stragglerGraceMs || 8000}
+              onChange={(e) => onChange({ stragglerGraceMs: Math.max(1000, parseInt(e.target.value, 10) || 8000) })}
+              className="w-20 rounded border border-black/10 dark:border-white/10 bg-white dark:bg-black/20 px-1.5 py-1 font-mono text-[11px] text-text-main outline-none focus:border-primary" />
+            <span className="text-[9px] text-text-muted">Straggler wait</span>
+          </label>
+          <label className="flex flex-col gap-0.5">
+            <span className="text-[10px] font-medium text-text-muted">Timeout (ms)</span>
+            <input type="number" min="10000" max="300000" step="5000" value={tuning.panelHardTimeoutMs || 90000}
+              onChange={(e) => onChange({ panelHardTimeoutMs: Math.max(10000, parseInt(e.target.value, 10) || 90000) })}
+              className="w-24 rounded border border-black/10 dark:border-white/10 bg-white dark:bg-black/20 px-1.5 py-1 font-mono text-[11px] text-text-main outline-none focus:border-primary" />
+            <span className="text-[9px] text-text-muted">Hard cap</span>
+          </label>
+          {hasCustom && (
+            <button onClick={() => onChange({ minPanel: 2, stragglerGraceMs: 8000, panelHardTimeoutMs: 90000 })}
+              className="text-[10px] text-text-muted hover:text-red-500 transition-colors px-1" title="Reset to defaults">
+              Reset
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+const STRATEGY_OPTIONS = [
+  { value: "fallback", label: "Fallback — try in order" },
+  { value: "round-robin", label: "Round Robin — rotate" },
+  { value: "fusion", label: "Fusion — panel + judge" },
+];
+>>>>>>> a0650fda (feat(merge-prep): stage all local work for upstream merge)
 
 function ComboCard({ combo, getCaps, comboByName = {}, activeProviders = [], copied, onCopy, onEdit, onDuplicate, onDelete, strategy = {}, onSetStrategy, selected = false, onToggleSelect }) {
   const [showJudgeSelect, setShowJudgeSelect] = useState(false);
@@ -769,6 +854,22 @@ function ComboCard({ combo, getCaps, comboByName = {}, activeProviders = [], cop
                 )}
               </div>
             )}
+
+            {/* Fusion tuning overrides */}
+            {isFusion && (
+              <FusionTuningRow
+                tuning={strategy.fusionTuning || {}}
+                onChange={(patch) => {
+                  const next = { ...(strategy.fusionTuning || {}), ...patch };
+                  // Prune defaults so we only store overrides
+                  if (next.minPanel === 2) delete next.minPanel;
+                  if (next.stragglerGraceMs === 8000) delete next.stragglerGraceMs;
+                  if (next.panelHardTimeoutMs === 90000) delete next.panelHardTimeoutMs;
+                  const hasKeys = Object.keys(next).length > 0;
+                  onSetStrategy({ fusionTuning: hasKeys ? next : undefined });
+                }}
+              />
+            )}
           </div>
         </div>
 
@@ -784,7 +885,16 @@ function ComboCard({ combo, getCaps, comboByName = {}, activeProviders = [], cop
             />
           </div>
 
-          <div className="grid grid-cols-4 gap-1 sm:flex">
+          <div className="grid grid-cols-5 gap-1 sm:flex">
+            <Link
+              href={`/dashboard/combos/${combo.id}`}
+              onClick={(e) => e.stopPropagation()}
+              className="flex flex-col items-center rounded px-2 py-1 text-text-muted transition-colors hover:bg-black/5 hover:text-primary dark:hover:bg-white/5"
+              title="View details"
+            >
+              <span className="material-symbols-outlined text-[18px]">open_in_new</span>
+              <span className="text-[10px] leading-tight">Details</span>
+            </Link>
             <button
               onClick={(e) => { e.stopPropagation(); onCopy(combo.name, `combo-${combo.id}`); }}
               className="flex flex-col items-center rounded px-2 py-1 text-text-muted transition-colors hover:bg-black/5 hover:text-primary dark:hover:bg-white/5"
@@ -1283,6 +1393,71 @@ function MarkdownLogSection({ markdownLog, onChange }) {
           <p className="text-[10px] text-text-muted mt-0.5">
             How often the daily markdown file is <span className="font-medium">rewritten (overwritten)</span> with the latest 24h of requests.
           </p>
+        </div>
+      )}
+    </Card>
+  );
+}
+
+function ModelAutoPersistSection({ modelAutoPersist, onChange }) {
+  const { enabled, maxModelsPerProvider, markSource } = modelAutoPersist;
+  const patch = (p) => onChange({ ...modelAutoPersist, ...p });
+
+  return (
+    <Card padding="md" className={!enabled ? "opacity-80" : ""}>
+      <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="material-symbols-outlined text-primary text-lg">save</span>
+            <p className="text-sm font-medium">Auto-Persist Discovered Models</p>
+          </div>
+          <p className="text-xs text-text-muted mt-0.5">
+            When a compatible provider (OpenAI/Anthropic-compatible) is queried for its model list,
+            automatically save discovered model IDs to the local database.
+          </p>
+          <ul className="mt-1.5 text-[11px] text-text-muted flex flex-col gap-0.5">
+            <li><span className="font-medium text-text-main">First-discovery only</span> — models already in your custom list are skipped (idempotent)</li>
+            <li><span className="font-medium text-text-main">Safety cap</span> — providers returning more than the max are skipped entirely (prevents OpenRouter-scale floods)</li>
+            <li><span className="font-medium text-text-main">No auto-reap</span> — persisted models stay until manually removed</li>
+            <li><span className="font-medium text-text-main">Off by default</span> — opt in to build a persistent catalog from dynamic providers</li>
+          </ul>
+        </div>
+        <div className="shrink-0">
+          <Toggle
+            checked={enabled}
+            onChange={(v) => patch({ enabled: v })}
+            label={enabled ? "Enabled" : "Disabled"}
+            size="md"
+          />
+        </div>
+      </div>
+
+      {enabled && (
+        <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div>
+            <label className="text-xs font-medium text-text-main mb-1 block">Max models per provider</label>
+            <Input
+              type="number"
+              min={1}
+              max={1000}
+              value={String(maxModelsPerProvider)}
+              onChange={(e) => patch({ maxModelsPerProvider: Math.max(1, Math.min(1000, Number(e.target.value) || 200)) })}
+            />
+            <p className="text-[10px] text-text-muted mt-0.5">
+              Providers returning more than this are skipped. Set lower to avoid large imports.
+            </p>
+          </div>
+          <div className="flex items-center gap-2 pt-5">
+            <Toggle
+              checked={markSource}
+              onChange={(v) => patch({ markSource: v })}
+              label={markSource ? "Tag source" : "No tag"}
+              size="sm"
+            />
+            <span className="text-[10px] text-text-muted">
+              Mark auto-persisted models with <code className="font-mono">source: &quot;auto-discovered&quot;</code>
+            </span>
+          </div>
         </div>
       )}
     </Card>

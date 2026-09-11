@@ -69,12 +69,34 @@ function cleanupLegacySystray({ silent = false } = {}) {
 function chmodSystrayBin({ silent = false } = {}) {
   if (process.platform === "win32") return;
   const binName = process.platform === "darwin" ? "tray_darwin_release" : "tray_linux_release";
-  const binPath = path.join(getRuntimeNodeModules(), SYSTRAY_PKG, "traybin", binName);
-  if (!fs.existsSync(binPath)) return;
-  try {
-    fs.chmodSync(binPath, 0o755);
-  } catch (e) {
-    if (!silent) console.warn(`[9router][runtime] chmod tray bin failed: ${e.message}`);
+
+  // Systray2 v2.1.4+ caches the binary in ~/.cache/node-systray/<version>/
+  // in addition to the npm-installed copy under <runtime>/node_modules/systray2/traybin/.
+  // We need to chmod + de-quarantine BOTH locations.
+  const candidates = [
+    path.join(getRuntimeNodeModules(), SYSTRAY_PKG, "traybin", binName),
+    path.join(os.homedir(), ".cache", "node-systray", SYSTRAY_VERSION, binName)
+  ];
+
+  for (const binPath of candidates) {
+    if (!fs.existsSync(binPath)) continue;
+    try {
+      fs.chmodSync(binPath, 0o755);
+    } catch (e) {
+      if (!silent) console.warn(`[9router][runtime] chmod tray bin failed: ${e.message}`);
+    }
+    // macOS tags downloaded binaries with com.apple.provenance and/or
+    // com.apple.quarantine. These prevent the Go binary from spawning
+    // under launchd (silently exits). Strip them best-effort.
+    if (process.platform === "darwin") {
+      try {
+        const { execSync } = require("child_process");
+        execSync(`xattr -d com.apple.provenance "${binPath}" 2>/dev/null`, { stdio: "ignore" });
+        execSync(`xattr -d com.apple.quarantine "${binPath}" 2>/dev/null`, { stdio: "ignore" });
+      } catch {
+        // Best-effort — xattr not present or no permission, that's fine
+      }
+    }
   }
 }
 

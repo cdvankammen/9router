@@ -4,7 +4,11 @@ import { fromOpenAIFinish } from "../../translator/concerns/finishReason.js";
 import { ollamaBodyToOpenAI } from "../../translator/response/ollama-to-openai.js";
 import { addBufferToUsage, filterUsageForFormat } from "../../utils/usageTracking.js";
 import { createErrorResult } from "../../utils/error.js";
+<<<<<<< HEAD
 import { upstreamResponseHeaders } from "../../utils/upstreamHeaders.js";
+=======
+import { validateResponseBody } from "../../utils/responseValidator.js";
+>>>>>>> a0650fda (feat(merge-prep): stage all local work for upstream merge)
 import { HTTP_STATUS } from "../../config/runtimeConfig.js";
 import { parseSSEToOpenAIResponse } from "./sseToJsonHandler.js";
 import { unwrapClineEnvelope } from "../../shared/clineEnvelope.js";
@@ -307,10 +311,21 @@ export async function handleNonStreamingResponse({ providerResponse, provider, m
     }
   }
 
+<<<<<<< HEAD
   // Unwrap before any consumer reads choices/usage so non-stream clients get a
   // bare OpenAI body and usage tracking sees data.usage. No-op unless the
   // provider opts in via transport.quirks.clineEnvelope.
   responseBody = unwrapClineEnvelope(responseBody, provider);
+=======
+  // GAP-RETRY-01: semantic validation — provider may return HTTP 200 with an
+  // empty choices array (e.g. {"choices": []}) which the client cannot use.
+  // If choices is explicitly present but empty, reject as retryable 502 so
+  // combo/fallback rotates to another model instead of forwarding to client.
+  if (Array.isArray(responseBody?.choices) && responseBody.choices.length === 0) {
+    appendLog({ status: `FAILED ${HTTP_STATUS.BAD_GATEWAY} EMPTY_CHOICES` });
+    return createErrorResult(HTTP_STATUS.BAD_GATEWAY, "Provider returned empty response: no choices");
+  }
+>>>>>>> a0650fda (feat(merge-prep): stage all local work for upstream merge)
 
   reqLogger.logProviderResponse(providerResponse.status, providerResponse.statusText, providerResponse.headers, responseBody);
   if (onRequestSuccess) {

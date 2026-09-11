@@ -3,6 +3,7 @@ const path = require("path");
 const fs = require("fs");
 const crypto = require("crypto");
 const { pathToFileURL } = require("url");
+const { checkLimit } = require("./custom-server.rate-limiter");
 
 const origCreate = http.createServer.bind(http);
 
@@ -195,6 +196,23 @@ http.createServer = (...args) => {
     req.headers["x-9r-real-ip"] = ip;
     req.headers["x-9r-peer-token"] = PEER_TOKEN;
     if (viaProxy) req.headers["x-9r-via-proxy"] = "1";
+    // ── Inbound rate limiting (per-IP sliding window) ──────────────────────
+    // Loopback IPs bypass (local tool usage). Returns 429 + Retry-After when
+    // the per-IP budget is exhausted. See custom-server.rate-limiter.js.
+    const rl = checkLimit(ip, req.url, req.method);
+    if (!rl.allowed) {
+      res.writeHead(429, {
+        "Content-Type": "application/json",
+        "Retry-After": String(rl.retryAfter),
+        "X-RateLimit-Limit": "see custom-server.rate-limiter",
+      });
+      res.end(JSON.stringify({
+        error: "Too Many Requests",
+        retryAfter: rl.retryAfter,
+        message: "Rate limit exceeded. Retry after " + rl.retryAfter + " seconds.",
+      }));
+      return;
+    }
     return handler(req, res);
   };
   const server = origCreate(...rest, wrapped);
