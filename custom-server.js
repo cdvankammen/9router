@@ -85,8 +85,11 @@ async function l1LoadSettings() {
         console.error(`[L1] settings load failed (attempt ${L1.loadAttempts}, retry in ${delay}ms):`, e && e.message ? e.message : e);
       }
       setTimeout(l1LoadSettings, delay);
-    } else if (process.env.DEBUG_L1_PEER_FORWARD) {
-      console.error("[L1] settings load gave up after 10 attempts:", e && e.message ? e.message : e);
+    } else {
+      console.warn("[L1] peer forwarding disabled: settings load failed after 10 attempts");
+      if (process.env.DEBUG_L1_PEER_FORWARD) {
+        console.error("[L1] (debug) final error:", e && e.message ? e.message : e);
+      }
     }
   }
 }
