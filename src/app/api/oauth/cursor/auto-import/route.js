@@ -1,11 +1,64 @@
 import { NextResponse } from "next/server";
-import { access, constants } from "fs/promises";
+import { access, constants, lstat, realpath } from "fs/promises";
 import { homedir } from "os";
-import { join } from "path";
+import { join, resolve as resolvePath } from "path";
 import { execFile } from "child_process";
 import { promisify } from "util";
 
 const execFileAsync = promisify(execFile);
+
+/**
+ * Validate a Cursor db path against traversal/symlink attacks (GAP-P1-12).
+ *
+ * The candidate paths come from getCandidatePaths() which builds them from
+ * homedir() + hardcoded Cursor config subdirs. An attacker who can place a
+ * symlink at one of those locations could redirect sqlite3 / better-sqlite3
+ * to open an arbitrary file. This function:
+ *   1. Resolves the path to its real location (following symlinks).
+ *   2. Confirms the real path is still under one of the allowed Cursor dirs.
+ *   3. Rejects any path containing traversal segments.
+ *
+ * @param {string} candidatePath - The path to validate
+ * @returns {Promise<string>} The validated real path
+ * @throws {Error} If the path fails validation
+ */
+async function validateCursorDbPath(candidatePath) {
+  // Reject obvious traversal attempts in the raw candidate
+  if (candidatePath.includes("..") || candidatePath.includes("\0")) {
+    throw new Error(`Path traversal rejected: ${candidatePath}`);
+  }
+
+  // Resolve to canonical absolute path (follows symlinks)
+  let realPath;
+  try {
+    realPath = await realpath(candidatePath);
+  } catch {
+    // If realpath fails, the path doesn't exist or is inaccessible
+    throw new Error(`Cannot resolve path: ${candidatePath}`);
+  }
+
+  // Build the allowed prefix set from the same homedir
+  const home = homedir();
+  const allowedPrefixes = [
+    resolvePath(home, "Library/Application Support/Cursor"),
+    resolvePath(home, "Library/Application Support/Cursor - Insiders"),
+    resolvePath(home, "AppData"),                    // Windows Roaming + Local
+    resolvePath(home, ".config/Cursor"),              // Linux
+    resolvePath(home, ".config/cursor"),              // Linux lowercase
+  ];
+
+  const isAllowed = allowedPrefixes.some((prefix) =>
+    realPath.startsWith(prefix + "/") || realPath.startsWith(prefix + "\\")
+  );
+
+  if (!isAllowed) {
+    throw new Error(
+      `Cursor db path outside allowed directories: ${realPath} (candidate was ${candidatePath})`
+    );
+  }
+
+  return realPath;
+}
 
 const ACCESS_TOKEN_KEYS = ["cursorAuth/accessToken", "cursorAuth/token"];
 const MACHINE_ID_KEYS = [
@@ -194,6 +247,16 @@ export async function GET() {
       return NextResponse.json({
         found: false,
         error: `Cursor database not found. Checked locations:\n${candidates.join("\n")}\n\nMake sure Cursor IDE is installed and opened at least once.`,
+      });
+    }
+
+    // Security: validate dbPath against symlink/traversal attacks (GAP-P1-12)
+    try {
+      dbPath = await validateCursorDbPath(dbPath);
+    } catch (validationError) {
+      return NextResponse.json({
+        found: false,
+        error: `Security validation failed for Cursor database path: ${validationError.message}`,
       });
     }
 
