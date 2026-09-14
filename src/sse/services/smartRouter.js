@@ -11,6 +11,7 @@
 
 import { getSettings, getProviderNodes, getProviderConnections } from "@/lib/localDb";
 import { createCombo, getComboByName, updateCombo } from "@/lib/db/repos/combosRepo.js";
+import { assertPublicUrlResolved } from "@/shared/utils/ssrfGuard.js";
 import {
   classifyTask,
   scoreModel,
@@ -71,6 +72,15 @@ async function getNodeModels(node) {
     let baseUrl = String(node.baseUrl || "").replace(/\/+$/, "");
     if (baseUrl.endsWith("/messages")) baseUrl = baseUrl.slice(0, -"/messages".length);
     if (!baseUrl) return [];
+    // SSRF guard: node.baseUrl is admin-configured, but a compromised/renamed
+    // node entry (or DB tampering) must not let the router fetch internal hosts.
+    // Reject private/metadata/loopback targets (incl. DNS-resolving hostnames).
+    try {
+      await assertPublicUrlResolved(baseUrl);
+    } catch {
+      log.debug("SMART", `getNodeModels(${node.id}) → blocked internal baseUrl`);
+      return [];
+    }
     const url = `${baseUrl}/models`;
 
     // Build auth headers based on node type (matches dashboard /models route)
