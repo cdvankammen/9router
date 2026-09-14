@@ -44,7 +44,7 @@ async function getInternalHeaders() {
   try {
     const keys = await getApiKeys();
     apiKey = keys.find((k) => k.isActive !== false)?.key || null;
-  } catch {}
+  } catch (e) { console.error("[ping] getInternalHeaders: getApiKeys failed:", e.message); }
 
   const headers = { "Content-Type": "application/json" };
   if (apiKey) headers["Authorization"] = `Bearer ${apiKey}`;
@@ -66,7 +66,7 @@ export async function pingModelByKind(model, kind, baseUrl = `http://127.0.0.1:$
     const latencyMs = Date.now() - start;
     const rawText = await res.text().catch(() => "");
     let parsed = null;
-    try { parsed = rawText ? JSON.parse(rawText) : null; } catch {}
+    try { parsed = rawText ? JSON.parse(rawText) : null; } catch { /* intentional: non-JSON response stays parsed=null → error */ }
 
     if (!res.ok) {
       const detail = parsed?.error?.message || parsed?.error || rawText;
@@ -89,7 +89,7 @@ export async function pingModelByKind(model, kind, baseUrl = `http://127.0.0.1:$
     const latencyMs = Date.now() - start;
     const rawText = await res.text().catch(() => "");
     let parsed = null;
-    try { parsed = rawText ? JSON.parse(rawText) : null; } catch {}
+    try { parsed = rawText ? JSON.parse(rawText) : null; } catch { /* intentional: non-JSON response stays parsed=null → error */ }
 
     if (!res.ok) {
       const detail = parsed?.error?.message || parsed?.msg || parsed?.message || parsed?.error || rawText;
@@ -118,7 +118,7 @@ export async function pingModelByKind(model, kind, baseUrl = `http://127.0.0.1:$
     const latencyMs = Date.now() - start;
     const rawText = await res.text().catch(() => "");
     let parsed = null;
-    try { parsed = rawText ? JSON.parse(rawText) : null; } catch {}
+    try { parsed = rawText ? JSON.parse(rawText) : null; } catch { /* intentional: non-JSON response stays parsed=null → error */ }
 
     if (!res.ok) {
       const detail = parsed?.error?.message || parsed?.msg || parsed?.message || parsed?.error || rawText;
@@ -181,7 +181,7 @@ export async function pingModelByKind(model, kind, baseUrl = `http://127.0.0.1:$
 
   const rawText = await res.text().catch(() => "");
   let parsed = null;
-  try { parsed = rawText ? JSON.parse(rawText) : null; } catch {}
+  try { parsed = rawText ? JSON.parse(rawText) : null; } catch { /* intentional: non-JSON response stays parsed=null → error */ }
 
   // Unwrap before the choices checks below. No-op for providers that do not
   // opt in via transport.quirks.clineEnvelope.

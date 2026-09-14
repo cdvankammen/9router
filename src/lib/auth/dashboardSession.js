@@ -17,18 +17,22 @@ function loadJwtSecret() {
     return process.env.JWT_SECRET;
   }
 
-  // Dev mode: generate ephemeral secret with warning
+  const file = path.join(DATA_DIR, "jwt-secret");
+
+  // Dev mode: reuse a persisted secret if present, else generate one.
+  // A failed read is logged (not swallowed) so a broken secret file is
+  // visible instead of silently rotating sessions.
   if (!isProd) {
+    try {
+      const existing = fs.readFileSync(file, "utf8").trim();
+      if (existing) return existing;
+    } catch (e) {
+      console.warn("[JWT] secret file unreadable (%s), regenerating:", e.code);
+    }
     console.warn(
       "⚠️  [DEV] JWT_SECRET not set — generating ephemeral secret. " +
       "Set JWT_SECRET in .env for stable sessions across restarts."
     );
-    const file = path.join(DATA_DIR, "jwt-secret");
-    try {
-      return fs.readFileSync(file, "utf8").trim();
-    } catch (e) {
-      console.warn("[JWT] secret file unreadable (%s), regenerating:", e.code);
-    }
     fs.mkdirSync(DATA_DIR, { recursive: true });
     const generated = crypto.randomBytes(32).toString("hex");
     fs.writeFileSync(file, generated, { mode: 0o600 });
@@ -64,7 +68,10 @@ export async function verifyDashboardAuthToken(token) {
   try {
     await jwtVerify(token, SECRET);
     return true;
-  } catch {
+  } catch (e) {
+    if (e.code !== "ERR_JWS_INVALID" && e.code !== "ERR_JWT_EXPIRED" && !String(e.message || "").toLowerCase().includes("invalid")) {
+      console.warn("[dashboardSession] verifyDashboardAuthToken unexpected error:", e.message);
+    }
     return false;
   }
 }
@@ -74,7 +81,10 @@ export async function getDashboardAuthSession(token) {
   try {
     const { payload } = await jwtVerify(token, SECRET);
     return payload;
-  } catch {
+  } catch (e) {
+    if (e.code !== "ERR_JWS_INVALID" && e.code !== "ERR_JWT_EXPIRED" && !String(e.message || "").toLowerCase().includes("invalid")) {
+      console.warn("[dashboardSession] getDashboardAuthSession unexpected error:", e.message);
+    }
     return null;
   }
 }

@@ -114,7 +114,9 @@ async function getConnectionMapCached() {
     for (const c of all) map[c.id] = c.name || c.email || c.id;
     connCache.map = map;
     connCache.ts = Date.now();
-  } catch {}
+  } catch (e) {
+    console.error("[usageRepo] getConnectionMapCached failed to load connections:", e.message);
+  }
   return connCache.map;
 }
 
@@ -129,7 +131,9 @@ async function ensureRingInitialized() {
       apiKey: r.apiKey, endpoint: r.endpoint, cost: r.cost, status: r.status,
       tokens: parseJson(r.tokens, {}),
     }));
-  } catch {}
+  } catch (e) {
+    console.error("[usageRepo] ensureRingInitialized failed:", e.message);
+  }
 }
 
 async function calculateCost(provider, model, tokens) {
@@ -354,7 +358,7 @@ export async function getUsageStats(period = "all") {
   ]);
 
   let allConnections = [];
-  try { allConnections = await getProviderConnections(); } catch {}
+  try { allConnections = await getProviderConnections(); } catch (e) { console.error("[usageRepo] getUsageStats: getProviderConnections failed:", e.message); }
   const connectionMap = {};
   for (const c of allConnections) connectionMap[c.id] = c.name || c.email || c.id;
 
@@ -362,10 +366,10 @@ export async function getUsageStats(period = "all") {
   try {
     const nodes = await getProviderNodes();
     for (const n of nodes) if (n.id && n.name) providerNodeNameMap[n.id] = n.name;
-  } catch {}
+  } catch (e) { console.error("[usageRepo] getUsageStats: getProviderNodes failed:", e.message); }
 
   let allApiKeys = [];
-  try { allApiKeys = await getApiKeys(); } catch {}
+  try { allApiKeys = await getApiKeys(); } catch (e) { console.error("[usageRepo] getUsageStats: getApiKeys failed:", e.message); }
   const apiKeyMap = {};
   for (const k of allApiKeys) apiKeyMap[k.key] = { name: k.name, id: k.id, createdAt: k.createdAt };
 
@@ -792,7 +796,7 @@ export async function getRecentLogs(limit = 200) {
       const { getProviderConnections } = await import("./connectionsRepo.js");
       const connections = await getProviderConnections();
       for (const c of connections) connMap[c.id] = c.name || c.email || "";
-    } catch {}
+    } catch (e) { console.error("[usageRepo] getRecentLogs: connections enrichment failed:", e.message); }
 
     return rows.map((r) => {
       const ts = formatLogDate(new Date(r.timestamp));

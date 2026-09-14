@@ -392,7 +392,7 @@ async function installTailscaleLinux(sudoPassword, log) {
       } catch (e) {
         return reject(new Error(`Failed to write install script: ${e.message}`));
       }
-      const cleanup = () => { try { fs.unlinkSync(tmpScript); } catch {} };
+      const cleanup = () => { try { fs.unlinkSync(tmpScript); } catch { /* intentional: tmp file cleanup */ } };
       const child = spawn("sudo", ["-S", "sh", tmpScript], { stdio: ["pipe", "pipe", "pipe"], windowsHide: true });
       let stderr = "";
       child.stdout.on("data", (d) => {

@@ -51,7 +51,7 @@ export async function POST(request) {
           : error.message;
         send("error", { error: msg });
       } finally {
-        if (!closed) { try { controller.close(); } catch {} }
+        if (!closed) { try { controller.close(); } catch { /* intentional: stream cleanup */ } }
       }
     },
   });

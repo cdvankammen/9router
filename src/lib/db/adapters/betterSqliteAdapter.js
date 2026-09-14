@@ -22,14 +22,15 @@ export function createBetterSqliteAdapter(filePath) {
 
   // Truncate WAL periodically so file stays small for backup/copy
   const checkpointTimer = setInterval(() => {
-    try { db.pragma("wal_checkpoint(PASSIVE)"); } catch {}
+    try { db.pragma("wal_checkpoint(PASSIVE)"); } catch (e) { console.error("[betterSqliteAdapter] WAL checkpoint failed:", e.message); }
   }, CHECKPOINT_INTERVAL_MS);
   if (typeof checkpointTimer.unref === "function") checkpointTimer.unref();
 
   function gracefulClose() {
-    try { db.pragma("wal_checkpoint(PASSIVE)"); } catch {}
-    try { stmtCache.clear(); } catch {}
-    try { db.close(); } catch {}
+    // intentional: shutdown cleanup — logging here would spam during normal exit
+    try { db.pragma("wal_checkpoint(PASSIVE)"); } catch { /* shutdown cleanup */ }
+    try { stmtCache.clear(); } catch { /* shutdown cleanup */ }
+    try { db.close(); } catch { /* shutdown cleanup */ }
   }
 
   // Ensure WAL is flushed and -wal/-shm files removed on shutdown
@@ -45,7 +46,7 @@ export function createBetterSqliteAdapter(filePath) {
     all(sql, params = []) { return prepare(sql).all(...params); },
     exec(sql) { return db.exec(sql); },
     transaction(fn) { return db.transaction(fn)(); },
-    checkpoint() { try { db.pragma("wal_checkpoint(PASSIVE)"); } catch {} },
+    checkpoint() { try { db.pragma("wal_checkpoint(PASSIVE)"); } catch (e) { console.error("[betterSqliteAdapter] manual checkpoint failed:", e.message); } } },
     close() {
       clearInterval(checkpointTimer);
       gracefulClose();

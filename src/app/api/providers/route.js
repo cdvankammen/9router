@@ -86,7 +86,7 @@ export async function GET(request) {
       for (const node of nodes) {
         if (node.id && node.name) nodeNameMap[node.id] = node.name;
       }
-    } catch { }
+    } catch (e) { console.error("[providers] GET failed to enrich names:", e.message); }
 
     // Hide sensitive fields, enrich name for compatible providers
     const safeConnections = connections.map(c => {

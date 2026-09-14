@@ -45,7 +45,7 @@ export function backupFile(srcPath, destDir, destName = null) {
 // observability log, so the backup stays small regardless of DB size.
 export function backupDbLite(adapter, destDir, destName = "data.sqlite") {
   const dest = path.join(destDir, destName);
-  try { fs.rmSync(dest, { force: true }); } catch {}
+  try { fs.rmSync(dest, { force: true }); } catch { /* intentional: pre-write cleanup */ }
   const escaped = dest.replace(/'/g, "''");
 
   adapter.exec(`ATTACH DATABASE '${escaped}' AS bak`);
@@ -63,7 +63,7 @@ export function backupDbLite(adapter, destDir, destName = "data.sqlite") {
       }
     });
   } finally {
-    try { adapter.exec("DETACH DATABASE bak"); } catch {}
+    try { adapter.exec("DETACH DATABASE bak"); } catch { /* intentional: cleanup on failed backup */ }
   }
   return dest;
 }
@@ -76,6 +76,6 @@ export function pruneOldBackups() {
     .sort((a, b) => b.mtime - a.mtime);
 
   for (const old of entries.slice(KEEP_BACKUPS)) {
-    try { fs.rmSync(old.full, { recursive: true, force: true }); } catch {}
+    try { fs.rmSync(old.full, { recursive: true, force: true }); } catch { /* intentional: prune cleanup */ }
   }
 }

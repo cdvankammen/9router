@@ -142,7 +142,7 @@ export class QoderService {
       try {
         const body = JSON.parse(text);
         if (body.message) message = `Qoder device token poll failed: ${body.message}`;
-      } catch {}
+      } catch { /* intentional: non-JSON error body, using generic HTTP status message */ }
       throw new Error(message);
     }
 

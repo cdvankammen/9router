@@ -205,7 +205,7 @@ async function passthroughHttp2(req, res, bodyBuffer, headers, targetHost, onRes
       if (dumper) { dumper.writeChunk(`\n[ERROR h2] ${e.message}\n`); dumper.end(); }
       if (!res.headersSent) res.writeHead(502);
       if (!res.writableEnded) res.end("Bad Gateway");
-      try { client.close(); } catch {}
+      try { client.close(); } catch { /* intentional: http2 client cleanup */ }
       resolve();
     });
 
@@ -233,8 +233,8 @@ async function passthroughHttp2(req, res, bodyBuffer, headers, targetHost, onRes
       stream.on("end", () => {
         if (dumper) dumper.end();
         if (!res.writableEnded) res.end();
-        if (onResponse) try { onResponse(Buffer.concat(chunks), outHeaders); } catch {}
-        try { client.close(); } catch {}
+        if (onResponse) try { onResponse(Buffer.concat(chunks), outHeaders); } catch (e) { console.error("[mitm] onResponse callback threw:", e.message); }
+        try { client.close(); } catch { /* intentional: http2 stream-end cleanup */ }
         resolve();
       });
     });
@@ -243,7 +243,7 @@ async function passthroughHttp2(req, res, bodyBuffer, headers, targetHost, onRes
       if (dumper) { dumper.writeChunk(`\n[ERROR h2-stream] ${e.message}\n`); dumper.end(); }
       if (!res.headersSent) res.writeHead(502);
       if (!res.writableEnded) res.end();
-      try { client.close(); } catch {}
+      try { client.close(); } catch { /* intentional: http2 stream-error cleanup */ }
       resolve();
     });
   });

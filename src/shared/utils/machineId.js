@@ -18,16 +18,17 @@ function loadRawMachineId() {
   try {
     cachedRawId = fs.readFileSync(MACHINE_ID_FILE, 'utf8').trim();
     if (cachedRawId) return cachedRawId;
-  } catch {}
+  } catch { /* intentional: no machine-id file yet — creates one */ }
   try {
     cachedRawId = machineIdSync();
-  } catch {
+  } catch (e) {
+    console.warn("[machineId] machineIdSync failed, using random UUID:", e.message);
     cachedRawId = crypto.randomUUID();
   }
   try {
     fs.mkdirSync(DATA_DIR, { recursive: true });
     fs.writeFileSync(MACHINE_ID_FILE, cachedRawId, { mode: 0o600 });
-  } catch {}
+  } catch (e) { console.warn("[machineId] failed to persist machine-id file:", e.message); }
   return cachedRawId;
 }
 
@@ -37,12 +38,12 @@ function loadCliSecret() {
   try {
     cachedCliSecret = fs.readFileSync(CLI_SECRET_FILE, 'utf8').trim();
     if (cachedCliSecret) return cachedCliSecret;
-  } catch {}
+  } catch { /* intentional: no cli-secret file yet — generates one */ }
   cachedCliSecret = crypto.randomBytes(32).toString('hex');
   try {
     fs.mkdirSync(AUTH_DIR, { recursive: true });
     fs.writeFileSync(CLI_SECRET_FILE, cachedCliSecret, { mode: 0o600 });
-  } catch {}
+  } catch (e) { console.warn("[machineId] failed to persist cli-secret:", e.message); }
   return cachedCliSecret;
 }
 
