@@ -94,7 +94,7 @@ export async function createSqlJsAdapter(filePath) {
       scheduleSave();
       return result;
     } catch (e) {
-      try { db.exec(`ROLLBACK TO ${sp}`); db.exec(`RELEASE ${sp}`); } catch (e2) { console.error("[sqljsAdapter] transaction rollback failed:", e2.message); }
+      try { db.exec(`ROLLBACK TO ${sp}`); db.exec(`RELEASE ${sp}`); } catch {}
       throw e;
     }
   }
@@ -106,7 +106,7 @@ export async function createSqlJsAdapter(filePath) {
   }
 
   // Flush on shutdown
-  const flush = () => { if (dirty) try { persist(); } catch (e) { console.error("[sqljsAdapter] shutdown persist failed:", e.message); } };
+  const flush = () => { if (dirty) try { persist(); } catch {} };
   process.on("beforeExit", flush);
   process.on("SIGINT", flush);
   process.on("SIGTERM", flush);

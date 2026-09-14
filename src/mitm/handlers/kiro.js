@@ -10,7 +10,7 @@ function dbg(msg) {
   if (!IS_DEV) return;
   try {
     fs.appendFileSync(DEBUG_LOG, `${new Date().toISOString()} ${msg}\n`);
-  } catch { /* intentional: non-fatal debug log write failure */ }
+  } catch {}
 }
 
 // ─── CRC32 (standard, polynomial 0xEDB88320 — same as AWS EventStream) ───────

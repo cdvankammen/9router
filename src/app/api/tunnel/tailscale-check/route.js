@@ -4,11 +4,17 @@ import { promisify } from "util";
 import { NextResponse } from "next/server";
 import { isTailscaleInstalled, isTailscaleLoggedIn, isSystemDaemonRunning, getTailscaleBin, TAILSCALE_SOCKET } from "@/lib/tunnel";
 import { getCachedPassword, loadEncryptedPassword } from "@/mitm/manager";
-import { hasBrew } from "@/lib/tunnel/tailscale/brewPath.js";
 
 const execAsync = promisify(exec);
 const EXTENDED_PATH = `/usr/local/bin:/opt/homebrew/bin:/usr/sbin:/usr/bin:/bin:/snap/bin:${process.env.PATH || ""}`;
 const PROBE_TIMEOUT_MS = 1500;
+
+async function hasBrew() {
+  try {
+    await execAsync("which brew", { windowsHide: true, env: { ...process.env, PATH: EXTENDED_PATH }, timeout: PROBE_TIMEOUT_MS });
+    return true;
+  } catch { return false; }
+}
 
 async function isCustomDaemonRunning() {
   const bin = getTailscaleBin();

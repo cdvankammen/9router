@@ -3,7 +3,7 @@
 // pre-change safety backup in migrate.js: when the stored version is lower,
 // one lightweight DB backup is taken before applying schema changes. Forgetting
 // to bump only skips that backup — it does NOT break the additive auto-sync.
-export const SCHEMA_VERSION = 3;
+export const SCHEMA_VERSION = 1;
 
 export const PRAGMA_SQL = `
 PRAGMA journal_mode = WAL;
@@ -34,7 +34,7 @@ export const TABLES = {
   providerConnections: {
     columns: {
       id: "TEXT PRIMARY KEY",
-      provider: "TEXT NOT NULL REFERENCES providerNodes(id) ON DELETE CASCADE",
+      provider: "TEXT NOT NULL",
       authType: "TEXT NOT NULL",
       name: "TEXT",
       email: "TEXT",
@@ -121,14 +121,12 @@ export const TABLES = {
       status: "TEXT",
       tokens: "TEXT",
       meta: "TEXT",
-      conversationId: "TEXT",
     },
     indexes: [
       "CREATE INDEX IF NOT EXISTS idx_uh_ts ON usageHistory(timestamp DESC)",
       "CREATE INDEX IF NOT EXISTS idx_uh_provider ON usageHistory(provider)",
       "CREATE INDEX IF NOT EXISTS idx_uh_model ON usageHistory(model)",
       "CREATE INDEX IF NOT EXISTS idx_uh_conn ON usageHistory(connectionId)",
-      "CREATE INDEX IF NOT EXISTS idx_uh_conversation ON usageHistory(conversationId)",
     ],
   },
   usageDaily: {
@@ -146,14 +144,12 @@ export const TABLES = {
       connectionId: "TEXT",
       status: "TEXT",
       data: "TEXT NOT NULL",
-      conversationId: "TEXT",
     },
     indexes: [
       "CREATE INDEX IF NOT EXISTS idx_rd_ts ON requestDetails(timestamp DESC)",
       "CREATE INDEX IF NOT EXISTS idx_rd_provider ON requestDetails(provider)",
       "CREATE INDEX IF NOT EXISTS idx_rd_model ON requestDetails(model)",
       "CREATE INDEX IF NOT EXISTS idx_rd_conn ON requestDetails(connectionId)",
-      "CREATE INDEX IF NOT EXISTS idx_rd_conversation ON requestDetails(conversationId)",
     ],
   },
 };

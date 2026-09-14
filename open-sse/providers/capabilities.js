@@ -673,17 +673,3 @@ export function getCapabilitiesForModel(provider, model) {
   // 4. Floor
   return refine(null, provider, model);
 }
-
-/**
- * Merge user-defined per-model capability overrides over resolved static caps.
- * User overrides always win (a user can both grant and revoke a capability).
- * Only fields present in the override object are applied.
- *
- * @param {object} staticCaps - result of getCapabilitiesForModel(provider, model)
- * @param {object} [userOverrides] - { vision: true, audioInput: false, ... } or null
- * @returns {object} merged capabilities
- */
-export function mergeUserCapabilityOverrides(staticCaps, userOverrides) {
-  if (!userOverrides || typeof userOverrides !== "object") return staticCaps;
-  return { ...staticCaps, ...userOverrides };
-}

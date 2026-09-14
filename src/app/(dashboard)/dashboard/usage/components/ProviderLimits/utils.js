@@ -618,24 +618,6 @@ export function parseQuotaData(provider, data) {
         }
         break;
 
-      case "openrouter":
-        // OpenRouter returns USD credit figures (usage/limit/limit_remaining),
-        // same shape family as Vercel — forward the explicit remainingPercentage
-        // and the `unlimited` flag so uncapped keys render without a false cap.
-        if (data.quotas) {
-          Object.entries(data.quotas).forEach(([name, quota]) => {
-            normalizedQuotas.push({
-              name,
-              used: quota.used || 0,
-              total: quota.total || 0,
-              resetAt: quota.resetAt || null,
-              remainingPercentage: quota.remainingPercentage,
-              unlimited: quota.unlimited,
-            });
-          });
-        }
-        break;
-
       case "codebuddy-cn":
       case "codebuddy-intl":
         // CodeBuddy CN/Intl mix recurring refill packs ("Monthly"/"Weekly"/...)

@@ -5,22 +5,11 @@ import Modal from "./Modal";
 import Input from "./Input";
 import Button from "./Button";
 import ModelSelectModal from "./ModelSelectModal";
-import CapacityBadges from "./CapacityBadges";
-import Tooltip from "./Tooltip";
-import { useModelCaps } from "@/shared/hooks/useModelCaps";
 
 const VALID_NAME_REGEX = /^[a-zA-Z0-9_.\-]+$/;
 
-// Template presets for quick combo creation
-const TEMPLATES = [
-  { label: "Coding Fallback", icon: "code", models: ["anthropic/claude-sonnet-4-20250514", "openai/gpt-4o", "deepseek/deepseek-chat"] },
-  { label: "Research Chain", icon: "science", models: ["anthropic/claude-sonnet-4-20250514", "openai/o3-mini", "google/gemini-2.5-flash"] },
-  { label: "Budget Route", icon: "savings", models: ["deepseek/deepseek-chat", "openai/gpt-4o-mini", "google/gemini-2.5-flash"] },
-  { label: "Max Quality", icon: "diamond", models: ["anthropic/claude-opus-4-20250514", "openai/o3", "google/gemini-2.5-pro"] },
-];
-
-// Inline editable model item with capability badges and validation status
-function ModelItem({ index, model, isFirst, isLast, onEdit, onMoveUp, onMoveDown, onRemove, caps, isKnown }) {
+// Inline editable model item
+function ModelItem({ index, model, isFirst, isLast, onEdit, onMoveUp, onMoveDown, onRemove }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(model);
   const commit = () => {
@@ -40,21 +29,8 @@ function ModelItem({ index, model, isFirst, isLast, onEdit, onMoveUp, onMoveDown
         <input autoFocus value={draft} onChange={(e) => setDraft(e.target.value)} onBlur={commit} onKeyDown={handleKeyDown}
           className="min-w-0 flex-1 rounded border border-primary/40 bg-white px-1.5 py-0.5 font-mono text-xs text-text-main outline-none dark:bg-black/20" />
       ) : (
-        <div className="min-w-0 flex-1 flex items-center gap-1.5 cursor-text truncate rounded px-1.5 py-0.5 hover:bg-black/5 dark:hover:bg-white/5"
-          onClick={() => setEditing(true)} title="Click to edit">
-          <span className="font-mono text-xs text-text-main truncate">{model}</span>
-          {caps && <CapacityBadges caps={caps} />}
-          {isKnown === true && (
-            <Tooltip text="Known model">
-              <span className="material-symbols-outlined text-green-500 leading-none" style={{ fontSize: "14px" }}>check_circle</span>
-            </Tooltip>
-          )}
-          {isKnown === false && (
-            <Tooltip text="Unrecognized model — may still work with custom providers">
-              <span className="material-symbols-outlined text-amber-500 leading-none" style={{ fontSize: "14px" }}>warning</span>
-            </Tooltip>
-          )}
-        </div>
+        <div className="min-w-0 flex-1 cursor-text truncate rounded px-1.5 py-0.5 font-mono text-xs text-text-main hover:bg-black/5 dark:hover:bg-white/5"
+          onClick={() => setEditing(true)} title="Click to edit">{model}</div>
       )}
       <div className="flex shrink-0 items-center gap-0.5">
         <button onClick={onMoveUp} disabled={isFirst}
@@ -85,7 +61,6 @@ export default function ComboFormModal({ isOpen, combo, onClose, onSave, activeP
   const [saving, setSaving] = useState(false);
   const [nameError, setNameError] = useState("");
   const [modelAliases, setModelAliases] = useState({});
-  const { getCaps, isKnownModel } = useModelCaps();
 
   useEffect(() => {
     if (!isOpen) return;
@@ -158,17 +133,6 @@ export default function ComboFormModal({ isOpen, combo, onClose, onSave, activeP
 
           <div>
             <label className="text-sm font-medium mb-1.5 block">Models</label>
-            {!isEdit && models.length === 0 && (
-              <div className="mb-2 flex flex-wrap gap-1.5">
-                {TEMPLATES.map((t) => (
-                  <button key={t.label} onClick={() => { setModels(t.models); if (!name) setName(t.label.toLowerCase().replace(/\s+/g, "-")); }}
-                    className="inline-flex items-center gap-1 rounded-full border border-black/10 dark:border-white/10 px-2 py-0.5 text-[10px] font-medium text-text-muted hover:border-primary hover:text-primary transition-colors">
-                    <span className="material-symbols-outlined text-[12px]">{t.icon}</span>
-                    {t.label}
-                  </button>
-                ))}
-              </div>
-            )}
             {models.length === 0 ? (
               <div className="text-center py-4 border border-dashed border-black/10 dark:border-white/10 rounded-lg bg-black/[0.01] dark:bg-white/[0.01]">
                 <span className="material-symbols-outlined text-text-muted text-xl mb-1">layers</span>
@@ -182,9 +146,7 @@ export default function ComboFormModal({ isOpen, combo, onClose, onSave, activeP
                     onEdit={(v) => { const a = [...models]; a[index] = v; setModels(a); }}
                     onMoveUp={() => handleMoveUp(index)}
                     onMoveDown={() => handleMoveDown(index)}
-                    onRemove={() => handleRemoveModel(index)}
-                    caps={getCaps?.(model)}
-                    isKnown={isKnownModel?.(model)} />
+                    onRemove={() => handleRemoveModel(index)} />
                 ))}
               </div>
             )}

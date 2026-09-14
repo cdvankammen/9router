@@ -388,16 +388,6 @@
 - **Login**: fresh-install remote login with the default password returns 403
   without issuing a JWT
 - **Usage**: `/api/usage/request-details` redacts request/response payloads
-# Unreleased (2026-08-11 — HA node-failover hardening)
-
-## Features
-- **Models**: remote-only model serving — `OLLAMA_LOCAL_DEFAULT_HOST` env override routes ollama models to a remote node; `qwen2.5*`/`llama3*` prefixes infer `ollama-local` (keyless `free` provider, real SSE streaming). Control-plane Mac never runs inference (`fdf82774`)
-
-## Fixes
-- **CLI**: bundle the full `src/lib/db` closure in `cli/app` (whole db tree + `dataDir.js` + `extractText.js`, `@/` aliases rewritten) — a partial copy threw at boot and poisoned the shared `global._dbAdapter`, breaking require-login and `/v1` (`24a50108`)
-- **Failover**: L1 settings load now retries with backoff (1s→5s, 10 attempts) instead of silently staying off when the DB isn't ready at boot (`d2affcc6`)
-- **Failover**: remove custom `API_KEY_SECRET`/`MACHINE_ID_SALT` from the mini2 launchd plist so key CRCs match across nodes; API keys are validated per-node (`d2affcc6`)
-- **Baseline**: fix `verify-no-regression.mjs` judge (layout-agnostic matching — was splitting on `/app/` and reporting everything as a regression); reconcile `known-fails.txt` with reality (`66fdbe82`, `3b705585`)
 
 # v0.5.50 (2026-08-05)
 

@@ -3,8 +3,6 @@ import { getSettings, validateApiKey } from "@/lib/localDb";
 import { getConsistentMachineId } from "@/shared/utils/machineId";
 import { verifyDashboardAuthToken } from "@/lib/auth/dashboardSession";
 import { hasTrustedPeerHeaders } from "@/lib/auth/trustedPeer";
-import { checkRateLimit, rateLimitResponse } from "@/lib/middleware/rateLimiter.js";
-import { sanitizeHeaders } from "@/lib/middleware/headerSanitizer.js";
 
 const CLI_TOKEN_HEADER = "x-9r-cli-token";
 const CLI_TOKEN_SALT = "9r-cli-auth";
@@ -29,7 +27,6 @@ const PUBLIC_API_PATHS = [
   "/api/auth/login",
   "/api/auth/logout",
   "/api/auth/status",
-  "/api/auth/setup",
   "/api/auth/oidc",
   "/api/auth/saml",
   "/api/version",
@@ -208,23 +205,7 @@ export const __test__ = {
 };
 
 export async function proxy(request) {
-  // Sanitize headers early — strip injection attempts and untrusted server-only headers.
-  // Mutates the request.headers in place (Next.js Headers is mutable in middleware).
-  const isTrustedProxy = hasTrustedPeerHeaders(request);
-  const sanitizeWarnings = sanitizeHeaders(request.headers, isTrustedProxy);
-  if (sanitizeWarnings.length > 0 && process.env.NODE_ENV === "development") {
-    console.warn("[middleware] header sanitization:", sanitizeWarnings.join(", "));
-  }
-
   const { pathname } = request.nextUrl;
-
-  // Apply rate limiting to all API and dashboard routes (skip static assets).
-  if (pathname.startsWith("/api/") || pathname.startsWith("/dashboard")) {
-    const rateResult = checkRateLimit(request);
-    if (rateResult.limited) {
-      return rateLimitResponse(rateResult, NextResponse);
-    }
-  }
 
   // Local-only gate for spawn-capable / host-secret routes.
   if (LOCAL_ONLY_PATHS.some((p) => pathname.startsWith(p))) {

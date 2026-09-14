@@ -8,8 +8,6 @@ import {
 } from "@/shared/constants/providers";
 import { getProviderConnections, getCombos, getCustomModels, getModelAliases } from "@/lib/localDb";
 import { getDisabledModels } from "@/lib/disabledModelsDb";
-import { getSettings } from "@/lib/db/repos/settingsRepo";
-import { addCustomModel, persistDiscoveredModels } from "@/lib/db/repos/aliasRepo";
 import { resolveKiroModels } from "open-sse/services/kiroModels.js";
 import { resolveKimchiModels } from "open-sse/services/kimchiModels.js";
 import { resolveQoderModels, routableQoderModels } from "open-sse/services/qoderModels.js";
@@ -328,35 +326,35 @@ export async function buildModelsList(kindFilter, options = {}) {
     connections = await getProviderConnections();
     connections = connections.filter(c => c.isActive !== false);
   } catch (e) {
-    console.warn(`[models] getProviderConnections failed:`, e.message);
+    console.log("Could not fetch providers, returning all models");
   }
 
   let combos = [];
   try {
     combos = await getCombos();
   } catch (e) {
-    console.warn(`[models] getCombos failed:`, e.message);
+    console.log("Could not fetch combos");
   }
 
   let customModels = [];
   try {
     customModels = await getCustomModels();
   } catch (e) {
-    console.warn(`[models] getCustomModels failed:`, e.message);
+    console.log("Could not fetch custom models");
   }
 
   let modelAliases = {};
   try {
     modelAliases = await getModelAliases();
   } catch (e) {
-    console.warn(`[models] getModelAliases failed:`, e.message);
+    console.log("Could not fetch model aliases");
   }
 
   let disabledByAlias = {};
   try {
     disabledByAlias = await getDisabledModels();
   } catch (e) {
-    console.warn(`[models] getDisabledModels failed:`, e.message);
+    console.log("Could not fetch disabled models");
   }
   const isDisabled = (alias, modelId) => Array.isArray(disabledByAlias[alias]) && disabledByAlias[alias].includes(modelId);
 
@@ -468,21 +466,6 @@ export async function buildModelsList(kindFilter, options = {}) {
 
       if (isCompatibleProvider && rawModelIds.length === 0 && !skipDynamicFetch) {
         rawModelIds = await fetchCompatibleModelIds(conn);
-
-        // Auto-persist discovered models to kv customModels (gated by settings).
-        // Fire-and-forget — don't block the /v1/models response.
-        if (rawModelIds.length > 0) {
-          try {
-            const settings = await getSettings();
-            const persistCfg = settings.modelAutoPersist;
-            if (persistCfg?.enabled && rawModelIds.length <= persistCfg.maxModelsPerProvider) {
-              persistDiscoveredModels(outputAlias, rawModelIds, persistCfg.markSource)
-                .catch((err) => console.error("[AutoPersist] failed:", err?.message));
-            }
-          } catch (err) {
-            console.error("[AutoPersist] settings read failed:", err?.message);
-          }
-        }
       }
 
       // Config-driven live catalog override (e.g. Kiro returns dynamic

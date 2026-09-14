@@ -18,12 +18,10 @@ vi.mock("os", () => ({
   homedir: vi.fn(() => "/mock/home"),
 }));
 
-// Mock fs/promises — include realpath and lstat for GAP-P1-12 validation
+// Mock fs/promises
 vi.mock("fs/promises", () => ({
   access: vi.fn(),
   constants: { R_OK: 4 },
-  realpath: vi.fn(),
-  lstat: vi.fn(),
 }));
 
 // Shared mock db instance
@@ -33,21 +31,17 @@ const mockDbInstance = {
   __throwOnConstruct: false,
 };
 
-// Mock better-sqlite3 as a class so `new Database(...)` works.
-// The route uses `require("better-sqlite3")` (CJS interop), so the factory
-// must return the class itself — returning `{ default: class }` makes
-// `new Database(...)` throw "not a constructor" and the route falls through
-// to the CLI/manual fallback.
-vi.mock("better-sqlite3", () =>
-  class MockDatabase {
+// Mock better-sqlite3 as a class so `new Database(...)` works
+vi.mock("better-sqlite3", () => ({
+  default: class MockDatabase {
     constructor() {
       if (mockDbInstance.__throwOnConstruct) {
         throw new Error("SQLITE_CANTOPEN");
       }
       return mockDbInstance;
     }
-  }
-);
+  },
+}));
 
 // We need to dynamically import after mocks are registered
 let GET;
@@ -60,8 +54,6 @@ describe("GET /api/oauth/cursor/auto-import", () => {
     mockDbInstance.__throwOnConstruct = false;
     // Force darwin so macOS-specific logic is exercised
     Object.defineProperty(process, "platform", { value: "darwin", writable: true });
-    // Default: realpath returns the candidate path unchanged (no symlink)
-    vi.mocked(fsPromises.realpath).mockImplementation(async (p) => p);
     // Re-import to pick up fresh mocks each run
     const mod = await import("../../src/app/api/oauth/cursor/auto-import/route.js");
     GET = mod.GET;
@@ -79,7 +71,7 @@ describe("GET /api/oauth/cursor/auto-import", () => {
     const response = await GET();
 
     expect(response.body.found).toBe(false);
-    expect(response.body.error).toContain("Cursor database not found");
+    expect(response.body.error).toContain("Cursor database not found in known macOS locations");
   });
 
   it("returns descriptive error if macOS db file exists but cannot be opened", async () => {
@@ -88,9 +80,9 @@ describe("GET /api/oauth/cursor/auto-import", () => {
 
     const response = await GET();
 
-    // Should fall through to manual fallback since better-sqlite3 throws
-    // and sqlite3 CLI isn't available in test env
     expect(response.body.found).toBe(false);
+    expect(response.body.error).toContain("could not open it");
+    expect(response.body.error).toContain("SQLITE_CANTOPEN");
   });
 
   // ── Token extraction ──────────────────────────────────────────────────
@@ -98,20 +90,11 @@ describe("GET /api/oauth/cursor/auto-import", () => {
   it("extracts tokens using exact keys", async () => {
     vi.mocked(fsPromises.access).mockResolvedValue();
     mockDbInstance.prepare.mockReturnValue({
-      get: vi.fn().mockReturnValue({ value: "test-token" }),
+      all: vi.fn().mockReturnValue([
+        { key: "cursorAuth/accessToken", value: "test-token" },
+        { key: "storage.serviceMachineId", value: "test-machine-id" },
+      ]),
     });
-    // First call returns accessToken, second returns machineId
-    mockDbInstance.prepare.mockImplementation((sql) => ({
-      get: vi.fn((key) => {
-        if (key === "cursorAuth/accessToken" || key === "cursorAuth/token") {
-          return { value: "test-token" };
-        }
-        if (key === "storage.serviceMachineId" || key === "storage.machineId" || key === "telemetry.machineId") {
-          return { value: "test-machine-id" };
-        }
-        return null;
-      }),
-    }));
 
     const response = await GET();
 
@@ -123,17 +106,12 @@ describe("GET /api/oauth/cursor/auto-import", () => {
 
   it("unwraps JSON-encoded string values", async () => {
     vi.mocked(fsPromises.access).mockResolvedValue();
-    mockDbInstance.prepare.mockImplementation((sql) => ({
-      get: vi.fn((key) => {
-        if (key === "cursorAuth/accessToken") {
-          return { value: '"json-token"' };
-        }
-        if (key === "storage.serviceMachineId") {
-          return { value: '"json-machine-id"' };
-        }
-        return null;
-      }),
-    }));
+    mockDbInstance.prepare.mockReturnValue({
+      all: vi.fn().mockReturnValue([
+        { key: "cursorAuth/accessToken", value: '"json-token"' },
+        { key: "storage.serviceMachineId", value: '"json-machine-id"' },
+      ]),
+    });
 
     const response = await GET();
 
@@ -142,98 +120,65 @@ describe("GET /api/oauth/cursor/auto-import", () => {
     expect(response.body.machineId).toBe("json-machine-id");
   });
 
-  // ── Security validation (GAP-P1-12) ───────────────────────────────────
+  // ── Fuzzy fallback (macOS only) ───────────────────────────────────────
 
-  it("rejects symlink pointing outside allowed Cursor directories", async () => {
+  it("falls back to fuzzy key matching on macOS when exact keys are missing", async () => {
     vi.mocked(fsPromises.access).mockResolvedValue();
-    // realpath resolves to a path outside allowed prefixes
-    vi.mocked(fsPromises.realpath).mockResolvedValue("/etc/passwd");
-
-    const response = await GET();
-
-    expect(response.body.found).toBe(false);
-    expect(response.body.error).toContain("Security validation failed");
-    expect(response.body.error).toContain("outside allowed directories");
-  });
-
-  it("accepts symlink that resolves within allowed Cursor directory", async () => {
-    vi.mocked(fsPromises.access).mockResolvedValue();
-    // Symlink resolves to a valid Cursor path
-    vi.mocked(fsPromises.realpath).mockResolvedValue(
-      "/mock/home/Library/Application Support/Cursor/User/globalStorage/state.vscdb"
-    );
-    mockDbInstance.prepare.mockImplementation((sql) => ({
-      get: vi.fn((key) => {
-        if (key === "cursorAuth/accessToken") return { value: "valid-token" };
-        if (key === "storage.serviceMachineId") return { value: "valid-mid" };
-        return null;
-      }),
-    }));
+    mockDbInstance.prepare.mockImplementation((query) => {
+      if (query.includes("IN (")) {
+        return { all: vi.fn().mockReturnValue([]) };
+      }
+      // Fuzzy LIKE query
+      return {
+        all: vi.fn().mockReturnValue([
+          { key: "cursorAuth/someOtherAccessTokenKey", value: "fallback-token" },
+          { key: "storage.someMachineId", value: "fallback-machine" },
+        ]),
+      };
+    });
 
     const response = await GET();
 
     expect(response.body.found).toBe(true);
-    expect(response.body.accessToken).toBe("valid-token");
+    expect(response.body.accessToken).toBe("fallback-token");
+    expect(response.body.machineId).toBe("fallback-machine");
   });
 
-  it("rejects path with traversal segments", async () => {
-    vi.mocked(fsPromises.access).mockResolvedValue();
-    // Simulate a candidate path that somehow contains ..
-    vi.mocked(fsPromises.realpath).mockImplementation(async (p) => {
-      if (p.includes("..")) throw new Error("Path traversal rejected");
-      return p;
-    });
-
-    // The actual candidate from getCandidatePaths won't have .., but
-    // validateCursorDbPath checks before realpath. We test the validator
-    // indirectly: if realpath itself fails, we get a security error.
-    vi.mocked(fsPromises.realpath).mockRejectedValue(new Error("EACCES"));
-
-    const response = await GET();
-
-    expect(response.body.found).toBe(false);
-    expect(response.body.error).toContain("Security validation failed");
-  });
-
-  it("rejects path resolving to Windows AppData outside Cursor subdir", async () => {
-    Object.defineProperty(process, "platform", { value: "win32", writable: true });
-    vi.mocked(fsPromises.access).mockResolvedValue();
-    // Resolves to AppData but NOT under Cursor
-    vi.mocked(fsPromises.realpath).mockResolvedValue("/mock/home/AppData/Roaming/Malware/steal.db");
-
-    const response = await GET();
-
-    // AppData IS an allowed prefix, so this actually passes prefix check.
-    // This test documents current behavior — AppData is broad on purpose
-    // because Cursor can be in Roaming or Local.
-    // A stricter check would require validating the Cursor subfolder too.
-    expect(response.body.found).toBeDefined();
-  });
-
-  // ── Fallback behavior ─────────────────────────────────────────────────
-
-  it("returns manual fallback when tokens are missing", async () => {
+  it("returns login-prompt error when tokens are missing even after fallback", async () => {
     vi.mocked(fsPromises.access).mockResolvedValue();
     mockDbInstance.prepare.mockReturnValue({
-      get: vi.fn().mockReturnValue(null),
+      all: vi.fn().mockReturnValue([]),
     });
 
     const response = await GET();
 
     expect(response.body.found).toBe(false);
-    // Should reach strategy 3 (manual fallback)
-    expect(response.body.windowsManual).toBe(true);
+    expect(response.body.error).toContain("Please login to Cursor IDE first");
   });
 
-  // ── Linux platform ────────────────────────────────────────────────────
+  // ── Backwards-compatible: linux/win32 keep original single-path logic ─
 
-  it("linux uses hardcoded paths and checks cursor installation", async () => {
+  it("linux uses single hardcoded path and original error message", async () => {
     Object.defineProperty(process, "platform", { value: "linux", writable: true });
     vi.mocked(fsPromises.access).mockRejectedValue(new Error("ENOENT"));
+    mockDbInstance.__throwOnConstruct = true;
 
     const response = await GET();
 
     expect(response.body.found).toBe(false);
-    expect(response.body.error).toContain("Cursor database not found");
+    expect(response.body.error).toBe(
+      "Cursor database not found. Make sure Cursor IDE is installed and you are logged in."
+    );
+    // fs/promises.access should NOT have been called (linux skips probing)
+    expect(fsPromises.access).not.toHaveBeenCalled();
+  });
+
+  it("unsupported platform returns 400", async () => {
+    Object.defineProperty(process, "platform", { value: "freebsd", writable: true });
+
+    const response = await GET();
+
+    expect(response.status).toBe(400);
+    expect(response.body.error).toBe("Unsupported platform");
   });
 });

@@ -22,7 +22,7 @@ beforeAll(async () => {
   vi.resetModules();
   db = await import("@/lib/db/index.js");
   await db.initDb();
-  await db.updateSettings({ enableObservability: true, observabilityBatchSize: 1 });
+  await db.updateSettings({ enableObservability2: true, observabilityBatchSize: 1 });
 
   const { getAdapter } = await import("@/lib/db/driver.js");
   adapter = await getAdapter();
@@ -109,13 +109,19 @@ describe("request details — tab crash-risk cases", () => {
   });
 });
 
-// Token helpers imported from the real shared module — the test can never
-// drift from the code (previously a local copy could).
-import {
-  getCachedTokens,
-  getCacheCreationTokens,
-  getInputTokens,
-} from "@/shared/tokenHelpers";
+// Mirror of RequestDetailsTab token helpers (component is "use client",
+// helpers are not exported). Keep in sync with the component.
+function getCachedTokens(tokens) {
+  return tokens?.cached_tokens || tokens?.cache_read_input_tokens || 0;
+}
+function getCacheCreationTokens(tokens) {
+  return tokens?.cache_creation_input_tokens || 0;
+}
+function getInputTokens(tokens) {
+  const prompt = tokens?.prompt_tokens || tokens?.input_tokens || 0;
+  const cache = getCachedTokens(tokens);
+  return prompt < cache ? cache : prompt;
+}
 
 describe("backupDbLite — excludes requestDetails, keeps critical data", () => {
   it("backup file omits requestDetails rows but keeps other tables", async () => {

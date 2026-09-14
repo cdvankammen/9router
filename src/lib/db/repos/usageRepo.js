@@ -114,9 +114,7 @@ async function getConnectionMapCached() {
     for (const c of all) map[c.id] = c.name || c.email || c.id;
     connCache.map = map;
     connCache.ts = Date.now();
-  } catch (e) {
-    console.error("[usageRepo] getConnectionMapCached failed to load connections:", e.message);
-  }
+  } catch {}
   return connCache.map;
 }
 
@@ -131,9 +129,7 @@ async function ensureRingInitialized() {
       apiKey: r.apiKey, endpoint: r.endpoint, cost: r.cost, status: r.status,
       tokens: parseJson(r.tokens, {}),
     }));
-  } catch (e) {
-    console.error("[usageRepo] ensureRingInitialized failed:", e.message);
-  }
+  } catch {}
 }
 
 async function calculateCost(provider, model, tokens) {
@@ -284,12 +280,12 @@ export async function saveRequestUsage(entry) {
       }
 
       db.run(
-        `INSERT INTO usageHistory(timestamp, provider, model, connectionId, apiKey, endpoint, promptTokens, completionTokens, cost, status, tokens, meta, conversationId) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO usageHistory(timestamp, provider, model, connectionId, apiKey, endpoint, promptTokens, completionTokens, cost, status, tokens, meta) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           entry.timestamp, entry.provider || null, entry.model || null,
           entry.connectionId || null, entry.apiKey || null, entry.endpoint || null,
           promptTokens, completionTokens, entry.cost || 0, entry.status || "ok",
-          stringifyJson(tokens), stringifyJson(entry.meta || {}), entry.conversationId || null,
+          stringifyJson(tokens), stringifyJson({}),
         ]
       );
 
@@ -358,7 +354,7 @@ export async function getUsageStats(period = "all") {
   ]);
 
   let allConnections = [];
-  try { allConnections = await getProviderConnections(); } catch (e) { console.error("[usageRepo] getUsageStats: getProviderConnections failed:", e.message); }
+  try { allConnections = await getProviderConnections(); } catch {}
   const connectionMap = {};
   for (const c of allConnections) connectionMap[c.id] = c.name || c.email || c.id;
 
@@ -366,10 +362,10 @@ export async function getUsageStats(period = "all") {
   try {
     const nodes = await getProviderNodes();
     for (const n of nodes) if (n.id && n.name) providerNodeNameMap[n.id] = n.name;
-  } catch (e) { console.error("[usageRepo] getUsageStats: getProviderNodes failed:", e.message); }
+  } catch {}
 
   let allApiKeys = [];
-  try { allApiKeys = await getApiKeys(); } catch (e) { console.error("[usageRepo] getUsageStats: getApiKeys failed:", e.message); }
+  try { allApiKeys = await getApiKeys(); } catch {}
   const apiKeyMap = {};
   for (const k of allApiKeys) apiKeyMap[k.key] = { name: k.name, id: k.id, createdAt: k.createdAt };
 
@@ -796,7 +792,7 @@ export async function getRecentLogs(limit = 200) {
       const { getProviderConnections } = await import("./connectionsRepo.js");
       const connections = await getProviderConnections();
       for (const c of connections) connMap[c.id] = c.name || c.email || "";
-    } catch (e) { console.error("[usageRepo] getRecentLogs: connections enrichment failed:", e.message); }
+    } catch {}
 
     return rows.map((r) => {
       const ts = formatLogDate(new Date(r.timestamp));

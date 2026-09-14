@@ -24,9 +24,6 @@ export default {
       "HTTP-Referer": "https://endpoint-proxy.local",
       "X-Title": "Endpoint Proxy",
     },
-    usage: {
-      url: "https://openrouter.ai/api/v1/auth/key",
-    },
   },
   models: [
     { id: "openai/text-embedding-3-large", name: "OpenAI Text Embedding 3 Large", kind: "embedding" },
@@ -77,8 +74,4 @@ export default {
   },
   modelsFetcher: { url: "https://openrouter.ai/api/v1/models", type: "openrouter-free" },
   passthroughModels: true,
-  features: {
-    usage: true,
-    usageApikey: true,
-  },
 };

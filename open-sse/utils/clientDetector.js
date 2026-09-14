@@ -9,19 +9,11 @@ const NATIVE_PAIRS = {
   "gemini-cli": ["gemini-cli"],
   "antigravity": ["antigravity"],
   "codex": ["codex"],
-  "aider": ["aider"],
-  "cline": ["cline"],
-  "roo-code": ["roo-code"],
-  "windsurf": ["windsurf"],
-  "zed": ["zed"],
-  "warp": ["warp"],
-  "continue": ["continue"],
-  "openrouter-sdk": ["openrouter-sdk"],
 };
 
 /**
  * Detect which CLI tool is making the request.
- * Returns one of: "claude" | "gemini-cli" | "antigravity" | "codex" | "aider" | "cline" | "roo-code" | "windsurf" | "zed" | "warp" | "continue" | "openrouter-sdk" | "github-copilot" | "deepseek-tui" | null
+ * Returns one of: "claude" | "gemini-cli" | "antigravity" | "codex" | null
  * @param {object} headers - Lowercase header key/value object
  * @param {object} body    - Parsed request body
  */
@@ -31,14 +23,6 @@ export function detectClientTool(headers = {}, body = {}) {
   const openaiIntent = (headers["openai-intent"] || "").toLowerCase();
   const initiator = (headers["x-initiator"] || headers["X-Initiator"] || "").toLowerCase();
   const originator = (headers["originator"] || "").toLowerCase();
-
-  // Trusted identity headers (governance M1) — only honored post-auth.
-  // These are set by the gateway after validating the API key, so they
-  // cannot be spoofed by the client. The gateway strips untrusted
-  // X-9R-* headers at the edge and re-injects verified ones.
-  const trustedApp = headers["x-9r-app"] || headers["x-9router-app"];
-  const trustedUser = headers["x-9r-user"] || headers["x-9router-user"];
-  const trustedSession = headers["x-9r-session"] || headers["x-9router-session"];
 
   // Antigravity: detected via body field (not header)
   if (body.userAgent === "antigravity") return "antigravity";
@@ -59,81 +43,8 @@ export function detectClientTool(headers = {}, body = {}) {
   if (ua.includes("codex-tui") || ua.includes("codex-cli") || ua.includes("codex_cli_rs") ||
       ua.includes("codex desktop") || originator.startsWith("codex_")) return "codex";
 
-  // Aider
-  if (ua.includes("aider")) return "aider";
-
-  // Cline
-  if (ua.includes("cline")) return "cline";
-
-  // Roo Code
-  if (ua.includes("roo-code") || ua.includes("roocode")) return "roo-code";
-
-  // Windsurf
-  if (ua.includes("windsurf")) return "windsurf";
-
-  // Zed
-  if (ua.includes("zed")) return "zed";
-
-  // Warp
-  if (ua.includes("warp")) return "warp";
-
-  // Continue
-  if (ua.includes("continue")) return "continue";
-
-  // OpenRouter SDK
-  if (ua.includes("openrouter") || ua.includes("openrouter-sdk")) return "openrouter-sdk";
-
   // DeepSeek TUI
   if (ua.includes("deepseek-tui")) return "deepseek-tui";
-
-  // Trusted headers override UA detection (governance M1)
-  if (trustedApp) return trustedApp;
-
-  return null;
-}
-
-/**
- * Detect IDE from User-Agent (M3).
- * Returns one of: "vscode" | "jetbrains" | "neovim" | "zed" | "warp" | "terminal" | null
- * @param {string} ua - Lowercase User-Agent string
- */
-export function detectIDE(ua) {
-  if (!ua || typeof ua !== "string") return null;
-  const lower = ua.toLowerCase();
-
-  // VS Code (including Cursor, GitHub Codespaces, etc.)
-  if (lower.includes("vscode") || lower.includes("code ") || lower.includes("github-codespaces")) {
-    return "vscode";
-  }
-
-  // JetBrains IDEs (IntelliJ, PyCharm, WebStorm, etc.)
-  if (lower.includes("jetbrains") || lower.includes("intellij") || lower.includes("pycharm") ||
-      lower.includes("webstorm") || lower.includes("rider") || lower.includes("goland") ||
-      lower.includes("clion") || lower.includes("datagrip") || lower.includes("rubymine") ||
-      lower.includes("phpstorm")) {
-    return "jetbrains";
-  }
-
-  // Neovim
-  if (lower.includes("neovim") || lower.includes("nvim")) {
-    return "neovim";
-  }
-
-  // Zed (already caught as client tool, but also an IDE)
-  if (lower.includes("zed")) {
-    return "zed";
-  }
-
-  // Warp (terminal)
-  if (lower.includes("warp")) {
-    return "warp";
-  }
-
-  // Generic terminal (curl, wget, httpie, etc. — no IDE)
-  if (lower.includes("curl") || lower.includes("wget") || lower.includes("httpie") ||
-      lower.includes("axios") || lower.includes("node-fetch") || lower.includes("undici")) {
-    return "terminal";
-  }
 
   return null;
 }

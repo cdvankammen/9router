@@ -2,7 +2,6 @@ const path = require("path");
 const fs = require("fs");
 const forge = require("node-forge");
 const { MITM_DIR } = require("../paths");
-const { encryptPrivateKey, decryptPrivateKey, isEncrypted } = require("./keyEncryption");
 
 const ROOT_CA_KEY_PATH = path.join(MITM_DIR, "rootCA.key");
 const ROOT_CA_CERT_PATH = path.join(MITM_DIR, "rootCA.crt");
@@ -82,12 +81,11 @@ function generateRootCA() {
   // Self-sign the certificate
   cert.sign(keys.privateKey, forge.md.sha256.create());
 
-  // Save to disk — encrypt the private key at rest (H2 remediation)
+  // Save to disk
   const privateKeyPem = forge.pki.privateKeyToPem(keys.privateKey);
   const certPem = forge.pki.certificateToPem(cert);
 
-  const encryptedKey = encryptPrivateKey(privateKeyPem);
-  fs.writeFileSync(ROOT_CA_KEY_PATH, encryptedKey, { mode: 0o600 });
+  fs.writeFileSync(ROOT_CA_KEY_PATH, privateKeyPem);
   fs.writeFileSync(ROOT_CA_CERT_PATH, certPem);
 
   console.log("✅ Root CA generated successfully");
@@ -95,15 +93,14 @@ function generateRootCA() {
 }
 
 /**
- * Load Root CA from disk. Decrypts encrypted keys in memory; handles plaintext keys transparently.
+ * Load Root CA from disk
  */
 function loadRootCA() {
   if (!fs.existsSync(ROOT_CA_KEY_PATH) || !fs.existsSync(ROOT_CA_CERT_PATH)) {
     throw new Error("Root CA not found. Generate it first.");
   }
 
-  const rawKey = fs.readFileSync(ROOT_CA_KEY_PATH, "utf8");
-  const keyPem = decryptPrivateKey(rawKey); // handles both encrypted and plaintext
+  const keyPem = fs.readFileSync(ROOT_CA_KEY_PATH, "utf8");
   const certPem = fs.readFileSync(ROOT_CA_CERT_PATH, "utf8");
 
   return {

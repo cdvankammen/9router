@@ -12,7 +12,6 @@ import {
   isSudoPasswordRequired,
   initDbHooks,
 } from "@/mitm/manager";
-import { execFileSync } from "child_process";
 import { getSettings, updateSettings } from "@/lib/localDb";
 
 initDbHooks(getSettings, updateSettings);
@@ -49,7 +48,7 @@ function requiresSudoPassword(pwd) {
 function checkIsAdmin() {
   if (isWin) {
     try {
-      execFileSync("net", ["session"], { windowsHide: true, stdio: "ignore" });
+      require("child_process").execSync("net session >nul 2>&1", { windowsHide: true });
       return true;
     } catch {
       return false;

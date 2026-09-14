@@ -14,14 +14,7 @@ import { timestampSlug, getAppVersion } from "./version.js";
 const KEEP_BACKUPS = 3;
 
 // Tables excluded from safety backups (large, non-critical, reproducible).
-// requestDetails_fts is derived data (full-text index over requestDetails) —
-// it must never be copied: its CREATE VIRTUAL TABLE sql can't be re-prefixed
-// to the bak schema, it's reproducible from the main table anyway, and its
-// FTS5 shadow tables (*_data/_idx/_content/_docsize/_config) are name-
-// reserved so recreating them in the backup DB is rejected by SQLite.
-const BACKUP_EXCLUDE_TABLES = ["requestDetails", "requestDetails_fts"];
-const isExcludedTable = (name) =>
-  BACKUP_EXCLUDE_TABLES.includes(name) || BACKUP_EXCLUDE_TABLES.some((t) => name.startsWith(t + "_"));
+const BACKUP_EXCLUDE_TABLES = ["requestDetails"];
 
 export function makeBackupDir(label) {
   ensureDirs();
@@ -45,32 +38,26 @@ export function backupFile(srcPath, destDir, destName = null) {
 // observability log, so the backup stays small regardless of DB size.
 export function backupDbLite(adapter, destDir, destName = "data.sqlite") {
   const dest = path.join(destDir, destName);
-  try { fs.rmSync(dest, { force: true }); } catch { /* intentional: pre-write cleanup */ }
+  try { fs.rmSync(dest, { force: true }); } catch {}
   const escaped = dest.replace(/'/g, "''");
 
   adapter.exec(`ATTACH DATABASE '${escaped}' AS bak`);
   try {
+    const excluded = new Set(BACKUP_EXCLUDE_TABLES);
     const tables = adapter
       .all(`SELECT name, sql FROM main.sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'`)
-      .filter((t) => !isExcludedTable(t.name));
+      .filter((t) => !excluded.has(t.name));
 
     adapter.transaction(() => {
       for (const t of tables) {
         // Recreate table structure in backup DB, then copy rows.
-        // FK clauses referencing excluded tables (e.g. message_facets →
-        // requestDetails) are stripped: the referenced table won't exist in
-        // the backup, and the backup is a safety snapshot, not a live DB.
-        let createSql = t.sql.replace(/CREATE TABLE\s+/i, "CREATE TABLE bak.");
-        createSql = createSql.replace(
-          /REFERENCES\s+requestDetails(?:_fts)?\s*\([^)]*\)\s*(?:ON\s+DELETE\s+CASCADE)?/gi,
-          ""
-        );
+        const createSql = t.sql.replace(/CREATE TABLE\s+/i, "CREATE TABLE bak.");
         adapter.exec(createSql);
         adapter.exec(`INSERT INTO bak.${t.name} SELECT * FROM main.${t.name}`);
       }
     });
   } finally {
-    try { adapter.exec("DETACH DATABASE bak"); } catch { /* intentional: cleanup on failed backup */ }
+    try { adapter.exec("DETACH DATABASE bak"); } catch {}
   }
   return dest;
 }
@@ -83,6 +70,6 @@ export function pruneOldBackups() {
     .sort((a, b) => b.mtime - a.mtime);
 
   for (const old of entries.slice(KEEP_BACKUPS)) {
-    try { fs.rmSync(old.full, { recursive: true, force: true }); } catch { /* intentional: prune cleanup */ }
+    try { fs.rmSync(old.full, { recursive: true, force: true }); } catch {}
   }
 }

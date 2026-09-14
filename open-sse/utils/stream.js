@@ -260,12 +260,6 @@ export function createSSEStream(options = {}) {
             }
           }
 
-          // Track [DONE] sentinel to prevent duplicate emission in flush().
-          // Upstream already sent the terminator — don't re-emit on stream end.
-          if (trimmed === "data: [DONE]") {
-            streamDoneSent = true;
-          }
-
           reqLogger?.appendConvertedChunk?.(output);
           controller.enqueue(sharedEncoder.encode(output));
           // Responses clients (codex CLI) close on response.completed instead of [DONE]
@@ -457,17 +451,7 @@ export function createSSEStream(options = {}) {
             controller.enqueue(sharedEncoder.encode(doneOutput));
           }
 
-<<<<<<< HEAD
           finalizeStream();
-=======
-          if (onStreamComplete) {
-            onStreamComplete({
-              content: accumulatedContent,
-              thinking: accumulatedThinking,
-              totalContentLength
-            }, usage, ttftAt);
-          }
->>>>>>> a0650fda (feat(merge-prep): stage all local work for upstream merge)
           return;
         }
 
@@ -542,27 +526,7 @@ export function createSSEStream(options = {}) {
           streamDoneSent = true;
         }
 
-<<<<<<< HEAD
         finalizeStream();
-=======
-        if (!hasValidUsage(state?.usage) && totalContentLength > 0) {
-          state.usage = estimateUsage(body, totalContentLength, sourceFormat);
-        }
-
-        if (hasValidUsage(state?.usage)) {
-          logUsage(state.provider || targetFormat, state.usage, model, connectionId, apiKey);
-        } else {
-          appendRequestLog({ model, provider, connectionId, tokens: null, status: "200 OK" }).catch(() => { });
-        }
-        
-        if (onStreamComplete) {
-          onStreamComplete({
-            content: accumulatedContent,
-            thinking: accumulatedThinking,
-            totalContentLength
-          }, state?.usage, ttftAt);
-        }
->>>>>>> a0650fda (feat(merge-prep): stage all local work for upstream merge)
       } catch (error) {
         console.log("Error in flush:", error);
         finalizeStream();

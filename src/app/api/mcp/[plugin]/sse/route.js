@@ -1,31 +1,9 @@
 import { registerSession, unregisterSession, findPlugin } from "@/lib/mcp/stdioSseBridge";
-import { getConsistentMachineId } from "@/shared/utils/machineId";
-import { NextResponse } from "next/server";
-
-const CLI_TOKEN_HEADER = "x-9r-cli-token";
-const CLI_TOKEN_SALT = "9r-cli-auth";
-
-let cachedCliToken = null;
-async function getCliToken() {
-  if (!cachedCliToken) cachedCliToken = await getConsistentMachineId(CLI_TOKEN_SALT);
-  return cachedCliToken;
-}
-
-async function hasValidCliToken(request) {
-  const token = request.headers.get(CLI_TOKEN_HEADER);
-  if (!token) return false;
-  return token === await getCliToken();
-}
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET(request, { params }) {
-  // SECURITY: Require CLI-token auth for MCP endpoints (issue #3674)
-  if (!await hasValidCliToken(request)) {
-    return NextResponse.json({ error: "CLI token required" }, { status: 401 });
-  }
-
   const { plugin } = await params;
   if (!findPlugin(plugin)) {
     return new Response(`Unknown plugin: ${plugin}`, { status: 404 });

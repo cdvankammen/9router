@@ -71,7 +71,7 @@ export class DefaultExecutor extends BaseExecutor {
     super(provider, PROVIDERS[provider] || PROVIDERS.openai);
   }
 
-  transformRequest(model, body, stream, credentials) {
+  transformRequest(model, body) {
     const transformed = this.applyJsonSchemaFallback(body);
 
     if (transformed && typeof transformed === "object") {
@@ -80,27 +80,9 @@ export class DefaultExecutor extends BaseExecutor {
         delete transformed.client_metadata;
       }
       stripUnsupportedParams(this.provider, model, transformed);
-      // Ask OpenAI-compatible upstreams to emit a final usage chunk on streams so the
-      // gateway records REAL token counts instead of a chars/4 estimate (which silently
-      // drops usage entirely for tool-only/empty-text responses). Chat-completions format
-      // only — claude/openai-responses/gemini/ollama don't accept stream_options. Never
-      // clobber a caller-supplied value; opt out per provider via quirks.noIncludeUsage.
-      if (stream && transformed.messages && !transformed.stream_options && this.supportsIncludeUsage(credentials)) {
-        transformed.stream_options = { include_usage: true };
-      }
     }
 
     return injectReasoningContent({ provider: this.provider, model, body: transformed });
-  }
-
-  // Whether this provider accepts OpenAI's stream_options.include_usage (chat-completions only).
-  supportsIncludeUsage(credentials) {
-    if (this.config.quirks?.noIncludeUsage) return false;
-    if (this.config.format !== "openai") return false;
-    if (this.provider?.startsWith?.("openai-compatible-")) {
-      return resolveOpenAICompatibleApiType(this.provider, credentials) === "chat";
-    }
-    return true;
   }
 
   // Fallback json_schema → json_object for openai-compatible providers without native Structured Output.

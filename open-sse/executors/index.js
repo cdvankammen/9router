@@ -27,6 +27,7 @@ import ZedExecutor from "./zed.js";
 import WindsurfExecutor from "./windsurf.js";
 import { DefaultExecutor } from "./default.js";
 import { DevinCliExecutor } from "./devin-cli.js";
+import { NineRouterExecutor } from "./9router.js";
 
 const executors = {
   antigravity: new AntigravityExecutor(),
@@ -63,6 +64,8 @@ const executors = {
   zed: new ZedExecutor(),
   windsurf: new WindsurfExecutor(),
   "devin-cli": new DevinCliExecutor(),
+  "9router": new NineRouterExecutor(),
+  "9r": new NineRouterExecutor(), // Alias
 };
 
 const defaultCache = new Map();

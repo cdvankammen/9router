@@ -6,14 +6,8 @@ import { execSync, exec, spawn } from "child_process";
 import { promisify } from "util";
 import { execWithPassword } from "@/mitm/dns/dnsConfig";
 import { DATA_DIR } from "@/lib/dataDir.js";
-import { findBrewBin } from "./brewPath.js";
 
 const execAsync = promisify(exec);
-
-// Legacy PATH for non-brew probes (tailscale/daemon binaries resolved via absolute paths from getTailscaleBin()).
-// Not a shell-injection surface: all callers use the absolute path as argv[0] with execFileSync/spawn semantics.
-// Kept so child processes inherit a sensible lookup path for shells/aux tools.
-const EXTENDED_PATH = `/usr/local/bin:/opt/homebrew/bin:/usr/sbin:/usr/bin:/bin:/snap/bin:${process.env.PATH || ""}`;
 
 const BIN_DIR = path.join(DATA_DIR, "bin");
 const IS_MAC = os.platform() === "darwin";
@@ -291,15 +285,20 @@ export async function installTailscale(sudoPassword, hostname, onProgress) {
   return startLogin(hostname);
 }
 
+const EXTENDED_PATH = `/usr/local/bin:/opt/homebrew/bin:/usr/sbin:/usr/bin:/bin:/snap/bin:${process.env.PATH || ""}`;
+
+function hasBrew() {
+  try { execSync("which brew", { stdio: "ignore", windowsHide: true, env: { ...process.env, PATH: EXTENDED_PATH } }); return true; } catch { return false; }
+}
+
 async function installTailscaleMac(sudoPassword, log) {
-  const brewBin = findBrewBin();
-  if (brewBin) {
+  if (hasBrew()) {
     log("Installing via Homebrew...");
     await new Promise((resolve, reject) => {
-      // Use absolute path — no shell resolution, no PATH dependency (GAP-P2-15).
-      const child = spawn(brewBin, ["install", "tailscale"], {
+      const child = spawn("brew", ["install", "tailscale"], {
         stdio: ["ignore", "pipe", "pipe"],
         windowsHide: true,
+        env: { ...process.env, PATH: EXTENDED_PATH }
       });
       child.stdout.on("data", (d) => {
         const line = d.toString().trim();
@@ -392,7 +391,7 @@ async function installTailscaleLinux(sudoPassword, log) {
       } catch (e) {
         return reject(new Error(`Failed to write install script: ${e.message}`));
       }
-      const cleanup = () => { try { fs.unlinkSync(tmpScript); } catch { /* intentional: tmp file cleanup */ } };
+      const cleanup = () => { try { fs.unlinkSync(tmpScript); } catch {} };
       const child = spawn("sudo", ["-S", "sh", tmpScript], { stdio: ["pipe", "pipe", "pipe"], windowsHide: true });
       let stderr = "";
       child.stdout.on("data", (d) => {

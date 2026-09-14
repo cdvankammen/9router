@@ -129,9 +129,7 @@ export default function CompatibleModelsSection({ providerStorageAlias, provider
 
     setImporting(true);
     try {
-      // ?refresh=1 busts the smart-router's node-models cache so a freshly
-      // imported model is visible to routing immediately.
-      const res = await fetch(`/api/providers/${activeConnection.id}/models?refresh=1`);
+      const res = await fetch(`/api/providers/${activeConnection.id}/models`);
       const data = await res.json();
       if (!res.ok) {
         alert(data.error || "Failed to import models");

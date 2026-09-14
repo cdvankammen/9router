@@ -426,7 +426,7 @@ export async function POST(request, { params }) {
           const b64 = code.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
           const padded = b64 + "=".repeat((4 - b64.length % 4) % 4);
           directPayload = JSON.parse(Buffer.from(padded, "base64").toString("utf8"));
-        } catch { /* intentional: not a valid JWT payload, fall through */ }
+        } catch {}
 
         const accountId = info.chatgptAccountId || directPayload.account_id;
         const planType = info.chatgptPlanType || directPayload.plan_type;

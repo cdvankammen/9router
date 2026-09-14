@@ -42,15 +42,6 @@ function isTraySupported() {
  * @returns {Object|null} tray instance or null if not supported/failed
  */
 function initTray(options) {
-  // macOS needs ActivationPolicy set before tray initialization
-  if (process.platform === 'darwin') {
-    try {
-      const { ensureUIElementPolicy } = require('./tray');
-      ensureUIElementPolicy();
-    } catch (e) {
-      console.error('[tray] ActivationPolicy shim failed:', e.message);
-    }
-  }
   if (!isTraySupported()) {
     return null;
   }
@@ -122,7 +113,6 @@ function handleClick(index, options, onAutostartToggle) {
  */
 function initWindowsTray(options) {
   const { port } = options;
-  currentPort = port; // Store for keepalive updates
   try {
     const { initWinTray } = require("./trayWin");
     const iconPath = path.join(__dirname, "icon.ico");
@@ -200,7 +190,6 @@ function chmodTrayBin(pkgName) {
 
 function initUnixTray(options) {
   const { port } = options;
-  currentPort = port; // Store for keepalive updates
   try {
     const resolved = resolveSystray();
     if (!resolved) return null;
@@ -330,55 +319,7 @@ function openBrowser(url) {
   exec(cmd);
 }
 
-/**
- * Check if the tray instance is alive and responsive.
- * Sends a no-op update to the tray menu to keep the Go binary's event loop active
- * and verify IPC connectivity. Returns true if successful, false otherwise.
- * 
- * This serves two purposes:
- * 1. Keepalive: Prevents macOS Jetsam from throttling the idle tray binary.
- * 2. Watchdog: Detects if the tray binary has crashed or frozen.
- */
-function isTrayAlive() {
-  if (!trayInstance) return false;
-  
-  try {
-    // For systray2 (Unix/macOS), send a dummy update to the status item.
-    // This forces the Go binary to process an IPC message, keeping it alive.
-    if (!isWinTray) {
-      // Update the tooltip slightly or just re-send the current state.
-      // We use a timestamp in the tooltip to ensure the message is unique/processed,
-      // but visually it remains effectively the same if we don't change the text much.
-      // Actually, just sending any valid action is enough to wake the loop.
-      // Let's update the first item (Status) with the current time in tooltip only.
-      const now = new Date().toISOString();
-      trayInstance.sendAction({
-        type: "update-item",
-        item: {
-          title: `9Router (Port ${currentPort || 'unknown'})`,
-          tooltip: `Server is running • ${now}`,
-          enabled: false
-        },
-        seq_id: MENU_INDEX.STATUS
-      });
-      return true;
-    } else {
-      // Windows tray implementation might differ. 
-      // For now, assume if the instance exists, it's alive unless proven otherwise.
-      // The Windows implementation uses PowerShell which is more resilient to this specific Jetsam issue.
-      return true;
-    }
-  } catch (err) {
-    console.error(`[9router] Tray keepalive check failed: ${err.message}`);
-    return false;
-  }
-}
-
-// Store current port for keepalive updates
-let currentPort = null;
-
 module.exports = {
   initTray,
-  killTray,
-  isTrayAlive
+  killTray
 };

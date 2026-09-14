@@ -13,7 +13,6 @@ export {
   createProviderConnection, updateProviderConnection,
   deleteProviderConnection, deleteProviderConnectionsByProvider,
   reorderProviderConnections, cleanupProviderConnections,
-  getOrphanConnections, deleteOrphanConnections,
 } from "./repos/connectionsRepo.js";
 
 // Provider nodes
@@ -66,16 +65,7 @@ export {
 // Request details
 export {
   saveRequestDetail, getRequestDetails, getRequestDetailById, getDistinctProviders,
-  getRequestFacets, getDroppedRecordsCount,
-  getConversationSummary, getConversationMessages, getErrorSummary,
-  parseJsonPathQuery,
 } from "./repos/requestDetailsRepo.js";
-
-// Message annotations + saved views
-export {
-  getAnnotations, addAnnotation, deleteAnnotation, toggleStar,
-  getSavedViews, saveView, deleteSavedView,
-} from "./repos/annotationsRepo.js";
 
 // Export/import full DB
 export async function exportDb() {
@@ -124,19 +114,18 @@ export async function importDb(payload) {
       db.run(`INSERT INTO settings(id, data) VALUES(1, ?) ON CONFLICT(id) DO UPDATE SET data = excluded.data`, [stringifyJson(payload.settings)]);
     }
 
-    // Provider nodes must be imported BEFORE connections (FK constraint).
-    for (const n of payload.providerNodes || []) {
-      const { id, type, name, createdAt, updatedAt, ...rest } = n;
-      db.run(
-        `INSERT OR REPLACE INTO providerNodes(id, type, name, data, createdAt, updatedAt) VALUES(?, ?, ?, ?, ?, ?)`,
-        [id, type || null, name || null, stringifyJson(rest), createdAt || new Date().toISOString(), updatedAt || new Date().toISOString()]
-      );
-    }
     for (const c of payload.providerConnections || []) {
       const { id, provider, authType, name, email, priority, isActive, createdAt, updatedAt, ...rest } = c;
       db.run(
         `INSERT OR REPLACE INTO providerConnections(id, provider, authType, name, email, priority, isActive, data, createdAt, updatedAt) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [id, provider, authType || "oauth", name || null, email || null, priority || null, isActive === false ? 0 : 1, stringifyJson(rest), createdAt || new Date().toISOString(), updatedAt || new Date().toISOString()]
+      );
+    }
+    for (const n of payload.providerNodes || []) {
+      const { id, type, name, createdAt, updatedAt, ...rest } = n;
+      db.run(
+        `INSERT OR REPLACE INTO providerNodes(id, type, name, data, createdAt, updatedAt) VALUES(?, ?, ?, ?, ?, ?)`,
+        [id, type || null, name || null, stringifyJson(rest), createdAt || new Date().toISOString(), updatedAt || new Date().toISOString()]
       );
     }
     for (const p of payload.proxyPools || []) {

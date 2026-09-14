@@ -1,12 +1,18 @@
 "use server";
 
 import os from "os";
+import { execSync } from "child_process";
 import { installTailscale, loadState, generateShortId } from "@/lib/tunnel";
 import { getCachedPassword, loadEncryptedPassword, initDbHooks } from "@/mitm/manager";
 import { getSettings, updateSettings } from "@/lib/localDb";
-import { hasBrew } from "@/lib/tunnel/tailscale/brewPath.js";
 
 initDbHooks(getSettings, updateSettings);
+
+const EXTENDED_PATH = `/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:${process.env.PATH || ""}`;
+
+function hasBrew() {
+  try { execSync("which brew", { stdio: "ignore", windowsHide: true, env: { ...process.env, PATH: EXTENDED_PATH } }); return true; } catch { return false; }
+}
 
 export async function POST(request) {
   const body = await request.json().catch(() => ({}));
@@ -51,7 +57,7 @@ export async function POST(request) {
           : error.message;
         send("error", { error: msg });
       } finally {
-        if (!closed) { try { controller.close(); } catch { /* intentional: stream cleanup */ } }
+        if (!closed) { try { controller.close(); } catch {} }
       }
     },
   });

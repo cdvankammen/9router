@@ -221,48 +221,6 @@ function buildCliPackage() {
     process.exit(1);
   }
 
-  // Step 3a1: Copy the per-IP rate limiter (custom-server.js requires it at boot).
-  const rateLimiterSrc = path.join(appDir, "custom-server.rate-limiter.js");
-  if (fs.existsSync(rateLimiterSrc)) {
-    fs.copyFileSync(rateLimiterSrc, path.join(cliAppDir, "custom-server.rate-limiter.js"));
-    console.log("✅ Copied custom-server.rate-limiter.js\n");
-  } else {
-    console.warn("⚠️  custom-server.rate-limiter.js not found — per-IP rate limiting disabled\n");
-  }
-
-  // Step 3a2: Bundle the L1 in-app peer-forwarding settings modules.
-  // custom-server.js dynamic-imports src/lib/db/repos/settingsRepo.js at
-  // startup to read settings.peerNodes, but the Next standalone build does
-  // NOT include src/lib/db (repos/helpers/driver/paths) — without these the
-  // import fails, the catch swallows it, and L1 silently stays disabled.
-  // Copy the WHOLE src/lib/db tree + dataDir + extractText so the full
-  // closure (settingsRepo → driver → paths/adapters/migrate/schema/version/
-  // backup/helpers/migrations) is present. The only `@/` aliases inside the
-  // copied tree are rewritten to relative imports (standalone runtime has no
-  // alias resolver): paths.js → ../dataDir.js, requestDetailsRepo.js →
-  // ../../extractText.js.
-  console.log("3️⃣ a2 Bundling L1 peer-forwarding settings modules...");
-  function copyFileRel(srcRel, destRel, rewrite = null) {
-    const srcPath = path.join(appDir, srcRel);
-    const destPath = path.join(cliAppDir, destRel);
-    if (!fs.existsSync(srcPath)) {
-      console.warn(`⚠️  ${srcRel} not found — L1 peer forwarding will stay off`);
-      return;
-    }
-    fs.mkdirSync(path.dirname(destPath), { recursive: true });
-    let content = fs.readFileSync(srcPath, "utf8");
-    if (rewrite) content = content.replace(rewrite[0], rewrite[1]);
-    fs.writeFileSync(destPath, content);
-    console.log(`✅ Bundled ${destRel}`);
-  }
-  copyRecursive(path.join(appDir, "src/lib/db"), path.join(cliAppDir, "src/lib/db"));
-  copyFileRel("src/lib/db/paths.js", "src/lib/db/paths.js",
-    [/from "@\/lib\/dataDir\.js"/, 'from "../dataDir.js"']);
-  copyFileRel("src/lib/db/repos/requestDetailsRepo.js", "src/lib/db/repos/requestDetailsRepo.js",
-    [/from "@\/lib\/extractText\.js"/, 'from "../../extractText.js"']);
-  copyFileRel("src/lib/dataDir.js", "src/lib/dataDir.js");
-  copyFileRel("src/lib/extractText.js", "src/lib/extractText.js");
-
   // Step 3b: Ensure sql.js (pure JS fallback) bundled in app/cli/app/node_modules.
   // Strip better-sqlite3 (native) — it lives in ~/.9router/runtime to avoid
   // Windows EBUSY during global CLI updates. node:sqlite (Node ≥22.5) is also

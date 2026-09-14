@@ -96,7 +96,10 @@ if (args[0] === "connect") {
 // Self-heal SQLite runtime deps (sql.js + better-sqlite3) into ~/.9router/runtime
 // so the server can resolve them via NODE_PATH. Best-effort — sql.js is required,
 // better-sqlite3 is optional. Logs to stderr only on failure.
-try { ensureSqliteRuntime({ silent: true }); } catch (e) { console.error('[sqlite-runtime] self-heal failed:', e.message); }
+try { ensureSqliteRuntime({ silent: true }); } catch {}
+
+// Self-heal tray runtime (systray for macOS/Linux only). Windows skipped.
+try { ensureTrayRuntime({ silent: true }); } catch {}
 
 // Configuration constants
 const APP_NAME = pkg.name; // Use from package.json
@@ -177,34 +180,10 @@ Commands:
   }
 }
 
-// Production JWT_SECRET validation — fail fast before spawning server
-const isProdEnv = process.env.NODE_ENV === "production";
-if (isProdEnv && !process.env.JWT_SECRET) {
-  console.error("\n❌ JWT_SECRET is required in production.");
-  console.error("   Generate one: openssl rand -hex 32");
-  console.error("   Add it to your .env file or export JWT_SECRET=...\n");
-  process.exit(1);
-}
-
 // Auto-relaunch after update: detached process has no TTY → fallback to tray
 if (skipUpdate && !trayMode && !process.stdin.isTTY) {
   trayMode = true;
   process.env.TRAY_MODE = "1";
-}
-
-// Self-heal tray runtime (systray for macOS/Linux only). Windows skipped.
-// Moved here (after arg parsing) so trayMode is resolved — including the
-// auto-relaunch fallback above. Install is unconditional so the binary is
-// pre-cached for future --tray invocations; errors are logged only when
-// tray was actually requested (otherwise silent — GAP-P3-01).
-try {
-  ensureTrayRuntime({ silent: true });
-} catch (e) {
-  if (trayMode) {
-    console.error(`[tray-runtime] install failed: ${e.message}`);
-    console.error(`   Tray mode was requested but systray2 could not be installed.`);
-    console.error(`   Falling back to headless — tray icon will not appear.`);
-  }
 }
 
 // Always use Node.js runtime with absolute path
@@ -742,47 +721,6 @@ function startServer(updatePromise) {
     }
   };
 
-  // Watchdog to prevent tray freeze (Jetsam) and recover from crashes
-  let trayWatchdogInterval = null;
-  const startTrayWatchdog = () => {
-    if (trayWatchdogInterval) clearInterval(trayWatchdogInterval);
-    
-    // Check every 60 seconds
-    trayWatchdogInterval = setInterval(() => {
-      if (isShuttingDown) {
-        clearInterval(trayWatchdogInterval);
-        return;
-      }
-
-      try {
-        const { isTrayAlive, initTray, killTray } = require("./src/cli/tray/tray");
-        const alive = isTrayAlive();
-        
-        if (!alive) {
-          console.error("[9router] Tray watchdog: tray unresponsive, attempting restart...");
-          killTray().then(() => {
-            // Re-initialize tray
-            initTray({
-              port,
-              onQuit: () => {
-                isShuttingDown = true;
-                console.log("\n👋 Shutting down from tray...");
-                cleanup();
-                setTimeout(() => process.exit(0), 100);
-              },
-              onOpenDashboard: () => openBrowser(url)
-            });
-            console.log("[9router] Tray watchdog: tray restarted successfully.");
-          }).catch(err => {
-            console.error("[9router] Tray watchdog: failed to restart tray:", err.message);
-          });
-        }
-      } catch (err) {
-        console.error("[9router] Tray watchdog error:", err.message);
-      }
-    }, 60000);
-  };
-
   // Tray-only mode: no TUI, just tray icon
   if (trayMode) {
     // Ignore SIGHUP so macOS terminal close doesn't kill the background tray process
@@ -794,7 +732,6 @@ function startServer(updatePromise) {
 
     waitServerReady(port).then(() => {
       initTrayIcon();
-      startTrayWatchdog();
       console.log("\n💡 Router is now running in system tray. Close this terminal if you want.");
       console.log("   Right-click tray icon to open dashboard or quit.\n");
     });
@@ -808,25 +745,6 @@ function startServer(updatePromise) {
     const latestVersion = await latestVersionPromise;
     // Start tray icon alongside TUI
     initTrayIcon();
-
-    // Tray watchdog: restart if frozen
-    let trayHealthy = true;
-    const trayWatchdog = setInterval(() => {
-      try {
-        if (!trayModule.isAlive()) throw new Error('tray not alive');
-        trayHealthy = true;
-      } catch {
-        trayHealthy = false;
-        trayModule.restartTray();
-      }
-    }, 60_000);
-
-    // Clear interval on cleanup
-    const originalCleanup = cleanup;
-    cleanup = () => {
-      clearInterval(trayWatchdog);
-      originalCleanup();
-    };
 
     try {
       while (true) {
@@ -874,9 +792,6 @@ function startServer(updatePromise) {
             console.log(`🔔 9Router is running in tray (PID: ${process.pid})`);
             console.log(`   Server: http://${displayHost}:${port}`);
             console.log(`\n💡 You can close this terminal. Right-click tray icon to quit.\n`);
-
-            // Start watchdog to prevent Jetsam freeze
-            startTrayWatchdog();
 
             // Tray already init'd at startup — just keep event loop alive.
             return;

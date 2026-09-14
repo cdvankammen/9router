@@ -12,19 +12,10 @@ let sqliteDb;
 beforeAll(async () => {
   tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "9router-db-compare-"));
   process.env.DATA_DIR = tempDir;
-  if (!process.env.API_KEY_SECRET) process.env.API_KEY_SECRET = "test-secret-" + Date.now();
   vi.resetModules();
   sqliteDb = await import("@/lib/db/index.js");
   await sqliteDb.initDb();
 });
-
-// providerConnections.provider has a FK → providerNodes(id) (migration 002).
-// Tests that create connections must first create the provider node.
-async function ensureNode(provider) {
-  const existing = await sqliteDb.getProviderNodeById(provider);
-  if (existing) return existing;
-  return sqliteDb.createProviderNode({ id: provider, type: "openai", name: provider });
-}
 
 afterAll(() => {
   if (tempDir) fs.rmSync(tempDir, { recursive: true, force: true });
@@ -75,7 +66,6 @@ describe("DB SQLite layer — public API parity", () => {
   });
 
   it("providerConnections: CRUD + reorder by priority", async () => {
-    await ensureNode("test");
     const c1 = await sqliteDb.createProviderConnection({ provider: "test", authType: "apikey", name: "a", apiKey: "k1" });
     const c2 = await sqliteDb.createProviderConnection({ provider: "test", authType: "apikey", name: "b", apiKey: "k2" });
     const c3 = await sqliteDb.createProviderConnection({ provider: "test", authType: "apikey", name: "c", apiKey: "k3" });
@@ -99,7 +89,6 @@ describe("DB SQLite layer — public API parity", () => {
   });
 
   it("providerConnections: optional fields persisted via JSON column", async () => {
-    await ensureNode("p2");
     const c = await sqliteDb.createProviderConnection({
       provider: "p2", authType: "oauth", email: "x@y.com",
       accessToken: "tok", refreshToken: "rtok", expiresAt: 12345,
@@ -113,7 +102,6 @@ describe("DB SQLite layer — public API parity", () => {
   });
 
   it("providerConnections: successful validation clears stale routing locks", async () => {
-    await ensureNode("health-reset-update");
     const c = await sqliteDb.createProviderConnection({
       provider: "health-reset-update",
       authType: "oauth",
@@ -147,7 +135,6 @@ describe("DB SQLite layer — public API parity", () => {
   });
 
   it("providerConnections: re-saving valid OAuth credentials clears stale routing locks", async () => {
-    await ensureNode("health-reset-resave");
     const existing = await sqliteDb.createProviderConnection({
       provider: "health-reset-resave",
       authType: "oauth",
@@ -183,7 +170,6 @@ describe("DB SQLite layer — public API parity", () => {
   });
 
   it("providerConnections: active soft warnings survive the health reset", async () => {
-    await ensureNode("health-reset-warning");
     const c = await sqliteDb.createProviderConnection({
       provider: "health-reset-warning",
       authType: "oauth",
@@ -214,7 +200,6 @@ describe("DB SQLite layer — public API parity", () => {
   });
 
   it("providerConnections: GitHub OAuth uses account identity as fallback name", async () => {
-    await ensureNode("github");
     const c = await sqliteDb.createProviderConnection({
       provider: "github",
       authType: "oauth",

@@ -1,7 +1,6 @@
 import open from "open";
 import { OAuthService } from "./oauth.js";
 import crypto from "crypto";
-import * as jose from "jose";
 import { XAI_CONFIG, XAI_PKCE_VERIFIER_BYTES } from "../constants/xai.js";
 import { startLocalServer } from "../utils/server.js";
 import { generateCodeVerifier, generateCodeChallenge, generateState } from "../utils/pkce.js";
@@ -23,9 +22,6 @@ import { spinner as createSpinner } from "../utils/ui.js";
 const BASE64_BLOCK_SIZE = 4;
 
 let cachedDiscovery = null;
-let cachedJWKS = null;
-let jwksCacheExpiry = 0;
-const JWKS_CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
 
 export function validateOAuthEndpoint(rawUrl, field) {
   const value = String(rawUrl || "").trim();

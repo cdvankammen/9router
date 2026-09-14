@@ -7,7 +7,6 @@ import Drawer from "@/shared/components/Drawer";
 import Pagination from "@/shared/components/Pagination";
 import { cn } from "@/shared/utils/cn";
 import { AI_PROVIDERS, getProviderByAlias } from "@/shared/constants/providers";
-import { getCachedTokens, getCacheCreationTokens, getInputTokens } from "@/shared/tokenHelpers";
 
 let providerNameCache = null;
 let providerNodesCache = null;
@@ -83,7 +82,22 @@ function CollapsibleSection({ title, children, defaultOpen = false, icon = null 
   );
 }
 
-// Token helpers live in src/shared/tokenHelpers.js (shared with unit tests).
+function getCachedTokens(tokens) {
+  return tokens?.cached_tokens || tokens?.cache_read_input_tokens || 0;
+}
+
+function getCacheCreationTokens(tokens) {
+  return tokens?.cache_creation_input_tokens || 0;
+}
+
+function getInputTokens(tokens) {
+  const prompt = tokens?.prompt_tokens || tokens?.input_tokens || 0;
+  // Canonical storage keeps prompt cache-inclusive. Legacy Claude rows may have
+  // stored prompt cache-exclusive; fall back to cache when it's larger so old
+  // rows don't under-report input.
+  const cache = getCachedTokens(tokens);
+  return prompt < cache ? cache : prompt;
+}
 
 export default function RequestDetailsTab() {
   const [details, setDetails] = useState([]);
@@ -96,25 +110,13 @@ export default function RequestDetailsTab() {
   const [loading, setLoading] = useState(false);
   const [selectedDetail, setSelectedDetail] = useState(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [analysisState, setAnalysisState] = useState({ loading: false, analysis: null, error: null, model: null });
   const [providers, setProviders] = useState([]);
   const [providerNameCache, setProviderNameCache] = useState(null);
   const [filters, setFilters] = useState({
     provider: "",
     startDate: "",
-    endDate: "",
-    conversationId: ""
+    endDate: ""
   });
-  const [obsStatus, setObsStatus] = useState(null); // { enabled, maxRecords, currentCount, droppedRecords }
-
-  const fetchObsStatus = useCallback(async () => {
-    try {
-      const res = await fetch("/api/observability/status");
-      if (res.ok) setObsStatus(await res.json());
-    } catch {
-      // non-fatal — banner just doesn't show
-    }
-  }, []);
 
   const fetchProviders = useCallback(async () => {
     try {
@@ -139,7 +141,6 @@ export default function RequestDetailsTab() {
       if (filters.provider) params.append("provider", filters.provider);
       if (filters.startDate) params.append("startDate", filters.startDate);
       if (filters.endDate) params.append("endDate", filters.endDate);
-      if (filters.conversationId) params.append("conversationId", filters.conversationId);
 
       const res = await fetch(`/api/usage/request-details?${params}`);
       const data = await res.json();
@@ -155,8 +156,7 @@ export default function RequestDetailsTab() {
 
   useEffect(() => {
     fetchProviders();
-    fetchObsStatus();
-  }, [fetchProviders, fetchObsStatus]);
+  }, [fetchProviders]);
 
   useEffect(() => {
     fetchDetails();
@@ -165,27 +165,6 @@ export default function RequestDetailsTab() {
   const handleViewDetail = (detail) => {
     setSelectedDetail(detail);
     setIsDrawerOpen(true);
-    setAnalysisState({ loading: false, analysis: null, error: null, model: null });
-  };
-
-  const handleAnalyzeError = async () => {
-    if (!selectedDetail?.id || analysisState.loading) return;
-    setAnalysisState({ loading: true, analysis: null, error: null, model: null });
-    try {
-      const res = await fetch("/api/analyze-error", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ detailId: selectedDetail.id }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setAnalysisState({ loading: false, analysis: null, error: data.error || "Analysis failed", model: null });
-        return;
-      }
-      setAnalysisState({ loading: false, analysis: data.analysis, error: null, model: data.model });
-    } catch (err) {
-      setAnalysisState({ loading: false, analysis: null, error: err.message || "Analysis failed", model: null });
-    }
   };
 
   const handlePageChange = (newPage) => {
@@ -197,20 +176,11 @@ export default function RequestDetailsTab() {
   };
 
   const handleClearFilters = () => {
-    setFilters({ provider: "", startDate: "", endDate: "", conversationId: "" });
+    setFilters({ provider: "", startDate: "", endDate: "" });
   };
 
   return (
     <div className="flex min-w-0 flex-col gap-6">
-      {/* Observability capture status — surfaces silent data loss from the cap */}
-      {obsStatus?.enabled && obsStatus.droppedRecords > 0 && (
-        <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-600 dark:text-amber-400">
-          <span className="font-medium">Capture at cap:</span>{" "}
-          {obsStatus.currentCount.toLocaleString()}/{obsStatus.maxRecords.toLocaleString()} records stored —{" "}
-          <span className="font-mono">{obsStatus.droppedRecords.toLocaleString()}</span> oldest dropped since startup.
-          Increase <code className="font-mono">Observability → Max records</code> in Settings if you need more history.
-        </div>
-      )}
       <Card padding="md">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <div className="flex min-w-0 flex-col gap-2">
@@ -262,28 +232,13 @@ export default function RequestDetailsTab() {
               )}
             />
           </div>
-
-          <div className="flex min-w-0 flex-col gap-2">
-            <label htmlFor="conversation-filter" className="text-sm font-medium text-text-main">Conversation ID</label>
-            <input
-              id="conversation-filter"
-              type="text"
-              value={filters.conversationId}
-              onChange={(e) => setFilters({ ...filters, conversationId: e.target.value })}
-              placeholder="conv-abc123…"
-              className={cn(
-                "h-9 px-3 rounded-lg border border-black/10 dark:border-white/10 bg-surface",
-                "w-full min-w-0 text-sm text-text-main focus:outline-none focus:ring-2 focus:ring-primary/20"
-              )}
-            />
-          </div>
           
           <div className="flex min-w-0 flex-col gap-2 sm:col-span-2 lg:col-span-1">
             <span className="hidden text-sm font-medium text-text-main opacity-0 lg:block" aria-hidden="true">Clear</span>
             <Button 
               variant="ghost" 
               onClick={handleClearFilters}
-              disabled={!filters.provider && !filters.startDate && !filters.endDate && !filters.conversationId}
+              disabled={!filters.provider && !filters.startDate && !filters.endDate}
               className="w-full"
             >
               Clear Filters
@@ -300,7 +255,6 @@ export default function RequestDetailsTab() {
                 <th className="text-left p-4 text-sm font-semibold text-text-main">Timestamp</th>
                 <th className="text-left p-4 text-sm font-semibold text-text-main">Model</th>
                 <th className="text-left p-4 text-sm font-semibold text-text-main">Provider</th>
-                <th className="text-left p-4 text-sm font-semibold text-text-main">Conversation</th>
                 <th className="text-right p-4 text-sm font-semibold text-text-main">Input Tokens</th>
                 <th className="text-right p-4 text-sm font-semibold text-text-main">Cached</th>
                 <th className="text-right p-4 text-sm font-semibold text-text-main">Cache Creation</th>
@@ -312,7 +266,7 @@ export default function RequestDetailsTab() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan="8" className="p-8 text-center text-text-muted">
+                  <td colSpan="7" className="p-8 text-center text-text-muted">
                     <div className="flex items-center justify-center gap-2">
                       <span className="material-symbols-outlined animate-spin text-[20px]">progress_activity</span>
                       Loading...
@@ -321,7 +275,7 @@ export default function RequestDetailsTab() {
                 </tr>
               ) : details.length === 0 ? (
                 <tr>
-                  <td colSpan="8" className="p-8 text-center text-text-muted">
+                  <td colSpan="7" className="p-8 text-center text-text-muted">
                     No request details found
                   </td>
                 </tr>
@@ -342,9 +296,6 @@ export default function RequestDetailsTab() {
                          {getProviderName(detail.provider, providerNameCache)}
                        </span>
                      </td>
-                    <td className="max-w-[160px] truncate p-4 font-mono text-xs text-text-muted" title={detail.conversationId || ""}>
-                      {detail.conversationId || "—"}
-                    </td>
                     <td className="p-4 text-sm text-text-main text-right font-mono">
                       {getInputTokens(detail.tokens).toLocaleString()}
                     </td>
@@ -462,45 +413,6 @@ export default function RequestDetailsTab() {
               </div>
             </div>
 
-            {selectedDetail.status !== "success" && (
-              <div className="rounded-lg border border-black/5 dark:border-white/5 p-4">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <span className="material-symbols-outlined text-[18px] text-amber-500">support_agent</span>
-                    <span className="font-semibold text-sm text-text-main">AI Error Analysis</span>
-                    {analysisState.model && (
-                      <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-primary/10 text-primary">
-                        {analysisState.model}
-                      </span>
-                    )}
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleAnalyzeError}
-                    disabled={analysisState.loading}
-                  >
-                    {analysisState.loading ? (
-                      <span className="flex items-center gap-1.5">
-                        <span className="material-symbols-outlined animate-spin text-[16px]">progress_activity</span>
-                        Analyzing…
-                      </span>
-                    ) : (
-                      "Analyze error with AI"
-                    )}
-                  </Button>
-                </div>
-                {analysisState.error && (
-                  <p className="mt-2 text-xs text-red-500">{analysisState.error}</p>
-                )}
-                {analysisState.analysis && (
-                  <pre className="mt-3 max-h-[300px] max-w-full overflow-auto whitespace-pre-wrap rounded-lg border border-black/5 bg-black/5 p-3 font-mono text-xs text-text-main dark:border-white/5 dark:bg-white/5 sm:p-4">
-                    {analysisState.analysis}
-                  </pre>
-                )}
-              </div>
-            )}
-
             {selectedDetail.pxpipe && (
               <div className="rounded-lg border border-black/5 dark:border-white/5 p-4">
                 <div className="flex items-center gap-2 mb-2">
@@ -543,54 +455,9 @@ export default function RequestDetailsTab() {
               </div>
             )}
 
-            {/* Smart Router: task type + score breakdown ("why this model") */}
-            {selectedDetail.meta && (selectedDetail.meta.taskType || selectedDetail.meta.scores) && (
-              <div className="rounded-lg border border-black/5 dark:border-white/5 p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="material-symbols-outlined text-[18px] text-text-muted">route</span>
-                  <span className="font-semibold text-sm text-text-main">Smart Router</span>
-                  {selectedDetail.meta.taskType && (
-                    <span className="rounded bg-primary/10 px-1.5 py-0.5 font-mono text-[10px] text-primary">
-                      {selectedDetail.meta.taskType}
-                    </span>
-                  )}
-                  {selectedDetail.meta.sticky && (
-                    <span className="rounded bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-medium text-amber-600 dark:text-amber-400">
-                      sticky session
-                    </span>
-                  )}
-                </div>
-                {Array.isArray(selectedDetail.meta.scores) && selectedDetail.meta.scores.length > 0 && (
-                  <div className="mt-2">
-                    <p className="text-[11px] text-text-muted mb-1.5">Why this model was picked (top candidates by score)</p>
-                    <div className="flex flex-col gap-1">
-                      {selectedDetail.meta.scores.map((s, i) => {
-                        const isWinner = i === 0;
-                        const maxScore = Math.max(...selectedDetail.meta.scores.map((x) => x.score), 1);
-                        return (
-                          <div key={`${s.model}-${i}`} className="flex items-center gap-2">
-                            <span className="w-4 text-center font-mono text-[10px] text-text-muted">{i + 1}</span>
-                            <code className="min-w-0 flex-1 truncate font-mono text-xs text-text-main">{s.model}</code>
-                            <div className="h-1.5 w-24 overflow-hidden rounded-full bg-black/5 dark:bg-white/5">
-                              <div
-                                className={`h-full rounded-full ${isWinner ? "bg-primary" : "bg-text-muted/30"}`}
-                                style={{ width: `${Math.max(4, (s.score / maxScore) * 100)}%` }}
-                              />
-                            </div>
-                            <span className={`w-12 text-right font-mono text-[11px] ${isWinner ? "font-semibold text-primary" : "text-text-muted"}`}>
-                              {s.score}
-                            </span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
             <div className="space-y-4">
-              <CollapsibleSection title="1. Client Request (Input)" defaultOpen={true} icon="input">                <pre className="max-h-[300px] max-w-full overflow-auto rounded-lg border border-black/5 bg-black/5 p-3 font-mono text-xs text-text-main dark:border-white/5 dark:bg-white/5 sm:p-4">
+              <CollapsibleSection title="1. Client Request (Input)" defaultOpen={true} icon="input">
+                <pre className="max-h-[300px] max-w-full overflow-auto rounded-lg border border-black/5 bg-black/5 p-3 font-mono text-xs text-text-main dark:border-white/5 dark:bg-white/5 sm:p-4">
                   {JSON.stringify(selectedDetail.request, null, 2)}
                 </pre>
               </CollapsibleSection>

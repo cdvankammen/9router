@@ -7,8 +7,6 @@ import { HTTP_STATUS, STREAM_STALL_TIMEOUT_MS } from "../../config/runtimeConfig
 import { buildAbortedResponsesTerminalBytes } from "../../utils/responsesStreamHelpers.js";
 import { buildStreamErrorBytes } from "../../utils/streamHelpers.js";
 import { buildRequestDetail, extractRequestConfig, saveUsageStats, formatDoneLine } from "./requestDetail.js";
-import { categorizeError } from "../../utils/errorCategorizer.js";
-import { detectClientTool, detectIDE } from "../../utils/clientDetector.js";
 import { saveRequestDetail } from "@/lib/usageDb.js";
 import { SSE_HEADERS_CORS as SSE_HEADERS } from "../../utils/sseConstants.js";
 import { upstreamResponseHeaders } from "../../utils/upstreamHeaders.js";
@@ -47,7 +45,7 @@ function buildTransformStream({ provider, sourceFormat, targetFormat, userAgent,
 /**
  * Handle streaming response — pipe provider SSE through transform stream to client.
  */
-export async function handleStreamingResponse({ providerResponse, provider, model, sourceFormat, targetFormat, userAgent, body, stream, translatedBody, finalBody, requestStartTime, connectionId, apiKey, clientRawRequest, onRequestSuccess, reqLogger, toolNameMap, customToolNames, streamController, onStreamComplete, streamDetailId, pxpipe, reqTag, log, credentials, conversationId, taskType, smartRouterMeta, sourceApp, upstreamUrl }) {
+export async function handleStreamingResponse({ providerResponse, provider, model, sourceFormat, targetFormat, userAgent, body, stream, translatedBody, finalBody, requestStartTime, connectionId, apiKey, clientRawRequest, onRequestSuccess, reqLogger, toolNameMap, customToolNames, streamController, onStreamComplete, streamDetailId, pxpipe, reqTag, log, credentials }) {
   if (onRequestSuccess) {
     Promise.resolve()
       .then(onRequestSuccess)
@@ -74,29 +72,6 @@ export async function handleStreamingResponse({ providerResponse, provider, mode
     if (log?.errorLine) log.errorLine(reqTag, "✗", `BLOCKED ${status} · ${provider}/${model} · non-SSE (${upstreamContentType})\n    ${shortMsg}`);
     else console.warn(`[STREAM] ${provider} | ${model} | blocked pipe: ${shortMsg} [${status}]`);
     streamController?.handleError?.(new Error(`upstream non-SSE: ${status}`));
-
-    // OBSERVABILITY: capture the blocked non-SSE response (was the only exit
-    // path missing saveRequestDetail coverage). Fire-and-forget like all
-    // other request-detail writes — zero latency impact on the error return.
-    saveRequestDetail(buildRequestDetail({
-      provider, model, connectionId,
-      conversationId,
-      errorCategory: categorizeError(status, shortMsg),
-      latency: { ttft: 0, total: Date.now() - requestStartTime },
-      tokens: { prompt_tokens: 0, completion_tokens: 0 },
-      request: extractRequestConfig(body, stream),
-      providerRequest: finalBody || translatedBody || null,
-      providerResponse: bodyText.slice(0, 2000),
-      response: { error: shortMsg, type: "non-sse-blocked" },
-      pxpipe,
-      sourceApp,
-      userAgent,
-      clientTool: detectClientTool(clientRawRequest?.headers || {}, body),
-      ide: detectIDE(userAgent),
-      url: providerUrl || providerResponse?.url,
-      status: "error"
-    })).catch(() => {});
-
     return {
       success: false,
       response: new Response(JSON.stringify({ error: { message: `[${status}]: ${shortMsg}` } }), {
@@ -121,7 +96,6 @@ export async function handleStreamingResponse({ providerResponse, provider, mode
 
   saveRequestDetail(buildRequestDetail({
     provider, model, connectionId,
-    conversationId,
     latency: { ttft: 0, total: Date.now() - requestStartTime },
     tokens: { prompt_tokens: 0, completion_tokens: 0 },
     request: extractRequestConfig(body, stream),
@@ -129,11 +103,6 @@ export async function handleStreamingResponse({ providerResponse, provider, mode
     providerResponse: "[Streaming - raw response not captured]",
     response: { content: "[Streaming in progress...]", thinking: null, type: "streaming" },
     pxpipe,
-    sourceApp,
-    userAgent,
-    clientTool: detectClientTool(clientRawRequest?.headers || {}, body),
-    ide: detectIDE(userAgent),
-    url: providerUrl || providerResponse?.url,
     status: "success"
   }, { id: streamDetailId })).catch(err => {
     console.error("[RequestDetail] Failed to save streaming request:", err.message);
@@ -148,7 +117,7 @@ export async function handleStreamingResponse({ providerResponse, provider, mode
 /**
  * Build onStreamComplete callback for streaming usage tracking.
  */
-export function buildOnStreamComplete({ provider, model, connectionId, apiKey, requestStartTime, body, stream, finalBody, translatedBody, clientRawRequest, pxpipe, reqTag, log, conversationId, taskType, smartRouterMeta, sourceApp, userAgent, providerUrl }) {
+export function buildOnStreamComplete({ provider, model, connectionId, apiKey, requestStartTime, body, stream, finalBody, translatedBody, clientRawRequest, pxpipe, reqTag, log }) {
   const streamDetailId = `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
 
   const onStreamComplete = (contentObj, usage, ttftAt) => {
@@ -156,21 +125,11 @@ export function buildOnStreamComplete({ provider, model, connectionId, apiKey, r
       ttft: ttftAt ? ttftAt - requestStartTime : Date.now() - requestStartTime,
       total: Date.now() - requestStartTime
     };
-    const isEmptyStream = !contentObj?.totalContentLength || contentObj.totalContentLength === 0;
     const safeContent = contentObj?.content || "[Empty streaming response]";
     const safeThinking = contentObj?.thinking || null;
 
-    // GAP-RETRY-02: Detect empty streaming responses (HTTP 200 + zero content).
-    // Provider returned valid SSE framing but no actual content chunks.
-    // Mark as error so retry/fallback logic can trigger instead of silent success.
-    if (isEmptyStream) {
-      if (log?.errorLine) log.errorLine(reqTag, "✗", `EMPTY STREAM · ${provider}/${model} · ${latency.total}ms · HTTP 200 but zero content received`);
-      else console.warn(`[STREAM] ${provider} | ${model} | EMPTY STREAM: HTTP 200 with zero content (${latency.total}ms)`);
-    }
-
     saveRequestDetail(buildRequestDetail({
       provider, model, connectionId,
-      conversationId,
       latency,
       tokens: usage || { prompt_tokens: 0, completion_tokens: 0 },
       request: extractRequestConfig(body, stream),
@@ -178,19 +137,13 @@ export function buildOnStreamComplete({ provider, model, connectionId, apiKey, r
       providerResponse: safeContent,
       response: { content: safeContent, thinking: safeThinking, type: "streaming" },
       pxpipe,
-      sourceApp,
-      userAgent,
-      clientTool: detectClientTool(clientRawRequest?.headers || {}, body),
-      ide: detectIDE(userAgent),
-      url: providerUrl || providerResponse?.url,
-      status: isEmptyStream ? "error" : "success",
-      ...(isEmptyStream ? { errorCategory: "empty_response" } : {})
+      status: "success"
     }, { id: streamDetailId })).catch(err => {
       console.error("[RequestDetail] Failed to update streaming content:", err.message);
     });
 
     // Persist stream usage to DB (no console line; the "📊 done" line below is authoritative)
-    saveUsageStats({ provider, model, tokens: usage, connectionId, apiKey, endpoint: clientRawRequest?.endpoint, label: "STREAM USAGE", silent: true, conversationId, taskType, smartRouterMeta });
+    saveUsageStats({ provider, model, tokens: usage, connectionId, apiKey, endpoint: clientRawRequest?.endpoint, label: "STREAM USAGE", silent: true });
     if (log?.line) log.line(reqTag, "📊", formatDoneLine({ usage, latency }));
   };
 

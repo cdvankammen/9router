@@ -29,7 +29,7 @@ export async function POST(request) {
   try {
     const body = await clonedReq.json();
     modelName = body.model || "llama3.2";
-  } catch { /* intentional: fallback to default model when body is not valid JSON */ }
+  } catch {}
 
   const response = await handleChat(request);
   return transformToOllama(response, modelName);

@@ -43,7 +43,7 @@ const kilocode = {
           const profile = await profileRes.json();
           orgId = profile.organizations?.[0]?.id || null;
         }
-      } catch (e) { console.warn("[kilocode] failed to fetch org profile:", e.message); }
+      } catch {}
       return { ok: true, data: { access_token: data.token, _userEmail: data.userEmail, _orgId: orgId } };
     }
     return { ok: false, data: { error: "authorization_pending" } };

@@ -21,15 +21,14 @@ export async function createBunSqliteAdapter(filePath) {
   }
 
   const checkpointTimer = setInterval(() => {
-    try { db.exec("PRAGMA wal_checkpoint(PASSIVE)"); } catch (e) { console.error("[bunSqliteAdapter] WAL checkpoint failed:", e.message); }
+    try { db.exec("PRAGMA wal_checkpoint(TRUNCATE)"); } catch {}
   }, CHECKPOINT_INTERVAL_MS);
   if (typeof checkpointTimer.unref === "function") checkpointTimer.unref();
 
   function gracefulClose() {
-    // intentional: shutdown cleanup — logging here would spam during normal exit
-    try { db.exec("PRAGMA wal_checkpoint(PASSIVE)"); } catch { /* shutdown cleanup */ }
-    try { stmtCache.clear(); } catch { /* shutdown cleanup */ }
-    try { db.close(); } catch { /* shutdown cleanup */ }
+    try { db.exec("PRAGMA wal_checkpoint(TRUNCATE)"); } catch {}
+    try { stmtCache.clear(); } catch {}
+    try { db.close(); } catch {}
   }
   const onShutdown = () => gracefulClose();
   process.once("beforeExit", onShutdown);
@@ -54,7 +53,7 @@ export async function createBunSqliteAdapter(filePath) {
       const tx = db.transaction(fn);
       return tx();
     },
-    checkpoint() { try { db.exec("PRAGMA wal_checkpoint(PASSIVE)"); } catch (e) { console.error("[bunSqliteAdapter] manual checkpoint failed:", e.message); } } },
+    checkpoint() { try { db.exec("PRAGMA wal_checkpoint(TRUNCATE)"); } catch {} },
     close() {
       clearInterval(checkpointTimer);
       gracefulClose();

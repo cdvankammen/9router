@@ -28,15 +28,10 @@ describe("DB Concurrency — atomic safety", () => {
     const N = 100;
     const promises = [];
     for (let i = 0; i < N; i++) {
-      // Unique timestamp per entry: saveRequestUsage dedupes identical
-      // (timestamp+provider+model+fields) rows — production requests never
-      // collide on the same millisecond, so the concurrency test must not
-      // either (otherwise 99 of 100 look like duplicates).
       promises.push(db.saveRequestUsage({
         provider: "openai", model: "gpt-4", connectionId: "c1",
         tokens: { prompt_tokens: 10, completion_tokens: 5 },
         endpoint: "/v1/chat", status: "ok",
-        timestamp: new Date(Date.now() + i).toISOString(),
       }));
     }
     await Promise.all(promises);
@@ -77,7 +72,6 @@ describe("DB Concurrency — atomic safety", () => {
       ops.push(db.saveRequestUsage({
         provider: "anthropic", model: `m-${i % 3}`, connectionId: "c2",
         tokens: { prompt_tokens: 20 }, status: "ok",
-        timestamp: new Date(Date.now() + i).toISOString(),
       }));
       ops.push(db.setModelAlias(`a-${i}`, `target-${i}`));
       ops.push(db.disableModels("openai", [`d-${i}`]));
@@ -109,8 +103,6 @@ describe("DB Concurrency — atomic safety", () => {
   });
 
   it("OAuth refresh race: parallel updateProviderConnection on same id", async () => {
-    // providerConnections.provider has a FK → providerNodes(id) (migration 002)
-    await db.createProviderNode({ id: "oauth-test", type: "openai", name: "oauth-test" });
     const conn = await db.createProviderConnection({
       provider: "oauth-test", authType: "oauth", email: "x@y.com",
       accessToken: "initial", refreshToken: "rt-initial",
@@ -165,7 +157,6 @@ describe("DB Concurrency — atomic safety", () => {
         provider: "google", model: "gemini-pro", connectionId: "cG",
         tokens: { prompt_tokens: 100, completion_tokens: 50 },
         status: "ok",
-        timestamp: new Date(Date.now() + i).toISOString(),
       }));
     }
     await Promise.all(promises);

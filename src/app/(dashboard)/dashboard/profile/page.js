@@ -1621,40 +1621,6 @@ export default function ProfilePage() {
           </div>
         </Card>
 
-        {/* Developer Mode */}
-        <Card>
-          <div className="flex items-center gap-3 mb-4">
-            <div className="p-2 rounded-lg bg-purple-500/10 text-purple-500 shrink-0">
-              <span className="material-symbols-outlined text-[20px]">code</span>
-            </div>
-            <h3 className="text-base sm:text-lg font-semibold">Developer Mode</h3>
-          </div>
-          <div className="flex items-start sm:items-center justify-between gap-4">
-            <div className="flex-1 min-w-0">
-              <p className="font-medium text-sm sm:text-base">Enable Dev Mode</p>
-              <p className="text-xs sm:text-sm text-text-muted">
-                Show advanced features: create combos from provider pages, debug panels, and more
-              </p>
-            </div>
-            <Toggle
-              checked={settings.devMode === true}
-              onChange={async () => {
-                try {
-                  await fetch("/api/settings", {
-                    method: "PATCH",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ devMode: !settings.devMode }),
-                  });
-                  setSettings(prev => ({ ...prev, devMode: !prev.devMode }));
-                } catch (err) {
-                  console.error("Failed to update dev mode:", err);
-                }
-              }}
-              disabled={loading}
-            />
-          </div>
-        </Card>
-
         {/* Account actions */}
         <div className="flex flex-col sm:flex-row gap-2">
           <Button

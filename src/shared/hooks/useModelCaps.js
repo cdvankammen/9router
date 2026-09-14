@@ -37,13 +37,6 @@ function loadModelCaps() {
   return inflight;
 }
 
-// Drop the shared cache so the next loadModelCaps() re-fetches /api/models.
-// Called after a capability override is saved so vision/audio pickers reflect it.
-export function invalidateModelCaps() {
-  cache = null;
-  inflight = null;
-}
-
 // Resolve caps from a "provider/model" string or a bare model id.
 function resolveCaps(byFull, byId, key) {
   if (!key) return null;
@@ -58,7 +51,6 @@ function resolveCaps(byFull, byId, key) {
     reasoning: c.reasoning,
     contextWindow: c.contextWindow,
     maxOutput: c.maxOutput,
-    audioInput: c.audioInput,
   };
 }
 
@@ -93,29 +85,5 @@ export function useModelCaps() {
     [byFull, byId],
   );
 
-  // Check if a model string matches any known model in the registry.
-  // Returns true for exact matches (fullModel, routedModel, or bare model id).
-  // Used for soft validation — unknown models may still be valid (custom providers).
-  const isKnownModel = useCallback(
-    (key) => {
-      if (!key) return false;
-      if (byFull[key]) return true;
-      const bare = key.includes("/") ? key.slice(key.indexOf("/") + 1) : key;
-      if (byId[bare]) return true;
-      return false;
-    },
-    [byFull, byId],
-  );
-
-  // Force a re-fetch of /api/models (after a capability override is saved).
-  const refresh = useCallback(() => {
-    invalidateModelCaps();
-    return loadModelCaps().then((maps) => {
-      setByFull(maps.byFull);
-      setById(maps.byId);
-      return maps;
-    });
-  }, []);
-
-  return { getCaps, isKnownModel, refresh };
+  return { getCaps };
 }

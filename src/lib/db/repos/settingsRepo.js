@@ -111,6 +111,26 @@ const DEFAULT_SETTINGS = {
   // CORS allowlist for API endpoints. Empty = wildcard (legacy behavior).
   // When non-empty, only listed origins receive Access-Control-Allow-Origin.
   corsAllowedOrigins: [],
+  // Claude compat layer (see src/lib/claudeCompat.js): suffixMode controls
+  // when [1m] is appended to rewritten /v1/models ids.
+  claudeCompat: {
+    enabled: true,
+    suffixMode: "auto",
+    keywords: [],
+  },
+  // Default-model mapping written to ~/.claude/settings.json env by the
+  // endpoint page's one-click button (see /api/claude-compat/write-claude-settings).
+  claudeDefaultModels: {
+    sonnet: { model: "", name: "", oneM: false },
+    opus: { model: "", name: "", oneM: false },
+    fable: { model: "", name: "", oneM: false },
+    haiku: { model: "", name: "", oneM: false },
+    subagent: { model: "", oneM: false },
+  },
+  // User contextWindow overrides, keyed by model id or glob pattern (e.g.
+  // "glm-5.3" or "glm-5*"). Consumed by open-sse/providers/capabilities.js
+  // via setContextWindowOverrides(); managed on /dashboard/model-context.
+  contextWindowOverrides: {},
 };
 
 async function readRaw() {
@@ -153,6 +173,7 @@ const CONFIG_MERGE_KEYS = new Set([
   "capacityAdapter",
   "srComboCleanup",
   "modelAutoPersist",
+  "claudeCompat",
 ]);
 
 // Nested MAP keys: the sender owns the full map (replace semantics — deleting

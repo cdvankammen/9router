@@ -97,7 +97,6 @@ export default function ModelSelectModal({
   const [searchQuery, setSearchQuery] = useState("");
   const [combos, setCombos] = useState([]);
   const [providerNodes, setProviderNodes] = useState([]);
-  const [nodeModelsError, setNodeModelsError] = useState({}); // nodeId -> message
   const [customModels, setCustomModels] = useState([]);
   const [disabledModels, setDisabledModels] = useState({});
   // Cursor and Cline expose the usable catalog per account, so the static catalog is
@@ -144,26 +143,6 @@ export default function ModelSelectModal({
       if (!res.ok) throw new Error(`Failed to fetch provider nodes: ${res.status}`);
       const data = await res.json();
       setProviderNodes(data.nodes || []);
-
-      // Probe each custom node's /models endpoint so a node whose models fail
-      // to load gets a visible badge instead of silently showing nothing.
-      // Use the connection models route (auth-aware) per node.
-      const nodes = data.nodes || [];
-      const failures = {};
-      const conns = await fetch("/api/providers").then((r) => r.ok ? r.json() : { connections: [] }).catch(() => ({ connections: [] }));
-      for (const node of nodes) {
-        const conn = (conns.connections || []).find((c) => c.provider === node.id && c.isActive !== false);
-        if (!conn?.id) continue;
-        try {
-          const mres = await fetch(`/api/providers/${conn.id}/models`, { cache: "no-store" });
-          if (!mres.ok || (await mres.json()).models?.length === 0) {
-            failures[node.id] = `models failed to load (${mres.status || "empty"})`;
-          }
-        } catch {
-          failures[node.id] = "models failed to load";
-        }
-      }
-      setNodeModelsError(failures);
     } catch (error) {
       console.error("Error fetching provider nodes:", error);
       setProviderNodes([]);
@@ -237,15 +216,9 @@ export default function ModelSelectModal({
       ? NO_AUTH_PROVIDER_IDS.filter((id) => (AI_PROVIDERS[id]?.serviceKinds || ["llm"]).includes(kindFilter))
       : NO_AUTH_PROVIDER_IDS;
 
-    // Show the FULL 9Router model catalog — every registered provider with
-    // models, connected or not — so users can pick any model for combos,
-    // capacity adapters, etc. before connecting that provider. Groups with
-    // zero models are skipped downstream. Connected/custom providers are
-    // always included on top of the static catalog.
-    const catalogIds = PROVIDER_ORDER.filter((id) => !allProviders[id]?.hidden);
+    // Only show connected providers (including both standard and custom)
     const providerIdsToShow = new Set([
-      ...catalogIds,           // Full static catalog (all registered providers)
-      ...activeConnectionIds,  // Connected providers (incl. custom compatible nodes)
+      ...activeConnectionIds,  // Only connected providers
       ...noAuthIds,            // No-auth providers (kind-filtered)
     ]);
 
@@ -468,11 +441,9 @@ export default function ModelSelectModal({
     return [...added, ...rest];
   };
 
-  // Filter + sort models by search query. Connected providers float to the top.
+  // Filter models by search query
   const filteredGroups = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
-    // Set of connected provider IDs for sorting
-    const connectedIds = new Set(filteredActiveProviders.map(p => p.provider));
 
     const filtered = {};
     Object.entries(groupedModels).forEach(([providerId, group]) => {
@@ -484,40 +455,21 @@ export default function ModelSelectModal({
       }
       if (query) {
         const providerNameMatches = group.name.toLowerCase().includes(query);
-        const providerAliasMatches = (group.alias || "").toLowerCase().includes(query);
-        const groupMatches = providerNameMatches || providerAliasMatches;
-        if (groupMatches) {
-          models = sortModels(models);
-        } else {
-          models = models.filter(
-            (m) =>
-              m.name.toLowerCase().includes(query) ||
-              m.id.toLowerCase().includes(query)
-          );
-          if (models.length === 0) return;
-        }
-      } else {
-        models = sortModels(models);
+        models = models.filter(
+          (m) =>
+            m.name.toLowerCase().includes(query) ||
+            m.id.toLowerCase().includes(query)
+        );
+        if (models.length === 0 && !providerNameMatches) return;
       }
       filtered[providerId] = {
         ...group,
-        models,
-        isConnected: connectedIds.has(providerId),
+        models: sortModels(models),
       };
     });
 
-    // Sort: connected providers first, then alphabetical by name
-    const sorted = {};
-    const entries = Object.entries(filtered);
-    const connected = entries.filter(([, g]) => g.isConnected);
-    const unconnected = entries.filter(([, g]) => !g.isConnected);
-    connected.sort((a, b) => a[1].name.localeCompare(b[1].name));
-    unconnected.sort((a, b) => a[1].name.localeCompare(b[1].name));
-    for (const [id, group] of [...connected, ...unconnected]) {
-      sorted[id] = group;
-    }
-    return sorted;
-  }, [groupedModels, searchQuery, addedModelValues, filteredActiveProviders]);
+    return filtered;
+  }, [groupedModels, searchQuery, addedModelValues]);
 
   const handleSelect = (model) => {
     const value = model?.value || model?.name || model;
@@ -608,9 +560,7 @@ export default function ModelSelectModal({
         )}
 
         {/* Provider models */}
-        {Object.entries(filteredGroups).map(([providerId, group]) => {
-          const isConnected = filteredActiveProviders.some((p) => p.provider === providerId);
-          return (
+        {Object.entries(filteredGroups).map(([providerId, group]) => (
           <div key={providerId}>
             {/* Provider header */}
             <div className="flex items-center gap-1.5 mb-1.5 sticky top-0 bg-surface py-0.5">
@@ -627,22 +577,6 @@ export default function ModelSelectModal({
               <span className="text-[10px] text-text-muted">
                 ({group.models.length})
               </span>
-              {!isConnected && (
-                <span
-                  className="text-[9px] px-1 py-px rounded bg-amber-500/10 text-amber-600 font-medium"
-                  title="No credentials connected — you must connect this provider before requests will succeed"
-                >
-                  not connected
-                </span>
-              )}
-              {nodeModelsError[providerId] && (
-                <span
-                  className="text-[9px] px-1 py-px rounded bg-red-500/10 text-red-500 font-medium"
-                  title={`${nodeModelsError[providerId]} — the router will skip this node's models until it responds`}
-                >
-                  {nodeModelsError[providerId]}
-                </span>
-              )}
             </div>
 
             <div className="flex flex-wrap gap-1.5">
@@ -693,8 +627,7 @@ export default function ModelSelectModal({
               })}
             </div>
           </div>
-          );
-        })}
+        ))}
 
         {Object.keys(filteredGroups).length === 0 && filteredCombos.length === 0 && (
           <div className="text-center py-4 text-text-muted">

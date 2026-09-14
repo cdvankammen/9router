@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import PropTypes from "prop-types";
 import {
   Card,
@@ -15,6 +15,7 @@ import { OAUTH_PROVIDERS, APIKEY_PROVIDERS } from "@/shared/constants/config";
 import {
   FREE_PROVIDERS,
   FREE_TIER_PROVIDERS,
+  WEB_COOKIE_PROVIDERS,
   OPENAI_COMPATIBLE_PREFIX,
   ANTHROPIC_COMPATIBLE_PREFIX,
 } from "@/shared/constants/providers";
@@ -99,7 +100,6 @@ export default function ProvidersPage() {
   const [connections, setConnections] = useState([]);
   const [providerNodes, setProviderNodes] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [fetchError, setFetchError] = useState(null);
   const [showAllApikey, setShowAllApikey] = useState(false);
   const [showAddCompatibleModal, setShowAddCompatibleModal] = useState(false);
   const [showAddAnthropicCompatibleModal, setShowAddAnthropicCompatibleModal] =
@@ -107,7 +107,6 @@ export default function ProvidersPage() {
   const [testingMode, setTestingMode] = useState(null);
   const [testResults, setTestResults] = useState(null);
   const [statusFilter, setStatusFilter] = useState("all");
-  const [providerHealth, setProviderHealth] = useState(null);
   const notify = useNotificationStore();
   const searchQuery = useHeaderSearchStore((s) => s.query);
   const registerSearch = useHeaderSearchStore((s) => s.register);
@@ -162,31 +161,14 @@ export default function ProvidersPage() {
         if (connectionsRes.ok)
           setConnections(connectionsData.connections || []);
         if (nodesRes.ok) setProviderNodes(nodesData.nodes || []);
-        if (!connectionsRes.ok && !nodesRes.ok) {
-          setFetchError("Failed to load providers. Check that the server is running.");
-        }
       } catch (error) {
-        setFetchError(`Failed to connect to server: ${error.message || "network error"}`);
-        notify.error("Failed to load providers");
+        console.log("Error fetching data:", error);
       } finally {
         setLoading(false);
       }
     };
     fetchData();
   }, []);
-
-  const refreshProviderHealth = useCallback(async () => {
-    try {
-      const res = await fetch("/api/health/providers", { cache: "no-store" });
-      if (res.ok) setProviderHealth(await res.json());
-    } catch {
-      // non-fatal — banner just doesn't show
-    }
-  }, []);
-
-  useEffect(() => {
-    refreshProviderHealth();
-  }, [refreshProviderHealth]);
 
   const getProviderStats = (providerId, authType) => {
     const authTypes = Array.isArray(authType) ? authType : [authType];
@@ -274,9 +256,8 @@ export default function ProvidersPage() {
         else notify.warning(`${passed}/${total} passed, ${failed} failed`);
       }
     } catch (error) {
-      const detail = error.message || "unknown error";
-      setTestResults({ error: `Test request failed: ${detail}` });
-      notify.error(`Provider test failed: ${detail}`);
+      setTestResults({ error: "Test request failed" });
+      notify.error("Provider test failed");
     } finally {
       setTestingMode(null);
     }
@@ -395,32 +376,6 @@ export default function ProvidersPage() {
     );
   }
 
-  if (fetchError) {
-    return (
-      <div className="flex flex-col items-center justify-center gap-4 py-20">
-        <span className="material-symbols-outlined text-red-500 text-[48px]">cloud_off</span>
-        <div className="text-center">
-          <p className="text-sm font-medium text-text-main">Unable to load providers</p>
-          <p className="mt-1 text-xs text-text-muted max-w-sm">{fetchError}</p>
-        </div>
-        <Button
-          variant="secondary"
-          size="sm"
-          onClick={() => {
-            setFetchError(null);
-            setLoading(true);
-            // Re-trigger the fetch effect by forcing a remount-style reload
-            fetch("/api/providers")
-              .then(() => window.location.reload())
-              .catch(() => window.location.reload());
-          }}
-        >
-          Retry
-        </Button>
-      </div>
-    );
-  }
-
   const hasAnyResult =
     oauthEntries.length > 0 ||
     freeEntries.length > 0 ||
@@ -431,44 +386,6 @@ export default function ProvidersPage() {
 
   return (
     <div className="flex min-w-0 flex-col gap-6 px-1 sm:px-0">
-      {/* Provider health — providers needing attention (auth expired, locked, errors) */}
-      {providerHealth?.needsAttention?.length > 0 && (
-        <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <span className="material-symbols-outlined text-[16px] text-amber-600 dark:text-amber-400">warning</span>
-              <span className="text-xs font-medium text-amber-700 dark:text-amber-300">
-                {providerHealth.needsAttention.length} provider{providerHealth.needsAttention.length === 1 ? "" : "s"} need attention
-              </span>
-            </div>
-            <button
-              onClick={refreshProviderHealth}
-              className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] text-amber-700 hover:bg-amber-500/10 dark:text-amber-300"
-            >
-              <span className="material-symbols-outlined text-[13px]">refresh</span>
-              Refresh
-            </button>
-          </div>
-          <div className="mt-1.5 flex flex-wrap gap-1.5">
-            {providerHealth.providers
-              .filter((p) => providerHealth.needsAttention.includes(p.provider))
-              .map((p) => (
-                <span
-                  key={p.provider}
-                  className="inline-flex items-center gap-1 rounded bg-black/5 dark:bg-white/5 px-1.5 py-0.5 font-mono text-[11px] text-text-main"
-                  title={p.lastError || ""}
-                >
-                  {p.provider}
-                  {p.auth === "expired" && <span className="rounded bg-red-500/15 px-1 text-[10px] font-medium text-red-500">expired</span>}
-                  {p.auth === "needs-reauth" && <span className="rounded bg-red-500/15 px-1 text-[10px] font-medium text-red-500">re-auth</span>}
-                  {p.locked > 0 && <span className="rounded bg-amber-500/15 px-1 text-[10px] font-medium text-amber-600 dark:text-amber-400">locked</span>}
-                  {p.lastError && <span className="max-w-[200px] truncate text-[10px] text-text-muted">{p.lastError}</span>}
-                </span>
-              ))}
-          </div>
-        </div>
-      )}
-
       <div className="flex items-center justify-end">
         <select
           value={statusFilter}
@@ -704,6 +621,27 @@ export default function ProvidersPage() {
         )}
       </div>
       )}
+
+      {/* Web Cookie Providers — use browser subscription cookie instead of API key */}
+      {/* <div className="flex flex-col gap-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-semibold flex items-center gap-2">
+            Web Cookie Providers{" "}
+          </h2>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {Object.entries(WEB_COOKIE_PROVIDERS).map(([key, info]) => (
+            <ApiKeyProviderCard
+              key={key}
+              providerId={key}
+              provider={info}
+              stats={getProviderStats(key, "apikey")}
+              authType="apikey"
+              onToggle={(active) => handleToggleProvider(key, "apikey", active)}
+            />
+          ))}
+        </div>
+      </div> */}
 
       <AddCompatibleModal
         variant="openai"

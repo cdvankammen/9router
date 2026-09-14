@@ -16,25 +16,5 @@
     "javascript:S3776": {
       "level": "off"
     }
-  },
-  "github.copilot.chat.cli.sessionControllerForSessionsApp.enabled": true,
-  "github.copilot.chat.cli.sessionController.enabled": true,
-  "github.copilot.completions.chat.enabled": true,
-  "github.copilot.chat.agent.autoFix": true,
-  "github.copilot.chat.searchSubagent.thoroughnessEnabled": true,
-  "github.copilot.chat.review.intent": true,
-  "github.copilot.chat.responsesApiContextManagement.enabled": true,
-  "github.copilot.chat.responsesApi.promptCacheKey.enabled": true,
-  "github.copilot.chat.responsesApi.promptCacheBreakpoint.enabled": true,
-  "github.copilot.chat.localWorkspaceRecording.enabled": true,
-  "github.copilot.chat.languageContext.fix.typescript.enabled": true,
-  "github.copilot.chat.claudeAgent.allowAutoPermissions": true,
-  "github.copilot.chat.claudeAgent.useSdkExtension": false,
-  "github.copilot.chat.codesearch.enabled": true,
-  "github.copilot.chat.cli.branchSupport.enabled": true,
-  "inlineChat.notebookAgent": true,
-  "chat.agent.thinking.generateTitles": true,
-  "github.copilot.chat.inlineChat.enableThinking": true,
-  "chat.agent.thinking.collapsedTools": "off",
-  "python.languageServer": "None"
+  }
 }

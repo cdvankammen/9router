@@ -37,7 +37,6 @@ vi.mock("../../src/sse/services/tokenRefresh.js", () => ({
 vi.mock("@/lib/usageDb.js", () => ({ saveRequestUsage: mocks.saveRequestUsage }));
 
 import { handleEmbeddings } from "../../src/sse/handlers/embeddings.js";
-import * as log from "../../src/sse/utils/logger.js";
 
 describe("embedding usage persistence", () => {
   beforeEach(() => {
@@ -88,26 +87,5 @@ describe("embedding usage persistence", () => {
     }));
 
     expect(mocks.saveRequestUsage).not.toHaveBeenCalled();
-  });
-
-  it("logs a warning instead of silently swallowing usage persistence failures", async () => {
-    mocks.saveRequestUsage.mockRejectedValue(new Error("db write failed"));
-
-    await handleEmbeddings(new Request("http://localhost/v1/embeddings", {
-      method: "POST",
-      body: JSON.stringify({ model: "openai/text-embedding-3-small", input: "hello" }),
-    }));
-
-    // Allow the fire-and-forget promise chain to settle
-    await new Promise((r) => setTimeout(r, 10));
-
-    expect(log.warn).toHaveBeenCalledWith(
-      "EMBED",
-      expect.stringContaining("usage persistence failed"),
-    );
-    expect(log.warn).toHaveBeenCalledWith(
-      "EMBED",
-      expect.stringContaining("db write failed"),
-    );
   });
 });

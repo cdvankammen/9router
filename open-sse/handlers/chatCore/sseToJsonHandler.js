@@ -1,12 +1,10 @@
 import { convertResponsesStreamToJson } from "../../transformer/streamToJsonConverter.js";
 import { restoreToolNames } from "../../utils/opencodeFingerprint.js";
 import { createErrorResult } from "../../utils/error.js";
-import { validateResponseBody } from "../../utils/responseValidator.js";
 import { HTTP_STATUS } from "../../config/runtimeConfig.js";
 import { FORMATS } from "../../translator/formats.js";
 import { PROVIDERS } from "../../config/providers.js";
 import { buildRequestDetail, extractRequestConfig, saveUsageStats, formatDoneLine } from "./requestDetail.js";
-import { detectClientTool, detectIDE } from "../../utils/clientDetector.js";
 import { ROLE, RESPONSES_ITEM } from "../../translator/schema/index.js";
 
 // Responses-API providers (e.g. codex) may emit SSE without content-type + use Responses output shape
@@ -109,71 +107,18 @@ function chatCompletionToResponses(responseBody, customToolNames = null) {
 }
 
 /**
- * Convert an OpenAI Chat Completions JSON body into the Anthropic Claude
- * Message shape. Inlined here (not imported from nonStreamingHandler.js) to
- * avoid a circular import: nonStreamingHandler already imports
- * parseSSEToOpenAIResponse from this module.
- */
-function openAICompletionToClaudeMessage(responseBody) {
-  if (!responseBody?.choices?.[0]) return responseBody;
-  const choice = responseBody.choices[0];
-  const message = choice.message || {};
-  const content = [];
-
-  const reasoning = message.reasoning_content || message.provider_specific_fields?.reasoning_content || "";
-  if (reasoning) {
-    content.push({ type: "thinking", thinking: reasoning });
-  }
-  if (typeof message.content === "string" && message.content.length > 0) {
-    content.push({ type: "text", text: message.content });
-  }
-  for (const toolCall of message.tool_calls || []) {
-    const fn = toolCall.function || {};
-    let toolName = fn.name || toolCall.name || "";
-    if (toolName.startsWith("proxy_")) toolName = toolName.slice("proxy_".length);
-    content.push({
-      type: "tool_use",
-      id: toolCall.id || `toolu_${Date.now()}_${content.length}`,
-      name: toolName,
-      input: parseToolArguments(fn.arguments || toolCall.arguments),
-    });
-  }
-  if (content.length === 0) content.push({ type: "text", text: "" });
-
-  const usage = responseBody.usage || {};
-  return {
-    id: String(responseBody.id || `msg_${Date.now()}`).replace(/^chatcmpl-/, ""),
-    type: "message",
-    role: "assistant",
-    model: responseBody.model || "unknown",
-    content,
-    stop_reason: fromOpenAIFinish(choice.finish_reason, "claude"),
-    stop_sequence: null,
-    usage: {
-      input_tokens: usage.prompt_tokens || usage.input_tokens || 0,
-      output_tokens: usage.completion_tokens || usage.output_tokens || 0,
-    },
-  };
-}
-
-/**
  * Parse OpenAI-style SSE text into a single chat completion JSON.
  * Used when provider forces streaming but client wants non-streaming.
  */
 export function parseSSEToOpenAIResponse(rawSSE, fallbackModel) {
   const chunks = [];
   let streamError = null;
-  let sawDone = false;
 
   for (const line of String(rawSSE || "").split("\n")) {
     const trimmed = line.trim();
     if (!trimmed.startsWith("data:")) continue;
     const payload = trimmed.slice(5).trim();
-    if (!payload) continue;
-    if (payload === "[DONE]") {
-      sawDone = true;
-      continue;
-    }
+    if (!payload || payload === "[DONE]") continue;
     try {
       const chunk = JSON.parse(payload);
       if (chunk?.error) streamError = chunk.error;
@@ -182,21 +127,7 @@ export function parseSSEToOpenAIResponse(rawSSE, fallbackModel) {
   }
 
   if (streamError) return { error: streamError };
-  // A properly-terminated stream that only contained [DONE] (no data events)
-  // returns a body with empty choices so the downstream validator rejects it
-  // with EMPTY_CHOICES (which triggers fallback), rather than returning null
-  // which the handler treats as "not handled" / silent skip. A completely
-  // empty stream (no [DONE] either) stays null — nothing to convert.
-  if (chunks.length === 0) {
-    if (!sawDone) return null;
-    return {
-      id: `chatcmpl-${Date.now()}`,
-      object: "chat.completion",
-      created: Math.floor(Date.now() / 1000),
-      model: fallbackModel || "unknown",
-      choices: [],
-    };
-  }
+  if (chunks.length === 0) return null;
 
   const first = chunks[0];
   const contentParts = [];
@@ -249,7 +180,7 @@ export function parseSSEToOpenAIResponse(rawSSE, fallbackModel) {
  * Handle case: provider forced streaming but client wants JSON.
  * Supports both Codex/Responses API SSE and standard Chat Completions SSE.
  */
-export async function handleForcedSSEToJson({ providerResponse, sourceFormat, targetFormat, provider, model, body, stream, translatedBody, finalBody, requestStartTime, connectionId, apiKey, clientRawRequest, onRequestSuccess, customToolNames, toolNameMap, trackDone, appendLog, reqTag, log, conversationId, taskType, smartRouterMeta, sourceApp, userAgent, upstreamUrl }) {
+export async function handleForcedSSEToJson({ providerResponse, sourceFormat, targetFormat, provider, model, body, stream, translatedBody, finalBody, requestStartTime, connectionId, apiKey, clientRawRequest, onRequestSuccess, customToolNames, toolNameMap, trackDone, appendLog, reqTag, log }) {
   const contentType = providerResponse.headers.get("content-type") || "";
   const isSSE = contentType.includes("text/event-stream") || (contentType === "" && isResponsesProvider(provider));
   if (!isSSE) return null; // not handled here
@@ -258,13 +189,8 @@ export async function handleForcedSSEToJson({ providerResponse, sourceFormat, ta
 
   const ctx = {
     provider, model, connectionId,
-    conversationId,
     request: extractRequestConfig(body, stream),
-    providerRequest: finalBody || translatedBody || null,
-    sourceApp,
-    userAgent,
-    clientTool: detectClientTool(clientRawRequest?.headers || {}, body),
-    ide: detectIDE(userAgent)
+    providerRequest: finalBody || translatedBody || null
   };
 
   // Codex/Responses API SSE path
@@ -279,7 +205,7 @@ export async function handleForcedSSEToJson({ providerResponse, sourceFormat, ta
 
       const usage = jsonResponse.usage || {};
       appendLog({ tokens: usage, status: "200 OK" });
-      saveUsageStats({ provider, model, tokens: usage, connectionId, apiKey, endpoint: clientRawRequest?.endpoint, silent: true, conversationId, taskType, smartRouterMeta });
+      saveUsageStats({ provider, model, tokens: usage, connectionId, apiKey, endpoint: clientRawRequest?.endpoint, silent: true });
       if (log?.line) log.line(reqTag, "📊", formatDoneLine({ usage, latency: { total: Date.now() - requestStartTime } }));
 
       // Same cache-inclusive total for the recorded detail, so the DB and the
@@ -292,7 +218,6 @@ export async function handleForcedSSEToJson({ providerResponse, sourceFormat, ta
 
       saveRequestDetail(buildRequestDetail({
         ...ctx,
-        url: providerUrl || providerResponse?.url,
         latency: { ttft: totalLatency, total: totalLatency },
         tokens: { prompt_tokens: inTokensForLog, completion_tokens: usage.output_tokens || 0 },
         response: { content: textContent, thinking: null, finish_reason: jsonResponse.status || "unknown" },
@@ -384,24 +309,16 @@ export async function handleForcedSSEToJson({ providerResponse, sourceFormat, ta
       );
     }
 
-    // GAP-RETRY-01: semantic validation — SSE→JSON parsed body may have empty
-    // choices array.  Reject so the combo fallback rotates instead of forwarding
-    // an unusable response to the client.
-    if (Array.isArray(parsed?.choices) && parsed.choices.length === 0) {
-      return createErrorResult(HTTP_STATUS.BAD_GATEWAY, "Provider returned empty response: no choices");
-    }
-
     if (onRequestSuccess) await onRequestSuccess();
 
     const usage = parsed.usage || {};
     appendLog({ tokens: usage, status: "200 OK" });
-    saveUsageStats({ provider, model, tokens: usage, connectionId, apiKey, endpoint: clientRawRequest?.endpoint, silent: true, conversationId, taskType, smartRouterMeta });
+    saveUsageStats({ provider, model, tokens: usage, connectionId, apiKey, endpoint: clientRawRequest?.endpoint, silent: true });
     if (log?.line) log.line(reqTag, "📊", formatDoneLine({ usage, latency: { total: Date.now() - requestStartTime } }));
 
     const totalLatency = Date.now() - requestStartTime;
     saveRequestDetail(buildRequestDetail({
       ...ctx,
-      url: providerUrl || providerResponse?.url,
       latency: { ttft: totalLatency, total: totalLatency },
       tokens: usage,
       response: {
@@ -433,20 +350,15 @@ export async function handleForcedSSEToJson({ providerResponse, sourceFormat, ta
       }
     }
 
-    // A Responses-format client (e.g. Codex) or Claude-format client forced this
-    // provider to stream, but wants JSON back. parseSSEToOpenAIResponse yields a
-    // Chat Completions body; convert it to the client's expected format so tool_calls
-    // are not lost on the non-streaming return path. Inlined (not imported from
+    // A Responses-format client (e.g. Codex) forced this provider to stream,
+    // but wants JSON back. parseSSEToOpenAIResponse yields a Chat Completions
+    // body; convert it to the Responses `output` shape so tool_calls are not
+    // lost on the non-streaming return path. Inlined (not imported from
     // nonStreamingHandler.js) to avoid a circular import: nonStreamingHandler
     // already imports parseSSEToOpenAIResponse from this module.
-    let finalBody;
-    if (sourceFormat === FORMATS.OPENAI_RESPONSES) {
-      finalBody = chatCompletionToResponses(parsed, customToolNames);
-    } else if (sourceFormat === FORMATS.CLAUDE) {
-      finalBody = openAICompletionToClaudeMessage(parsed);
-    } else {
-      finalBody = parsed;
-    }
+    const finalBody = sourceFormat === FORMATS.OPENAI_RESPONSES
+      ? chatCompletionToResponses(parsed, customToolNames)
+      : parsed;
 
     return { success: true, response: new Response(JSON.stringify(restoreToolNames(finalBody, toolNameMap)), { headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } }) };
   } catch (err) {

@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { getStatusVariant as getConnectionStatusVariant } from "@/shared/utils/connectionStatus";
 import PropTypes from "prop-types";
 import { Card, Badge, Button, Modal, Select, Toggle, EditConnectionModal, ConfirmModal } from "@/shared/components";
-import { useNotificationStore } from "@/store/notificationStore";
 
 // ── CooldownTimer ──────────────────────────────────────────────
 function CooldownTimer({ until }) {
@@ -297,7 +296,6 @@ AddApiKeyModal.propTypes = {
 // ── ConnectionsCard ────────────────────────────────────────────
 // Self-contained card: fetches, displays and manages all connections for a provider.
 export default function ConnectionsCard({ providerId, isOAuth }) {
-  const notify = useNotificationStore((s) => s.error);
   const [connections, setConnections] = useState([]);
   const [proxyPools, setProxyPools] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -323,7 +321,7 @@ export default function ConnectionsCard({ providerId, isOAuth }) {
       const override = (settingsData.providerStrategies || {})[providerId] || {};
       setProviderStrategy(override.fallbackStrategy || null);
       setProviderStickyLimit(override.stickyRoundRobinLimit != null ? String(override.stickyRoundRobinLimit) : "1");
-    } catch (e) { notify(e.message || "Failed to load connections"); }
+    } catch (e) { console.log("ConnectionsCard fetch error:", e); }
     finally { setLoading(false); }
   }, [providerId]);
 
@@ -341,7 +339,7 @@ export default function ConnectionsCard({ providerId, isOAuth }) {
       if (Object.keys(override).length === 0) delete updated[providerId];
       else updated[providerId] = override;
       await fetch("/api/settings", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ providerStrategies: updated }) });
-    } catch (e) { notify(e.message || "Failed to save strategy"); }
+    } catch (e) { console.log("saveStrategy error:", e); }
   };
 
   const handleSwapPriority = async (i1, i2) => {
@@ -353,7 +351,7 @@ export default function ConnectionsCard({ providerId, isOAuth }) {
         fetch(`/api/providers/${next[i1].id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ priority: i1 }) }),
         fetch(`/api/providers/${next[i2].id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ priority: i2 }) }),
       ]);
-    } catch { notify("Failed to reorder connections"); await fetch_(); }
+    } catch { await fetch_(); }
   };
 
   const handleDelete = async (id) => {
@@ -365,7 +363,7 @@ export default function ConnectionsCard({ providerId, isOAuth }) {
         try {
           const res = await fetch(`/api/providers/${id}`, { method: "DELETE" });
           if (res.ok) setConnections((prev) => prev.filter((c) => c.id !== id));
-        } catch (e) { notify(e.message || "Failed to delete connection"); }
+        } catch (e) { console.log("delete error:", e); }
       }
     });
   };
@@ -374,28 +372,28 @@ export default function ConnectionsCard({ providerId, isOAuth }) {
     try {
       const res = await fetch(`/api/providers/${id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ isActive }) });
       if (res.ok) setConnections((prev) => prev.map((c) => c.id === id ? { ...c, isActive } : c));
-    } catch (e) { notify(e.message || "Failed to toggle connection"); }
+    } catch (e) { console.log("toggle error:", e); }
   };
 
   const handleUpdateProxy = async (connId, proxyPoolId) => {
     try {
       const res = await fetch(`/api/providers/${connId}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ proxyPoolId: proxyPoolId || null }) });
       if (res.ok) setConnections((prev) => prev.map((c) => c.id === connId ? { ...c, providerSpecificData: { ...c.providerSpecificData, proxyPoolId: proxyPoolId || null } } : c));
-    } catch (e) { notify(e.message || "Failed to update proxy"); }
+    } catch (e) { console.log("proxy error:", e); }
   };
 
   const handleSaveApiKey = async (formData) => {
     try {
       const res = await fetch("/api/providers", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ provider: providerId, ...formData }) });
       if (res.ok) { await fetch_(); setShowAddModal(false); }
-    } catch (e) { notify(e.message || "Failed to save API key"); }
+    } catch (e) { console.log("save apikey error:", e); }
   };
 
   const handleUpdateConnection = async (formData) => {
     try {
       const res = await fetch(`/api/providers/${selectedConnection.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(formData) });
       if (res.ok) { await fetch_(); setShowEditModal(false); }
-    } catch (e) { notify(e.message || "Failed to update connection"); }
+    } catch (e) { console.log("update connection error:", e); }
   };
 
   if (loading) return <Card><div className="h-20 animate-pulse bg-black/5 rounded-lg" /></Card>;

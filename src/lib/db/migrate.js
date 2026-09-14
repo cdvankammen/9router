@@ -103,7 +103,7 @@ function syncSchemaFromTables(adapter) {
 
     // Indexes (idempotent)
     for (const idx of def.indexes || []) {
-      try { adapter.exec(idx); } catch { /* intentional: index may already exist (idempotent migration) */ }
+      try { adapter.exec(idx); } catch {}
     }
   }
 }
@@ -283,7 +283,7 @@ export async function runMigrationOnce(adapter) {
       throw err;
     }
 
-    try { fs.writeFileSync(MIGRATED_MARKER, new Date().toISOString()); } catch (e) { console.warn("[migrate] failed to write migrated marker:", e.message); }
+    try { fs.writeFileSync(MIGRATED_MARKER, new Date().toISOString()); } catch {}
     pruneOldBackups();
     console.log(`[DB][migrate] JSON → SQLite in ${Date.now() - t0}ms | legacy JSON kept at DATA_DIR | backup: ${backupDir}`);
     return;

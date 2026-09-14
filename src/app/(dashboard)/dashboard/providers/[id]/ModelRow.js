@@ -1,12 +1,8 @@
 import PropTypes from "prop-types";
-import { useState } from "react";
 import { CapacityBadges } from "@/shared/components";
-import ErrorGroupList from "./ErrorGroupList";
 
-export default function ModelRow({ model, fullModel, alias, copied, onCopy, testStatus, isCustom, isFree, onDeleteAlias, onTest, isTesting, onDisable, caps, thinkingSuffix, onToggleCap, errorGroups }) {
+export default function ModelRow({ model, fullModel, alias, copied, onCopy, testStatus, isCustom, isFree, onDeleteAlias, onTest, isTesting, onDisable, caps, thinkingSuffix }) {
   const displayModel = thinkingSuffix ? `${fullModel}(${thinkingSuffix})` : fullModel;
-  const [showErrors, setShowErrors] = useState(false);
-  const errorCount = (errorGroups || []).reduce((sum, g) => sum + (g.count || 0), 0);
   const borderColor = testStatus === "ok"
     ? "border-green-500/40"
     : testStatus === "error"
@@ -18,13 +14,6 @@ export default function ModelRow({ model, fullModel, alias, copied, onCopy, test
     : testStatus === "error"
     ? "#ef4444"
     : undefined;
-
-  // Capability toggles — let the user mark a model vision/audio-capable (or
-  // revoke a wrong static flag). Persisted via settings.modelCapOverrides.
-  const capToggles = onToggleCap ? [
-    { key: "vision", label: "Vision", icon: "visibility" },
-    { key: "audioInput", label: "Audio", icon: "graphic_eq" },
-  ] : [];
 
   return (
     <div className={`group min-w-0 max-w-full rounded-lg border px-3 py-2 ${borderColor} hover:bg-sidebar/50`}>
@@ -40,19 +29,6 @@ export default function ModelRow({ model, fullModel, alias, copied, onCopy, test
           <span className="flex min-w-0 items-center text-[9px] gap-1 pl-1">
             {model.name && <span className="truncate text-[9px] italic text-text-muted/70">{model.name}</span>}
             <CapacityBadges caps={caps} colorOverride="text-text-muted/70" size={12} />
-            {errorCount > 0 && (
-              <button
-                onClick={() => setShowErrors((v) => !v)}
-                className="flex shrink-0 items-center gap-0.5 rounded bg-red-500/10 px-1 py-0.5 text-[9px] font-semibold text-red-500 hover:bg-red-500/20"
-                title="Show errors for this model"
-              >
-                <span className="material-symbols-outlined text-[11px]">error</span>
-                {errorCount}
-                <span className="material-symbols-outlined text-[11px]">
-                  {showErrors ? "expand_less" : "expand_more"}
-                </span>
-              </button>
-            )}
           </span>
         </div>
         {onTest && (
@@ -101,30 +77,7 @@ export default function ModelRow({ model, fullModel, alias, copied, onCopy, test
             <span className="material-symbols-outlined text-sm">close</span>
           </button>
         ) : null}
-        {/* Capability toggles (vision/audio) — right side, always visible when onToggleCap provided */}
-        {capToggles.length > 0 && (
-          <div className="flex shrink-0 items-center gap-0.5" title="Toggle model capabilities (affects combo vision/audio pickers)">
-            {capToggles.map(({ key, label, icon }) => {
-              const on = caps?.[key] === true;
-              return (
-                <button
-                  key={key}
-                  onClick={() => onToggleCap(key, !on)}
-                  className={`rounded p-0.5 transition-colors ${on ? "text-primary" : "text-text-muted/40 hover:text-text-muted"}`}
-                  title={`${label}: ${on ? "capable (click to revoke)" : "not capable (click to mark)"}`}
-                >
-                  <span className="material-symbols-outlined text-sm">{icon}</span>
-                </button>
-              );
-            })}
-          </div>
-        )}
       </div>
-      {showErrors && errorCount > 0 && (
-        <div className="mt-2 border-t border-border/60 pt-2">
-          <ErrorGroupList groups={errorGroups} emptyMessage="No errors recorded for this model." />
-        </div>
-      )}
     </div>
   );
 }
@@ -146,6 +99,4 @@ ModelRow.propTypes = {
   onDisable: PropTypes.func,
   caps: PropTypes.object,
   thinkingSuffix: PropTypes.string,
-  onToggleCap: PropTypes.func,
-  errorGroups: PropTypes.array,
 };
