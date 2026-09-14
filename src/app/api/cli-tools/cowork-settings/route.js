@@ -98,7 +98,7 @@ const resolveAppRootForRead = async () => {
   return candidates[0];
 };
 
-export const getWriteRoot = () => getCandidateRoots()[0];
+const getWriteRoot = () => getCandidateRoots()[0];
 const getConfigDir = async () => path.join(await resolveAppRootForRead(), "configLibrary");
 const getWriteConfigDir = () => path.join(getWriteRoot(), "configLibrary");
 const getMetaPath = async () => path.join(await getConfigDir(), "_meta.json");

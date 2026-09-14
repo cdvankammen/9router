@@ -1589,13 +1589,15 @@ export default function ProviderDetailPage() {
       </div>
     );
   }
+
+  if (loading) {
     return (
       <div className="flex flex-col gap-8">
         <CardSkeleton />
         <CardSkeleton />
       </div>
     );
-}
+  }
 
   if (!providerInfo) {
     return (

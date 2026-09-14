@@ -35,4 +35,7 @@ export {
   deleteApiKey,
   validateApiKey,
   isCloudEnabled,
+  getOrphanConnections,
+  deleteOrphanConnections,
+  cleanupProviderConnections,
 } from "@/lib/localDb";
