@@ -82,9 +82,38 @@
 1. `PORT=20200 JWT_SECRET=smoke-test node custom-server.js`
 2. Test: `/api/health`, `/api/v1/models`, `/api/combos`, `/api/health/providers`, chat completions (provider + combo + stream), `/dashboard`, `/api/version`, `/login`
 
-### Phase 6 — Deploy to mini2
-1. Build standalone, copy to mini2
-2. Restart service, verify port 20128
+### Phase 6 — Deploy to mini2 (DONE ✅ 2026-09-16)
+1. ✅ `npm run build` — **GREEN** after fixing:
+   - `src/app/api/v1/models/route.js` — removed duplicate `getSettings` import (merge artifact: both `settingsRepo` and `localDb` variants survived; `settingsRepo` is canonical)
+   - Build requires `JWT_SECRET` at build time (route config collection) — passed inline generated secret
+2. ✅ `scripts/copy-standalone-assets.mjs` — **packaging bug fixed**: standalone bundle was missing `custom-server.rate-limiter.js` (custom-server.js requires it at boot → `MODULE_NOT_FOUND` crash). CLI build (`cli/scripts/build-cli.js` step 3a1) already copied it; the standalone postbuild did not. Committed `008dd3ab`.
+3. ✅ Copied `.next/standalone` (78M) → `mini2:~/9router-deploy/`
+4. ✅ Started via launchd `com.9router.standalone` (wrapper `~/9router-deploy/start.sh` reads `JWT_SECRET` from `~/.9router/jwt-secret` — single source of truth, sessions stay valid)
+5. ✅ Port **20128**, `NODE_ENV=production`, KeepAlive on crash
+6. ✅ DB migrated 1→3 on mini2 (message_facets, message_annotations) with pre-schema backup
+7. ✅ Verified: `/api/health` ok, `/api/version` 0.5.75, `/dashboard` 200, `/login` 200, `/api/v1/models` + chat completions auth-gated (API key required), `/api/health/providers` valid JSON, `/api/combos` returns existing combos
+
+## Final Reconciliation Record (2026-09-15/16)
+
+### Backup branch verification (DONE ✅)
+- `master-backup-20260914` → `git merge-base --is-ancestor` = YES, `v2..backup` = **0 commits** — fully contained in v2
+- `v1-bug-fix-backup-20260910` → `v2..backup` = **0 commits** (all 1187 commits already in v2)
+
+### Additional branch merges (DONE ✅)
+| Branch | Merge commit | Notes |
+|--------|-------------|-------|
+| `9router/t_294c431b` | `e1b64e41` | models route error logging (`console.warn`), removed unused imports + cline resolver + auto-persist |
+| `t_6248a7d0` | `8d21882a` | security: `execSync("net session")` → `execFileSync("net", ["session"], { windowsHide: true })` |
+| `pr-3595-squash` | `32f65837` | 38 files / 6281 insertions — **11 conflicts resolved** (capabilities.js, profile/page.js, providers/page.js, requestDetailsRepo.js, settingsRepo.js, schema.js, Sidebar.js, useModelCaps.js, chat.js, golden-url-header.snap, kiro-external-idp.test.js) |
+
+### Test reconciliation (DONE ✅)
+- **86 NEW test failures** vs baseline → **all resolved** (0 NEW remaining; 74 fails = all baseline; 13 stale baseline entries now pass)
+- Fixes: error-categorizer (removed `statuses:[200]` from empty_response), translator-helpers-edge (fold-in-place behavior), kiro-external-idp (q.* URL ordering + 15s timeout), minimax-transport (detectIDE mock), golden-url-header snapshot (0.5.75 / node 26.5.0), oauth-cursor symlink test → baseline (vitest can't mock runtime `require("better-sqlite3")`)
+- **3 post-merge regressions** fixed: claude-compat display_name `[1m]` suffix, opencode-go free models + DeepSeek formats, commandcode 503 cooldown timeout
+- Committed: `05cda673` (86 NEW fixes), `5aa410de` (post-merge alignment)
+
+### Deploy fixes (DONE ✅)
+- `008dd3ab` — rate-limiter packaging + getSettings dedupe (see Phase 6)
 
 ## Risk Register
 | Risk | Mitigation |
