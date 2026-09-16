@@ -48,6 +48,16 @@ export async function createNodeSqliteAdapter(filePath) {
   process.once("SIGINT", () => { onShutdown(); process.exit(0); });
   process.once("SIGTERM", () => { onShutdown(); process.exit(0); });
 
+  // node:sqlite returns rows with a null prototype. Next.js RSC serialization
+  // rejects null-prototype objects ("Only plain objects ... can be passed to
+  // Client Components"), and JSON.stringify drops their keys entirely. Normalize
+  // to plain objects so every consumer (repos, RSC pages, API routes) sees the
+  // same shape as better-sqlite3 / sql.js rows.
+  function toPlain(row) {
+    if (row === null || row === undefined) return row;
+    return { ...row };
+  }
+
   return {
     driver: "node:sqlite",
     run(sql, params = []) {
@@ -55,10 +65,10 @@ export async function createNodeSqliteAdapter(filePath) {
       return { changes: Number(r.changes ?? 0), lastInsertRowid: Number(r.lastInsertRowid ?? 0) };
     },
     get(sql, params = []) {
-      return prepare(sql).get(...params);
+      return toPlain(prepare(sql).get(...params));
     },
     all(sql, params = []) {
-      return prepare(sql).all(...params);
+      return prepare(sql).all(...params).map(toPlain);
     },
     exec(sql) { return db.exec(sql); },
     transaction(fn) {
