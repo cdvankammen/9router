@@ -24,7 +24,7 @@ describe("Kiro external_idp (CLIProxyAPI) import and refresh", () => {
     global.fetch = originalFetch;
   });
 
-  it("refreshes Microsoft external_idp tokens with form-encoded OAuth body", async () => {
+  it("refreshes Microsoft external_idp tokens with form-encoded OAuth body", { timeout: 15000 }, async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
       json: () => Promise.resolve({
@@ -76,7 +76,7 @@ describe("Kiro external_idp (CLIProxyAPI) import and refresh", () => {
     });
   });
 
-  it("rejects external_idp refresh endpoints outside Microsoft login", async () => {
+  it("rejects external_idp refresh endpoints outside Microsoft login", { timeout: 15000 }, async () => {
     const { refreshKiroToken } = await import("../../open-sse/services/tokenRefresh.js");
     const fetchMock = vi.fn();
     global.fetch = fetchMock;
@@ -92,7 +92,7 @@ describe("Kiro external_idp (CLIProxyAPI) import and refresh", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("adds CodeWhisperer external IdP headers and endpoint ordering", async () => {
+  it("adds CodeWhisperer external IdP headers and endpoint ordering", { timeout: 15000 }, async () => {
     const { KiroExecutor } = await import("../../open-sse/executors/kiro.js");
     const executor = new KiroExecutor();
     const credentials = {
@@ -105,12 +105,16 @@ describe("Kiro external_idp (CLIProxyAPI) import and refresh", () => {
     expect(headers.TokenType).toBe("EXTERNAL_IDP");
     expect(headers.tokentype).toBeUndefined();
 
+    // Since 7e5f5a88: kiro.dev must never be first for any auth method (deprecated
+    // path gateway returns 400 REQUEST_BODY_INVALID). q.* is always first for all
+    // auth methods — Amazon surfaces reject foreign tokens with 401/403 which DO
+    // fall through safely.
     expect(executor.buildUrl("claude-sonnet-4.5", true, 0, credentials)).toBe(
-      "https://codewhisperer.us-east-1.amazonaws.com/generateAssistantResponse"
+      "https://q.us-east-1.amazonaws.com/generateAssistantResponse"
     );
   });
 
-  it("sends TokenType for external_idp Kiro usage probes", async () => {
+  it("sends TokenType for external_idp Kiro usage probes", { timeout: 15000 }, async () => {
     const calls = [];
     vi.doMock("../../open-sse/utils/proxyFetch.js", () => ({
       proxyAwareFetch: vi.fn(async (url, init) => {

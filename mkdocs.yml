@@ -1,0 +1,6 @@
+site_name: 9router Documentation
+site_description: 9router - local-first LLM model router for the Hermes fleet
+nav:
+  - Home: index.md
+plugins:
+  - techdocs-core

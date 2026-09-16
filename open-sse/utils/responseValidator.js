@@ -26,6 +26,15 @@ export function validateResponseBody(body) {
 
   const reasons = [];
 
+  // finish_reason: "error" — provider explicitly signaled failure. This is the
+  // dominant signal: skip content analysis so the reason list stays precise
+  // (an empty-content choice with finish_reason "error" is an error, not a
+  // separate NO_CONTENT case).
+  if (body.choices?.[0]?.finish_reason === "error") {
+    reasons.push("FINISH_REASON_ERROR");
+    return { valid: false, reasons };
+  }
+
   // Empty choices array (canonical upstream bug)
   if (!Array.isArray(body.choices) || body.choices.length === 0) {
     reasons.push("EMPTY_CHOICES");
@@ -41,11 +50,6 @@ export function validateResponseBody(body) {
     if (!hasMessageContent && !hasDeltaContent && !hasToolCalls) {
       reasons.push("NO_CONTENT");
     }
-  }
-
-  // finish_reason: "error" — provider explicitly signaled failure
-  if (body.choices?.[0]?.finish_reason === "error") {
-    reasons.push("FINISH_REASON_ERROR");
   }
 
   return { valid: reasons.length === 0, reasons };

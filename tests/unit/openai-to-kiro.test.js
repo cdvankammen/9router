@@ -11,7 +11,12 @@ import { openaiToKiroRequest } from "../../open-sse/translator/request/openai-to
 
 const contentOf = (result) =>
   result.conversationState.currentMessage.userInputMessage.content;
-const systemPromptOf = (result) => result.systemPrompt || "";
+// The thinking prefix (thinking_mode / max_thinking_length tags) travels inside
+// the first user turn's content — kiro.dev rejects a top-level `systemPrompt`
+// with 400 REQUEST_BODY_INVALID (see commit 1892ed77), so the translator no
+// longer emits one. Read the prefix from the current message content instead.
+const systemPromptOf = (result) =>
+  result.conversationState?.currentMessage?.userInputMessage?.content || "";
 
 describe("openaiToKiroRequest", () => {
   describe("basic message conversion", () => {
@@ -582,8 +587,12 @@ describe("openaiToKiroRequest", () => {
         {}
       );
 
-      expect(first.systemPrompt).toBe(second.systemPrompt);
-      expect(first.systemPrompt).not.toContain("Current time");
+      // The system prompt (thinking tags) travels as the content prefix of the
+      // first user turn. It must be identical across turns — only the user
+      // content and the current-time context differ.
+      const prefixOf = (r) => systemPromptOf(r).split("[Context:")[0];
+      expect(prefixOf(first)).toBe(prefixOf(second));
+      expect(prefixOf(first)).not.toContain("Current time");
       expect(first.conversationState.currentMessage.userInputMessage.content).toContain("Current time");
     });
 

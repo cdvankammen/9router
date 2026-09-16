@@ -48,6 +48,7 @@ vi.mock("../../open-sse/utils/requestLogger.js", () => ({
 
 vi.mock("../../open-sse/utils/clientDetector.js", () => ({
   detectClientTool: vi.fn(() => null),
+  detectIDE: vi.fn(() => null),
   isNativePassthrough: vi.fn(() => false),
 }));
 

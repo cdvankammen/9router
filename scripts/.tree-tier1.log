@@ -1,0 +1,92 @@
+[2026-09-15T21:44:34.232Z] [disk] 42.94 GiB free
+[2026-09-15T21:44:34.335Z] [roots] Tier 1: 70 roots (research docs + prior rows)
+[2026-09-15T21:44:34.336Z] [run] 70 roots to expand (0 already complete)
+[2026-09-15T22:02:12.725Z] [root-done] research:01-open-sse-engine — 127 nodes, total 127 nodes / 1206 searches
+[2026-09-15T22:02:12.730Z] [root-done] research:02-src-nextjs-app — 127 nodes, total 254 nodes / 2316 searches
+[2026-09-15T22:02:12.736Z] [root-done] research:03-cli-and-tests — 127 nodes, total 381 nodes / 3306 searches
+[2026-09-15T22:02:12.737Z] [root-done] research:04-infrastructure-config — 127 nodes, total 508 nodes / 4576 searches
+[2026-09-15T22:02:12.789Z] [cache] saved (508 nodes, 4576 searches)
+[2026-09-15T22:21:47.654Z] [root-done] research:05-cross-cutting-analysis — 127 nodes, total 635 nodes / 5846 searches
+[2026-09-15T22:21:47.667Z] [root-done] research:06-executors-deep-dive — 127 nodes, total 762 nodes / 7116 searches
+[2026-09-15T22:21:47.670Z] [root-done] research:07-providers-registry-deep-dive — 127 nodes, total 889 nodes / 8386 searches
+[2026-09-15T22:21:47.670Z] [root-done] research:08-translator-deep-dive — 127 nodes, total 1016 nodes / 9656 searches
+[2026-09-15T22:21:48.473Z] [cache] saved (1016 nodes, 9656 searches)
+[2026-09-15T22:40:54.679Z] [root-done] research:09-services-deep-dive — 127 nodes, total 1143 nodes / 10926 searches
+[2026-09-15T22:40:55.343Z] [root-done] research:11-db-layer-deep-dive — 127 nodes, total 1270 nodes / 12196 searches
+[2026-09-15T22:40:55.349Z] [root-done] research:12-oauth-deep-dive — 127 nodes, total 1397 nodes / 13466 searches
+[2026-09-15T22:40:55.350Z] [root-done] research:13-sse-layer-deep-dive — 127 nodes, total 1524 nodes / 14728 searches
+[2026-09-15T22:40:55.468Z] [cache] saved (1524 nodes, 14728 searches)
+[2026-09-15T23:00:10.080Z] [root-done] research:14-mitm-deep-dive — 127 nodes, total 1651 nodes / 15998 searches
+[2026-09-15T23:00:10.094Z] [root-done] research:15-api-routes-deep-dive — 127 nodes, total 1778 nodes / 17264 searches
+[2026-09-15T23:00:10.095Z] [root-done] research:16-ux-research-drop-indicator-and-override-placement — 127 nodes, total 1905 nodes / 18534 searches
+[2026-09-15T23:00:10.096Z] [root-done] research:17-code-review-user-commits — 127 nodes, total 2032 nodes / 19804 searches
+[2026-09-15T23:00:10.325Z] [cache] saved (2032 nodes, 19804 searches)
+[2026-09-15T23:18:35.982Z] [root-done] research:18-feature-gap-review — 127 nodes, total 2159 nodes / 21074 searches
+[2026-09-15T23:18:36.002Z] [root-done] research:19-upstream-provider-risks — 127 nodes, total 2286 nodes / 22344 searches
+[2026-09-15T23:18:36.012Z] [root-done] research:20-review-otherbot-work-vs-research — 127 nodes, total 2413 nodes / 23614 searches
+[2026-09-15T23:18:36.017Z] [root-done] research:21-audit-no-more-bugs — 127 nodes, total 2540 nodes / 24884 searches
+[2026-09-15T23:18:37.397Z] [cache] saved (2540 nodes, 24884 searches)
+[2026-09-15T23:37:38.553Z] [root-done] research:21-messages-audit-refactor-design — 127 nodes, total 2667 nodes / 26154 searches
+[2026-09-15T23:37:38.582Z] [root-done] research:22-error-sweep — 127 nodes, total 2794 nodes / 27424 searches
+[2026-09-15T23:37:38.583Z] [root-done] research:23-refactor-decisions — 127 nodes, total 2921 nodes / 28694 searches
+[2026-09-15T23:37:38.584Z] [root-done] research:24-ha-mini-backup-nodes — 127 nodes, total 3048 nodes / 29964 searches
+[2026-09-15T23:37:39.118Z] [cache] saved (3048 nodes, 29964 searches)
+[2026-09-15T23:56:18.872Z] [root-done] research:25-error-inbox-p2-design — 127 nodes, total 3175 nodes / 31234 searches
+[2026-09-15T23:56:18.961Z] [root-done] research:25-node-failover-implementation — 127 nodes, total 3302 nodes / 32504 searches
+[2026-09-15T23:56:18.962Z] [root-done] research:26-node-failover-networking-options — 127 nodes, total 3429 nodes / 33678 searches
+[2026-09-15T23:56:18.962Z] [root-done] research:26-programmatic-error-registry — 127 nodes, total 3556 nodes / 34948 searches
+[2026-09-15T23:56:21.690Z] [cache] saved (3556 nodes, 34948 searches)
+[2026-09-16T00:17:12.047Z] [root-done] research:27-model-serving-policy — 127 nodes, total 3683 nodes / 36218 searches
+[2026-09-16T00:17:12.128Z] [root-done] research:28-dual-instance-conflicts-and-cleanup — 127 nodes, total 3810 nodes / 37488 searches
+[2026-09-16T00:17:12.130Z] [root-done] research:28-hermes-hooks-wiring-plan — 127 nodes, total 3937 nodes / 38758 searches
+[2026-09-16T00:17:12.136Z] [root-done] research:28b-mini2-failover-crashloop-deep-dive — 127 nodes, total 4064 nodes / 40028 searches
+[2026-09-16T00:17:15.989Z] [cache] saved (4064 nodes, 40028 searches)
+[2026-09-16T00:37:44.268Z] [root-done] research:28c-failover-session-command-log — 127 nodes, total 4191 nodes / 41298 searches
+[2026-09-16T00:37:44.289Z] [root-done] research:28d-packaging-fix — 127 nodes, total 4318 nodes / 42568 searches
+[2026-09-16T00:37:44.291Z] [root-done] research:29-mini2-freeze-investigation — 127 nodes, total 4445 nodes / 43838 searches
+[2026-09-16T00:37:44.409Z] [root-done] research:29-unified-error-system-v2 — 127 nodes, total 4572 nodes / 45108 searches
+[2026-09-16T00:37:48.062Z] [cache] saved (4572 nodes, 45108 searches)
+[2026-09-16T00:59:32.463Z] [root-done] research:30-goal-systems-research — 127 nodes, total 4699 nodes / 46378 searches
+[2026-09-16T00:59:32.471Z] [root-done] research:30-tray-freeze-root-cause-fix — 127 nodes, total 4826 nodes / 47648 searches
+[2026-09-16T00:59:32.472Z] [root-done] research:31-runtime-enforcement-layers — 127 nodes, total 4953 nodes / 48918 searches
+[2026-09-16T00:59:32.472Z] [root-done] research:32-enforcement-mechanisms-per-layer — 127 nodes, total 5080 nodes / 50188 searches
+[2026-09-16T00:59:32.777Z] [cache] saved (5080 nodes, 50188 searches)
+[2026-09-16T01:21:48.136Z] [root-done] research:32-gap-analysis-comprehensive — 127 nodes, total 5207 nodes / 51458 searches
+[2026-09-16T01:21:48.144Z] [root-done] research:33-layers-combinations-build-plans — 127 nodes, total 5334 nodes / 52728 searches
+[2026-09-16T01:21:48.145Z] [root-done] research:33-master-coding-rule — 127 nodes, total 5461 nodes / 53998 searches
+[2026-09-16T01:21:48.157Z] [root-done] research:34-divergence-analysis — 127 nodes, total 5588 nodes / 55268 searches
+[2026-09-16T01:21:48.629Z] [cache] saved (5588 nodes, 55268 searches)
+[2026-09-16T01:41:18.330Z] [root-done] research:34-malformed-response-handling — 127 nodes, total 5715 nodes / 56538 searches
+[2026-09-16T01:41:18.340Z] [root-done] research:35-tempdelete-origin — 127 nodes, total 5842 nodes / 57808 searches
+[2026-09-16T01:41:18.341Z] [root-done] research:36-gap-merge-summary — 127 nodes, total 5969 nodes / 59078 searches
+[2026-09-16T01:41:18.342Z] [root-done] research:37-ai-model-routing-deep-research — 127 nodes, total 6096 nodes / 60348 searches
+[2026-09-16T01:41:18.795Z] [cache] saved (6096 nodes, 60348 searches)
+[2026-09-16T01:59:32.833Z] [root-done] research:38-message-driven-tools-research — 127 nodes, total 6223 nodes / 61362 searches
+[2026-09-16T01:59:32.842Z] [root-done] research:39-binary-tree-expansion-master-plan — 127 nodes, total 6350 nodes / 62632 searches
+[2026-09-16T01:59:32.842Z] [root-done] research:41-branch-learned-routing — 127 nodes, total 6477 nodes / 63902 searches
+[2026-09-16T01:59:32.843Z] [root-done] research:42-branch-cascades-and-fallbacks — 127 nodes, total 6604 nodes / 65172 searches
+[2026-09-16T01:59:33.151Z] [cache] saved (6604 nodes, 65172 searches)
+[2026-09-16T02:21:27.840Z] [root-done] research:build-debug-deploy-guide — 127 nodes, total 6731 nodes / 66442 searches
+[2026-09-16T02:21:27.851Z] [root-done] research:methodology-llm-routing-corpus — 127 nodes, total 6858 nodes / 67712 searches
+[2026-09-16T02:21:27.851Z] [root-done] prior:arxiv:2406.18665 — 127 nodes, total 6985 nodes / 68982 searches
+[2026-09-16T02:21:27.851Z] [root-done] prior:arxiv:2403.12031 — 127 nodes, total 7112 nodes / 70252 searches
+[2026-09-16T02:21:28.372Z] [cache] saved (7112 nodes, 70252 searches)
+[2026-09-16T02:42:43.970Z] [root-done] prior:arxiv:2305.05176 — 127 nodes, total 7239 nodes / 71522 searches
+[2026-09-16T02:42:43.979Z] [root-done] prior:arxiv:2404.14618 — 127 nodes, total 7366 nodes / 72792 searches
+[2026-09-16T02:42:43.980Z] [root-done] prior:arxiv:2310.12963 — 127 nodes, total 7493 nodes / 74062 searches
+[2026-09-16T02:42:43.980Z] [root-done] prior:arxiv:2309.15789 — 127 nodes, total 7620 nodes / 75332 searches
+[2026-09-16T02:42:44.452Z] [cache] saved (7620 nodes, 75332 searches)
+[2026-09-16T03:05:24.079Z] [root-done] prior:arxiv:2308.11601 — 127 nodes, total 7747 nodes / 76602 searches
+[2026-09-16T03:05:24.089Z] [root-done] prior:web:openrouter-auto-router — 127 nodes, total 7874 nodes / 77872 searches
+[2026-09-16T03:05:24.090Z] [root-done] prior:github:BerriAI/litellm — 127 nodes, total 8001 nodes / 79142 searches
+[2026-09-16T03:05:24.090Z] [root-done] prior:github:BlockRunAI/ClawRouter — 127 nodes, total 8128 nodes / 80412 searches
+[2026-09-16T03:05:24.471Z] [cache] saved (8128 nodes, 80412 searches)
+[2026-09-16T03:29:51.577Z] [root-done] prior:github:vllm-project/semantic-router — 127 nodes, total 8255 nodes / 81554 searches
+[2026-09-16T03:29:51.596Z] [root-done] prior:github:aurelio-labs/semantic-router — 127 nodes, total 8382 nodes / 82824 searches
+[2026-09-16T03:29:51.603Z] [root-done] prior:github:coaidev/coai — 127 nodes, total 8509 nodes / 84094 searches
+[2026-09-16T03:29:51.609Z] [root-done] prior:9router:16-decision-points — 127 nodes, total 8636 nodes / 85364 searches
+[2026-09-16T03:29:53.063Z] [cache] saved (8636 nodes, 85364 searches)
+[2026-09-16T03:43:52.223Z] [root-done] prior:9router:37-deep-research — 127 nodes, total 8763 nodes / 86634 searches
+[2026-09-16T03:43:52.227Z] [root-done] prior:9router:smart-router-source — 127 nodes, total 8890 nodes / 87904 searches
+[2026-09-16T03:43:53.323Z] [cache] saved (8890 nodes, 87904 searches)
+[2026-09-16T03:43:54.402Z] [done] 70 roots, 8890 nodes, 87904 searches → /Users/chris/Documents/GitHub/9router/scripts/.routing-tree-cache.json

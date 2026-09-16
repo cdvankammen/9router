@@ -33,17 +33,21 @@ const mockDbInstance = {
   __throwOnConstruct: false,
 };
 
-// Mock better-sqlite3 as a class so `new Database(...)` works
-vi.mock("better-sqlite3", () => ({
-  default: class MockDatabase {
+// Mock better-sqlite3 as a class so `new Database(...)` works.
+// The route uses `require("better-sqlite3")` (CJS interop), so the factory
+// must return the class itself — returning `{ default: class }` makes
+// `new Database(...)` throw "not a constructor" and the route falls through
+// to the CLI/manual fallback.
+vi.mock("better-sqlite3", () =>
+  class MockDatabase {
     constructor() {
       if (mockDbInstance.__throwOnConstruct) {
         throw new Error("SQLITE_CANTOPEN");
       }
       return mockDbInstance;
     }
-  },
-}));
+  }
+);
 
 // We need to dynamically import after mocks are registered
 let GET;

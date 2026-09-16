@@ -1,0 +1,22 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: 9router
+  title: 9router
+  description: >-
+    9router is a local-first model router/proxy that aggregates multiple LLM
+    providers (OpenAI-compatible), used as the Hermes fleet's primary inference
+    router on mini. Evaluated as Backstage catalog entity for the homelab
+    pilot (2026-09-15).
+  annotations:
+    backstage.io/source-location: url:https://github.com/decolua/9router/tree/master
+    github.com/project-slug: decolua/9router
+    backstage.io/techdocs-ref: dir:.
+  tags:
+    - router
+    - llm
+    - proxy
+spec:
+  type: service
+  lifecycle: production
+  owner: group:default/infrastructure

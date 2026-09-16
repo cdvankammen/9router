@@ -57,7 +57,14 @@ export function backupDbLite(adapter, destDir, destName = "data.sqlite") {
     adapter.transaction(() => {
       for (const t of tables) {
         // Recreate table structure in backup DB, then copy rows.
-        const createSql = t.sql.replace(/CREATE TABLE\s+/i, "CREATE TABLE bak.");
+        // FK clauses referencing excluded tables (e.g. message_facets →
+        // requestDetails) are stripped: the referenced table won't exist in
+        // the backup, and the backup is a safety snapshot, not a live DB.
+        let createSql = t.sql.replace(/CREATE TABLE\s+/i, "CREATE TABLE bak.");
+        createSql = createSql.replace(
+          /REFERENCES\s+requestDetails(?:_fts)?\s*\([^)]*\)\s*(?:ON\s+DELETE\s+CASCADE)?/gi,
+          ""
+        );
         adapter.exec(createSql);
         adapter.exec(`INSERT INTO bak.${t.name} SELECT * FROM main.${t.name}`);
       }

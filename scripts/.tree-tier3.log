@@ -1,0 +1,28 @@
+[2026-09-16T07:29:51.382Z] [disk] 15.44 GiB free
+[2026-09-16T07:29:51.538Z] [roots] Tier 1: 201 roots (research docs + prior rows)
+[2026-09-16T07:29:53.239Z] [run] 104 roots to expand (97 already complete)
+[2026-09-16T08:08:34.634Z] [root-done] research:impl-plan-100-inference-efficiency-toolkit — 127 nodes, total 12446 nodes / 123344 searches
+[2026-09-16T08:08:34.679Z] [root-done] research:impl-plan-101-sparse-routing-efficiency — 127 nodes, total 12573 nodes / 124614 searches
+[2026-09-16T08:08:34.682Z] [root-done] research:impl-plan-102-response-verification-methods — 127 nodes, total 12700 nodes / 125804 searches
+[2026-09-16T08:08:34.690Z] [root-done] research:impl-plan-103-human-preference-learning — 127 nodes, total 12827 nodes / 127074 searches
+[2026-09-16T08:08:36.407Z] [cache] saved (12827 nodes, 127074 searches)
+[2026-09-16T08:34:24.245Z] [root-done] research:impl-plan-104-capability-matching-detection — 127 nodes, total 12954 nodes / 128174 searches
+[2026-09-16T08:34:24.259Z] [root-done] research:impl-plan-105-domain-specialized-routing — 127 nodes, total 13081 nodes / 129444 searches
+[2026-09-16T08:34:24.260Z] [root-done] research:impl-plan-106-step-context-agent-routing — 127 nodes, total 13208 nodes / 130714 searches
+[2026-09-16T08:34:24.261Z] [root-done] research:impl-plan-107-routing-scope-resolution — 127 nodes, total 13335 nodes / 131984 searches
+[2026-09-16T08:34:26.218Z] [cache] saved (13335 nodes, 131984 searches)
+[2026-09-16T08:56:01.054Z] [root-done] research:impl-plan-108-hybrid-routing-explainability — 127 nodes, total 13462 nodes / 133254 searches
+[2026-09-16T08:56:01.057Z] [root-done] research:impl-plan-109-safety-signals-guardrails — 127 nodes, total 13589 nodes / 134524 searches
+[2026-09-16T08:56:01.058Z] [root-done] research:impl-plan-110-cost-quality-modeling — 127 nodes, total 13716 nodes / 135794 searches
+[2026-09-16T08:56:01.058Z] [root-done] research:impl-plan-111-routing-algorithm-library — 127 nodes, total 13843 nodes / 137048 searches
+[2026-09-16T08:56:01.848Z] [cache] saved (13843 nodes, 137048 searches)
+[2026-09-16T09:21:54.934Z] [root-done] research:impl-plan-112-experiment-design-power — 127 nodes, total 13970 nodes / 138318 searches
+[2026-09-16T09:21:54.940Z] [root-done] research:impl-plan-113-quantization-aware-routing — 127 nodes, total 14097 nodes / 139588 searches
+[2026-09-16T09:21:54.941Z] [root-done] research:impl-plan-114-rag-aware-routing — 127 nodes, total 14224 nodes / 140858 searches
+[2026-09-16T09:21:54.942Z] [root-done] research:impl-plan-115-executor-specialization-selection — 127 nodes, total 14351 nodes / 141968 searches
+[2026-09-16T09:21:56.465Z] [cache] saved (14351 nodes, 141968 searches)
+[2026-09-16T09:44:16.755Z] [root-done] research:impl-plan-116-db-adapter-chain-hardening — 127 nodes, total 14478 nodes / 143238 searches
+[2026-09-16T09:44:16.761Z] [root-done] research:impl-plan-117-enforcement-combinations — 127 nodes, total 14605 nodes / 144508 searches
+[2026-09-16T09:44:16.764Z] [root-done] research:impl-plan-118-feature-gap-tracking — 127 nodes, total 14732 nodes / 145778 searches
+[2026-09-16T09:44:16.765Z] [root-done] research:impl-plan-119-ha-mini-backup-nodes — 127 nodes, total 14859 nodes / 147048 searches
+[2026-09-16T09:44:18.548Z] [cache] saved (14859 nodes, 147048 searches)

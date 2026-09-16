@@ -1,0 +1,486 @@
+[phase1] Seeding from OpenAlex (35 queries)...
+[2026-09-15T03:13:25.363Z]   OpenAlex 429 on "LLM routing" — retry 1 in 2314ms
+[2026-09-15T03:13:27.767Z]   OpenAlex 429 on "LLM routing" — retry 2 in 4227ms
+[2026-09-15T03:13:32.421Z]   OpenAlex 429 on "LLM routing" — retry 3 in 8023ms
+  OpenAlex "LLM routing" -> 100 docs (total 100)
+[2026-09-15T03:13:42.880Z]   OpenAlex 429 on "model routing" — retry 1 in 2374ms
+[2026-09-15T03:13:45.333Z]   OpenAlex 429 on "model routing" — retry 2 in 4376ms
+[2026-09-15T03:13:49.866Z]   OpenAlex 429 on "model routing" — retry 3 in 8465ms
+  OpenAlex "model routing" -> 98 docs (total 197)
+[2026-09-15T03:14:00.130Z]   OpenAlex 429 on "language model selection" — retry 1 in 2443ms
+[2026-09-15T03:14:02.674Z]   OpenAlex 429 on "language model selection" — retry 2 in 4272ms
+[2026-09-15T03:14:07.108Z]   OpenAlex 429 on "language model selection" — retry 3 in 8330ms
+  OpenAlex "language model selection" -> 99 docs (total 296)
+[2026-09-15T03:14:18.051Z]   OpenAlex 429 on "LLM selection" — retry 1 in 2485ms
+[2026-09-15T03:14:20.632Z]   OpenAlex 429 on "LLM selection" — retry 2 in 4037ms
+[2026-09-15T03:14:24.795Z]   OpenAlex 429 on "LLM selection" — retry 3 in 8166ms
+  OpenAlex "LLM selection" -> 100 docs (total 392)
+[2026-09-15T03:14:34.369Z]   OpenAlex 429 on "large language model selection" — retry 1 in 2292ms
+[2026-09-15T03:14:36.752Z]   OpenAlex 429 on "large language model selection" — retry 2 in 4395ms
+[2026-09-15T03:14:41.360Z]   OpenAlex 429 on "large language model selection" — retry 3 in 8409ms
+  OpenAlex "large language model selection" -> 98 docs (total 473)
+[2026-09-15T03:14:51.266Z]   OpenAlex 429 on "mixture of experts routing" — retry 1 in 2123ms
+[2026-09-15T03:14:53.481Z]   OpenAlex 429 on "mixture of experts routing" — retry 2 in 4168ms
+[2026-09-15T03:14:57.818Z]   OpenAlex 429 on "mixture of experts routing" — retry 3 in 8346ms
+  OpenAlex "mixture of experts routing" -> 97 docs (total 569)
+[2026-09-15T03:15:08.262Z]   OpenAlex 429 on "cascading language models" — retry 1 in 2111ms
+[2026-09-15T03:15:10.462Z]   OpenAlex 429 on "cascading language models" — retry 2 in 4089ms
+[2026-09-15T03:15:14.741Z]   OpenAlex 429 on "cascading language models" — retry 3 in 8367ms
+  OpenAlex "cascading language models" -> 99 docs (total 667)
+[2026-09-15T03:15:24.493Z]   OpenAlex 429 on "model cascade LLM" — retry 1 in 2295ms
+[2026-09-15T03:15:26.880Z]   OpenAlex 429 on "model cascade LLM" — retry 2 in 4176ms
+[2026-09-15T03:15:31.223Z]   OpenAlex 429 on "model cascade LLM" — retry 3 in 8047ms
+  OpenAlex "model cascade LLM" -> 99 docs (total 761)
+[2026-09-15T03:15:40.895Z]   OpenAlex 429 on "LLM cascade" — retry 1 in 2003ms
+[2026-09-15T03:15:42.990Z]   OpenAlex 429 on "LLM cascade" — retry 2 in 4360ms
+[2026-09-15T03:15:47.518Z]   OpenAlex 429 on "LLM cascade" — retry 3 in 8128ms
+  OpenAlex "LLM cascade" -> 97 docs (total 840)
+[2026-09-15T03:15:57.993Z]   OpenAlex 429 on "cost efficient inference LLM" — retry 1 in 2473ms
+[2026-09-15T03:16:00.547Z]   OpenAlex 429 on "cost efficient inference LLM" — retry 2 in 4254ms
+[2026-09-15T03:16:04.960Z]   OpenAlex 429 on "cost efficient inference LLM" — retry 3 in 8143ms
+  OpenAlex "cost efficient inference LLM" -> 100 docs (total 936)
+[2026-09-15T03:16:14.838Z]   OpenAlex 429 on "router large language models" — retry 1 in 2359ms
+[2026-09-15T03:16:17.289Z]   OpenAlex 429 on "router large language models" — retry 2 in 4416ms
+[2026-09-15T03:16:21.869Z]   OpenAlex 429 on "router large language models" — retry 3 in 8107ms
+  OpenAlex "router large language models" -> 97 docs (total 1018)
+[2026-09-15T03:16:31.904Z]   OpenAlex 429 on "prompt routing" — retry 1 in 2102ms
+[2026-09-15T03:16:34.096Z]   OpenAlex 429 on "prompt routing" — retry 2 in 4111ms
+[2026-09-15T03:16:38.368Z]   OpenAlex 429 on "prompt routing" — retry 3 in 8328ms
+  OpenAlex "prompt routing" -> 100 docs (total 1113)
+[2026-09-15T03:16:48.557Z]   OpenAlex 429 on "expert selection LLM" — retry 1 in 2095ms
+[2026-09-15T03:16:50.755Z]   OpenAlex 429 on "expert selection LLM" — retry 2 in 4171ms
+[2026-09-15T03:16:55.046Z]   OpenAlex 429 on "expert selection LLM" — retry 3 in 8248ms
+  OpenAlex "expert selection LLM" -> 100 docs (total 1189)
+[2026-09-15T03:17:06.197Z]   OpenAlex 429 on "model serving LLM" — retry 1 in 2001ms
+[2026-09-15T03:17:08.290Z]   OpenAlex 429 on "model serving LLM" — retry 2 in 4427ms
+[2026-09-15T03:17:12.887Z]   OpenAlex 429 on "model serving LLM" — retry 3 in 8047ms
+  OpenAlex "model serving LLM" -> 100 docs (total 1276)
+[2026-09-15T03:17:22.678Z]   OpenAlex 429 on "inference optimization LLM" — retry 1 in 2225ms
+[2026-09-15T03:17:25.012Z]   OpenAlex 429 on "inference optimization LLM" — retry 2 in 4030ms
+[2026-09-15T03:17:29.196Z]   OpenAlex 429 on "inference optimization LLM" — retry 3 in 8399ms
+  OpenAlex "inference optimization LLM" -> 100 docs (total 1352)
+[2026-09-15T03:17:38.956Z]   OpenAlex 429 on "model composition LLM" — retry 1 in 2435ms
+[2026-09-15T03:17:41.467Z]   OpenAlex 429 on "model composition LLM" — retry 2 in 4478ms
+[2026-09-15T03:17:46.101Z]   OpenAlex 429 on "model composition LLM" — retry 3 in 8407ms
+  OpenAlex "model composition LLM" -> 100 docs (total 1378)
+[2026-09-15T03:17:56.220Z]   OpenAlex 429 on "speculative decoding" — retry 1 in 2032ms
+[2026-09-15T03:17:58.371Z]   OpenAlex 429 on "speculative decoding" — retry 2 in 4197ms
+[2026-09-15T03:18:02.724Z]   OpenAlex 429 on "speculative decoding" — retry 3 in 8036ms
+  OpenAlex "speculative decoding" -> 100 docs (total 1477)
+[2026-09-15T03:18:12.721Z]   OpenAlex 429 on "model evaluation routing" — retry 1 in 2078ms
+[2026-09-15T03:18:14.897Z]   OpenAlex 429 on "model evaluation routing" — retry 2 in 4082ms
+[2026-09-15T03:18:19.144Z]   OpenAlex 429 on "model evaluation routing" — retry 3 in 8350ms
+  OpenAlex "model evaluation routing" -> 98 docs (total 1556)
+[2026-09-15T03:18:30.374Z]   OpenAlex 429 on "query routing LLM" — retry 1 in 2028ms
+[2026-09-15T03:18:32.478Z]   OpenAlex 429 on "query routing LLM" — retry 2 in 4160ms
+[2026-09-15T03:18:36.783Z]   OpenAlex 429 on "query routing LLM" — retry 3 in 8444ms
+  OpenAlex "query routing LLM" -> 100 docs (total 1626)
+[2026-09-15T03:18:47.710Z]   OpenAlex 429 on "task routing LLM" — retry 1 in 2459ms
+[2026-09-15T03:18:50.244Z]   OpenAlex 429 on "task routing LLM" — retry 2 in 4112ms
+[2026-09-15T03:18:54.501Z]   OpenAlex 429 on "task routing LLM" — retry 3 in 8213ms
+  OpenAlex "task routing LLM" -> 100 docs (total 1679)
+[2026-09-15T03:19:04.529Z]   OpenAlex 429 on "model orchestration LLM" — retry 1 in 2445ms
+[2026-09-15T03:19:07.051Z]   OpenAlex 429 on "model orchestration LLM" — retry 2 in 4377ms
+[2026-09-15T03:19:11.584Z]   OpenAlex 429 on "model orchestration LLM" — retry 3 in 8478ms
+  OpenAlex "model orchestration LLM" -> 99 docs (total 1770)
+[2026-09-15T03:19:21.889Z]   OpenAlex 429 on "multi-model routing" — retry 1 in 2279ms
+[2026-09-15T03:19:24.246Z]   OpenAlex 429 on "multi-model routing" — retry 2 in 4498ms
+[2026-09-15T03:19:28.905Z]   OpenAlex 429 on "multi-model routing" — retry 3 in 8030ms
+  OpenAlex "multi-model routing" -> 100 docs (total 1852)
+[2026-09-15T03:19:38.621Z]   OpenAlex 429 on "model fallback LLM" — retry 1 in 2464ms
+[2026-09-15T03:19:41.316Z]   OpenAlex 429 on "model fallback LLM" — retry 2 in 4424ms
+[2026-09-15T03:19:45.917Z]   OpenAlex 429 on "model fallback LLM" — retry 3 in 8322ms
+  OpenAlex "model fallback LLM" -> 100 docs (total 1904)
+[2026-09-15T03:19:55.677Z]   OpenAlex 429 on "AI gateway" — retry 1 in 2057ms
+[2026-09-15T03:19:57.813Z]   OpenAlex 429 on "AI gateway" — retry 2 in 4004ms
+[2026-09-15T03:20:01.963Z]   OpenAlex 429 on "AI gateway" — retry 3 in 8191ms
+  OpenAlex "AI gateway" -> 100 docs (total 2004)
+[2026-09-15T03:20:12.275Z]   OpenAlex 429 on "model marketplace LLM" — retry 1 in 2259ms
+[2026-09-15T03:20:14.624Z]   OpenAlex 429 on "model marketplace LLM" — retry 2 in 4408ms
+[2026-09-15T03:20:19.191Z]   OpenAlex 429 on "model marketplace LLM" — retry 3 in 8434ms
+  OpenAlex "model marketplace LLM" -> 100 docs (total 2035)
+[2026-09-15T03:20:29.950Z]   OpenAlex 429 on "cost quality LLM" — retry 1 in 2389ms
+[2026-09-15T03:20:32.429Z]   OpenAlex 429 on "cost quality LLM" — retry 2 in 4239ms
+[2026-09-15T03:20:36.814Z]   OpenAlex 429 on "cost quality LLM" — retry 3 in 8494ms
+  OpenAlex "cost quality LLM" -> 100 docs (total 2109)
+[2026-09-15T03:20:47.168Z]   OpenAlex 429 on "model ranking LLM" — retry 1 in 2381ms
+[2026-09-15T03:20:49.628Z]   OpenAlex 429 on "model ranking LLM" — retry 2 in 4249ms
+[2026-09-15T03:20:54.101Z]   OpenAlex 429 on "model ranking LLM" — retry 3 in 8409ms
+  OpenAlex "model ranking LLM" -> 100 docs (total 2188)
+[2026-09-15T03:21:04.657Z]   OpenAlex 429 on "benchmark model selection" — retry 1 in 2381ms
+[2026-09-15T03:21:07.132Z]   OpenAlex 429 on "benchmark model selection" — retry 2 in 4363ms
+[2026-09-15T03:21:11.649Z]   OpenAlex 429 on "benchmark model selection" — retry 3 in 8058ms
+  OpenAlex "benchmark model selection" -> 99 docs (total 2276)
+[2026-09-15T03:21:21.160Z]   OpenAlex 429 on "LLM router" — retry 1 in 2078ms
+[2026-09-15T03:21:23.335Z]   OpenAlex 429 on "LLM router" — retry 2 in 4476ms
+[2026-09-15T03:21:27.969Z]   OpenAlex 429 on "LLM router" — retry 3 in 8297ms
+  OpenAlex "LLM router" -> 84 docs (total 2359)
+[2026-09-15T03:21:37.692Z]   OpenAlex 429 on "model router" — retry 1 in 2393ms
+[2026-09-15T03:21:40.163Z]   OpenAlex 429 on "model router" — retry 2 in 4100ms
+[2026-09-15T03:21:44.442Z]   OpenAlex 429 on "model router" — retry 3 in 8052ms
+  OpenAlex "model router" -> 87 docs (total 2411)
+[2026-09-15T03:21:54.133Z]   OpenAlex 429 on "LLM gateway" — retry 1 in 2137ms
+[2026-09-15T03:21:56.346Z]   OpenAlex 429 on "LLM gateway" — retry 2 in 4065ms
+[2026-09-15T03:22:00.603Z]   OpenAlex 429 on "LLM gateway" — retry 3 in 8015ms
+  OpenAlex "LLM gateway" -> 99 docs (total 2486)
+[2026-09-15T03:22:11.110Z]   OpenAlex 429 on "routing large language models" — retry 1 in 2119ms
+[2026-09-15T03:22:13.303Z]   OpenAlex 429 on "routing large language models" — retry 2 in 4464ms
+[2026-09-15T03:22:17.905Z]   OpenAlex 429 on "routing large language models" — retry 3 in 8019ms
+  OpenAlex "routing large language models" -> 99 docs (total 2507)
+[2026-09-15T03:22:27.550Z]   OpenAlex 429 on "adaptive inference LLM" — retry 1 in 2169ms
+[2026-09-15T03:22:29.795Z]   OpenAlex 429 on "adaptive inference LLM" — retry 2 in 4469ms
+[2026-09-15T03:22:34.415Z]   OpenAlex 429 on "adaptive inference LLM" — retry 3 in 8109ms
+  OpenAlex "adaptive inference LLM" -> 100 docs (total 2529)
+[2026-09-15T03:22:43.801Z]   OpenAlex 429 on "LLM dispatch" — retry 1 in 2301ms
+[2026-09-15T03:22:46.179Z]   OpenAlex 429 on "LLM dispatch" — retry 2 in 4243ms
+[2026-09-15T03:22:50.577Z]   OpenAlex 429 on "LLM dispatch" — retry 3 in 8428ms
+  OpenAlex "LLM dispatch" -> 99 docs (total 2605)
+[2026-09-15T03:23:00.974Z]   OpenAlex 429 on "model selection inference" — retry 1 in 2214ms
+[2026-09-15T03:23:03.280Z]   OpenAlex 429 on "model selection inference" — retry 2 in 4356ms
+[2026-09-15T03:23:07.809Z]   OpenAlex 429 on "model selection inference" — retry 3 in 8293ms
+  OpenAlex "model selection inference" -> 97 docs (total 2701)
+[phase1] Seeding from GitHub (15 queries)...
+  GitHub "llm router" -> 100 repos (total 2801)
+  GitHub "model router" -> 100 repos (total 2880)
+  GitHub "llm routing" -> 100 repos (total 2906)
+  GitHub "model selection llm" -> 100 repos (total 3005)
+  GitHub "ai gateway" -> 100 repos (total 3101)
+  GitHub "llm gateway" -> 100 repos (total 3160)
+  GitHub "model fallback" -> 100 repos (total 3257)
+  GitHub "prompt router" -> 100 repos (total 3342)
+  GitHub "llm load balancer" -> 100 repos (total 3431)
+  GitHub "model orchestration" -> 100 repos (total 3526)
+  GitHub "llm proxy" -> 100 repos (total 3607)
+  GitHub "multi-model router" -> 100 repos (total 3701)
+  GitHub "llm balancer" -> 100 repos (total 3730)
+  GitHub "model routing" -> 100 repos (total 3755)
+  GitHub "llm api gateway" -> 100 repos (total 3804)
+[cache] phase-1 checkpoint saved: 3804 docs
+[phase2] Depth-5 expansion (queue-based: every doc gets depth 5, cap 20000)...
+[2026-09-15T03:24:58.343Z]   Crossref 429 on "LLM routing" — retry 1 in 2093ms
+[2026-09-15T03:25:01.895Z]   Crossref 429 on "routing decision" — retry 1 in 2479ms
+[2026-09-15T03:25:19.807Z]   Crossref 429 on "model selection" — retry 1 in 2412ms
+[2026-09-15T03:25:27.817Z]   Crossref 429 on "model selection" — retry 1 in 2088ms
+  depth pass: 52 docs expanded, 260 searches, corpus 3804
+[2026-09-15T03:25:53.854Z]   Crossref 429 on "AI gateway" — retry 1 in 2012ms
+[2026-09-15T03:26:44.229Z]   Crossref 429 on "LLM routing" — retry 1 in 2498ms
+  depth pass: 100 docs expanded, 500 searches, corpus 3804
+[2026-09-15T03:27:15.931Z]   Crossref 429 on "AI gateway" — retry 1 in 2374ms
+[2026-09-15T03:27:45.776Z]   Crossref 429 on "LLM routing" — retry 1 in 2335ms
+[2026-09-15T03:27:45.961Z]   Crossref 429 on "performance scale" — retry 1 in 2400ms
+[2026-09-15T03:27:48.414Z]   Crossref 429 on "performance scale" — retry 2 in 4344ms
+  depth pass: 152 docs expanded, 760 searches, corpus 3804
+[2026-09-15T03:28:55.822Z]   Crossref 429 on "model selection" — retry 1 in 2436ms
+  depth pass: 200 docs expanded, 1000 searches, corpus 3804
+  depth pass: 252 docs expanded, 1260 searches, corpus 3804
+[2026-09-15T03:31:13.139Z]   Crossref 429 on "prompt routing" — retry 1 in 2313ms
+  depth pass: 300 docs expanded, 1500 searches, corpus 3804
+  depth pass: 352 docs expanded, 1760 searches, corpus 3804
+[2026-09-15T03:34:22.547Z]   Crossref 429 on "llms" — retry 1 in 2377ms
+[2026-09-15T03:34:53.218Z]   Crossref 429 on "LLM routing" — retry 1 in 2079ms
+  depth pass: 400 docs expanded, 2000 searches, corpus 3804
+[2026-09-15T03:35:14.199Z]   Crossref 429 on "LLM routing" — retry 1 in 2249ms
+[2026-09-15T03:35:31.256Z]   Crossref 429 on "study" — retry 1 in 2027ms
+[2026-09-15T03:35:31.335Z]   Crossref 429 on "prompt routing" — retry 1 in 2099ms
+[2026-09-15T03:36:20.359Z]   Crossref 429 on "LLM routing" — retry 1 in 2197ms
+  depth pass: 452 docs expanded, 2260 searches, corpus 3804
+[2026-09-15T03:37:27.348Z]   Crossref 429 on "model selection" — retry 1 in 2004ms
+  depth pass: 500 docs expanded, 2500 searches, corpus 3804
+[2026-09-15T03:38:11.957Z]   Crossref 429 on "AI gateway" — retry 1 in 2174ms
+[2026-09-15T03:38:23.987Z]   Crossref 429 on "prompt routing" — retry 1 in 2166ms
+  depth pass: 552 docs expanded, 2760 searches, corpus 3804
+[2026-09-15T03:39:26.852Z]   Crossref 429 on "model selection" — retry 1 in 2159ms
+[2026-09-15T03:40:00.541Z]   Crossref 429 on "prompt routing" — retry 1 in 2295ms
+  depth pass: 600 docs expanded, 3000 searches, corpus 3804
+[2026-09-15T03:41:29.159Z]   Crossref 429 on "LLM routing" — retry 1 in 2216ms
+  depth pass: 652 docs expanded, 3260 searches, corpus 3804
+[2026-09-15T03:42:21.298Z]   Crossref 429 on "model selection" — retry 1 in 2342ms
+[2026-09-15T03:42:27.009Z]   Crossref 429 on "LLM routing" — retry 1 in 2331ms
+[2026-09-15T03:42:37.196Z]   Crossref 429 on "AI gateway" — retry 1 in 2175ms
+[2026-09-15T03:42:43.228Z]   Crossref 429 on "model selection" — retry 1 in 2133ms
+[2026-09-15T03:42:50.077Z]   Crossref 429 on "model routing" — retry 1 in 2200ms
+[2026-09-15T03:43:09.439Z]   Crossref 429 on "prompt routing" — retry 1 in 2114ms
+  depth pass: 700 docs expanded, 3500 searches, corpus 3804
+[2026-09-15T03:43:20.676Z]   Crossref 429 on "bp-llm" — retry 1 in 2065ms
+[2026-09-15T03:43:20.762Z]   Crossref 429 on "prompt routing" — retry 1 in 2407ms
+[2026-09-15T03:44:18.398Z]   Crossref 429 on "LLM routing" — retry 1 in 2300ms
+  depth pass: 752 docs expanded, 3760 searches, corpus 3804
+[2026-09-15T03:45:02.347Z]   Crossref 429 on "LLM routing" — retry 1 in 2425ms
+[2026-09-15T03:45:55.243Z]   Crossref 429 on "LLM routing" — retry 1 in 2077ms
+  depth pass: 800 docs expanded, 4000 searches, corpus 3804
+  depth pass: 852 docs expanded, 4260 searches, corpus 3804
+[2026-09-15T03:47:50.240Z]   Crossref 429 on "AI gateway" — retry 1 in 2182ms
+[2026-09-15T03:47:54.119Z]   Crossref 429 on "LLM routing" — retry 1 in 2494ms
+[2026-09-15T03:48:28.833Z]   Crossref 429 on "AI gateway" — retry 1 in 2245ms
+  depth pass: 900 docs expanded, 4500 searches, corpus 3804
+[2026-09-15T03:49:52.312Z]   Crossref 429 on "model selection" — retry 1 in 2309ms
+[2026-09-15T03:50:14.931Z]   Crossref 429 on "model selection" — retry 1 in 2166ms
+  depth pass: 952 docs expanded, 4760 searches, corpus 3804
+  depth pass: 1000 docs expanded, 5000 searches, corpus 3804
+  depth pass: 1052 docs expanded, 5260 searches, corpus 3804
+[2026-09-15T03:53:31.557Z]   Crossref 429 on "LLM routing" — retry 1 in 2439ms
+[2026-09-15T03:53:31.638Z]   Crossref 429 on "LLM routing" — retry 1 in 2134ms
+[2026-09-15T03:53:32.047Z]   Crossref 429 on "prompt routing" — retry 1 in 2218ms
+  depth pass: 1100 docs expanded, 5500 searches, corpus 3804
+[2026-09-15T03:55:15.962Z]   Crossref 429 on "prompt routing" — retry 1 in 2439ms
+[2026-09-15T03:55:16.479Z]   Crossref 429 on "model" — retry 1 in 2082ms
+  depth pass: 1152 docs expanded, 5760 searches, corpus 3804
+[2026-09-15T03:55:30.827Z]   Crossref 429 on "LLM routing" — retry 1 in 2380ms
+[2026-09-15T03:55:45.479Z]   Crossref 429 on "prompt routing" — retry 1 in 2145ms
+[2026-09-15T03:56:28.633Z]   Crossref 429 on "parameter" — retry 1 in 2497ms
+  depth pass: 1200 docs expanded, 6000 searches, corpus 3804
+[2026-09-15T03:56:40.788Z]   Crossref 429 on "study" — retry 1 in 2310ms
+[2026-09-15T03:56:53.886Z]   Crossref 429 on "prompt routing" — retry 1 in 2397ms
+[2026-09-15T03:56:54.016Z]   Crossref 429 on "throughput latency" — retry 1 in 2480ms
+[2026-09-15T03:56:54.270Z]   Crossref 429 on "prompt routing" — retry 1 in 2041ms
+[2026-09-15T03:57:21.566Z]   Crossref 429 on "AI gateway" — retry 1 in 2406ms
+[2026-09-15T03:57:24.886Z]   Crossref 429 on "benchmark large" — retry 1 in 2038ms
+[2026-09-15T03:57:24.987Z]   Crossref 429 on "LLM routing" — retry 1 in 2275ms
+  depth pass: 1252 docs expanded, 6260 searches, corpus 3804
+[2026-09-15T03:58:26.549Z]   Crossref 429 on "LLM routing" — retry 1 in 2313ms
+[2026-09-15T03:58:43.148Z]   Crossref 429 on "4-bit" — retry 1 in 2217ms
+[2026-09-15T03:58:43.209Z]   Crossref 429 on "reproducibility" — retry 1 in 2193ms
+[2026-09-15T03:58:43.675Z]   Crossref 429 on "performance language" — retry 1 in 2274ms
+  depth pass: 1300 docs expanded, 6500 searches, corpus 3804
+[2026-09-15T03:58:59.908Z]   Crossref 429 on "AI gateway" — retry 1 in 2273ms
+[2026-09-15T03:58:59.994Z]   Crossref 429 on "AI gateway" — retry 1 in 2301ms
+[2026-09-15T03:59:16.725Z]   Crossref 429 on "model inference" — retry 1 in 2185ms
+[2026-09-15T03:59:16.967Z]   Crossref 429 on "prompt routing" — retry 1 in 2285ms
+[2026-09-15T03:59:52.977Z]   Crossref 429 on "model selection" — retry 1 in 2189ms
+[2026-09-15T03:59:53.125Z]   Crossref 429 on "efficient deployment" — retry 1 in 2010ms
+[2026-09-15T03:59:53.274Z]   Crossref 429 on "ultra-thin" — retry 1 in 2112ms
+[2026-09-15T04:00:08.657Z]   Crossref 429 on "model selection" — retry 1 in 2051ms
+  depth pass: 1352 docs expanded, 6760 searches, corpus 3804
+[2026-09-15T04:00:23.031Z]   Crossref 429 on "llms" — retry 1 in 2087ms
+  depth pass: 1400 docs expanded, 7000 searches, corpus 3804
+[2026-09-15T04:02:44.782Z]   Crossref 429 on "model selection" — retry 1 in 2278ms
+  depth pass: 1452 docs expanded, 7260 searches, corpus 3804
+[2026-09-15T04:04:06.065Z]   Crossref 429 on "model routing" — retry 1 in 2156ms
+  depth pass: 1500 docs expanded, 7500 searches, corpus 3804
+[2026-09-15T04:04:40.490Z]   Crossref 429 on "model selection" — retry 1 in 2164ms
+[2026-09-15T04:04:59.504Z]   Crossref 429 on "model selection" — retry 1 in 2052ms
+[2026-09-15T04:05:00.075Z]   Crossref 429 on "AI gateway" — retry 1 in 2313ms
+  depth pass: 1552 docs expanded, 7760 searches, corpus 3804
+[2026-09-15T04:05:42.994Z]   Crossref 429 on "LLM routing" — retry 1 in 2341ms
+[2026-09-15T04:06:05.826Z]   Crossref 429 on "LLM routing" — retry 1 in 2185ms
+[2026-09-15T04:06:06.279Z]   Crossref 429 on "caching" — retry 1 in 2443ms
+[2026-09-15T04:06:13.736Z]   Crossref 429 on "memory" — retry 1 in 2248ms
+[2026-09-15T04:06:14.020Z]   Crossref 429 on "AI gateway" — retry 1 in 2487ms
+[2026-09-15T04:06:23.905Z]   Crossref 429 on "prompt routing" — retry 1 in 2443ms
+  depth pass: 1600 docs expanded, 8000 searches, corpus 3804
+[2026-09-15T04:06:30.693Z]   Crossref 429 on "LLM routing" — retry 1 in 2102ms
+[2026-09-15T04:07:07.611Z]   Crossref 429 on "reasoning" — retry 1 in 2294ms
+[2026-09-15T04:07:07.760Z]   Crossref 429 on "language model" — retry 1 in 2031ms
+  depth pass: 1652 docs expanded, 8260 searches, corpus 3804
+[2026-09-15T04:07:48.651Z]   Crossref 429 on "supervised" — retry 1 in 2065ms
+[2026-09-15T04:08:27.930Z]   Crossref 429 on "evaluation model" — retry 1 in 2436ms
+[2026-09-15T04:08:29.098Z]   Crossref 429 on "AI gateway" — retry 1 in 2117ms
+  depth pass: 1700 docs expanded, 8500 searches, corpus 3804
+[2026-09-15T04:08:53.810Z]   Crossref 429 on "systems" — retry 1 in 2076ms
+[2026-09-15T04:09:39.550Z]   Crossref 429 on "AI gateway" — retry 1 in 2402ms
+[2026-09-15T04:09:49.274Z]   Crossref 429 on "LLM routing" — retry 1 in 2075ms
+  depth pass: 1752 docs expanded, 8760 searches, corpus 3804
+[2026-09-15T04:10:07.747Z]   Crossref 429 on "prompt routing" — retry 1 in 2171ms
+  depth pass: 1800 docs expanded, 9000 searches, corpus 3804
+[2026-09-15T04:11:26.575Z]   Crossref 429 on "LLM routing" — retry 1 in 2066ms
+[2026-09-15T04:11:38.530Z]   Crossref 429 on "LLM routing" — retry 1 in 2488ms
+[2026-09-15T04:11:56.535Z]   Crossref 429 on "AI gateway" — retry 1 in 2207ms
+[2026-09-15T04:12:00.327Z]   Crossref 429 on "LLM routing" — retry 1 in 2470ms
+[2026-09-15T04:12:15.653Z]   Crossref 429 on "AI gateway" — retry 1 in 2409ms
+[2026-09-15T04:12:19.875Z]   Crossref 429 on "LLM routing" — retry 1 in 2240ms
+[2026-09-15T04:12:23.020Z]   Crossref 429 on "AI gateway" — retry 1 in 2411ms
+  depth pass: 1852 docs expanded, 9260 searches, corpus 3804
+[2026-09-15T04:12:41.928Z]   Crossref 429 on "tornou-se" — retry 1 in 2047ms
+[2026-09-15T04:12:48.571Z]   Crossref 429 on "phase" — retry 1 in 2087ms
+[2026-09-15T04:12:48.884Z]   Crossref 429 on "model selection" — retry 1 in 2250ms
+[2026-09-15T04:12:59.982Z]   Crossref 429 on "benchmark-linked" — retry 1 in 2313ms
+[2026-09-15T04:13:06.356Z]   Crossref 429 on "model quality" — retry 1 in 2099ms
+  depth pass: 1900 docs expanded, 9500 searches, corpus 3804
+[2026-09-15T04:13:55.579Z]   Crossref 429 on "prompt routing" — retry 1 in 2493ms
+[2026-09-15T04:13:55.807Z]   Crossref 429 on "model selection" — retry 1 in 2234ms
+[2026-09-15T04:14:29.431Z]   Crossref 429 on "control" — retry 1 in 2319ms
+  depth pass: 1952 docs expanded, 9760 searches, corpus 3804
+[2026-09-15T04:15:35.091Z]   Crossref 429 on "LLM routing" — retry 1 in 2433ms
+  depth pass: 2000 docs expanded, 10000 searches, corpus 3804
+[2026-09-15T04:16:08.066Z]   Crossref 429 on "AI gateway" — retry 1 in 2413ms
+[2026-09-15T04:16:12.194Z]   Crossref 429 on "LLM routing" — retry 1 in 2379ms
+[2026-09-15T04:16:26.937Z]   Crossref 429 on "quality cost" — retry 1 in 2352ms
+  depth pass: 2052 docs expanded, 10260 searches, corpus 3804
+[2026-09-15T04:16:53.112Z]   Crossref 429 on "LLM routing" — retry 1 in 2180ms
+[2026-09-15T04:16:59.503Z]   Crossref 429 on "five-class" — retry 1 in 2142ms
+[2026-09-15T04:17:05.828Z]   Crossref 429 on "LLM routing" — retry 1 in 2301ms
+[2026-09-15T04:17:06.017Z]   Crossref 429 on "quality classification" — retry 1 in 2098ms
+[2026-09-15T04:17:13.775Z]   Crossref 429 on "LLM routing" — retry 1 in 2025ms
+[2026-09-15T04:17:27.201Z]   Crossref 429 on "efficiency" — retry 1 in 2282ms
+[2026-09-15T04:17:27.561Z]   Crossref 429 on "AI gateway" — retry 1 in 2447ms
+[2026-09-15T04:17:53.116Z]   Crossref 429 on "prompt routing" — retry 1 in 2437ms
+[2026-09-15T04:17:53.201Z]   Crossref 429 on "risk" — retry 1 in 2313ms
+[2026-09-15T04:17:53.460Z]   Crossref 429 on "quality" — retry 1 in 2136ms
+  depth pass: 2100 docs expanded, 10500 searches, corpus 3804
+[2026-09-15T04:18:13.690Z]   Crossref 429 on "system" — retry 1 in 2339ms
+[2026-09-15T04:18:21.872Z]   Crossref 429 on "accuracy" — retry 1 in 2457ms
+[2026-09-15T04:18:43.307Z]   Crossref 429 on "model selection" — retry 1 in 2158ms
+[2026-09-15T04:19:00.349Z]   Crossref 429 on "AI gateway" — retry 1 in 2397ms
+[2026-09-15T04:19:08.907Z]   Crossref 429 on "prompt routing" — retry 1 in 2445ms
+[2026-09-15T04:19:09.271Z]   Crossref 429 on "metric" — retry 1 in 2090ms
+  depth pass: 2152 docs expanded, 10760 searches, corpus 3804
+[2026-09-15T04:19:30.111Z]   Crossref 429 on "model selection" — retry 1 in 2429ms
+[2026-09-15T04:19:30.671Z]   Crossref 429 on "AI gateway" — retry 1 in 2363ms
+[2026-09-15T04:19:34.321Z]   Crossref 429 on "ranking" — retry 1 in 2025ms
+[2026-09-15T04:19:35.596Z]   Crossref 429 on "model selection" — retry 1 in 2025ms
+[2026-09-15T04:19:47.761Z]   Crossref 429 on "LLM routing" — retry 1 in 2200ms
+[2026-09-15T04:19:56.476Z]   Crossref 429 on "AI gateway" — retry 1 in 2448ms
+  depth pass: 2200 docs expanded, 11000 searches, corpus 3804
+[2026-09-15T04:20:32.335Z]   Crossref 429 on "performance" — retry 1 in 2431ms
+[2026-09-15T04:21:21.840Z]   Crossref 429 on "LLM routing" — retry 1 in 2468ms
+  depth pass: 2252 docs expanded, 11260 searches, corpus 3804
+[2026-09-15T04:22:09.424Z]   Crossref 429 on "prompt routing" — retry 1 in 2216ms
+[2026-09-15T04:22:40.606Z]   Crossref 429 on "model selection" — retry 1 in 2495ms
+  depth pass: 2300 docs expanded, 11500 searches, corpus 3804
+[2026-09-15T04:22:46.085Z]   Crossref 429 on "prompt routing" — retry 1 in 2081ms
+[2026-09-15T04:22:46.265Z]   Crossref 429 on "prompt routing" — retry 1 in 2469ms
+[2026-09-15T04:23:01.407Z]   Crossref 429 on "LLM routing" — retry 1 in 2273ms
+[2026-09-15T04:23:03.739Z]   Crossref 429 on "LLM routing" — retry 2 in 4136ms
+[2026-09-15T04:23:43.411Z]   Crossref 429 on "LLM routing" — retry 1 in 2272ms
+[2026-09-15T04:23:43.675Z]   Crossref 429 on "monitoring" — retry 1 in 2471ms
+[2026-09-15T04:23:51.522Z]   Crossref 429 on "LLM routing" — retry 1 in 2069ms
+  depth pass: 2352 docs expanded, 11760 searches, corpus 3804
+[2026-09-15T04:24:21.522Z]   Crossref 429 on "website-based" — retry 1 in 2148ms
+[2026-09-15T04:24:21.870Z]   Crossref 429 on "model selection" — retry 1 in 2438ms
+[2026-09-15T04:24:50.394Z]   Crossref 429 on "LLM routing" — retry 1 in 2092ms
+  depth pass: 2400 docs expanded, 12000 searches, corpus 3804
+[2026-09-15T04:26:09.922Z]   Crossref 429 on "AI gateway" — retry 1 in 2493ms
+[2026-09-15T04:26:20.384Z]   Crossref 429 on "model selection" — retry 1 in 2237ms
+[2026-09-15T04:26:20.671Z]   Crossref 429 on "AI gateway" — retry 1 in 2335ms
+[2026-09-15T04:26:21.137Z]   Crossref 429 on "AI gateway" — retry 1 in 2166ms
+  depth pass: 2452 docs expanded, 12260 searches, corpus 3804
+[2026-09-15T04:26:24.673Z]   Crossref 429 on "LLM routing" — retry 1 in 2302ms
+[2026-09-15T04:26:25.115Z]   Crossref 429 on "prompt routing" — retry 1 in 2210ms
+[2026-09-15T04:26:31.678Z]   Crossref 429 on "LLM routing" — retry 1 in 2050ms
+[2026-09-15T04:26:51.489Z]   Crossref 429 on "model selection" — retry 1 in 2122ms
+[2026-09-15T04:26:55.851Z]   Crossref 429 on "LLM routing" — retry 1 in 2094ms
+[2026-09-15T04:27:05.082Z]   Crossref 429 on "AI gateway" — retry 1 in 2437ms
+[2026-09-15T04:27:10.035Z]   Crossref 429 on "model selection" — retry 1 in 2359ms
+[2026-09-15T04:27:17.838Z]   Crossref 429 on "LLM routing" — retry 1 in 2369ms
+[2026-09-15T04:27:18.489Z]   Crossref 429 on "performance cost" — retry 1 in 2248ms
+[2026-09-15T04:27:28.554Z]   Crossref 429 on "model selection" — retry 1 in 2313ms
+  depth pass: 2500 docs expanded, 12500 searches, corpus 3804
+[2026-09-15T04:27:33.261Z]   Crossref 429 on "LLM routing" — retry 1 in 2293ms
+[2026-09-15T04:27:49.826Z]   Crossref 429 on "prompt routing" — retry 1 in 2500ms
+[2026-09-15T04:27:58.122Z]   Crossref 429 on "inference performance" — retry 1 in 2123ms
+[2026-09-15T04:28:05.529Z]   Crossref 429 on "model selection" — retry 1 in 2338ms
+[2026-09-15T04:28:17.559Z]   Crossref 429 on "adaptive" — retry 1 in 2403ms
+[2026-09-15T04:28:22.340Z]   Crossref 429 on "prompt routing" — retry 1 in 2418ms
+  depth pass: 2552 docs expanded, 12760 searches, corpus 3804
+[2026-09-15T04:28:51.971Z]   Crossref 429 on "LLM routing" — retry 1 in 2217ms
+[2026-09-15T04:28:54.600Z]   Crossref 429 on "AI gateway" — retry 1 in 2197ms
+  depth pass: 2600 docs expanded, 13000 searches, corpus 3804
+[2026-09-15T04:30:46.507Z]   Crossref 429 on "model selection" — retry 1 in 2327ms
+  depth pass: 2652 docs expanded, 13260 searches, corpus 3804
+[2026-09-15T04:31:23.192Z]   Crossref 429 on "model selection" — retry 1 in 2377ms
+[2026-09-15T04:32:10.425Z]   Crossref 429 on "LLM routing" — retry 1 in 2106ms
+  depth pass: 2700 docs expanded, 13500 searches, corpus 3804
+[2026-09-15T04:32:46.740Z]   Crossref 429 on "routers" — retry 1 in 2441ms
+[2026-09-15T04:32:47.151Z]   Crossref 429 on "llms" — retry 1 in 2057ms
+[2026-09-15T04:32:53.808Z]   Crossref 429 on "retrieve-and-rerank" — retry 1 in 2326ms
+[2026-09-15T04:33:04.568Z]   Crossref 429 on "fusion" — retry 1 in 2342ms
+  depth pass: 2752 docs expanded, 13760 searches, corpus 3804
+[2026-09-15T04:33:52.846Z]   Crossref 429 on "LLM routing" — retry 1 in 2318ms
+  depth pass: 2800 docs expanded, 14000 searches, corpus 3804
+[2026-09-15T04:34:46.811Z]   Crossref 429 on "prompt model" — retry 1 in 2142ms
+[2026-09-15T04:34:47.098Z]   Crossref 429 on "mixture-of-models" — retry 1 in 2425ms
+[2026-09-15T04:35:09.599Z]   Crossref 429 on "planning" — retry 1 in 2285ms
+[2026-09-15T04:35:09.990Z]   Crossref 429 on "model" — retry 1 in 2341ms
+[2026-09-15T04:35:21.544Z]   Crossref 429 on "model" — retry 1 in 2143ms
+[2026-09-15T04:35:26.380Z]   Crossref 429 on "dynamic" — retry 1 in 2354ms
+[2026-09-15T04:35:34.494Z]   Crossref 429 on "model" — retry 1 in 2244ms
+[2026-09-15T04:35:49.021Z]   Crossref 429 on "model" — retry 1 in 2024ms
+[2026-09-15T04:35:49.446Z]   Crossref 429 on "model" — retry 1 in 2019ms
+  depth pass: 2852 docs expanded, 14260 searches, corpus 3804
+[2026-09-15T04:35:59.629Z]   Crossref 429 on "chat" — retry 1 in 2105ms
+[2026-09-15T04:36:00.012Z]   Crossref 429 on "language model" — retry 1 in 2184ms
+[2026-09-15T04:36:09.099Z]   Crossref 429 on "model" — retry 1 in 2464ms
+[2026-09-15T04:36:30.253Z]   Crossref 429 on "LLM routing" — retry 1 in 2103ms
+[2026-09-15T04:36:30.514Z]   Crossref 429 on "library" — retry 1 in 2182ms
+[2026-09-15T04:36:39.515Z]   Crossref 429 on "prompt routing" — retry 1 in 2461ms
+  depth pass: 2900 docs expanded, 14500 searches, corpus 3804
+[2026-09-15T04:37:26.330Z]   Crossref 429 on "selection" — retry 1 in 2245ms
+[2026-09-15T04:37:46.031Z]   Crossref 429 on "large language" — retry 1 in 2304ms
+[2026-09-15T04:38:02.057Z]   Crossref 429 on "LLM routing" — retry 1 in 2181ms
+  depth pass: 2952 docs expanded, 14760 searches, corpus 3804
+[2026-09-15T04:38:30.612Z]   Crossref 429 on "model routing" — retry 1 in 2143ms
+[2026-09-15T04:38:32.937Z]   Crossref 429 on "selection" — retry 1 in 2283ms
+  depth pass: 3000 docs expanded, 15000 searches, corpus 3804
+[2026-09-15T04:39:26.515Z]   Crossref 429 on "tool model" — retry 1 in 2202ms
+[2026-09-15T04:39:28.777Z]   Crossref 429 on "tool model" — retry 2 in 4049ms
+[2026-09-15T04:39:37.962Z]   Crossref 429 on "model routing" — retry 1 in 2158ms
+[2026-09-15T04:39:45.736Z]   Crossref 429 on "prompt routing" — retry 1 in 2385ms
+[2026-09-15T04:40:08.128Z]   Crossref 429 on "gateway" — retry 1 in 2398ms
+[2026-09-15T04:40:14.259Z]   Crossref 429 on "model routing" — retry 1 in 2351ms
+[2026-09-15T04:40:32.864Z]   Crossref 429 on "openai-compatible" — retry 1 in 2097ms
+  depth pass: 3052 docs expanded, 15260 searches, corpus 3804
+[2026-09-15T04:41:22.709Z]   Crossref 429 on "open-source" — retry 1 in 2418ms
+  depth pass: 3100 docs expanded, 15500 searches, corpus 3804
+[2026-09-15T04:42:09.925Z]   Crossref 429 on "inference" — retry 1 in 2366ms
+  depth pass: 3152 docs expanded, 15760 searches, corpus 3804
+[2026-09-15T04:43:26.193Z]   Crossref 429 on "endpoint" — retry 1 in 2221ms
+[2026-09-15T04:43:26.275Z]   Crossref 429 on "remote" — retry 1 in 2220ms
+[2026-09-15T04:43:26.318Z]   Crossref 429 on "provider" — retry 1 in 2046ms
+[2026-09-15T04:44:05.927Z]   Crossref 429 on "LLM routing" — retry 1 in 2352ms
+  depth pass: 3200 docs expanded, 16000 searches, corpus 3804
+[2026-09-15T04:44:27.535Z]   Crossref 429 on "fallback context" — retry 1 in 2412ms
+  depth pass: 3252 docs expanded, 16260 searches, corpus 3804
+[2026-09-15T04:46:22.983Z]   Crossref 429 on "prompt" — retry 1 in 2188ms
+  depth pass: 3300 docs expanded, 16500 searches, corpus 3804
+[2026-09-15T04:46:56.693Z]   Crossref 429 on "routing prompt" — retry 1 in 2121ms
+[2026-09-15T04:47:07.121Z]   Crossref 429 on "prompt" — retry 1 in 2117ms
+[2026-09-15T04:47:35.707Z]   Crossref 429 on "domain-specific" — retry 1 in 2177ms
+[2026-09-15T04:47:42.089Z]   Crossref 429 on "using" — retry 1 in 2412ms
+[2026-09-15T04:47:53.285Z]   Crossref 429 on "interface" — retry 1 in 2437ms
+[2026-09-15T04:47:53.543Z]   Crossref 429 on "systems" — retry 1 in 2039ms
+  depth pass: 3352 docs expanded, 16760 searches, corpus 3804
+[2026-09-15T04:48:41.976Z]   Crossref 429 on "balancer" — retry 1 in 2086ms
+[2026-09-15T04:48:42.196Z]   Crossref 429 on "gateway" — retry 1 in 2444ms
+  depth pass: 3400 docs expanded, 17000 searches, corpus 3804
+[2026-09-15T04:49:15.270Z]   Crossref 429 on "balancer" — retry 1 in 2281ms
+[2026-09-15T04:49:29.455Z]   Crossref 429 on "orchestration" — retry 1 in 2424ms
+[2026-09-15T04:49:48.887Z]   Crossref 429 on "cluster" — retry 1 in 2308ms
+[2026-09-15T04:50:10.536Z]   Crossref 429 on "model routing" — retry 1 in 2030ms
+[2026-09-15T04:50:32.321Z]   Crossref 429 on "tool" — retry 1 in 2371ms
+  depth pass: 3452 docs expanded, 17260 searches, corpus 3804
+[2026-09-15T04:51:12.844Z]   Crossref 429 on "task orchestration" — retry 1 in 2229ms
+[2026-09-15T04:51:39.622Z]   Crossref 429 on "prompt routing" — retry 1 in 2109ms
+[2026-09-15T04:51:39.756Z]   Crossref 429 on "orchestration" — retry 1 in 2296ms
+[2026-09-15T04:51:44.768Z]   Crossref 429 on "plugin" — retry 1 in 2197ms
+  depth pass: 3500 docs expanded, 17500 searches, corpus 3804
+[2026-09-15T04:51:52.064Z]   Crossref 429 on "lip-sync" — retry 1 in 2066ms
+[2026-09-15T04:51:52.786Z]   Crossref 429 on "cloud-based" — retry 1 in 2224ms
+[2026-09-15T04:52:11.884Z]   Crossref 429 on "model" — retry 1 in 2029ms
+[2026-09-15T04:52:53.946Z]   Crossref 429 on "model selection" — retry 1 in 2066ms
+  depth pass: 3552 docs expanded, 17760 searches, corpus 3804
+[2026-09-15T04:53:21.385Z]   Crossref 429 on "request" — retry 1 in 2135ms
+[2026-09-15T04:53:21.998Z]   Crossref 429 on "inference" — retry 1 in 2158ms
+[2026-09-15T04:53:36.243Z]   Crossref 429 on "using" — retry 1 in 2221ms
+[2026-09-15T04:53:38.069Z]   Crossref 429 on "provider-agnostic" — retry 1 in 2386ms
+[2026-09-15T04:53:38.521Z]   Crossref 429 on "using" — retry 2 in 4280ms
+[2026-09-15T04:53:53.254Z]   Crossref 429 on "single" — retry 1 in 2273ms
+  depth pass: 3600 docs expanded, 18000 searches, corpus 3804
+[2026-09-15T04:54:51.314Z]   Crossref 429 on "reasoning" — retry 1 in 2083ms
+[2026-09-15T04:55:17.127Z]   Crossref 429 on "fusion" — retry 1 in 2491ms
+  depth pass: 3652 docs expanded, 18260 searches, corpus 3804
+[2026-09-15T04:56:08.018Z]   Crossref 429 on "LLM routing" — retry 1 in 2323ms
+[2026-09-15T04:56:09.097Z]   Crossref 429 on "AI gateway" — retry 1 in 2279ms
+[2026-09-15T04:56:26.625Z]   Crossref 429 on "agent" — retry 1 in 2279ms
+[2026-09-15T04:56:31.784Z]   Crossref 429 on "multi-model" — retry 1 in 2239ms
+[2026-09-15T04:56:43.871Z]   Crossref 429 on "context" — retry 1 in 2407ms
+[2026-09-15T04:56:44.234Z]   Crossref 429 on "saving" — retry 1 in 2295ms
+  depth pass: 3700 docs expanded, 18500 searches, corpus 3804
+[2026-09-15T04:57:00.601Z]   Crossref 429 on "representation" — retry 1 in 2005ms
+[2026-09-15T04:57:09.879Z]   Crossref 429 on "prompt" — retry 1 in 2249ms
+[2026-09-15T04:57:10.147Z]   Crossref 429 on "prompt routing" — retry 1 in 2426ms
+  depth pass: 3752 docs expanded, 18760 searches, corpus 3804
+[2026-09-15T04:58:38.105Z]   Crossref 429 on "LLM routing" — retry 1 in 2485ms
+[2026-09-15T04:58:38.255Z]   Crossref 429 on "per-provider" — retry 1 in 2018ms
+  depth pass: 3800 docs expanded, 19000 searches, corpus 3804
+[cache] saved 3804 docs, 19020 depth searches to /Users/chris/Documents/GitHub/9router/scripts/.routing-corpus-cache.json
+[done] corpus size: 3804

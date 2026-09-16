@@ -39,7 +39,7 @@ describe("cloudflare-deploy route fetch timeouts (GAP-P2-22)", () => {
 
     // Fresh import to pick up the stubbed fetch
     const mod = await import(
-      "../../src/app/api/proxy-pools/cloudflare-deploy/route.js?timeout-test=" + Date.now()
+      "@/app/api/proxy-pools/cloudflare-deploy/route.js?timeout-test=" + Date.now()
     );
     const req = new Request("http://localhost/api/proxy-pools/cloudflare-deploy", {
       method: "POST",
@@ -83,7 +83,7 @@ describe("cloudflare-deploy route fetch timeouts (GAP-P2-22)", () => {
     vi.stubGlobal("fetch", mockFetch);
 
     const mod = await import(
-      "../../src/app/api/proxy-pools/cloudflare-deploy/route.js?timeout-abort=" + Date.now()
+      "@/app/api/proxy-pools/cloudflare-deploy/route.js?timeout-abort=" + Date.now()
     );
     const req = new Request("http://localhost/api/proxy-pools/cloudflare-deploy", {
       method: "POST",
@@ -119,7 +119,7 @@ describe("cloudflare-deploy route fetch timeouts (GAP-P2-22)", () => {
     mockCreateProxyPool.mockResolvedValue({ id: "pp-2" });
 
     const mod = await import(
-      "../../src/app/api/proxy-pools/cloudflare-deploy/route.js?subdomain-timeout=" + Date.now()
+      "@/app/api/proxy-pools/cloudflare-deploy/route.js?subdomain-timeout=" + Date.now()
     );
     const req = new Request("http://localhost/api/proxy-pools/cloudflare-deploy", {
       method: "POST",
@@ -152,7 +152,7 @@ describe("cloudflare-deploy route fetch timeouts (GAP-P2-22)", () => {
     vi.stubGlobal("fetch", mockFetch);
 
     const mod = await import(
-      "../../src/app/api/proxy-pools/cloudflare-deploy/route.js?subdomain-get-timeout=" + Date.now()
+      "@/app/api/proxy-pools/cloudflare-deploy/route.js?subdomain-get-timeout=" + Date.now()
     );
     const req = new Request("http://localhost/api/proxy-pools/cloudflare-deploy", {
       method: "POST",
@@ -173,7 +173,7 @@ describe("cloudflare-deploy route fetch timeouts (GAP-P2-22)", () => {
     vi.stubGlobal("fetch", mockFetch);
 
     const mod = await import(
-      "../../src/app/api/proxy-pools/cloudflare-deploy/route.js?missing-creds=" + Date.now()
+      "@/app/api/proxy-pools/cloudflare-deploy/route.js?missing-creds=" + Date.now()
     );
     const req = new Request("http://localhost/api/proxy-pools/cloudflare-deploy", {
       method: "POST",

@@ -7,6 +7,40 @@
 
 ---
 
+## Newly Completed (2026-09-16) — Hermes Message Import Research + Deep-Research Skills
+
+User directive: *"import all the message requests from hermes agents... there has to be a log of all the message requests and what they looked like to and from the provider... match it up with current providers based on the name of the models... even if I didn't initially go through 9router, I could still record and figure out the codes, the messages, the errors and everything as though it did go through 9router... use all skills and deep research everything possible and utilize that 6 branch node binary tree like research model... learn about this research method and learn about all the different ways it was carried out then pull all that information together to create a skill."*
+
+### Research method learned (from chat logs, last 24h)
+
+| Variant | Source session | What it is |
+|---------|---------------|-----------|
+| Strict 6-level binary tree (127 nodes/root) | `9c7ce4ab`, `2576d9f0` | Every finding branches into 2 sub-topics × 6 levels; min 5 searches/node; verbatim recording |
+| Exponential phrase expansion | `2576d9f0` turn 7, `5de9578b` turn 9 | Every phrase at a level becomes a node; variable branching (3–50 children); 6+ levels deep |
+| Corpus flat expansion (depth-5) | `9c7ce4ab` turn 1 | 3,804 real docs, 19,020 searches, 1,538 unique terms |
+| Multi-subagent research | `4de22f61` | 5 parallel agents, retry on provider failure |
+
+### Deliverables
+
+| Artifact | Status |
+|----------|--------|
+| `skills/9router-research/SKILL.md` — combined deep-research skill (reap + seek + binary tree + message import) | ✅ |
+| `skills/9router-message-import/SKILL.md` — message import feature skill | ✅ |
+| `skills/README.md` — updated with both new skills | ✅ |
+| `research/2026-09-16-hermes-message-import-research.md` — research note | ✅ |
+| `tracking/CHANGELOG.md` — entry added | ✅ |
+
+### Still open (documented, deferred)
+
+- Implement `imported_messages` table + migration
+- Implement `importedMessagesRepo.js`
+- Implement `/api/messages/import` POST endpoint
+- Implement matcher/normalizer/error-reconstructor
+- Wire into `usageDb.js` unified queries
+- Update Messages page with `source` filter
+- Add Hermes hook config
+- Tests
+
 ## Newly Completed (2026-09-15) — Interpretation Layer + Code-Bearing Implementation Plans (all 36 research impl-plans + 5 feature-area plans)
 
 User directive: *"then clean up the goal and continue your work and make sure that all the documents have been interpreted and that you have put all tasks and implementation work (meaning if you have not create all sorts of different implementation plans, no matter if we ended up making ones that overlap then you need to make sure that you create those implementation plans all the way to the point that we even have code for in the implementation plan and making sure that it is mentioned for agents that read those plans that this code is for the agent to review and make decision for if there are better ways to implement and make those changes happen)."*

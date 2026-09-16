@@ -33,7 +33,7 @@ describe("GAP-P1-08: dashboardSession.js JWT secret logging", () => {
 
   it("logs warning when jwt-secret file is unreadable (ENOENT)", async () => {
     // No jwt-secret file exists in tmpDir -> readFileSync throws ENOENT
-    await import("../../src/lib/auth/dashboardSession.js");
+    await import("@/lib/auth/dashboardSession.js");
 
     // ANTI-FALSE-POSITIVE: Remove the console.warn in dashboardSession.js catch block -> this fails.
     expect(consoleWarnSpy).toHaveBeenCalledWith(
@@ -46,7 +46,7 @@ describe("GAP-P1-08: dashboardSession.js JWT secret logging", () => {
     const secretFile = path.join(tmpDir, "jwt-secret");
     fs.writeFileSync(secretFile, "valid-secret-here", { mode: 0o600 });
 
-    await import("../../src/lib/auth/dashboardSession.js");
+    await import("@/lib/auth/dashboardSession.js");
 
     expect(consoleWarnSpy).not.toHaveBeenCalledWith(
       expect.stringContaining("[JWT] secret file unreadable"),

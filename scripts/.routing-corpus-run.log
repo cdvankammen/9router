@@ -1,0 +1,17 @@
+[phase1] Seeding from arXiv (28 queries)...
+[2026-09-14T23:41:51.514Z]   arXiv 429 on "all:"LLM routing"" — retry 1 in 3529ms
+[2026-09-14T23:41:55.437Z]   arXiv 429 on "all:"LLM routing"" — retry 2 in 6694ms
+[2026-09-14T23:42:40.273Z]   arXiv error on "all:"LLM routing"" (arXiv 503 for all:"LLM routing") — retry 3 in 12801ms
+[2026-09-14T23:43:39.673Z]   arXiv error on "all:"LLM routing"" (arXiv 503 for all:"LLM routing") — retry 4 in 24353ms
+[2026-09-14T23:44:20.399Z]   arXiv 429 on "all:"LLM routing"" — retry 5 in 48065ms
+  arXiv "all:"LLM routing"" FAILED: arXiv 429 persistent for all:"LLM routing"
+[2026-09-14T23:45:11.231Z]   arXiv 429 on "all:"model routing"" — retry 1 in 3634ms
+[2026-09-14T23:45:15.119Z]   arXiv 429 on "all:"model routing"" — retry 2 in 6260ms
+[2026-09-14T23:45:37.019Z]   arXiv 429 on "all:"model routing"" — retry 3 in 12712ms
+[2026-09-14T23:46:00.366Z]   arXiv 429 on "all:"model routing"" — retry 4 in 24546ms
+[2026-09-14T23:46:25.361Z]   arXiv 429 on "all:"model routing"" — retry 5 in 48163ms
+  arXiv "all:"model routing"" FAILED: arXiv 429 persistent for all:"model routing"
+[2026-09-14T23:49:02.636Z]   arXiv 429 on "all:"language model selection"" — retry 1 in 4000ms
+[2026-09-14T23:49:06.993Z]   arXiv 429 on "all:"language model selection"" — retry 2 in 6030ms
+[2026-09-14T23:49:44.057Z]   arXiv 429 on "all:"language model selection"" — retry 3 in 12978ms
+[2026-09-14T23:49:57.367Z]   arXiv 429 on "all:"language model selection"" — retry 4 in 24520ms

@@ -1,0 +1,1577 @@
+[2026-09-14T23:41:51.514Z]   arXiv 429 on "all:"LLM routing"" — retry 1 in 3529ms
+[2026-09-14T23:41:55.437Z]   arXiv 429 on "all:"LLM routing"" — retry 2 in 6694ms
+[2026-09-14T23:42:40.273Z]   arXiv error on "all:"LLM routing"" (arXiv 503 for all:"LLM routing") — retry 3 in 12801ms
+[2026-09-14T23:43:39.673Z]   arXiv error on "all:"LLM routing"" (arXiv 503 for all:"LLM routing") — retry 4 in 24353ms
+[2026-09-14T23:44:20.399Z]   arXiv 429 on "all:"LLM routing"" — retry 5 in 48065ms
+[2026-09-14T23:45:11.231Z]   arXiv 429 on "all:"model routing"" — retry 1 in 3634ms
+[2026-09-14T23:45:15.119Z]   arXiv 429 on "all:"model routing"" — retry 2 in 6260ms
+[2026-09-14T23:45:37.019Z]   arXiv 429 on "all:"model routing"" — retry 3 in 12712ms
+[2026-09-14T23:46:00.366Z]   arXiv 429 on "all:"model routing"" — retry 4 in 24546ms
+[2026-09-14T23:46:25.361Z]   arXiv 429 on "all:"model routing"" — retry 5 in 48163ms
+[2026-09-14T23:49:02.636Z]   arXiv 429 on "all:"language model selection"" — retry 1 in 4000ms
+[2026-09-14T23:49:06.993Z]   arXiv 429 on "all:"language model selection"" — retry 2 in 6030ms
+[2026-09-14T23:49:44.057Z]   arXiv 429 on "all:"language model selection"" — retry 3 in 12978ms
+[2026-09-14T23:49:57.367Z]   arXiv 429 on "all:"language model selection"" — retry 4 in 24520ms
+[2026-09-15T00:04:28.137Z]   OpenAlex error on "LLM routing" (OpenAlex 503 for LLM routing) — retry 1 in 2253ms
+[2026-09-15T00:04:30.451Z]   OpenAlex error on "LLM routing" (OpenAlex 503 for LLM routing) — retry 2 in 4426ms
+[2026-09-15T00:04:35.055Z]   OpenAlex error on "LLM routing" (OpenAlex 503 for LLM routing) — retry 3 in 8245ms
+[2026-09-15T00:04:44.561Z]   OpenAlex error on "LLM routing" (OpenAlex 503 for LLM routing) — retry 4 in 16476ms
+[2026-09-15T00:05:01.703Z]   OpenAlex error on "model routing" (OpenAlex 503 for model routing) — retry 1 in 2261ms
+[2026-09-15T00:05:04.104Z]   OpenAlex error on "model routing" (OpenAlex 503 for model routing) — retry 2 in 4490ms
+[2026-09-15T00:05:08.778Z]   OpenAlex error on "model routing" (OpenAlex 503 for model routing) — retry 3 in 8476ms
+[2026-09-15T00:05:17.438Z]   OpenAlex error on "model routing" (OpenAlex 503 for model routing) — retry 4 in 16091ms
+[2026-09-15T00:05:34.070Z]   OpenAlex error on "language model selection" (OpenAlex 503 for language model selection) — retry 1 in 2303ms
+[2026-09-15T00:05:36.368Z]   OpenAlex error on "language model selection" (OpenAlex 503 for language model selection) — retry 2 in 4422ms
+[2026-09-15T00:06:41.926Z]   OpenAlex 429 on "model routing" — retry 1 in 2356ms
+[2026-09-15T00:06:46.107Z]   OpenAlex 429 on "language model selection" — retry 1 in 2283ms
+[2026-09-15T00:06:48.472Z]   OpenAlex 429 on "language model selection" — retry 2 in 4127ms
+[2026-09-15T00:06:52.757Z]   OpenAlex 429 on "language model selection" — retry 3 in 8408ms
+[2026-09-15T00:07:03.678Z]   OpenAlex 429 on "LLM selection" — retry 1 in 2059ms
+[2026-09-15T00:07:05.815Z]   OpenAlex 429 on "LLM selection" — retry 2 in 4051ms
+[2026-09-15T00:07:12.963Z]   OpenAlex 429 on "large language model selection" — retry 1 in 2361ms
+[2026-09-15T00:07:16.635Z]   OpenAlex 429 on "large language model selection" — retry 2 in 4385ms
+[2026-09-15T00:07:21.183Z]   OpenAlex 429 on "large language model selection" — retry 3 in 8427ms
+[2026-09-15T00:07:36.516Z]   OpenAlex 429 on "LLM cascade" — retry 1 in 2442ms
+[2026-09-15T00:07:39.037Z]   OpenAlex 429 on "LLM cascade" — retry 2 in 4028ms
+[2026-09-15T00:07:44.675Z]   OpenAlex 429 on "cost efficient inference LLM" — retry 1 in 2479ms
+[2026-09-15T00:07:47.245Z]   OpenAlex 429 on "cost efficient inference LLM" — retry 2 in 4360ms
+[2026-09-15T00:07:51.754Z]   OpenAlex 429 on "cost efficient inference LLM" — retry 3 in 8262ms
+[2026-09-15T00:08:01.524Z]   OpenAlex 429 on "router large language models" — retry 1 in 2268ms
+[2026-09-15T00:08:06.895Z]   OpenAlex 429 on "expert selection LLM" — retry 1 in 2179ms
+[2026-09-15T00:08:09.157Z]   OpenAlex 429 on "expert selection LLM" — retry 2 in 4314ms
+[2026-09-15T00:08:15.155Z]   OpenAlex 429 on "model serving LLM" — retry 1 in 2251ms
+[2026-09-15T00:08:17.493Z]   OpenAlex 429 on "model serving LLM" — retry 2 in 4296ms
+[2026-09-15T00:08:23.486Z]   OpenAlex 429 on "inference optimization LLM" — retry 1 in 2331ms
+[2026-09-15T00:08:25.894Z]   OpenAlex 429 on "inference optimization LLM" — retry 2 in 4131ms
+[2026-09-15T00:08:30.204Z]   OpenAlex 429 on "inference optimization LLM" — retry 3 in 8020ms
+[2026-09-15T00:08:41.460Z]   OpenAlex 429 on "model composition LLM" — retry 1 in 2310ms
+[2026-09-15T00:08:49.278Z]   OpenAlex 429 on "query routing LLM" — retry 1 in 2010ms
+[2026-09-15T00:08:55.995Z]   OpenAlex 429 on "multi-model routing" — retry 1 in 2078ms
+[2026-09-15T00:08:58.155Z]   OpenAlex 429 on "multi-model routing" — retry 2 in 4362ms
+[2026-09-15T00:09:04.382Z]   OpenAlex 429 on "model fallback LLM" — retry 1 in 2077ms
+[2026-09-15T00:09:06.540Z]   OpenAlex 429 on "model fallback LLM" — retry 2 in 4284ms
+[2026-09-15T00:09:10.979Z]   OpenAlex 429 on "model fallback LLM" — retry 3 in 8191ms
+[2026-09-15T00:09:20.904Z]   OpenAlex 429 on "AI gateway" — retry 1 in 2142ms
+[2026-09-15T00:09:26.275Z]   OpenAlex 429 on "AI gateway" — retry 2 in 4318ms
+[2026-09-15T00:09:32.517Z]   OpenAlex 429 on "model marketplace LLM" — retry 1 in 2454ms
+[2026-09-15T00:09:35.092Z]   OpenAlex 429 on "model marketplace LLM" — retry 2 in 4192ms
+[2026-09-15T00:09:39.565Z]   OpenAlex 429 on "model marketplace LLM" — retry 3 in 8339ms
+[2026-09-15T00:09:49.591Z]   OpenAlex 429 on "cost quality LLM" — retry 1 in 2365ms
+[2026-09-15T00:09:52.042Z]   OpenAlex 429 on "cost quality LLM" — retry 2 in 4361ms
+[2026-09-15T00:10:00.285Z]   OpenAlex 429 on "benchmark model selection" — retry 1 in 2138ms
+[2026-09-15T00:10:02.506Z]   OpenAlex 429 on "benchmark model selection" — retry 2 in 4380ms
+[2026-09-15T00:10:11.970Z]   OpenAlex 429 on "model router" — retry 1 in 2125ms
+[2026-09-15T00:10:14.172Z]   OpenAlex 429 on "model router" — retry 2 in 4242ms
+[2026-09-15T00:10:18.564Z]   OpenAlex 429 on "model router" — retry 3 in 8254ms
+[2026-09-15T00:10:28.638Z]   OpenAlex 429 on "LLM gateway" — retry 1 in 2178ms
+[2026-09-15T00:10:32.540Z]   OpenAlex 429 on "routing large language models" — retry 1 in 2240ms
+[2026-09-15T00:10:36.991Z]   OpenAlex 429 on "adaptive inference LLM" — retry 1 in 2471ms
+[2026-09-15T00:10:39.538Z]   OpenAlex 429 on "adaptive inference LLM" — retry 2 in 4301ms
+[2026-09-15T00:10:44.014Z]   OpenAlex 429 on "adaptive inference LLM" — retry 3 in 8135ms
+[2026-09-15T00:10:55.524Z]   OpenAlex 429 on "model selection inference" — retry 1 in 2443ms
+[2026-09-15T00:10:58.053Z]   OpenAlex 429 on "model selection inference" — retry 2 in 4358ms
+[2026-09-15T00:11:06.300Z]   OpenAlex 429 on "configurations" — retry 1 in 2043ms
+[2026-09-15T00:11:13.318Z]   OpenAlex 429 on "large language" — retry 1 in 2029ms
+[2026-09-15T00:11:13.325Z]   OpenAlex 429 on "questions" — retry 1 in 2038ms
+[2026-09-15T00:11:13.357Z]   OpenAlex 429 on "large language" — retry 1 in 2191ms
+[2026-09-15T00:11:18.057Z]   OpenAlex 429 on "vibe" — retry 1 in 2088ms
+[2026-09-15T00:11:24.756Z]   OpenAlex 429 on "large language" — retry 1 in 2427ms
+[2026-09-15T00:11:24.767Z]   OpenAlex 429 on "large language" — retry 1 in 2120ms
+[2026-09-15T00:11:24.767Z]   OpenAlex 429 on "large language" — retry 1 in 2118ms
+[2026-09-15T00:11:27.271Z]   OpenAlex 429 on "large language" — retry 2 in 4078ms
+[2026-09-15T00:11:28.568Z]   OpenAlex 429 on "language model" — retry 1 in 2252ms
+[2026-09-15T00:11:43.684Z]   OpenAlex 429 on "capability task" — retry 1 in 2103ms
+[2026-09-15T00:11:44.130Z]   OpenAlex 429 on "language model" — retry 1 in 2378ms
+[2026-09-15T00:11:44.404Z]   OpenAlex 429 on "query task" — retry 1 in 2206ms
+[2026-09-15T00:11:44.597Z]   OpenAlex 429 on "prompting" — retry 1 in 2263ms
+[2026-09-15T00:11:45.871Z]   OpenAlex 429 on "capability task" — retry 2 in 4208ms
+[2026-09-15T00:11:46.607Z]   OpenAlex 429 on "language model" — retry 2 in 4112ms
+[2026-09-15T00:11:46.706Z]   OpenAlex 429 on "query task" — retry 2 in 4274ms
+[2026-09-15T00:11:46.961Z]   OpenAlex 429 on "prompting" — retry 2 in 4377ms
+[2026-09-15T00:11:50.198Z]   OpenAlex 429 on "capability task" — retry 3 in 8450ms
+[2026-09-15T00:11:50.853Z]   OpenAlex 429 on "language model" — retry 3 in 8331ms
+[2026-09-15T00:11:52.198Z]   OpenAlex 429 on "prompting" — retry 3 in 8120ms
+[2026-09-15T00:11:53.237Z]   OpenAlex 429 on "query task" — retry 3 in 8041ms
+[2026-09-15T00:12:00.060Z]   OpenAlex 429 on "quality cost" — retry 1 in 2224ms
+[2026-09-15T00:12:02.158Z]   OpenAlex 429 on "model routing" — retry 1 in 2110ms
+[2026-09-15T00:12:02.370Z]   OpenAlex 429 on "quality cost" — retry 2 in 4010ms
+[2026-09-15T00:12:03.021Z]   OpenAlex 429 on "operator" — retry 1 in 2316ms
+[2026-09-15T00:12:03.158Z]   OpenAlex 429 on "model routing" — retry 1 in 2128ms
+[2026-09-15T00:12:04.388Z]   OpenAlex 429 on "model routing" — retry 2 in 4236ms
+[2026-09-15T00:12:05.378Z]   OpenAlex 429 on "model routing" — retry 2 in 4171ms
+[2026-09-15T00:12:05.428Z]   OpenAlex 429 on "operator" — retry 2 in 4308ms
+[2026-09-15T00:12:06.489Z]   OpenAlex 429 on "quality cost" — retry 3 in 8245ms
+[2026-09-15T00:12:08.749Z]   OpenAlex 429 on "model routing" — retry 3 in 8215ms
+[2026-09-15T00:12:09.645Z]   OpenAlex 429 on "model routing" — retry 3 in 8477ms
+[2026-09-15T00:12:09.857Z]   OpenAlex 429 on "operator" — retry 3 in 8412ms
+[2026-09-15T00:12:16.653Z]   OpenAlex 429 on "model" — retry 1 in 2031ms
+[2026-09-15T00:12:18.474Z]   OpenAlex 429 on "expert router" — retry 1 in 2499ms
+[2026-09-15T00:12:18.777Z]   OpenAlex 429 on "model" — retry 2 in 4051ms
+[2026-09-15T00:12:19.063Z]   OpenAlex 429 on "routing" — retry 1 in 2410ms
+[2026-09-15T00:12:19.500Z]   OpenAlex 429 on "preferences" — retry 1 in 2475ms
+[2026-09-15T00:12:21.070Z]   OpenAlex 429 on "expert router" — retry 2 in 4381ms
+[2026-09-15T00:12:21.577Z]   OpenAlex 429 on "routing" — retry 2 in 4162ms
+[2026-09-15T00:12:22.074Z]   OpenAlex 429 on "preferences" — retry 2 in 4063ms
+[2026-09-15T00:12:22.938Z]   OpenAlex 429 on "model" — retry 3 in 8328ms
+[2026-09-15T00:12:25.564Z]   OpenAlex 429 on "expert router" — retry 3 in 8107ms
+[2026-09-15T00:12:25.848Z]   OpenAlex 429 on "routing" — retry 3 in 8089ms
+[2026-09-15T00:12:26.224Z]   OpenAlex 429 on "preferences" — retry 3 in 8289ms
+[2026-09-15T00:12:32.545Z]   OpenAlex 429 on "task" — retry 1 in 2414ms
+[2026-09-15T00:12:34.748Z]   OpenAlex 429 on "expert" — retry 1 in 2084ms
+[2026-09-15T00:12:35.087Z]   OpenAlex 429 on "task" — retry 2 in 4133ms
+[2026-09-15T00:12:35.188Z]   OpenAlex 429 on "problem" — retry 1 in 2295ms
+[2026-09-15T00:12:36.932Z]   OpenAlex 429 on "expert" — retry 2 in 4016ms
+[2026-09-15T00:12:37.576Z]   OpenAlex 429 on "problem" — retry 2 in 4201ms
+[2026-09-15T00:12:39.338Z]   OpenAlex 429 on "task" — retry 3 in 8183ms
+[2026-09-15T00:12:41.073Z]   OpenAlex 429 on "expert" — retry 3 in 8462ms
+[2026-09-15T00:12:41.911Z]   OpenAlex 429 on "problem" — retry 3 in 8461ms
+[2026-09-15T00:12:51.549Z]   OpenAlex 429 on "inference cost" — retry 1 in 2184ms
+[2026-09-15T00:12:51.564Z]   OpenAlex 429 on "capability cost" — retry 1 in 2418ms
+[2026-09-15T00:12:51.607Z]   OpenAlex 429 on "large language" — retry 1 in 2264ms
+[2026-09-15T00:12:51.615Z]   OpenAlex 429 on "large language" — retry 1 in 2488ms
+[2026-09-15T00:12:53.845Z]   OpenAlex 429 on "inference cost" — retry 2 in 4011ms
+[2026-09-15T00:12:53.989Z]   OpenAlex 429 on "large language" — retry 2 in 4356ms
+[2026-09-15T00:12:54.181Z]   OpenAlex 429 on "capability cost" — retry 2 in 4263ms
+[2026-09-15T00:12:54.279Z]   OpenAlex 429 on "large language" — retry 2 in 4375ms
+[2026-09-15T00:12:58.012Z]   OpenAlex 429 on "inference cost" — retry 3 in 8351ms
+[2026-09-15T00:12:58.549Z]   OpenAlex 429 on "capability cost" — retry 3 in 8121ms
+[2026-09-15T00:12:58.633Z]   OpenAlex 429 on "large language" — retry 3 in 8399ms
+[2026-09-15T00:12:58.803Z]   OpenAlex 429 on "large language" — retry 3 in 8266ms
+[2026-09-15T00:13:07.945Z]   OpenAlex 429 on "routing" — retry 1 in 2305ms
+[2026-09-15T00:13:08.508Z]   OpenAlex 429 on "routers" — retry 1 in 2308ms
+[2026-09-15T00:13:08.646Z]   OpenAlex 429 on "detection" — retry 1 in 2310ms
+[2026-09-15T00:13:08.765Z]   OpenAlex 429 on "violations" — retry 1 in 2036ms
+[2026-09-15T00:13:10.336Z]   OpenAlex 429 on "routing" — retry 2 in 4056ms
+[2026-09-15T00:13:10.884Z]   OpenAlex 429 on "violations" — retry 2 in 4191ms
+[2026-09-15T00:13:10.905Z]   OpenAlex 429 on "routers" — retry 2 in 4378ms
+[2026-09-15T00:13:11.049Z]   OpenAlex 429 on "detection" — retry 2 in 4018ms
+[2026-09-15T00:13:14.488Z]   OpenAlex 429 on "routing" — retry 3 in 8290ms
+[2026-09-15T00:13:15.153Z]   OpenAlex 429 on "violations" — retry 3 in 8123ms
+[2026-09-15T00:13:15.155Z]   OpenAlex 429 on "detection" — retry 3 in 8312ms
+[2026-09-15T00:13:15.365Z]   OpenAlex 429 on "routers" — retry 3 in 8013ms
+[2026-09-15T00:13:23.733Z]   OpenAlex 429 on "queries" — retry 1 in 2112ms
+[2026-09-15T00:13:24.203Z]   OpenAlex 429 on "classifier" — retry 1 in 2178ms
+[2026-09-15T00:13:24.457Z]   OpenAlex 429 on "leaderboard" — retry 1 in 2469ms
+[2026-09-15T00:13:24.624Z]   OpenAlex 429 on "tods" — retry 1 in 2125ms
+[2026-09-15T00:13:25.944Z]   OpenAlex 429 on "queries" — retry 2 in 4460ms
+[2026-09-15T00:13:26.499Z]   OpenAlex 429 on "classifier" — retry 2 in 4292ms
+[2026-09-15T00:13:26.847Z]   OpenAlex 429 on "tods" — retry 2 in 4330ms
+[2026-09-15T00:13:27.023Z]   OpenAlex 429 on "leaderboard" — retry 2 in 4385ms
+[2026-09-15T00:13:30.511Z]   OpenAlex 429 on "queries" — retry 3 in 8492ms
+[2026-09-15T00:13:30.908Z]   OpenAlex 429 on "classifier" — retry 3 in 8500ms
+[2026-09-15T00:13:31.277Z]   OpenAlex 429 on "tods" — retry 3 in 8258ms
+[2026-09-15T00:13:31.497Z]   OpenAlex 429 on "leaderboard" — retry 3 in 8307ms
+[2026-09-15T00:13:40.505Z]   OpenAlex 429 on "model" — retry 1 in 2126ms
+[2026-09-15T00:13:40.784Z]   OpenAlex 429 on "uncertainty" — retry 1 in 2304ms
+[2026-09-15T00:13:40.915Z]   OpenAlex 429 on "cares" — retry 1 in 2380ms
+[2026-09-15T00:13:40.985Z]   OpenAlex 429 on "comparison" — retry 1 in 2026ms
+[2026-09-15T00:13:42.730Z]   OpenAlex 429 on "model" — retry 2 in 4109ms
+[2026-09-15T00:13:43.106Z]   OpenAlex 429 on "comparison" — retry 2 in 4137ms
+[2026-09-15T00:13:43.179Z]   OpenAlex 429 on "uncertainty" — retry 2 in 4488ms
+[2026-09-15T00:13:43.392Z]   OpenAlex 429 on "cares" — retry 2 in 4221ms
+[2026-09-15T00:13:46.937Z]   OpenAlex 429 on "model" — retry 3 in 8110ms
+[2026-09-15T00:13:47.339Z]   OpenAlex 429 on "comparison" — retry 3 in 8374ms
+[2026-09-15T00:13:47.723Z]   OpenAlex 429 on "cares" — retry 3 in 8397ms
+[2026-09-15T00:13:47.769Z]   OpenAlex 429 on "uncertainty" — retry 3 in 8152ms
+[2026-09-15T00:13:56.749Z]   OpenAlex 429 on "routerarena" — retry 1 in 2103ms
+[2026-09-15T00:13:56.802Z]   OpenAlex 429 on "violation" — retry 1 in 2002ms
+[2026-09-15T00:13:57.225Z]   OpenAlex 429 on "intent" — retry 1 in 2329ms
+[2026-09-15T00:13:57.277Z]   OpenAlex 429 on "queries" — retry 1 in 2163ms
+[2026-09-15T00:13:58.894Z]   OpenAlex 429 on "violation" — retry 2 in 4413ms
+[2026-09-15T00:13:58.956Z]   OpenAlex 429 on "routerarena" — retry 2 in 4404ms
+[2026-09-15T00:13:59.530Z]   OpenAlex 429 on "queries" — retry 2 in 4136ms
+[2026-09-15T00:13:59.645Z]   OpenAlex 429 on "intent" — retry 2 in 4137ms
+[2026-09-15T00:14:03.408Z]   OpenAlex 429 on "violation" — retry 3 in 8209ms
+[2026-09-15T00:14:03.453Z]   OpenAlex 429 on "routerarena" — retry 3 in 8047ms
+[2026-09-15T00:14:03.759Z]   OpenAlex 429 on "queries" — retry 3 in 8367ms
+[2026-09-15T00:14:03.889Z]   OpenAlex 429 on "intent" — retry 3 in 8030ms
+[2026-09-15T00:14:13.447Z]   OpenAlex 429 on "2025" — retry 1 in 2483ms
+[2026-09-15T00:14:13.457Z]   OpenAlex 429 on "large language" — retry 1 in 2323ms
+[2026-09-15T00:14:13.458Z]   OpenAlex 429 on "routing performance" — retry 1 in 2449ms
+[2026-09-15T00:14:16.005Z]   OpenAlex 429 on "large language" — retry 2 in 4381ms
+[2026-09-15T00:14:16.083Z]   OpenAlex 429 on "2025" — retry 2 in 4458ms
+[2026-09-15T00:14:16.199Z]   OpenAlex 429 on "routing performance" — retry 2 in 4132ms
+[2026-09-15T00:14:20.532Z]   OpenAlex 429 on "routing performance" — retry 3 in 8461ms
+[2026-09-15T00:14:20.538Z]   OpenAlex 429 on "large language" — retry 3 in 8496ms
+[2026-09-15T00:14:20.630Z]   OpenAlex 429 on "2025" — retry 3 in 8004ms
+[2026-09-15T00:14:29.676Z]   OpenAlex 429 on "large language" — retry 1 in 2401ms
+[2026-09-15T00:14:30.090Z]   OpenAlex 429 on "yanwei" — retry 1 in 2213ms
+[2026-09-15T00:14:30.646Z]   OpenAlex 429 on "performance cost" — retry 1 in 2321ms
+[2026-09-15T00:14:32.197Z]   OpenAlex 429 on "large language" — retry 2 in 4264ms
+[2026-09-15T00:14:32.406Z]   OpenAlex 429 on "yanwei" — retry 2 in 4152ms
+[2026-09-15T00:14:33.055Z]   OpenAlex 429 on "performance cost" — retry 2 in 4457ms
+[2026-09-15T00:14:36.560Z]   OpenAlex 429 on "large language" — retry 3 in 8340ms
+[2026-09-15T00:14:36.654Z]   OpenAlex 429 on "yanwei" — retry 3 in 8438ms
+[2026-09-15T00:14:37.594Z]   OpenAlex 429 on "performance cost" — retry 3 in 8366ms
+[2026-09-15T00:14:46.304Z]   OpenAlex 429 on "model routing" — retry 1 in 2452ms
+[2026-09-15T00:14:47.180Z]   OpenAlex 429 on "guibin" — retry 1 in 2313ms
+[2026-09-15T00:14:47.423Z]   OpenAlex 429 on "efficient router" — retry 1 in 2340ms
+[2026-09-15T00:14:49.591Z]   OpenAlex 429 on "guibin" — retry 2 in 4154ms
+[2026-09-15T00:14:49.630Z]   OpenAlex 429 on "model routing" — retry 2 in 4146ms
+[2026-09-15T00:14:49.849Z]   OpenAlex 429 on "efficient router" — retry 2 in 4149ms
+[2026-09-15T00:14:53.836Z]   OpenAlex 429 on "guibin" — retry 3 in 8417ms
+[2026-09-15T00:14:53.866Z]   OpenAlex 429 on "model routing" — retry 3 in 8487ms
+[2026-09-15T00:14:54.099Z]   OpenAlex 429 on "efficient router" — retry 3 in 8183ms
+[2026-09-15T00:15:04.042Z]   OpenAlex 429 on "performance evaluation" — retry 1 in 2188ms
+[2026-09-15T00:15:05.020Z]   OpenAlex 429 on "query router" — retry 1 in 2379ms
+[2026-09-15T00:15:06.336Z]   OpenAlex 429 on "performance evaluation" — retry 2 in 4284ms
+[2026-09-15T00:15:07.221Z]   OpenAlex 429 on "zhang" — retry 1 in 2186ms
+[2026-09-15T00:15:07.489Z]   OpenAlex 429 on "query router" — retry 2 in 4011ms
+[2026-09-15T00:15:09.504Z]   OpenAlex 429 on "zhang" — retry 2 in 4236ms
+[2026-09-15T00:15:10.738Z]   OpenAlex 429 on "performance evaluation" — retry 3 in 8426ms
+[2026-09-15T00:15:11.595Z]   OpenAlex 429 on "query router" — retry 3 in 8432ms
+[2026-09-15T00:15:13.837Z]   OpenAlex 429 on "zhang" — retry 3 in 8130ms
+[2026-09-15T00:15:20.096Z]   OpenAlex 429 on "models" — retry 1 in 2446ms
+[2026-09-15T00:15:20.580Z]   OpenAlex 429 on "query model" — retry 1 in 2211ms
+[2026-09-15T00:15:22.632Z]   OpenAlex 429 on "models" — retry 2 in 4265ms
+[2026-09-15T00:15:22.878Z]   OpenAlex 429 on "query model" — retry 2 in 4370ms
+[2026-09-15T00:15:23.216Z]   OpenAlex 429 on "boyang" — retry 1 in 2188ms
+[2026-09-15T00:15:25.591Z]   OpenAlex 429 on "boyang" — retry 2 in 4102ms
+[2026-09-15T00:15:26.988Z]   OpenAlex 429 on "models" — retry 3 in 8279ms
+[2026-09-15T00:15:27.347Z]   OpenAlex 429 on "query model" — retry 3 in 8443ms
+[2026-09-15T00:15:29.799Z]   OpenAlex 429 on "boyang" — retry 3 in 8484ms
+[2026-09-15T00:15:39.474Z]   OpenAlex 429 on "large language" — retry 1 in 2319ms
+[2026-09-15T00:15:39.481Z]   OpenAlex 429 on "large language" — retry 1 in 2470ms
+[2026-09-15T00:15:39.589Z]   OpenAlex 429 on "large language" — retry 1 in 2293ms
+[2026-09-15T00:15:41.859Z]   OpenAlex 429 on "large language" — retry 2 in 4487ms
+[2026-09-15T00:15:41.951Z]   OpenAlex 429 on "large language" — retry 2 in 4026ms
+[2026-09-15T00:15:42.004Z]   OpenAlex 429 on "large language" — retry 2 in 4201ms
+[2026-09-15T00:15:46.046Z]   OpenAlex 429 on "large language" — retry 3 in 8214ms
+[2026-09-15T00:15:46.257Z]   OpenAlex 429 on "large language" — retry 3 in 8488ms
+[2026-09-15T00:15:46.397Z]   OpenAlex 429 on "large language" — retry 3 in 8302ms
+[2026-09-15T00:15:55.289Z]   OpenAlex 429 on "models" — retry 1 in 2354ms
+[2026-09-15T00:15:56.122Z]   OpenAlex 429 on "translation" — retry 1 in 2173ms
+[2026-09-15T00:15:56.252Z]   OpenAlex 429 on "network" — retry 1 in 2454ms
+[2026-09-15T00:15:57.696Z]   OpenAlex 429 on "models" — retry 2 in 4014ms
+[2026-09-15T00:15:58.344Z]   OpenAlex 429 on "translation" — retry 2 in 4350ms
+[2026-09-15T00:15:58.755Z]   OpenAlex 429 on "network" — retry 2 in 4018ms
+[2026-09-15T00:16:01.780Z]   OpenAlex 429 on "models" — retry 3 in 8322ms
+[2026-09-15T00:16:02.753Z]   OpenAlex 429 on "translation" — retry 3 in 8088ms
+[2026-09-15T00:16:02.827Z]   OpenAlex 429 on "network" — retry 3 in 8445ms
+[2026-09-15T00:16:11.479Z]   OpenAlex 429 on "language" — retry 1 in 2327ms
+[2026-09-15T00:16:11.866Z]   OpenAlex 429 on "llms" — retry 1 in 2407ms
+[2026-09-15T00:16:12.114Z]   OpenAlex 429 on "configuration" — retry 1 in 2431ms
+[2026-09-15T00:16:13.864Z]   OpenAlex 429 on "language" — retry 2 in 4422ms
+[2026-09-15T00:16:14.341Z]   OpenAlex 429 on "llms" — retry 2 in 4284ms
+[2026-09-15T00:16:14.596Z]   OpenAlex 429 on "configuration" — retry 2 in 4419ms
+[2026-09-15T00:16:18.337Z]   OpenAlex 429 on "language" — retry 3 in 8027ms
+[2026-09-15T00:16:18.672Z]   OpenAlex 429 on "llms" — retry 3 in 8215ms
+[2026-09-15T00:16:19.064Z]   OpenAlex 429 on "configuration" — retry 3 in 8027ms
+[2026-09-15T00:16:27.444Z]   OpenAlex 429 on "llms" — retry 1 in 2089ms
+[2026-09-15T00:16:27.895Z]   OpenAlex 429 on "high-level" — retry 1 in 2297ms
+[2026-09-15T00:16:28.030Z]   OpenAlex 429 on "parameter" — retry 1 in 2268ms
+[2026-09-15T00:16:29.595Z]   OpenAlex 429 on "llms" — retry 2 in 4273ms
+[2026-09-15T00:16:30.261Z]   OpenAlex 429 on "high-level" — retry 2 in 4030ms
+[2026-09-15T00:16:30.344Z]   OpenAlex 429 on "parameter" — retry 2 in 4344ms
+[2026-09-15T00:16:33.918Z]   OpenAlex 429 on "llms" — retry 3 in 8381ms
+[2026-09-15T00:16:34.342Z]   OpenAlex 429 on "high-level" — retry 3 in 8263ms
+[2026-09-15T00:16:34.740Z]   OpenAlex 429 on "parameter" — retry 3 in 8015ms
+[2026-09-15T00:16:43.376Z]   OpenAlex 429 on "emerging" — retry 1 in 2131ms
+[2026-09-15T00:16:43.398Z]   OpenAlex 429 on "requirements" — retry 1 in 2196ms
+[2026-09-15T00:16:43.575Z]   OpenAlex 429 on "landermt" — retry 1 in 2192ms
+[2026-09-15T00:16:45.571Z]   OpenAlex 429 on "emerging" — retry 2 in 4489ms
+[2026-09-15T00:16:45.651Z]   OpenAlex 429 on "requirements" — retry 2 in 4087ms
+[2026-09-15T00:16:45.831Z]   OpenAlex 429 on "landermt" — retry 2 in 4319ms
+[2026-09-15T00:16:49.788Z]   OpenAlex 429 on "requirements" — retry 3 in 8134ms
+[2026-09-15T00:16:50.109Z]   OpenAlex 429 on "emerging" — retry 3 in 8043ms
+[2026-09-15T00:16:50.203Z]   OpenAlex 429 on "landermt" — retry 3 in 8134ms
+[2026-09-15T00:16:59.454Z]   OpenAlex 429 on "deployment large" — retry 1 in 2267ms
+[2026-09-15T00:16:59.456Z]   OpenAlex 429 on "large language" — retry 1 in 2022ms
+[2026-09-15T00:16:59.457Z]   OpenAlex 429 on "2024" — retry 1 in 2328ms
+[2026-09-15T00:17:01.533Z]   OpenAlex 429 on "large language" — retry 2 in 4074ms
+[2026-09-15T00:17:01.773Z]   OpenAlex 429 on "deployment large" — retry 2 in 4361ms
+[2026-09-15T00:17:01.835Z]   OpenAlex 429 on "2024" — retry 2 in 4070ms
+[2026-09-15T00:17:05.766Z]   OpenAlex 429 on "large language" — retry 3 in 8445ms
+[2026-09-15T00:17:05.961Z]   OpenAlex 429 on "2024" — retry 3 in 8228ms
+[2026-09-15T00:17:06.189Z]   OpenAlex 429 on "deployment large" — retry 3 in 8281ms
+[2026-09-15T00:17:15.454Z]   OpenAlex 429 on "applications" — retry 1 in 2124ms
+[2026-09-15T00:17:15.470Z]   OpenAlex 429 on "zhang" — retry 1 in 2023ms
+[2026-09-15T00:17:15.522Z]   OpenAlex 429 on "large language" — retry 1 in 2179ms
+[2026-09-15T00:17:17.580Z]   OpenAlex 429 on "zhang" — retry 2 in 4295ms
+[2026-09-15T00:17:17.635Z]   OpenAlex 429 on "applications" — retry 2 in 4492ms
+[2026-09-15T00:17:17.748Z]   OpenAlex 429 on "large language" — retry 2 in 4476ms
+[2026-09-15T00:17:22.014Z]   OpenAlex 429 on "zhang" — retry 3 in 8429ms
+[2026-09-15T00:17:22.189Z]   OpenAlex 429 on "applications" — retry 3 in 8081ms
+[2026-09-15T00:17:22.276Z]   OpenAlex 429 on "large language" — retry 3 in 8175ms
+[2026-09-15T00:17:31.158Z]   OpenAlex 429 on "langchain" — retry 1 in 2128ms
+[2026-09-15T00:17:31.839Z]   OpenAlex 429 on "dimitris" — retry 1 in 2062ms
+[2026-09-15T00:17:32.645Z]   OpenAlex 429 on "cost latency" — retry 1 in 2143ms
+[2026-09-15T00:17:33.432Z]   OpenAlex 429 on "langchain" — retry 2 in 4293ms
+[2026-09-15T00:17:34.012Z]   OpenAlex 429 on "dimitris" — retry 2 in 4181ms
+[2026-09-15T00:17:34.840Z]   OpenAlex 429 on "cost latency" — retry 2 in 4129ms
+[2026-09-15T00:17:37.776Z]   OpenAlex 429 on "langchain" — retry 3 in 8263ms
+[2026-09-15T00:17:38.245Z]   OpenAlex 429 on "dimitris" — retry 3 in 8302ms
+[2026-09-15T00:17:39.026Z]   OpenAlex 429 on "cost latency" — retry 3 in 8440ms
+[2026-09-15T00:17:46.853Z]   OpenAlex 429 on "study" — retry 1 in 2480ms
+[2026-09-15T00:17:47.438Z]   OpenAlex 429 on "stripelis" — retry 1 in 2125ms
+[2026-09-15T00:17:48.685Z]   OpenAlex 429 on "model routing" — retry 1 in 2276ms
+[2026-09-15T00:17:49.384Z]   OpenAlex 429 on "study" — retry 2 in 4498ms
+[2026-09-15T00:17:49.606Z]   OpenAlex 429 on "stripelis" — retry 2 in 4268ms
+[2026-09-15T00:17:51.010Z]   OpenAlex 429 on "model routing" — retry 2 in 4229ms
+[2026-09-15T00:17:53.920Z]   OpenAlex 429 on "stripelis" — retry 3 in 8017ms
+[2026-09-15T00:17:53.926Z]   OpenAlex 429 on "study" — retry 3 in 8482ms
+[2026-09-15T00:17:55.280Z]   OpenAlex 429 on "model routing" — retry 3 in 8062ms
+[2026-09-15T00:18:03.730Z]   OpenAlex 429 on "zhaozhuo" — retry 1 in 2249ms
+[2026-09-15T00:18:04.956Z]   OpenAlex 429 on "tasks" — retry 1 in 2313ms
+[2026-09-15T00:18:04.974Z]   OpenAlex 429 on "llms" — retry 1 in 2266ms
+[2026-09-15T00:18:06.039Z]   OpenAlex 429 on "zhaozhuo" — retry 2 in 4466ms
+[2026-09-15T00:18:07.289Z]   OpenAlex 429 on "llms" — retry 2 in 4492ms
+[2026-09-15T00:18:07.314Z]   OpenAlex 429 on "tasks" — retry 2 in 4260ms
+[2026-09-15T00:18:10.555Z]   OpenAlex 429 on "zhaozhuo" — retry 3 in 8374ms
+[2026-09-15T00:18:11.623Z]   OpenAlex 429 on "tasks" — retry 3 in 8272ms
+[2026-09-15T00:18:11.828Z]   OpenAlex 429 on "llms" — retry 3 in 8300ms
+[2026-09-15T00:18:20.968Z]   OpenAlex 429 on "large language" — retry 1 in 2291ms
+[2026-09-15T00:18:20.977Z]   OpenAlex 429 on "large language" — retry 1 in 2076ms
+[2026-09-15T00:18:23.111Z]   OpenAlex 429 on "large language" — retry 2 in 4086ms
+[2026-09-15T00:18:23.307Z]   OpenAlex 429 on "large language" — retry 2 in 4232ms
+[2026-09-15T00:18:27.254Z]   OpenAlex 429 on "large language" — retry 3 in 8446ms
+[2026-09-15T00:18:27.596Z]   OpenAlex 429 on "large language" — retry 3 in 8470ms
+[2026-09-15T00:18:37.021Z]   OpenAlex 429 on "model performance" — retry 1 in 2322ms
+[2026-09-15T00:18:37.814Z]   OpenAlex 429 on "optimization" — retry 1 in 2248ms
+[2026-09-15T00:18:39.394Z]   OpenAlex 429 on "model performance" — retry 2 in 4009ms
+[2026-09-15T00:18:40.120Z]   OpenAlex 429 on "optimization" — retry 2 in 4200ms
+[2026-09-15T00:18:43.495Z]   OpenAlex 429 on "model performance" — retry 3 in 8078ms
+[2026-09-15T00:18:44.369Z]   OpenAlex 429 on "optimization" — retry 3 in 8337ms
+[2026-09-15T00:18:53.148Z]   OpenAlex 429 on "routing" — retry 1 in 2282ms
+[2026-09-15T00:18:54.209Z]   OpenAlex 429 on "llm-based" — retry 1 in 2450ms
+[2026-09-15T00:18:55.489Z]   OpenAlex 429 on "routing" — retry 2 in 4064ms
+[2026-09-15T00:18:56.710Z]   OpenAlex 429 on "llm-based" — retry 2 in 4280ms
+[2026-09-15T00:18:59.596Z]   OpenAlex 429 on "routing" — retry 3 in 8457ms
+[2026-09-15T00:19:01.048Z]   OpenAlex 429 on "llm-based" — retry 3 in 8236ms
+[2026-09-15T00:19:09.556Z]   OpenAlex 429 on "model" — retry 1 in 2319ms
+[2026-09-15T00:19:10.330Z]   OpenAlex 429 on "prompts" — retry 1 in 2264ms
+[2026-09-15T00:19:11.931Z]   OpenAlex 429 on "model" — retry 2 in 4419ms
+[2026-09-15T00:19:12.661Z]   OpenAlex 429 on "prompts" — retry 2 in 4165ms
+[2026-09-15T00:19:16.409Z]   OpenAlex 429 on "model" — retry 3 in 8096ms
+[2026-09-15T00:19:16.870Z]   OpenAlex 429 on "prompts" — retry 3 in 8147ms
+[2026-09-15T00:19:25.604Z]   OpenAlex 429 on "multimodal" — retry 1 in 2039ms
+[2026-09-15T00:19:25.660Z]   OpenAlex 429 on "methods" — retry 1 in 2035ms
+[2026-09-15T00:19:27.694Z]   OpenAlex 429 on "multimodal" — retry 2 in 4487ms
+[2026-09-15T00:19:27.745Z]   OpenAlex 429 on "methods" — retry 2 in 4140ms
+[2026-09-15T00:19:32.013Z]   OpenAlex 429 on "methods" — retry 3 in 8190ms
+[2026-09-15T00:19:32.228Z]   OpenAlex 429 on "multimodal" — retry 3 in 8178ms
+[2026-09-15T00:19:41.937Z]   OpenAlex 429 on "2026" — retry 1 in 2481ms
+[2026-09-15T00:19:41.939Z]   OpenAlex 429 on "model selection" — retry 1 in 2401ms
+[2026-09-15T00:19:44.388Z]   OpenAlex 429 on "model selection" — retry 2 in 4364ms
+[2026-09-15T00:19:44.465Z]   OpenAlex 429 on "2026" — retry 2 in 4487ms
+[2026-09-15T00:19:48.905Z]   OpenAlex 429 on "model selection" — retry 3 in 8175ms
+[2026-09-15T00:19:49.007Z]   OpenAlex 429 on "2026" — retry 3 in 8028ms
+[2026-09-15T00:19:58.028Z]   OpenAlex 429 on "clovis" — retry 1 in 2222ms
+[2026-09-15T00:19:58.429Z]   OpenAlex 429 on "efficient inference" — retry 1 in 2131ms
+[2026-09-15T00:20:00.388Z]   OpenAlex 429 on "clovis" — retry 2 in 4000ms
+[2026-09-15T00:20:00.614Z]   OpenAlex 429 on "efficient inference" — retry 2 in 4410ms
+[2026-09-15T00:20:04.443Z]   OpenAlex 429 on "clovis" — retry 3 in 8413ms
+[2026-09-15T00:20:05.080Z]   OpenAlex 429 on "efficient inference" — retry 3 in 8250ms
+[2026-09-15T00:20:13.812Z]   OpenAlex 429 on "varangot-reille" — retry 1 in 2188ms
+[2026-09-15T00:20:14.373Z]   OpenAlex 429 on "inference routing" — retry 1 in 2287ms
+[2026-09-15T00:20:16.054Z]   OpenAlex 429 on "varangot-reille" — retry 2 in 4170ms
+[2026-09-15T00:20:16.720Z]   OpenAlex 429 on "inference routing" — retry 2 in 4492ms
+[2026-09-15T00:20:20.277Z]   OpenAlex 429 on "varangot-reille" — retry 3 in 8406ms
+[2026-09-15T00:20:21.264Z]   OpenAlex 429 on "inference routing" — retry 3 in 8320ms
+[2026-09-15T00:20:30.105Z]   OpenAlex 429 on "christophe" — retry 1 in 2380ms
+[2026-09-15T00:20:30.679Z]   OpenAlex 429 on "models" — retry 1 in 2012ms
+[2026-09-15T00:20:32.531Z]   OpenAlex 429 on "christophe" — retry 2 in 4259ms
+[2026-09-15T00:20:32.736Z]   OpenAlex 429 on "models" — retry 2 in 4448ms
+[2026-09-15T00:20:36.901Z]   OpenAlex 429 on "christophe" — retry 3 in 8286ms
+[2026-09-15T00:20:37.229Z]   OpenAlex 429 on "models" — retry 3 in 8040ms
+[2026-09-15T00:20:46.222Z]   OpenAlex 429 on "bouvard" — retry 1 in 2429ms
+[2026-09-15T00:20:46.635Z]   OpenAlex 429 on "based" — retry 1 in 2130ms
+[2026-09-15T00:20:48.731Z]   OpenAlex 429 on "bouvard" — retry 2 in 4159ms
+[2026-09-15T00:20:48.827Z]   OpenAlex 429 on "based" — retry 2 in 4202ms
+[2026-09-15T00:20:53.026Z]   OpenAlex 429 on "bouvard" — retry 3 in 8134ms
+[2026-09-15T00:20:53.388Z]   OpenAlex 429 on "based" — retry 3 in 8255ms
+[2026-09-15T00:21:04.526Z]   OpenAlex 429 on "large model" — retry 1 in 2341ms
+[2026-09-15T00:21:04.535Z]   OpenAlex 429 on "cost latency" — retry 1 in 2436ms
+[2026-09-15T00:21:06.920Z]   OpenAlex 429 on "large model" — retry 2 in 4252ms
+[2026-09-15T00:21:07.028Z]   OpenAlex 429 on "cost latency" — retry 2 in 4133ms
+[2026-09-15T00:21:11.296Z]   OpenAlex 429 on "cost latency" — retry 3 in 8138ms
+[2026-09-15T00:21:11.297Z]   OpenAlex 429 on "large model" — retry 3 in 8166ms
+[2026-09-15T00:21:20.988Z]   OpenAlex 429 on "large language" — retry 1 in 2322ms
+[2026-09-15T00:21:21.099Z]   OpenAlex 429 on "large language" — retry 1 in 2427ms
+[2026-09-15T00:21:23.356Z]   OpenAlex 429 on "large language" — retry 2 in 4132ms
+[2026-09-15T00:21:23.571Z]   OpenAlex 429 on "large language" — retry 2 in 4418ms
+[2026-09-15T00:21:27.534Z]   OpenAlex 429 on "large language" — retry 3 in 8085ms
+[2026-09-15T00:21:28.039Z]   OpenAlex 429 on "large language" — retry 3 in 8320ms
+[2026-09-15T00:21:36.886Z]   OpenAlex 429 on "models" — retry 1 in 2480ms
+[2026-09-15T00:21:37.788Z]   OpenAlex 429 on "quality cost" — retry 1 in 2304ms
+[2026-09-15T00:21:39.637Z]   OpenAlex 429 on "models" — retry 2 in 4013ms
+[2026-09-15T00:21:40.140Z]   OpenAlex 429 on "quality cost" — retry 2 in 4450ms
+[2026-09-15T00:21:43.704Z]   OpenAlex 429 on "models" — retry 3 in 8497ms
+[2026-09-15T00:21:44.643Z]   OpenAlex 429 on "quality cost" — retry 3 in 8111ms
+[2026-09-15T00:21:53.964Z]   OpenAlex 429 on "quality" — retry 1 in 2431ms
+[2026-09-15T00:21:54.164Z]   OpenAlex 429 on "model" — retry 1 in 2331ms
+[2026-09-15T00:21:56.439Z]   OpenAlex 429 on "quality" — retry 2 in 4359ms
+[2026-09-15T00:21:56.543Z]   OpenAlex 429 on "model" — retry 2 in 4309ms
+[2026-09-15T00:22:00.918Z]   OpenAlex 429 on "quality" — retry 3 in 8045ms
+[2026-09-15T00:22:00.965Z]   OpenAlex 429 on "model" — retry 3 in 8446ms
+[2026-09-15T00:22:09.713Z]   OpenAlex 429 on "large" — retry 1 in 2029ms
+[2026-09-15T00:22:10.380Z]   OpenAlex 429 on "lock-in" — retry 1 in 2072ms
+[2026-09-15T00:22:11.846Z]   OpenAlex 429 on "large" — retry 2 in 4027ms
+[2026-09-15T00:22:12.555Z]   OpenAlex 429 on "lock-in" — retry 2 in 4055ms
+[2026-09-15T00:22:15.928Z]   OpenAlex 429 on "large" — retry 3 in 8360ms
+[2026-09-15T00:22:16.662Z]   OpenAlex 429 on "lock-in" — retry 3 in 8233ms
+[2026-09-15T00:22:25.771Z]   OpenAlex 429 on "expert router" — retry 1 in 2080ms
+[2026-09-15T00:22:25.789Z]   OpenAlex 429 on "large language" — retry 1 in 2432ms
+[2026-09-15T00:22:27.904Z]   OpenAlex 429 on "expert router" — retry 2 in 4423ms
+[2026-09-15T00:22:28.289Z]   OpenAlex 429 on "large language" — retry 2 in 4078ms
+[2026-09-15T00:22:32.469Z]   OpenAlex 429 on "expert router" — retry 3 in 8400ms
+[2026-09-15T00:22:32.491Z]   OpenAlex 429 on "large language" — retry 3 in 8387ms
+[2026-09-15T00:22:41.937Z]   OpenAlex 429 on "model performance" — retry 1 in 2025ms
+[2026-09-15T00:22:42.104Z]   OpenAlex 429 on "throughput latency" — retry 1 in 2176ms
+[2026-09-15T00:22:44.010Z]   OpenAlex 429 on "model performance" — retry 2 in 4101ms
+[2026-09-15T00:22:44.331Z]   OpenAlex 429 on "throughput latency" — retry 2 in 4366ms
+[2026-09-15T00:22:48.158Z]   OpenAlex 429 on "model performance" — retry 3 in 8199ms
+[2026-09-15T00:22:48.743Z]   OpenAlex 429 on "throughput latency" — retry 3 in 8010ms
+[2026-09-15T00:22:57.379Z]   OpenAlex 429 on "capabilities" — retry 1 in 2186ms
+[2026-09-15T00:22:57.648Z]   OpenAlex 429 on "large language" — retry 1 in 2064ms
+[2026-09-15T00:22:59.616Z]   OpenAlex 429 on "capabilities" — retry 2 in 4499ms
+[2026-09-15T00:22:59.755Z]   OpenAlex 429 on "large language" — retry 2 in 4178ms
+[2026-09-15T00:23:04.051Z]   OpenAlex 429 on "large language" — retry 3 in 8074ms
+[2026-09-15T00:23:04.169Z]   OpenAlex 429 on "capabilities" — retry 3 in 8257ms
+[2026-09-15T00:23:13.534Z]   OpenAlex 429 on "which" — retry 1 in 2050ms
+[2026-09-15T00:23:13.595Z]   OpenAlex 429 on "router efficient" — retry 1 in 2463ms
+[2026-09-15T00:23:15.631Z]   OpenAlex 429 on "which" — retry 2 in 4434ms
+[2026-09-15T00:23:16.108Z]   OpenAlex 429 on "router efficient" — retry 2 in 4308ms
+[2026-09-15T00:23:20.115Z]   OpenAlex 429 on "which" — retry 3 in 8091ms
+[2026-09-15T00:23:20.462Z]   OpenAlex 429 on "router efficient" — retry 3 in 8174ms
+[2026-09-15T00:23:29.376Z]   OpenAlex 429 on "models" — retry 1 in 2455ms
+[2026-09-15T00:23:29.523Z]   OpenAlex 429 on "language" — retry 1 in 2055ms
+[2026-09-15T00:23:31.632Z]   OpenAlex 429 on "language" — retry 2 in 4035ms
+[2026-09-15T00:23:31.887Z]   OpenAlex 429 on "models" — retry 2 in 4365ms
+[2026-09-15T00:23:35.717Z]   OpenAlex 429 on "language" — retry 3 in 8334ms
+[2026-09-15T00:23:36.293Z]   OpenAlex 429 on "models" — retry 3 in 8153ms
+[2026-09-15T00:23:46.661Z]   OpenAlex 429 on "performance cost" — retry 1 in 2223ms
+[2026-09-15T00:23:46.719Z]   OpenAlex 429 on "large language" — retry 1 in 2037ms
+[2026-09-15T00:23:48.797Z]   OpenAlex 429 on "large language" — retry 2 in 4453ms
+[2026-09-15T00:23:48.929Z]   OpenAlex 429 on "performance cost" — retry 2 in 4036ms
+[2026-09-15T00:23:53.091Z]   OpenAlex 429 on "performance cost" — retry 3 in 8358ms
+[2026-09-15T00:23:53.307Z]   OpenAlex 429 on "large language" — retry 3 in 8173ms
+[2026-09-15T00:24:03.002Z]   OpenAlex 429 on "models" — retry 1 in 2436ms
+[2026-09-15T00:24:03.457Z]   OpenAlex 429 on "large language" — retry 1 in 2063ms
+[2026-09-15T00:24:05.484Z]   OpenAlex 429 on "models" — retry 2 in 4226ms
+[2026-09-15T00:24:05.566Z]   OpenAlex 429 on "large language" — retry 2 in 4367ms
+[2026-09-15T00:24:09.842Z]   OpenAlex 429 on "models" — retry 3 in 8169ms
+[2026-09-15T00:24:09.975Z]   OpenAlex 429 on "large language" — retry 3 in 8068ms
+[2026-09-15T00:24:19.158Z]   OpenAlex 429 on "language" — retry 1 in 2193ms
+[2026-09-15T00:24:19.181Z]   OpenAlex 429 on "cost routing" — retry 1 in 2032ms
+[2026-09-15T00:24:21.260Z]   OpenAlex 429 on "cost routing" — retry 2 in 4015ms
+[2026-09-15T00:24:21.399Z]   OpenAlex 429 on "language" — retry 2 in 4341ms
+[2026-09-15T00:24:25.339Z]   OpenAlex 429 on "cost routing" — retry 3 in 8311ms
+[2026-09-15T00:24:25.790Z]   OpenAlex 429 on "language" — retry 3 in 8363ms
+[2026-09-15T00:24:34.689Z]   OpenAlex 429 on "routing" — retry 1 in 2201ms
+[2026-09-15T00:24:35.134Z]   OpenAlex 429 on "auditing" — retry 1 in 2417ms
+[2026-09-15T00:24:36.941Z]   OpenAlex 429 on "routing" — retry 2 in 4270ms
+[2026-09-15T00:24:37.600Z]   OpenAlex 429 on "auditing" — retry 2 in 4150ms
+[2026-09-15T00:24:41.260Z]   OpenAlex 429 on "routing" — retry 3 in 8031ms
+[2026-09-15T00:24:41.799Z]   OpenAlex 429 on "auditing" — retry 3 in 8324ms
+[2026-09-15T00:24:50.535Z]   OpenAlex 429 on "large" — retry 1 in 2406ms
+[2026-09-15T00:24:51.995Z]   OpenAlex 429 on "tool" — retry 1 in 2199ms
+[2026-09-15T00:24:52.987Z]   OpenAlex 429 on "large" — retry 2 in 4394ms
+[2026-09-15T00:24:54.246Z]   OpenAlex 429 on "tool" — retry 2 in 4435ms
+[2026-09-15T00:24:57.427Z]   OpenAlex 429 on "large" — retry 3 in 8243ms
+[2026-09-15T00:24:58.731Z]   OpenAlex 429 on "tool" — retry 3 in 8189ms
+[2026-09-15T00:25:07.755Z]   OpenAlex 429 on "large language" — retry 1 in 2159ms
+[2026-09-15T00:25:07.762Z]   OpenAlex 429 on "large language" — retry 1 in 2108ms
+[2026-09-15T00:25:09.917Z]   OpenAlex 429 on "large language" — retry 2 in 4187ms
+[2026-09-15T00:25:09.967Z]   OpenAlex 429 on "large language" — retry 2 in 4152ms
+[2026-09-15T00:25:14.232Z]   OpenAlex 429 on "large language" — retry 3 in 8146ms
+[2026-09-15T00:25:14.255Z]   OpenAlex 429 on "large language" — retry 3 in 8438ms
+[2026-09-15T00:25:24.134Z]   OpenAlex 429 on "multi-agent" — retry 1 in 2013ms
+[2026-09-15T00:25:24.426Z]   OpenAlex 429 on "model routing" — retry 1 in 2488ms
+[2026-09-15T00:25:26.200Z]   OpenAlex 429 on "multi-agent" — retry 2 in 4246ms
+[2026-09-15T00:25:26.963Z]   OpenAlex 429 on "model routing" — retry 2 in 4237ms
+[2026-09-15T00:25:30.498Z]   OpenAlex 429 on "multi-agent" — retry 3 in 8433ms
+[2026-09-15T00:25:31.248Z]   OpenAlex 429 on "model routing" — retry 3 in 8129ms
+[2026-09-15T00:25:40.405Z]   OpenAlex 429 on "communication" — retry 1 in 2175ms
+[2026-09-15T00:25:40.704Z]   OpenAlex 429 on "routing agent" — retry 1 in 2395ms
+[2026-09-15T00:25:42.630Z]   OpenAlex 429 on "communication" — retry 2 in 4058ms
+[2026-09-15T00:25:43.155Z]   OpenAlex 429 on "routing agent" — retry 2 in 4150ms
+[2026-09-15T00:25:46.732Z]   OpenAlex 429 on "communication" — retry 3 in 8376ms
+[2026-09-15T00:25:47.350Z]   OpenAlex 429 on "routing agent" — retry 3 in 8016ms
+[2026-09-15T00:25:55.879Z]   OpenAlex 429 on "bmar" — retry 1 in 2400ms
+[2026-09-15T00:25:55.939Z]   OpenAlex 429 on "agent orchestration" — retry 1 in 2464ms
+[2026-09-15T00:25:58.329Z]   OpenAlex 429 on "bmar" — retry 2 in 4185ms
+[2026-09-15T00:25:58.451Z]   OpenAlex 429 on "agent orchestration" — retry 2 in 4399ms
+[2026-09-15T00:26:02.653Z]   OpenAlex 429 on "bmar" — retry 3 in 8039ms
+[2026-09-15T00:26:02.900Z]   OpenAlex 429 on "agent orchestration" — retry 3 in 8099ms
+[2026-09-15T00:26:11.943Z]   OpenAlex 429 on "pattern" — retry 1 in 2158ms
+[2026-09-15T00:26:11.965Z]   OpenAlex 429 on "using" — retry 1 in 2267ms
+[2026-09-15T00:26:14.149Z]   OpenAlex 429 on "pattern" — retry 2 in 4282ms
+[2026-09-15T00:26:14.275Z]   OpenAlex 429 on "using" — retry 2 in 4456ms
+[2026-09-15T00:26:18.554Z]   OpenAlex 429 on "pattern" — retry 3 in 8487ms
+[2026-09-15T00:26:18.781Z]   OpenAlex 429 on "using" — retry 3 in 8146ms
+[2026-09-15T00:26:28.173Z]   OpenAlex 429 on "large language" — retry 1 in 2393ms
+[2026-09-15T00:26:28.175Z]   OpenAlex 429 on "large language" — retry 1 in 2224ms
+[2026-09-15T00:26:30.460Z]   OpenAlex 429 on "large language" — retry 2 in 4436ms
+[2026-09-15T00:26:30.621Z]   OpenAlex 429 on "large language" — retry 2 in 4296ms
+[2026-09-15T00:26:35.015Z]   OpenAlex 429 on "large language" — retry 3 in 8068ms
+[2026-09-15T00:26:35.065Z]   OpenAlex 429 on "large language" — retry 3 in 8017ms
+[2026-09-15T00:26:43.756Z]   OpenAlex 429 on "domains" — retry 1 in 2079ms
+[2026-09-15T00:26:43.896Z]   OpenAlex 429 on "quality task" — retry 1 in 2015ms
+[2026-09-15T00:26:45.881Z]   OpenAlex 429 on "domains" — retry 2 in 4442ms
+[2026-09-15T00:26:45.957Z]   OpenAlex 429 on "quality task" — retry 2 in 4289ms
+[2026-09-15T00:26:50.366Z]   OpenAlex 429 on "quality task" — retry 3 in 8291ms
+[2026-09-15T00:26:50.394Z]   OpenAlex 429 on "domains" — retry 3 in 8141ms
+[2026-09-15T00:26:59.777Z]   OpenAlex 429 on "route" — retry 1 in 2254ms
+[2026-09-15T00:26:59.902Z]   OpenAlex 429 on "lora" — retry 1 in 2102ms
+[2026-09-15T00:27:02.052Z]   OpenAlex 429 on "lora" — retry 2 in 4057ms
+[2026-09-15T00:27:02.205Z]   OpenAlex 429 on "route" — retry 2 in 4331ms
+[2026-09-15T00:27:06.390Z]   OpenAlex 429 on "lora" — retry 3 in 8491ms
+[2026-09-15T00:27:06.590Z]   OpenAlex 429 on "route" — retry 3 in 8214ms
+[2026-09-15T00:27:15.956Z]   OpenAlex 429 on "language" — retry 1 in 2163ms
+[2026-09-15T00:27:15.990Z]   OpenAlex 429 on "experts" — retry 1 in 2159ms
+[2026-09-15T00:27:18.167Z]   OpenAlex 429 on "language" — retry 2 in 4035ms
+[2026-09-15T00:27:18.195Z]   OpenAlex 429 on "experts" — retry 2 in 4017ms
+[2026-09-15T00:27:22.311Z]   OpenAlex 429 on "language" — retry 3 in 8443ms
+[2026-09-15T00:27:22.323Z]   OpenAlex 429 on "experts" — retry 3 in 8289ms
+[2026-09-15T00:27:31.731Z]   OpenAlex 429 on "natural" — retry 1 in 2159ms
+[2026-09-15T00:27:32.074Z]   OpenAlex 429 on "fine-tuning" — retry 1 in 2380ms
+[2026-09-15T00:27:33.937Z]   OpenAlex 429 on "natural" — retry 2 in 4169ms
+[2026-09-15T00:27:34.502Z]   OpenAlex 429 on "fine-tuning" — retry 2 in 4395ms
+[2026-09-15T00:27:38.153Z]   OpenAlex 429 on "natural" — retry 3 in 8452ms
+[2026-09-15T00:27:38.947Z]   OpenAlex 429 on "fine-tuning" — retry 3 in 8360ms
+[2026-09-15T01:05:38.927Z]   OpenAlex 429 on "LLM routing" — retry 1 in 2060ms
+[2026-09-15T01:05:41.098Z]   OpenAlex 429 on "LLM routing" — retry 2 in 4348ms
+[2026-09-15T01:05:45.604Z]   OpenAlex 429 on "LLM routing" — retry 3 in 8049ms
+[2026-09-15T01:05:55.183Z]   OpenAlex 429 on "model routing" — retry 1 in 2080ms
+[2026-09-15T01:05:57.372Z]   OpenAlex 429 on "model routing" — retry 2 in 4378ms
+[2026-09-15T01:06:01.931Z]   OpenAlex 429 on "model routing" — retry 3 in 8479ms
+[2026-09-15T01:06:13.127Z]   OpenAlex 429 on "language model selection" — retry 1 in 2433ms
+[2026-09-15T01:06:15.665Z]   OpenAlex 429 on "language model selection" — retry 2 in 4450ms
+[2026-09-15T01:06:20.344Z]   OpenAlex 429 on "language model selection" — retry 3 in 8027ms
+[2026-09-15T01:06:29.671Z]   OpenAlex 429 on "LLM selection" — retry 1 in 2183ms
+[2026-09-15T01:06:31.946Z]   OpenAlex 429 on "LLM selection" — retry 2 in 4370ms
+[2026-09-15T01:06:36.486Z]   OpenAlex 429 on "LLM selection" — retry 3 in 8086ms
+[2026-09-15T01:06:46.718Z]   OpenAlex 429 on "large language model selection" — retry 1 in 2162ms
+[2026-09-15T01:06:48.975Z]   OpenAlex 429 on "large language model selection" — retry 2 in 4299ms
+[2026-09-15T01:06:53.427Z]   OpenAlex 429 on "large language model selection" — retry 3 in 8171ms
+[2026-09-15T01:07:03.821Z]   OpenAlex 429 on "mixture of experts routing" — retry 1 in 2330ms
+[2026-09-15T01:07:06.238Z]   OpenAlex 429 on "mixture of experts routing" — retry 2 in 4025ms
+[2026-09-15T01:07:10.440Z]   OpenAlex 429 on "mixture of experts routing" — retry 3 in 8444ms
+[2026-09-15T01:07:20.820Z]   OpenAlex 429 on "cascading language models" — retry 1 in 2076ms
+[2026-09-15T01:07:22.982Z]   OpenAlex 429 on "cascading language models" — retry 2 in 4023ms
+[2026-09-15T01:07:27.171Z]   OpenAlex 429 on "cascading language models" — retry 3 in 8357ms
+[2026-09-15T01:07:37.159Z]   OpenAlex 429 on "model cascade LLM" — retry 1 in 2082ms
+[2026-09-15T01:07:39.359Z]   OpenAlex 429 on "model cascade LLM" — retry 2 in 4423ms
+[2026-09-15T01:07:45.495Z]   OpenAlex 429 on "model cascade LLM" — retry 3 in 8252ms
+[2026-09-15T01:08:00.849Z]   OpenAlex 429 on "LLM cascade" — retry 1 in 2111ms
+[2026-09-15T01:08:03.068Z]   OpenAlex 429 on "LLM cascade" — retry 2 in 4193ms
+[2026-09-15T01:08:07.429Z]   OpenAlex 429 on "LLM cascade" — retry 3 in 8465ms
+[2026-09-15T01:08:17.455Z]   OpenAlex 429 on "cost efficient inference LLM" — retry 1 in 2476ms
+[2026-09-15T01:08:20.021Z]   OpenAlex 429 on "cost efficient inference LLM" — retry 2 in 4443ms
+[2026-09-15T01:08:25.074Z]   OpenAlex 429 on "cost efficient inference LLM" — retry 3 in 8172ms
+[2026-09-15T01:08:36.109Z]   OpenAlex 429 on "router large language models" — retry 1 in 2076ms
+[2026-09-15T01:08:39.569Z]   OpenAlex 429 on "router large language models" — retry 2 in 4298ms
+[2026-09-15T01:08:44.017Z]   OpenAlex 429 on "router large language models" — retry 3 in 8151ms
+[2026-09-15T01:08:53.355Z]   OpenAlex 429 on "prompt routing" — retry 1 in 2289ms
+[2026-09-15T01:08:55.750Z]   OpenAlex 429 on "prompt routing" — retry 2 in 4364ms
+[2026-09-15T01:09:00.295Z]   OpenAlex 429 on "prompt routing" — retry 3 in 8146ms
+[2026-09-15T01:09:10.394Z]   OpenAlex 429 on "expert selection LLM" — retry 1 in 2438ms
+[2026-09-15T01:09:12.927Z]   OpenAlex 429 on "expert selection LLM" — retry 2 in 4153ms
+[2026-09-15T01:09:17.256Z]   OpenAlex 429 on "expert selection LLM" — retry 3 in 8034ms
+[2026-09-15T01:09:27.162Z]   OpenAlex 429 on "model serving LLM" — retry 1 in 2066ms
+[2026-09-15T01:09:29.322Z]   OpenAlex 429 on "model serving LLM" — retry 2 in 4086ms
+[2026-09-15T01:09:33.563Z]   OpenAlex 429 on "model serving LLM" — retry 3 in 8150ms
+[2026-09-15T01:09:43.546Z]   OpenAlex 429 on "inference optimization LLM" — retry 1 in 2034ms
+[2026-09-15T01:09:45.688Z]   OpenAlex 429 on "inference optimization LLM" — retry 2 in 4292ms
+[2026-09-15T01:09:50.148Z]   OpenAlex 429 on "inference optimization LLM" — retry 3 in 8228ms
+[2026-09-15T01:10:00.602Z]   OpenAlex 429 on "model composition LLM" — retry 1 in 2095ms
+[2026-09-15T01:10:02.789Z]   OpenAlex 429 on "model composition LLM" — retry 2 in 4042ms
+[2026-09-15T01:10:06.986Z]   OpenAlex 429 on "model composition LLM" — retry 3 in 8046ms
+[2026-09-15T01:10:16.920Z]   OpenAlex 429 on "speculative decoding" — retry 1 in 2167ms
+[2026-09-15T01:10:19.190Z]   OpenAlex 429 on "speculative decoding" — retry 2 in 4361ms
+[2026-09-15T01:10:23.706Z]   OpenAlex 429 on "speculative decoding" — retry 3 in 8121ms
+[2026-09-15T01:10:33.649Z]   OpenAlex 429 on "model evaluation routing" — retry 1 in 2480ms
+[2026-09-15T01:10:36.224Z]   OpenAlex 429 on "model evaluation routing" — retry 2 in 4093ms
+[2026-09-15T01:10:40.492Z]   OpenAlex 429 on "model evaluation routing" — retry 3 in 8351ms
+[2026-09-15T01:10:50.230Z]   OpenAlex 429 on "query routing LLM" — retry 1 in 2088ms
+[2026-09-15T01:10:52.416Z]   OpenAlex 429 on "query routing LLM" — retry 2 in 4323ms
+[2026-09-15T01:10:56.889Z]   OpenAlex 429 on "query routing LLM" — retry 3 in 8412ms
+[2026-09-15T01:11:06.427Z]   OpenAlex 429 on "task routing LLM" — retry 1 in 2349ms
+[2026-09-15T01:11:08.869Z]   OpenAlex 429 on "task routing LLM" — retry 2 in 4214ms
+[2026-09-15T01:11:13.237Z]   OpenAlex 429 on "task routing LLM" — retry 3 in 8491ms
+[2026-09-15T01:11:23.834Z]   OpenAlex 429 on "model orchestration LLM" — retry 1 in 2175ms
+[2026-09-15T01:11:26.112Z]   OpenAlex 429 on "model orchestration LLM" — retry 2 in 4090ms
+[2026-09-15T01:11:30.359Z]   OpenAlex 429 on "model orchestration LLM" — retry 3 in 8095ms
+[2026-09-15T01:13:46.211Z]   OpenAlex 429 on "LLM routing" — retry 1 in 2481ms
+[2026-09-15T01:13:48.739Z]   OpenAlex 429 on "LLM routing" — retry 2 in 4494ms
+[2026-09-15T01:13:53.360Z]   OpenAlex 429 on "LLM routing" — retry 3 in 8302ms
+[2026-09-15T01:14:03.391Z]   OpenAlex 429 on "model routing" — retry 1 in 2414ms
+[2026-09-15T01:14:05.866Z]   OpenAlex 429 on "model routing" — retry 2 in 4348ms
+[2026-09-15T01:14:10.340Z]   OpenAlex 429 on "model routing" — retry 3 in 8329ms
+[2026-09-15T01:14:20.084Z]   OpenAlex 429 on "language model selection" — retry 1 in 2018ms
+[2026-09-15T01:14:22.156Z]   OpenAlex 429 on "language model selection" — retry 2 in 4044ms
+[2026-09-15T01:14:26.348Z]   OpenAlex 429 on "language model selection" — retry 3 in 8468ms
+[2026-09-15T01:14:36.837Z]   OpenAlex 429 on "LLM selection" — retry 1 in 2421ms
+[2026-09-15T01:14:39.334Z]   OpenAlex 429 on "LLM selection" — retry 2 in 4411ms
+[2026-09-15T01:14:43.886Z]   OpenAlex 429 on "LLM selection" — retry 3 in 8248ms
+[2026-09-15T01:14:54.007Z]   OpenAlex 429 on "large language model selection" — retry 1 in 2380ms
+[2026-09-15T01:14:56.481Z]   OpenAlex 429 on "large language model selection" — retry 2 in 4445ms
+[2026-09-15T01:15:01.060Z]   OpenAlex 429 on "large language model selection" — retry 3 in 8430ms
+[2026-09-15T01:15:10.810Z]   OpenAlex 429 on "mixture of experts routing" — retry 1 in 2337ms
+[2026-09-15T01:15:13.214Z]   OpenAlex 429 on "mixture of experts routing" — retry 2 in 4063ms
+[2026-09-15T01:15:17.394Z]   OpenAlex 429 on "mixture of experts routing" — retry 3 in 8294ms
+[2026-09-15T01:15:27.873Z]   OpenAlex 429 on "cascading language models" — retry 1 in 2387ms
+[2026-09-15T01:15:30.954Z]   OpenAlex 429 on "cascading language models" — retry 2 in 4129ms
+[2026-09-15T01:15:37.503Z]   OpenAlex 429 on "cascading language models" — retry 3 in 8398ms
+[2026-09-15T01:15:48.642Z]   OpenAlex 429 on "model cascade LLM" — retry 1 in 2409ms
+[2026-09-15T01:15:51.101Z]   OpenAlex 429 on "model cascade LLM" — retry 2 in 4143ms
+[2026-09-15T01:15:55.364Z]   OpenAlex 429 on "model cascade LLM" — retry 3 in 8049ms
+[2026-09-15T01:16:05.221Z]   OpenAlex 429 on "LLM cascade" — retry 1 in 2271ms
+[2026-09-15T01:16:07.562Z]   OpenAlex 429 on "LLM cascade" — retry 2 in 4185ms
+[2026-09-15T01:16:12.591Z]   OpenAlex 429 on "LLM cascade" — retry 3 in 8100ms
+[2026-09-15T01:16:22.852Z]   OpenAlex 429 on "cost efficient inference LLM" — retry 1 in 2071ms
+[2026-09-15T01:16:24.973Z]   OpenAlex 429 on "cost efficient inference LLM" — retry 2 in 4326ms
+[2026-09-15T01:16:29.424Z]   OpenAlex 429 on "cost efficient inference LLM" — retry 3 in 8420ms
+[2026-09-15T01:16:39.462Z]   OpenAlex 429 on "router large language models" — retry 1 in 2006ms
+[2026-09-15T01:16:41.524Z]   OpenAlex 429 on "router large language models" — retry 2 in 4227ms
+[2026-09-15T01:16:45.887Z]   OpenAlex 429 on "router large language models" — retry 3 in 8375ms
+[2026-09-15T01:16:56.048Z]   OpenAlex 429 on "prompt routing" — retry 1 in 2236ms
+[2026-09-15T01:16:58.333Z]   OpenAlex 429 on "prompt routing" — retry 2 in 4030ms
+[2026-09-15T01:17:04.332Z]   OpenAlex 429 on "prompt routing" — retry 3 in 8320ms
+[2026-09-15T01:17:14.513Z]   OpenAlex 429 on "expert selection LLM" — retry 1 in 2299ms
+[2026-09-15T01:17:17.493Z]   OpenAlex 429 on "expert selection LLM" — retry 2 in 4488ms
+[2026-09-15T01:17:22.148Z]   OpenAlex 429 on "expert selection LLM" — retry 3 in 8208ms
+[2026-09-15T01:17:32.354Z]   OpenAlex 429 on "model serving LLM" — retry 1 in 2002ms
+[2026-09-15T01:17:35.903Z]   OpenAlex 429 on "model serving LLM" — retry 2 in 4068ms
+[2026-09-15T01:17:40.097Z]   OpenAlex 429 on "model serving LLM" — retry 3 in 8294ms
+[2026-09-15T01:17:50.053Z]   OpenAlex 429 on "inference optimization LLM" — retry 1 in 2089ms
+[2026-09-15T01:17:52.205Z]   OpenAlex 429 on "inference optimization LLM" — retry 2 in 4123ms
+[2026-09-15T01:17:56.470Z]   OpenAlex 429 on "inference optimization LLM" — retry 3 in 8097ms
+[2026-09-15T01:18:06.122Z]   OpenAlex 429 on "model composition LLM" — retry 1 in 2076ms
+[2026-09-15T01:18:08.255Z]   OpenAlex 429 on "model composition LLM" — retry 2 in 4112ms
+[2026-09-15T01:18:12.493Z]   OpenAlex 429 on "model composition LLM" — retry 3 in 8019ms
+[2026-09-15T01:18:21.560Z]   OpenAlex 429 on "speculative decoding" — retry 1 in 2313ms
+[2026-09-15T01:18:23.937Z]   OpenAlex 429 on "speculative decoding" — retry 2 in 4312ms
+[2026-09-15T01:18:28.373Z]   OpenAlex 429 on "speculative decoding" — retry 3 in 8448ms
+[2026-09-15T01:18:38.312Z]   OpenAlex 429 on "model evaluation routing" — retry 1 in 2297ms
+[2026-09-15T01:18:40.670Z]   OpenAlex 429 on "model evaluation routing" — retry 2 in 4463ms
+[2026-09-15T01:18:45.260Z]   OpenAlex 429 on "model evaluation routing" — retry 3 in 8464ms
+[2026-09-15T01:18:54.788Z]   OpenAlex 429 on "query routing LLM" — retry 1 in 2386ms
+[2026-09-15T01:18:57.220Z]   OpenAlex 429 on "query routing LLM" — retry 2 in 4096ms
+[2026-09-15T01:19:01.465Z]   OpenAlex 429 on "query routing LLM" — retry 3 in 8280ms
+[2026-09-15T01:19:11.547Z]   OpenAlex 429 on "task routing LLM" — retry 1 in 2124ms
+[2026-09-15T01:19:13.723Z]   OpenAlex 429 on "task routing LLM" — retry 2 in 4098ms
+[2026-09-15T01:19:17.942Z]   OpenAlex 429 on "task routing LLM" — retry 3 in 8020ms
+[2026-09-15T01:19:28.187Z]   OpenAlex 429 on "model orchestration LLM" — retry 1 in 2099ms
+[2026-09-15T01:19:30.343Z]   OpenAlex 429 on "model orchestration LLM" — retry 2 in 4314ms
+[2026-09-15T01:19:34.797Z]   OpenAlex 429 on "model orchestration LLM" — retry 3 in 8251ms
+[2026-09-15T01:19:45.851Z]   OpenAlex 429 on "multi-model routing" — retry 1 in 2282ms
+[2026-09-15T01:19:48.203Z]   OpenAlex 429 on "multi-model routing" — retry 2 in 4130ms
+[2026-09-15T01:19:52.541Z]   OpenAlex 429 on "multi-model routing" — retry 3 in 8283ms
+[2026-09-15T01:20:02.679Z]   OpenAlex 429 on "model fallback LLM" — retry 1 in 2293ms
+[2026-09-15T01:20:05.018Z]   OpenAlex 429 on "model fallback LLM" — retry 2 in 4288ms
+[2026-09-15T01:20:09.437Z]   OpenAlex 429 on "model fallback LLM" — retry 3 in 8330ms
+[2026-09-15T01:20:19.565Z]   OpenAlex 429 on "AI gateway" — retry 1 in 2257ms
+[2026-09-15T01:20:21.866Z]   OpenAlex 429 on "AI gateway" — retry 2 in 4247ms
+[2026-09-15T01:20:26.234Z]   OpenAlex 429 on "AI gateway" — retry 3 in 8025ms
+[2026-09-15T01:20:35.398Z]   OpenAlex 429 on "model marketplace LLM" — retry 1 in 2315ms
+[2026-09-15T01:20:37.766Z]   OpenAlex 429 on "model marketplace LLM" — retry 2 in 4094ms
+[2026-09-15T01:20:41.989Z]   OpenAlex 429 on "model marketplace LLM" — retry 3 in 8205ms
+[2026-09-15T01:20:52.061Z]   OpenAlex 429 on "cost quality LLM" — retry 1 in 2008ms
+[2026-09-15T01:20:54.119Z]   OpenAlex 429 on "cost quality LLM" — retry 2 in 4485ms
+[2026-09-15T01:20:58.725Z]   OpenAlex 429 on "cost quality LLM" — retry 3 in 8459ms
+[2026-09-15T01:21:08.813Z]   OpenAlex 429 on "model ranking LLM" — retry 1 in 2339ms
+[2026-09-15T01:21:11.209Z]   OpenAlex 429 on "model ranking LLM" — retry 2 in 4145ms
+[2026-09-15T01:21:15.490Z]   OpenAlex 429 on "model ranking LLM" — retry 3 in 8110ms
+[2026-09-15T01:21:25.481Z]   OpenAlex 429 on "benchmark model selection" — retry 1 in 2483ms
+[2026-09-15T01:21:28.008Z]   OpenAlex 429 on "benchmark model selection" — retry 2 in 4182ms
+[2026-09-15T01:21:32.341Z]   OpenAlex 429 on "benchmark model selection" — retry 3 in 8022ms
+[2026-09-15T01:21:41.750Z]   OpenAlex 429 on "LLM router" — retry 1 in 2273ms
+[2026-09-15T01:21:44.071Z]   OpenAlex 429 on "LLM router" — retry 2 in 4442ms
+[2026-09-15T01:21:48.641Z]   OpenAlex 429 on "LLM router" — retry 3 in 8208ms
+[2026-09-15T01:21:58.919Z]   OpenAlex 429 on "model router" — retry 1 in 2171ms
+[2026-09-15T01:22:01.138Z]   OpenAlex 429 on "model router" — retry 2 in 4270ms
+[2026-09-15T01:22:05.536Z]   OpenAlex 429 on "model router" — retry 3 in 8341ms
+[2026-09-15T01:22:15.139Z]   OpenAlex 429 on "LLM gateway" — retry 1 in 2329ms
+[2026-09-15T01:22:17.520Z]   OpenAlex 429 on "LLM gateway" — retry 2 in 4416ms
+[2026-09-15T01:22:22.055Z]   OpenAlex 429 on "LLM gateway" — retry 3 in 8482ms
+[2026-09-15T01:22:31.904Z]   OpenAlex 429 on "routing large language models" — retry 1 in 2139ms
+[2026-09-15T01:22:34.090Z]   OpenAlex 429 on "routing large language models" — retry 2 in 4318ms
+[2026-09-15T01:22:38.555Z]   OpenAlex 429 on "routing large language models" — retry 3 in 8180ms
+[2026-09-15T01:22:48.771Z]   OpenAlex 429 on "adaptive inference LLM" — retry 1 in 2011ms
+[2026-09-15T01:22:50.827Z]   OpenAlex 429 on "adaptive inference LLM" — retry 2 in 4399ms
+[2026-09-15T01:22:55.345Z]   OpenAlex 429 on "adaptive inference LLM" — retry 3 in 8486ms
+[2026-09-15T01:23:05.506Z]   OpenAlex 429 on "LLM dispatch" — retry 1 in 2039ms
+[2026-09-15T01:23:07.593Z]   OpenAlex 429 on "LLM dispatch" — retry 2 in 4455ms
+[2026-09-15T01:23:12.168Z]   OpenAlex 429 on "LLM dispatch" — retry 3 in 8104ms
+[2026-09-15T01:23:21.947Z]   OpenAlex 429 on "model selection inference" — retry 1 in 2380ms
+[2026-09-15T01:23:24.373Z]   OpenAlex 429 on "model selection inference" — retry 2 in 4391ms
+[2026-09-15T01:23:28.883Z]   OpenAlex 429 on "model selection inference" — retry 3 in 8246ms
+[2026-09-15T01:24:29.044Z]   OpenAlex 429 on "model routing" — retry 1 in 2013ms
+[2026-09-15T01:24:29.045Z]   OpenAlex 429 on "model routing" — retry 1 in 2170ms
+[2026-09-15T01:24:29.045Z]   OpenAlex 429 on "model routing" — retry 1 in 2129ms
+[2026-09-15T01:24:29.046Z]   OpenAlex 429 on "model routing" — retry 1 in 2284ms
+[2026-09-15T01:24:31.118Z]   OpenAlex 429 on "model routing" — retry 2 in 4081ms
+[2026-09-15T01:24:31.232Z]   OpenAlex 429 on "model routing" — retry 2 in 4411ms
+[2026-09-15T01:24:31.266Z]   OpenAlex 429 on "model routing" — retry 2 in 4248ms
+[2026-09-15T01:24:31.379Z]   OpenAlex 429 on "model routing" — retry 2 in 4498ms
+[2026-09-15T01:24:35.260Z]   OpenAlex 429 on "model routing" — retry 3 in 8165ms
+[2026-09-15T01:24:35.571Z]   OpenAlex 429 on "model routing" — retry 3 in 8202ms
+[2026-09-15T01:24:35.693Z]   OpenAlex 429 on "model routing" — retry 3 in 8276ms
+[2026-09-15T01:24:35.925Z]   OpenAlex 429 on "model routing" — retry 3 in 8286ms
+[2026-09-15T01:24:45.104Z]   OpenAlex 429 on "LLM routing" — retry 1 in 2213ms
+[2026-09-15T01:24:45.195Z]   OpenAlex 429 on "LLM routing" — retry 1 in 2085ms
+[2026-09-15T01:24:45.251Z]   OpenAlex 429 on "LLM routing" — retry 1 in 2369ms
+[2026-09-15T01:24:45.517Z]   OpenAlex 429 on "LLM routing" — retry 1 in 2440ms
+[2026-09-15T01:24:47.327Z]   OpenAlex 429 on "LLM routing" — retry 2 in 4478ms
+[2026-09-15T01:24:47.362Z]   OpenAlex 429 on "LLM routing" — retry 2 in 4433ms
+[2026-09-15T01:24:47.669Z]   OpenAlex 429 on "LLM routing" — retry 2 in 4146ms
+[2026-09-15T01:24:48.001Z]   OpenAlex 429 on "LLM routing" — retry 2 in 4042ms
+[2026-09-15T01:24:51.851Z]   OpenAlex 429 on "LLM routing" — retry 3 in 8283ms
+[2026-09-15T01:24:51.854Z]   OpenAlex 429 on "LLM routing" — retry 3 in 8349ms
+[2026-09-15T01:24:51.866Z]   OpenAlex 429 on "LLM routing" — retry 3 in 8126ms
+[2026-09-15T01:24:52.089Z]   OpenAlex 429 on "LLM routing" — retry 3 in 8457ms
+[2026-09-15T01:25:00.990Z]   OpenAlex 429 on "prompt routing" — retry 1 in 2397ms
+[2026-09-15T01:25:01.036Z]   OpenAlex 429 on "prompt routing" — retry 1 in 2146ms
+[2026-09-15T01:25:01.223Z]   OpenAlex 429 on "prompt routing" — retry 1 in 2300ms
+[2026-09-15T01:25:02.158Z]   OpenAlex 429 on "prompt routing" — retry 1 in 2054ms
+[2026-09-15T01:25:03.230Z]   OpenAlex 429 on "prompt routing" — retry 2 in 4497ms
+[2026-09-15T01:25:03.436Z]   OpenAlex 429 on "prompt routing" — retry 2 in 4205ms
+[2026-09-15T01:25:03.574Z]   OpenAlex 429 on "prompt routing" — retry 2 in 4320ms
+[2026-09-15T01:25:04.257Z]   OpenAlex 429 on "prompt routing" — retry 2 in 4438ms
+[2026-09-15T01:25:07.687Z]   OpenAlex 429 on "prompt routing" — retry 3 in 8445ms
+[2026-09-15T01:25:07.770Z]   OpenAlex 429 on "prompt routing" — retry 3 in 8151ms
+[2026-09-15T01:25:07.944Z]   OpenAlex 429 on "prompt routing" — retry 3 in 8356ms
+[2026-09-15T01:25:08.740Z]   OpenAlex 429 on "prompt routing" — retry 3 in 8498ms
+[2026-09-15T01:25:16.852Z]   OpenAlex 429 on "model selection" — retry 1 in 2074ms
+[2026-09-15T01:25:17.095Z]   OpenAlex 429 on "model selection" — retry 1 in 2120ms
+[2026-09-15T01:25:17.151Z]   OpenAlex 429 on "model selection" — retry 1 in 2096ms
+[2026-09-15T01:25:18.213Z]   OpenAlex 429 on "model selection" — retry 1 in 2120ms
+[2026-09-15T01:25:18.971Z]   OpenAlex 429 on "model selection" — retry 2 in 4147ms
+[2026-09-15T01:25:19.259Z]   OpenAlex 429 on "model selection" — retry 2 in 4385ms
+[2026-09-15T01:25:19.295Z]   OpenAlex 429 on "model selection" — retry 2 in 4241ms
+[2026-09-15T01:25:20.377Z]   OpenAlex 429 on "model selection" — retry 2 in 4239ms
+[2026-09-15T01:25:23.166Z]   OpenAlex 429 on "model selection" — retry 3 in 8290ms
+[2026-09-15T01:25:23.581Z]   OpenAlex 429 on "model selection" — retry 3 in 8147ms
+[2026-09-15T01:25:23.697Z]   OpenAlex 429 on "model selection" — retry 3 in 8375ms
+[2026-09-15T01:25:24.662Z]   OpenAlex 429 on "model selection" — retry 3 in 8433ms
+[2026-09-15T01:25:32.884Z]   OpenAlex 429 on "AI gateway" — retry 1 in 2450ms
+[2026-09-15T01:25:33.046Z]   OpenAlex 429 on "AI gateway" — retry 1 in 2445ms
+[2026-09-15T01:25:33.868Z]   OpenAlex 429 on "AI gateway" — retry 1 in 2023ms
+[2026-09-15T01:25:35.326Z]   OpenAlex 429 on "AI gateway" — retry 1 in 2298ms
+[2026-09-15T01:25:35.388Z]   OpenAlex 429 on "AI gateway" — retry 2 in 4016ms
+[2026-09-15T01:25:35.543Z]   OpenAlex 429 on "AI gateway" — retry 2 in 4401ms
+[2026-09-15T01:25:35.938Z]   OpenAlex 429 on "AI gateway" — retry 2 in 4211ms
+[2026-09-15T01:25:37.673Z]   OpenAlex 429 on "AI gateway" — retry 2 in 4161ms
+[2026-09-15T01:25:39.460Z]   OpenAlex 429 on "AI gateway" — retry 3 in 8445ms
+[2026-09-15T01:25:39.990Z]   OpenAlex 429 on "AI gateway" — retry 3 in 8398ms
+[2026-09-15T01:25:40.204Z]   OpenAlex 429 on "AI gateway" — retry 3 in 8254ms
+[2026-09-15T01:25:41.887Z]   OpenAlex 429 on "AI gateway" — retry 3 in 8154ms
+[2026-09-15T01:25:50.863Z]   OpenAlex 429 on "large language" — retry 1 in 2351ms
+[2026-09-15T01:25:50.863Z]   OpenAlex 429 on "routing large" — retry 1 in 2382ms
+[2026-09-15T01:25:50.864Z]   OpenAlex 429 on "model routing" — retry 1 in 2278ms
+[2026-09-15T01:25:50.867Z]   OpenAlex 429 on "tool large" — retry 1 in 2331ms
+[2026-09-15T01:25:53.190Z]   OpenAlex 429 on "model routing" — retry 2 in 4220ms
+[2026-09-15T01:25:53.243Z]   OpenAlex 429 on "tool large" — retry 2 in 4033ms
+[2026-09-15T01:25:53.265Z]   OpenAlex 429 on "large language" — retry 2 in 4159ms
+[2026-09-15T01:25:53.291Z]   OpenAlex 429 on "routing large" — retry 2 in 4493ms
+[2026-09-15T01:25:57.324Z]   OpenAlex 429 on "tool large" — retry 3 in 8267ms
+[2026-09-15T01:25:57.462Z]   OpenAlex 429 on "model routing" — retry 3 in 8206ms
+[2026-09-15T01:25:57.475Z]   OpenAlex 429 on "large language" — retry 3 in 8340ms
+[2026-09-15T01:25:57.838Z]   OpenAlex 429 on "routing large" — retry 3 in 8081ms
+[2026-09-15T01:26:07.069Z]   OpenAlex 429 on "language model" — retry 1 in 2208ms
+[2026-09-15T01:26:07.178Z]   OpenAlex 429 on "large language" — retry 1 in 2178ms
+[2026-09-15T01:26:07.726Z]   OpenAlex 429 on "LLM routing" — retry 1 in 2109ms
+[2026-09-15T01:26:07.856Z]   OpenAlex 429 on "large language" — retry 1 in 2430ms
+[2026-09-15T01:26:09.333Z]   OpenAlex 429 on "language model" — retry 2 in 4461ms
+[2026-09-15T01:26:09.404Z]   OpenAlex 429 on "large language" — retry 2 in 4499ms
+[2026-09-15T01:26:09.885Z]   OpenAlex 429 on "LLM routing" — retry 2 in 4414ms
+[2026-09-15T01:26:10.331Z]   OpenAlex 429 on "large language" — retry 2 in 4220ms
+[2026-09-15T01:26:13.845Z]   OpenAlex 429 on "language model" — retry 3 in 8153ms
+[2026-09-15T01:26:13.955Z]   OpenAlex 429 on "large language" — retry 3 in 8153ms
+[2026-09-15T01:26:14.349Z]   OpenAlex 429 on "LLM routing" — retry 3 in 8233ms
+[2026-09-15T01:26:14.597Z]   OpenAlex 429 on "large language" — retry 3 in 8147ms
+[2026-09-15T01:26:23.652Z]   OpenAlex 429 on "llms" — retry 1 in 2325ms
+[2026-09-15T01:26:23.696Z]   OpenAlex 429 on "deep" — retry 1 in 2353ms
+[2026-09-15T01:26:24.100Z]   OpenAlex 429 on "llms" — retry 1 in 2094ms
+[2026-09-15T01:26:24.196Z]   OpenAlex 429 on "prompt routing" — retry 1 in 2377ms
+[2026-09-15T01:26:26.027Z]   OpenAlex 429 on "llms" — retry 2 in 4092ms
+[2026-09-15T01:26:26.095Z]   OpenAlex 429 on "deep" — retry 2 in 4133ms
+[2026-09-15T01:26:26.242Z]   OpenAlex 429 on "llms" — retry 2 in 4163ms
+[2026-09-15T01:26:26.621Z]   OpenAlex 429 on "prompt routing" — retry 2 in 4253ms
+[2026-09-15T01:26:30.183Z]   OpenAlex 429 on "llms" — retry 3 in 8032ms
+[2026-09-15T01:26:30.277Z]   OpenAlex 429 on "deep" — retry 3 in 8041ms
+[2026-09-15T01:26:30.456Z]   OpenAlex 429 on "llms" — retry 3 in 8253ms
+[2026-09-15T01:26:30.925Z]   OpenAlex 429 on "prompt routing" — retry 3 in 8500ms
+[2026-09-15T01:26:38.944Z]   OpenAlex 429 on "accidents" — retry 1 in 2364ms
+[2026-09-15T01:26:39.312Z]   OpenAlex 429 on "routing" — retry 1 in 2369ms
+[2026-09-15T01:26:39.991Z]   OpenAlex 429 on "contexts" — retry 1 in 2400ms
+[2026-09-15T01:26:40.836Z]   OpenAlex 429 on "model selection" — retry 1 in 2046ms
+[2026-09-15T01:26:41.354Z]   OpenAlex 429 on "accidents" — retry 2 in 4164ms
+[2026-09-15T01:26:41.730Z]   OpenAlex 429 on "routing" — retry 2 in 4111ms
+[2026-09-15T01:26:42.446Z]   OpenAlex 429 on "contexts" — retry 2 in 4397ms
+[2026-09-15T01:26:42.940Z]   OpenAlex 429 on "model selection" — retry 2 in 4307ms
+[2026-09-15T01:26:45.569Z]   OpenAlex 429 on "accidents" — retry 3 in 8403ms
+[2026-09-15T01:26:45.886Z]   OpenAlex 429 on "routing" — retry 3 in 8452ms
+[2026-09-15T01:26:46.914Z]   OpenAlex 429 on "contexts" — retry 3 in 8451ms
+[2026-09-15T01:26:47.303Z]   OpenAlex 429 on "model selection" — retry 3 in 8426ms
+[2026-09-15T01:26:55.806Z]   OpenAlex 429 on "paradigm" — retry 1 in 2000ms
+[2026-09-15T01:26:55.832Z]   OpenAlex 429 on "enhancing" — retry 1 in 2387ms
+[2026-09-15T01:26:57.327Z]   OpenAlex 429 on "however" — retry 1 in 2475ms
+[2026-09-15T01:26:57.621Z]   OpenAlex 429 on "AI gateway" — retry 1 in 2007ms
+[2026-09-15T01:26:57.854Z]   OpenAlex 429 on "paradigm" — retry 2 in 4404ms
+[2026-09-15T01:26:58.268Z]   OpenAlex 429 on "enhancing" — retry 2 in 4227ms
+[2026-09-15T01:26:59.678Z]   OpenAlex 429 on "AI gateway" — retry 2 in 4029ms
+[2026-09-15T01:26:59.848Z]   OpenAlex 429 on "however" — retry 2 in 4222ms
+[2026-09-15T01:27:02.307Z]   OpenAlex 429 on "paradigm" — retry 3 in 8152ms
+[2026-09-15T01:27:02.561Z]   OpenAlex 429 on "enhancing" — retry 3 in 8257ms
+[2026-09-15T01:27:06.569Z]   OpenAlex 429 on "however" — retry 3 in 8394ms
+[2026-09-15T01:27:06.631Z]   OpenAlex 429 on "AI gateway" — retry 3 in 8256ms
+[2026-09-15T01:27:16.149Z]   OpenAlex 429 on "large language" — retry 1 in 2212ms
+[2026-09-15T01:27:16.150Z]   OpenAlex 429 on "large language" — retry 1 in 2420ms
+[2026-09-15T01:27:16.150Z]   OpenAlex 429 on "2025" — retry 1 in 2352ms
+[2026-09-15T01:27:16.156Z]   OpenAlex 429 on "large language" — retry 1 in 2415ms
+[2026-09-15T01:27:18.409Z]   OpenAlex 429 on "large language" — retry 2 in 4474ms
+[2026-09-15T01:27:18.549Z]   OpenAlex 429 on "2025" — retry 2 in 4459ms
+[2026-09-15T01:27:18.617Z]   OpenAlex 429 on "large language" — retry 2 in 4415ms
+[2026-09-15T01:27:18.618Z]   OpenAlex 429 on "large language" — retry 2 in 4460ms
+[2026-09-15T01:27:23.015Z]   OpenAlex 429 on "large language" — retry 3 in 8178ms
+[2026-09-15T01:27:23.060Z]   OpenAlex 429 on "2025" — retry 3 in 8230ms
+[2026-09-15T01:27:23.086Z]   OpenAlex 429 on "large language" — retry 3 in 8334ms
+[2026-09-15T01:27:23.132Z]   OpenAlex 429 on "large language" — retry 3 in 8238ms
+[2026-09-15T01:27:31.957Z]   OpenAlex 429 on "inference cost" — retry 1 in 2310ms
+[2026-09-15T01:27:32.115Z]   OpenAlex 429 on "next-gpt" — retry 1 in 2268ms
+[2026-09-15T01:27:32.197Z]   OpenAlex 429 on "llms" — retry 1 in 2131ms
+[2026-09-15T01:27:32.303Z]   OpenAlex 429 on "jiang" — retry 1 in 2085ms
+[2026-09-15T01:27:34.314Z]   OpenAlex 429 on "inference cost" — retry 2 in 4011ms
+[2026-09-15T01:27:34.391Z]   OpenAlex 429 on "llms" — retry 2 in 4201ms
+[2026-09-15T01:27:34.430Z]   OpenAlex 429 on "next-gpt" — retry 2 in 4443ms
+[2026-09-15T01:27:34.430Z]   OpenAlex 429 on "jiang" — retry 2 in 4486ms
+[2026-09-15T01:27:38.380Z]   OpenAlex 429 on "inference cost" — retry 3 in 8029ms
+[2026-09-15T01:27:38.640Z]   OpenAlex 429 on "llms" — retry 3 in 8414ms
+[2026-09-15T01:27:38.953Z]   OpenAlex 429 on "next-gpt" — retry 3 in 8281ms
+[2026-09-15T01:27:38.962Z]   OpenAlex 429 on "jiang" — retry 3 in 8375ms
+[2026-09-15T01:27:47.601Z]   OpenAlex 429 on "model" — retry 1 in 2021ms
+[2026-09-15T01:27:47.951Z]   OpenAlex 429 on "modalities" — retry 1 in 2074ms
+[2026-09-15T01:27:48.289Z]   OpenAlex 429 on "dawei" — retry 1 in 2468ms
+[2026-09-15T01:27:48.434Z]   OpenAlex 429 on "safety" — retry 1 in 2167ms
+[2026-09-15T01:27:49.678Z]   OpenAlex 429 on "model" — retry 2 in 4234ms
+[2026-09-15T01:27:50.081Z]   OpenAlex 429 on "modalities" — retry 2 in 4208ms
+[2026-09-15T01:27:50.647Z]   OpenAlex 429 on "safety" — retry 2 in 4131ms
+[2026-09-15T01:27:50.803Z]   OpenAlex 429 on "dawei" — retry 2 in 4075ms
+[2026-09-15T01:27:53.961Z]   OpenAlex 429 on "model" — retry 3 in 8070ms
+[2026-09-15T01:27:54.337Z]   OpenAlex 429 on "modalities" — retry 3 in 8234ms
+[2026-09-15T01:27:54.824Z]   OpenAlex 429 on "safety" — retry 3 in 8129ms
+[2026-09-15T01:27:54.923Z]   OpenAlex 429 on "dawei" — retry 3 in 8028ms
+[2026-09-15T01:28:04.236Z]   OpenAlex 429 on "query" — retry 1 in 2194ms
+[2026-09-15T01:28:04.430Z]   OpenAlex 429 on "jailbreak" — retry 1 in 2499ms
+[2026-09-15T01:28:04.469Z]   OpenAlex 429 on "bohan" — retry 1 in 2383ms
+[2026-09-15T01:28:04.554Z]   OpenAlex 429 on "multimodal" — retry 1 in 2353ms
+[2026-09-15T01:28:06.484Z]   OpenAlex 429 on "query" — retry 2 in 4228ms
+[2026-09-15T01:28:06.909Z]   OpenAlex 429 on "bohan" — retry 2 in 4145ms
+[2026-09-15T01:28:06.962Z]   OpenAlex 429 on "multimodal" — retry 2 in 4062ms
+[2026-09-15T01:28:06.981Z]   OpenAlex 429 on "jailbreak" — retry 2 in 4102ms
+[2026-09-15T01:28:10.774Z]   OpenAlex 429 on "query" — retry 3 in 8346ms
+[2026-09-15T01:28:11.080Z]   OpenAlex 429 on "multimodal" — retry 3 in 8081ms
+[2026-09-15T01:28:11.106Z]   OpenAlex 429 on "bohan" — retry 3 in 8199ms
+[2026-09-15T01:28:11.139Z]   OpenAlex 429 on "jailbreak" — retry 3 in 8030ms
+[2026-09-15T01:28:20.332Z]   OpenAlex 429 on "llms" — retry 1 in 2302ms
+[2026-09-15T01:28:20.420Z]   OpenAlex 429 on "research" — retry 1 in 2156ms
+[2026-09-15T01:28:20.624Z]   OpenAlex 429 on "liangjie" — retry 1 in 2258ms
+[2026-09-15T01:28:20.800Z]   OpenAlex 429 on "content" — retry 1 in 2061ms
+[2026-09-15T01:28:22.625Z]   OpenAlex 429 on "research" — retry 2 in 4062ms
+[2026-09-15T01:28:22.682Z]   OpenAlex 429 on "llms" — retry 2 in 4348ms
+[2026-09-15T01:28:22.910Z]   OpenAlex 429 on "content" — retry 2 in 4301ms
+[2026-09-15T01:28:22.927Z]   OpenAlex 429 on "liangjie" — retry 2 in 4009ms
+[2026-09-15T01:28:26.736Z]   OpenAlex 429 on "research" — retry 3 in 8180ms
+[2026-09-15T01:28:26.984Z]   OpenAlex 429 on "liangjie" — retry 3 in 8037ms
+[2026-09-15T01:28:27.079Z]   OpenAlex 429 on "llms" — retry 3 in 8365ms
+[2026-09-15T01:28:27.265Z]   OpenAlex 429 on "content" — retry 3 in 8466ms
+[2026-09-15T01:28:37.516Z]   OpenAlex 429 on "2024" — retry 1 in 2426ms
+[2026-09-15T01:28:37.529Z]   OpenAlex 429 on "large language" — retry 1 in 2185ms
+[2026-09-15T01:28:37.529Z]   OpenAlex 429 on "large language" — retry 1 in 2422ms
+[2026-09-15T01:28:37.530Z]   OpenAlex 429 on "large language" — retry 1 in 2409ms
+[2026-09-15T01:28:39.770Z]   OpenAlex 429 on "large language" — retry 2 in 4363ms
+[2026-09-15T01:28:39.985Z]   OpenAlex 429 on "large language" — retry 2 in 4149ms
+[2026-09-15T01:28:39.985Z]   OpenAlex 429 on "2024" — retry 2 in 4399ms
+[2026-09-15T01:28:39.994Z]   OpenAlex 429 on "large language" — retry 2 in 4159ms
+[2026-09-15T01:28:44.262Z]   OpenAlex 429 on "large language" — retry 3 in 8427ms
+[2026-09-15T01:28:44.271Z]   OpenAlex 429 on "large language" — retry 3 in 8256ms
+[2026-09-15T01:28:44.277Z]   OpenAlex 429 on "large language" — retry 3 in 8131ms
+[2026-09-15T01:28:44.425Z]   OpenAlex 429 on "2024" — retry 3 in 8182ms
+[2026-09-15T01:28:53.818Z]   OpenAlex 429 on "inference throughput" — retry 1 in 2117ms
+[2026-09-15T01:28:53.820Z]   OpenAlex 429 on "data" — retry 1 in 2135ms
+[2026-09-15T01:28:53.929Z]   OpenAlex 429 on "optimization" — retry 1 in 2371ms
+[2026-09-15T01:28:54.006Z]   OpenAlex 429 on "garima" — retry 1 in 2113ms
+[2026-09-15T01:28:55.991Z]   OpenAlex 429 on "inference throughput" — retry 2 in 4354ms
+[2026-09-15T01:28:56.010Z]   OpenAlex 429 on "data" — retry 2 in 4334ms
+[2026-09-15T01:28:56.169Z]   OpenAlex 429 on "garima" — retry 2 in 4396ms
+[2026-09-15T01:28:57.202Z]   OpenAlex 429 on "optimization" — retry 2 in 4284ms
+[2026-09-15T01:29:00.398Z]   OpenAlex 429 on "inference throughput" — retry 3 in 8189ms
+[2026-09-15T01:29:00.400Z]   OpenAlex 429 on "data" — retry 3 in 8338ms
+[2026-09-15T01:29:01.597Z]   OpenAlex 429 on "garima" — retry 3 in 8265ms
+[2026-09-15T01:29:01.627Z]   OpenAlex 429 on "optimization" — retry 3 in 8260ms
+[2026-09-15T01:43:59.994Z]   OpenAlex 429 on "LLM routing" — retry 1 in 2478ms
+[2026-09-15T01:44:02.520Z]   OpenAlex 429 on "LLM routing" — retry 2 in 4479ms
+[2026-09-15T01:44:07.132Z]   OpenAlex 429 on "LLM routing" — retry 3 in 8115ms
+[2026-09-15T01:44:17.096Z]   OpenAlex 429 on "model routing" — retry 1 in 2479ms
+[2026-09-15T01:44:19.628Z]   OpenAlex 429 on "model routing" — retry 2 in 4076ms
+[2026-09-15T01:44:23.873Z]   OpenAlex 429 on "model routing" — retry 3 in 8182ms
+[2026-09-15T01:44:33.683Z]   OpenAlex 429 on "language model selection" — retry 1 in 2243ms
+[2026-09-15T01:44:35.970Z]   OpenAlex 429 on "language model selection" — retry 2 in 4208ms
+[2026-09-15T01:44:40.290Z]   OpenAlex 429 on "language model selection" — retry 3 in 8022ms
+[2026-09-15T01:44:49.587Z]   OpenAlex 429 on "LLM selection" — retry 1 in 2161ms
+[2026-09-15T01:44:51.799Z]   OpenAlex 429 on "LLM selection" — retry 2 in 4130ms
+[2026-09-15T01:44:56.045Z]   OpenAlex 429 on "LLM selection" — retry 3 in 8075ms
+[2026-09-15T01:45:06.735Z]   OpenAlex 429 on "large language model selection" — retry 1 in 2341ms
+[2026-09-15T01:45:09.125Z]   OpenAlex 429 on "large language model selection" — retry 2 in 4456ms
+[2026-09-15T01:45:13.698Z]   OpenAlex 429 on "large language model selection" — retry 3 in 8325ms
+[2026-09-15T01:45:23.386Z]   OpenAlex 429 on "mixture of experts routing" — retry 1 in 2163ms
+[2026-09-15T01:45:25.597Z]   OpenAlex 429 on "mixture of experts routing" — retry 2 in 4070ms
+[2026-09-15T01:45:29.800Z]   OpenAlex 429 on "mixture of experts routing" — retry 3 in 8418ms
+[2026-09-15T01:45:40.045Z]   OpenAlex 429 on "cascading language models" — retry 1 in 2482ms
+[2026-09-15T01:45:42.584Z]   OpenAlex 429 on "cascading language models" — retry 2 in 4205ms
+[2026-09-15T01:45:46.915Z]   OpenAlex 429 on "cascading language models" — retry 3 in 8206ms
+[2026-09-15T01:45:56.825Z]   OpenAlex 429 on "model cascade LLM" — retry 1 in 2474ms
+[2026-09-15T01:45:59.355Z]   OpenAlex 429 on "model cascade LLM" — retry 2 in 4414ms
+[2026-09-15T01:46:03.885Z]   OpenAlex 429 on "model cascade LLM" — retry 3 in 8069ms
+[2026-09-15T01:46:14.123Z]   OpenAlex 429 on "LLM cascade" — retry 1 in 2181ms
+[2026-09-15T01:46:16.354Z]   OpenAlex 429 on "LLM cascade" — retry 2 in 4065ms
+[2026-09-15T01:46:20.533Z]   OpenAlex 429 on "LLM cascade" — retry 3 in 8499ms
+[2026-09-15T01:46:30.519Z]   OpenAlex 429 on "cost efficient inference LLM" — retry 1 in 2399ms
+[2026-09-15T01:46:32.972Z]   OpenAlex 429 on "cost efficient inference LLM" — retry 2 in 4209ms
+[2026-09-15T01:46:37.301Z]   OpenAlex 429 on "cost efficient inference LLM" — retry 3 in 8189ms
+[2026-09-15T01:46:47.523Z]   OpenAlex 429 on "router large language models" — retry 1 in 2490ms
+[2026-09-15T01:46:50.059Z]   OpenAlex 429 on "router large language models" — retry 2 in 4089ms
+[2026-09-15T01:46:54.263Z]   OpenAlex 429 on "router large language models" — retry 3 in 8488ms
+[2026-09-15T01:47:05.062Z]   OpenAlex 429 on "prompt routing" — retry 1 in 2051ms
+[2026-09-15T01:47:07.163Z]   OpenAlex 429 on "prompt routing" — retry 2 in 4311ms
+[2026-09-15T01:47:11.586Z]   OpenAlex 429 on "prompt routing" — retry 3 in 8199ms
+[2026-09-15T01:47:20.794Z]   OpenAlex 429 on "expert selection LLM" — retry 1 in 2456ms
+[2026-09-15T01:47:23.305Z]   OpenAlex 429 on "expert selection LLM" — retry 2 in 4292ms
+[2026-09-15T01:47:27.715Z]   OpenAlex 429 on "expert selection LLM" — retry 3 in 8416ms
+[2026-09-15T01:47:38.052Z]   OpenAlex 429 on "model serving LLM" — retry 1 in 2094ms
+[2026-09-15T01:47:40.197Z]   OpenAlex 429 on "model serving LLM" — retry 2 in 4326ms
+[2026-09-15T01:47:44.646Z]   OpenAlex 429 on "model serving LLM" — retry 3 in 8084ms
+[2026-09-15T01:47:54.116Z]   OpenAlex 429 on "inference optimization LLM" — retry 1 in 2448ms
+[2026-09-15T01:47:56.611Z]   OpenAlex 429 on "inference optimization LLM" — retry 2 in 4107ms
+[2026-09-15T01:48:00.833Z]   OpenAlex 429 on "inference optimization LLM" — retry 3 in 8408ms
+[2026-09-15T01:48:11.291Z]   OpenAlex 429 on "model composition LLM" — retry 1 in 2110ms
+[2026-09-15T01:48:13.460Z]   OpenAlex 429 on "model composition LLM" — retry 2 in 4432ms
+[2026-09-15T01:48:18.003Z]   OpenAlex 429 on "model composition LLM" — retry 3 in 8133ms
+[2026-09-15T01:48:27.246Z]   OpenAlex 429 on "speculative decoding" — retry 1 in 2158ms
+[2026-09-15T01:48:29.456Z]   OpenAlex 429 on "speculative decoding" — retry 2 in 4448ms
+[2026-09-15T01:48:34.025Z]   OpenAlex 429 on "speculative decoding" — retry 3 in 8121ms
+[2026-09-15T01:48:43.666Z]   OpenAlex 429 on "model evaluation routing" — retry 1 in 2060ms
+[2026-09-15T01:48:45.775Z]   OpenAlex 429 on "model evaluation routing" — retry 2 in 4435ms
+[2026-09-15T01:48:50.332Z]   OpenAlex 429 on "model evaluation routing" — retry 3 in 8010ms
+[2026-09-15T01:49:00.410Z]   OpenAlex 429 on "query routing LLM" — retry 1 in 2396ms
+[2026-09-15T01:49:02.858Z]   OpenAlex 429 on "query routing LLM" — retry 2 in 4431ms
+[2026-09-15T01:49:07.410Z]   OpenAlex 429 on "query routing LLM" — retry 3 in 8084ms
+[2026-09-15T01:49:16.828Z]   OpenAlex 429 on "task routing LLM" — retry 1 in 2492ms
+[2026-09-15T01:49:19.378Z]   OpenAlex 429 on "task routing LLM" — retry 2 in 4311ms
+[2026-09-15T01:49:23.812Z]   OpenAlex 429 on "task routing LLM" — retry 3 in 8022ms
+[2026-09-15T01:49:33.249Z]   OpenAlex 429 on "model orchestration LLM" — retry 1 in 2419ms
+[2026-09-15T01:49:35.717Z]   OpenAlex 429 on "model orchestration LLM" — retry 2 in 4082ms
+[2026-09-15T01:49:39.940Z]   OpenAlex 429 on "model orchestration LLM" — retry 3 in 8048ms
+[2026-09-15T01:49:49.571Z]   OpenAlex 429 on "multi-model routing" — retry 1 in 2005ms
+[2026-09-15T01:49:51.629Z]   OpenAlex 429 on "multi-model routing" — retry 2 in 4062ms
+[2026-09-15T01:49:55.812Z]   OpenAlex 429 on "multi-model routing" — retry 3 in 8209ms
+[2026-09-15T01:50:05.826Z]   OpenAlex 429 on "model fallback LLM" — retry 1 in 2225ms
+[2026-09-15T01:50:08.102Z]   OpenAlex 429 on "model fallback LLM" — retry 2 in 4385ms
+[2026-09-15T01:50:12.604Z]   OpenAlex 429 on "model fallback LLM" — retry 3 in 8484ms
+[2026-09-15T01:50:22.910Z]   OpenAlex 429 on "AI gateway" — retry 1 in 2363ms
+[2026-09-15T01:50:25.318Z]   OpenAlex 429 on "AI gateway" — retry 2 in 4187ms
+[2026-09-15T01:50:29.615Z]   OpenAlex 429 on "AI gateway" — retry 3 in 8145ms
+[2026-09-15T01:50:39.086Z]   OpenAlex 429 on "model marketplace LLM" — retry 1 in 2247ms
+[2026-09-15T01:50:41.381Z]   OpenAlex 429 on "model marketplace LLM" — retry 2 in 4135ms
+[2026-09-15T01:50:45.632Z]   OpenAlex 429 on "model marketplace LLM" — retry 3 in 8373ms
+[2026-09-15T01:50:55.810Z]   OpenAlex 429 on "cost quality LLM" — retry 1 in 2430ms
+[2026-09-15T01:50:58.295Z]   OpenAlex 429 on "cost quality LLM" — retry 2 in 4379ms
+[2026-09-15T01:51:02.793Z]   OpenAlex 429 on "cost quality LLM" — retry 3 in 8348ms
+[2026-09-15T01:51:12.550Z]   OpenAlex 429 on "model ranking LLM" — retry 1 in 2474ms
+[2026-09-15T01:51:15.076Z]   OpenAlex 429 on "model ranking LLM" — retry 2 in 4176ms
+[2026-09-15T01:51:19.373Z]   OpenAlex 429 on "model ranking LLM" — retry 3 in 8249ms
+[2026-09-15T01:51:29.263Z]   OpenAlex 429 on "benchmark model selection" — retry 1 in 2059ms
+[2026-09-15T01:51:31.374Z]   OpenAlex 429 on "benchmark model selection" — retry 2 in 4048ms
+[2026-09-15T01:51:35.550Z]   OpenAlex 429 on "benchmark model selection" — retry 3 in 8221ms
+[2026-09-15T01:51:45.585Z]   OpenAlex 429 on "LLM router" — retry 1 in 2153ms
+[2026-09-15T01:51:47.798Z]   OpenAlex 429 on "LLM router" — retry 2 in 4395ms
+[2026-09-15T01:51:52.380Z]   OpenAlex 429 on "LLM router" — retry 3 in 8498ms
+[2026-09-15T01:52:03.080Z]   OpenAlex 429 on "model router" — retry 1 in 2451ms
+[2026-09-15T01:52:05.587Z]   OpenAlex 429 on "model router" — retry 2 in 4030ms
+[2026-09-15T01:52:09.739Z]   OpenAlex 429 on "model router" — retry 3 in 8050ms
+[2026-09-15T01:52:19.186Z]   OpenAlex 429 on "LLM gateway" — retry 1 in 2212ms
+[2026-09-15T01:52:21.457Z]   OpenAlex 429 on "LLM gateway" — retry 2 in 4224ms
+[2026-09-15T01:52:25.797Z]   OpenAlex 429 on "LLM gateway" — retry 3 in 8407ms
+[2026-09-15T01:52:35.982Z]   OpenAlex 429 on "routing large language models" — retry 1 in 2356ms
+[2026-09-15T01:52:38.380Z]   OpenAlex 429 on "routing large language models" — retry 2 in 4269ms
+[2026-09-15T01:52:42.758Z]   OpenAlex 429 on "routing large language models" — retry 3 in 8041ms
+[2026-09-15T01:52:52.119Z]   OpenAlex 429 on "adaptive inference LLM" — retry 1 in 2125ms
+[2026-09-15T01:52:54.299Z]   OpenAlex 429 on "adaptive inference LLM" — retry 2 in 4403ms
+[2026-09-15T01:52:58.837Z]   OpenAlex 429 on "adaptive inference LLM" — retry 3 in 8149ms
+[2026-09-15T01:53:08.758Z]   OpenAlex 429 on "LLM dispatch" — retry 1 in 2412ms
+[2026-09-15T01:53:11.222Z]   OpenAlex 429 on "LLM dispatch" — retry 2 in 4109ms
+[2026-09-15T01:53:15.452Z]   OpenAlex 429 on "LLM dispatch" — retry 3 in 8091ms
+[2026-09-15T01:53:25.178Z]   OpenAlex 429 on "model selection inference" — retry 1 in 2192ms
+[2026-09-15T01:53:27.418Z]   OpenAlex 429 on "model selection inference" — retry 2 in 4354ms
+[2026-09-15T01:53:31.890Z]   OpenAlex 429 on "model selection inference" — retry 3 in 8285ms
+[2026-09-15T01:54:29.363Z]   Crossref 429 on "LLM routing" — retry 1 in 2205ms
+[2026-09-15T01:54:36.823Z]   Crossref 429 on "prompt routing" — retry 1 in 2097ms
+[2026-09-15T01:54:39.608Z]   Crossref 429 on "model selection" — retry 1 in 2133ms
+[2026-09-15T01:54:39.710Z]   Crossref 429 on "benchmark router" — retry 1 in 2231ms
+[2026-09-15T01:54:53.831Z]   Crossref 429 on "language model" — retry 1 in 2483ms
+[2026-09-15T01:55:52.246Z]   Crossref 429 on "model selection" — retry 1 in 2170ms
+[2026-09-15T01:56:21.388Z]   Crossref 429 on "model selection" — retry 1 in 2219ms
+[2026-09-15T01:56:27.364Z]   Crossref 429 on "LLM routing" — retry 1 in 2345ms
+[2026-09-15T01:56:27.400Z]   Crossref 429 on "partial" — retry 1 in 2468ms
+[2026-09-15T01:56:55.640Z]   Crossref 429 on "architecture" — retry 1 in 2266ms
+[2026-09-15T01:57:15.728Z]   Crossref 429 on "review" — retry 1 in 2137ms
+[2026-09-15T01:57:57.869Z]   Crossref 429 on "space" — retry 1 in 2141ms
+[2026-09-15T01:58:05.794Z]   Crossref 429 on "LLM routing" — retry 1 in 2197ms
+[2026-09-15T01:58:06.111Z]   Crossref 429 on "prompt routing" — retry 1 in 2200ms
+[2026-09-15T01:58:31.327Z]   Crossref 429 on "small" — retry 1 in 2157ms
+[2026-09-15T01:58:58.190Z]   Crossref 429 on "model routing" — retry 1 in 2005ms
+[2026-09-15T01:58:58.598Z]   Crossref 429 on "performance" — retry 1 in 2421ms
+[2026-09-15T01:58:58.855Z]   Crossref 429 on "large language" — retry 1 in 2461ms
+[2026-09-15T01:59:05.862Z]   Crossref 429 on "analysis" — retry 1 in 2465ms
+[2026-09-15T01:59:34.326Z]   Crossref 429 on "analysis" — retry 1 in 2377ms
+[2026-09-15T01:59:55.499Z]   Crossref 429 on "non-probability" — retry 1 in 2194ms
+[2026-09-15T02:00:03.635Z]   Crossref 429 on "model selection" — retry 1 in 2333ms
+[2026-09-15T02:00:16.219Z]   Crossref 429 on "problem" — retry 1 in 2154ms
+[2026-09-15T02:01:53.135Z]   Crossref 429 on "domain" — retry 1 in 2470ms
+[2026-09-15T02:02:07.051Z]   Crossref 429 on "topic" — retry 1 in 2391ms
+[2026-09-15T02:02:09.496Z]   Crossref 429 on "topic" — retry 2 in 4347ms
+[2026-09-15T02:02:30.912Z]   Crossref 429 on "benchmark context" — retry 1 in 2145ms
+[2026-09-15T02:02:33.113Z]   Crossref 429 on "benchmark context" — retry 2 in 4217ms
+[2026-09-15T02:03:16.824Z]   Crossref 429 on "large" — retry 1 in 2318ms
+[2026-09-15T02:03:53.711Z]   Crossref 429 on "language model" — retry 1 in 2360ms
+[2026-09-15T02:04:41.452Z]   Crossref 429 on "learning" — retry 1 in 2044ms
+[2026-09-15T02:05:23.696Z]   Crossref 429 on "standard" — retry 1 in 2386ms
+[2026-09-15T02:05:29.602Z]   Crossref 429 on "knowledge" — retry 1 in 2364ms
+[2026-09-15T02:05:40.673Z]   Crossref 429 on "prompt routing" — retry 1 in 2062ms
+[2026-09-15T02:05:40.979Z]   Crossref 429 on "expert inference" — retry 1 in 2388ms
+[2026-09-15T02:05:41.231Z]   Crossref 429 on "layer" — retry 1 in 2023ms
+[2026-09-15T02:06:07.203Z]   Crossref 429 on "llms" — retry 1 in 2071ms
+[2026-09-15T02:06:18.743Z]   Crossref 429 on "prompt routing" — retry 1 in 2114ms
+[2026-09-15T02:06:19.174Z]   Crossref 429 on "human" — retry 1 in 2178ms
+[2026-09-15T02:06:19.488Z]   Crossref 429 on "model" — retry 1 in 2249ms
+[2026-09-15T02:06:19.717Z]   Crossref 429 on "dataset" — retry 1 in 2056ms
+[2026-09-15T02:06:54.377Z]   Crossref 429 on "data" — retry 1 in 2461ms
+[2026-09-15T02:07:27.230Z]   Crossref 429 on "cascading" — retry 1 in 2295ms
+[2026-09-15T02:08:17.023Z]   Crossref 429 on "trees" — retry 1 in 2076ms
+[2026-09-15T02:08:45.623Z]   Crossref 429 on "model" — retry 1 in 2447ms
+[2026-09-15T02:09:08.367Z]   Crossref 429 on "systems" — retry 1 in 2341ms
+[2026-09-15T02:09:26.179Z]   Crossref 429 on "language" — retry 1 in 2498ms
+[2026-09-15T02:09:32.698Z]   Crossref 429 on "llms" — retry 1 in 2415ms
+[2026-09-15T02:09:54.911Z]   Crossref 429 on "quantization" — retry 1 in 2238ms
+[2026-09-15T02:10:06.079Z]   Crossref 429 on "instruction" — retry 1 in 2417ms
+[2026-09-15T02:10:31.315Z]   Crossref 429 on "response" — retry 1 in 2467ms
+[2026-09-15T02:11:30.005Z]   Crossref 429 on "prompt routing" — retry 1 in 2120ms
+[2026-09-15T02:11:38.564Z]   Crossref 429 on "summarization-based" — retry 1 in 2113ms
+[2026-09-15T02:12:54.857Z]   Crossref 429 on "deployment cost" — retry 1 in 2047ms
+[2026-09-15T02:15:36.118Z]   Crossref 429 on "routing" — retry 1 in 2015ms
+[2026-09-15T02:15:44.474Z]   Crossref 429 on "approach" — retry 1 in 2491ms
+[2026-09-15T02:15:52.429Z]   Crossref 429 on "language" — retry 1 in 2155ms
+[2026-09-15T02:16:18.453Z]   Crossref 429 on "model selection" — retry 1 in 2138ms
+[2026-09-15T02:18:24.554Z]   Crossref 429 on "LLM routing" — retry 1 in 2460ms
+[2026-09-15T02:18:24.878Z]   Crossref 429 on "challenge" — retry 1 in 2437ms
+[2026-09-15T02:19:31.192Z]   Crossref 429 on "llms" — retry 1 in 2079ms
+[2026-09-15T02:19:31.368Z]   Crossref 429 on "agent large" — retry 1 in 2478ms
+[2026-09-15T02:19:31.757Z]   Crossref 429 on "inference serving" — retry 1 in 2483ms
+[2026-09-15T02:19:49.477Z]   Crossref 429 on "latency throughput" — retry 1 in 2112ms
+[2026-09-15T02:19:49.663Z]   Crossref 429 on "language" — retry 1 in 2157ms
+[2026-09-15T02:19:49.941Z]   Crossref 429 on "performance" — retry 1 in 2126ms
+[2026-09-15T02:27:59.961Z]   OpenAlex 429 on "LLM routing" — retry 1 in 2101ms
+[2026-09-15T02:28:02.112Z]   OpenAlex 429 on "LLM routing" — retry 2 in 4315ms
+[2026-09-15T02:28:06.551Z]   OpenAlex 429 on "LLM routing" — retry 3 in 8237ms
+[2026-09-15T02:28:16.941Z]   OpenAlex 429 on "model routing" — retry 1 in 2201ms
+[2026-09-15T02:28:19.194Z]   OpenAlex 429 on "model routing" — retry 2 in 4085ms
+[2026-09-15T02:28:23.398Z]   OpenAlex 429 on "model routing" — retry 3 in 8084ms
+[2026-09-15T02:28:33.382Z]   OpenAlex 429 on "language model selection" — retry 1 in 2294ms
+[2026-09-15T02:28:35.736Z]   OpenAlex 429 on "language model selection" — retry 2 in 4076ms
+[2026-09-15T02:28:39.937Z]   OpenAlex 429 on "language model selection" — retry 3 in 8384ms
+[2026-09-15T02:28:50.431Z]   OpenAlex 429 on "LLM selection" — retry 1 in 2066ms
+[2026-09-15T02:28:52.556Z]   OpenAlex 429 on "LLM selection" — retry 2 in 4182ms
+[2026-09-15T02:28:56.858Z]   OpenAlex 429 on "LLM selection" — retry 3 in 8475ms
+[2026-09-15T02:29:07.127Z]   OpenAlex 429 on "large language model selection" — retry 1 in 2399ms
+[2026-09-15T02:29:09.573Z]   OpenAlex 429 on "large language model selection" — retry 2 in 4373ms
+[2026-09-15T02:29:14.073Z]   OpenAlex 429 on "large language model selection" — retry 3 in 8323ms
+[2026-09-15T02:29:24.287Z]   OpenAlex 429 on "mixture of experts routing" — retry 1 in 2018ms
+[2026-09-15T02:29:26.359Z]   OpenAlex 429 on "mixture of experts routing" — retry 2 in 4379ms
+[2026-09-15T02:29:30.868Z]   OpenAlex 429 on "mixture of experts routing" — retry 3 in 8107ms
+[2026-09-15T02:29:41.651Z]   OpenAlex 429 on "cascading language models" — retry 1 in 2258ms
+[2026-09-15T02:29:43.962Z]   OpenAlex 429 on "cascading language models" — retry 2 in 4412ms
+[2026-09-15T02:29:48.495Z]   OpenAlex 429 on "cascading language models" — retry 3 in 8018ms
+[2026-09-15T02:29:58.516Z]   OpenAlex 429 on "model cascade LLM" — retry 1 in 2413ms
+[2026-09-15T02:30:00.982Z]   OpenAlex 429 on "model cascade LLM" — retry 2 in 4419ms
+[2026-09-15T02:30:05.703Z]   OpenAlex 429 on "model cascade LLM" — retry 3 in 8042ms
+[2026-09-15T02:30:16.146Z]   OpenAlex 429 on "LLM cascade" — retry 1 in 2399ms
+[2026-09-15T02:30:18.596Z]   OpenAlex 429 on "LLM cascade" — retry 2 in 4130ms
+[2026-09-15T02:30:22.843Z]   OpenAlex 429 on "LLM cascade" — retry 3 in 8403ms
+[2026-09-15T02:30:33.663Z]   OpenAlex 429 on "cost efficient inference LLM" — retry 1 in 2086ms
+[2026-09-15T02:30:35.804Z]   OpenAlex 429 on "cost efficient inference LLM" — retry 2 in 4356ms
+[2026-09-15T02:30:40.309Z]   OpenAlex 429 on "cost efficient inference LLM" — retry 3 in 8286ms
+[2026-09-15T02:30:49.966Z]   OpenAlex 429 on "router large language models" — retry 1 in 2194ms
+[2026-09-15T02:30:52.214Z]   OpenAlex 429 on "router large language models" — retry 2 in 4418ms
+[2026-09-15T02:30:56.765Z]   OpenAlex 429 on "router large language models" — retry 3 in 8062ms
+[2026-09-15T02:31:07.368Z]   OpenAlex 429 on "prompt routing" — retry 1 in 2337ms
+[2026-09-15T02:31:09.756Z]   OpenAlex 429 on "prompt routing" — retry 2 in 4427ms
+[2026-09-15T02:31:14.300Z]   OpenAlex 429 on "prompt routing" — retry 3 in 8444ms
+[2026-09-15T02:31:24.949Z]   OpenAlex 429 on "expert selection LLM" — retry 1 in 2000ms
+[2026-09-15T02:31:27.005Z]   OpenAlex 429 on "expert selection LLM" — retry 2 in 4208ms
+[2026-09-15T02:31:31.355Z]   OpenAlex 429 on "expert selection LLM" — retry 3 in 8237ms
+[2026-09-15T02:31:41.169Z]   OpenAlex 429 on "model serving LLM" — retry 1 in 2154ms
+[2026-09-15T02:31:43.375Z]   OpenAlex 429 on "model serving LLM" — retry 2 in 4264ms
+[2026-09-15T02:31:47.771Z]   OpenAlex 429 on "model serving LLM" — retry 3 in 8116ms
+[2026-09-15T02:31:58.009Z]   OpenAlex 429 on "inference optimization LLM" — retry 1 in 2493ms
+[2026-09-15T02:32:00.558Z]   OpenAlex 429 on "inference optimization LLM" — retry 2 in 4488ms
+[2026-09-15T02:32:05.172Z]   OpenAlex 429 on "inference optimization LLM" — retry 3 in 8007ms
+[2026-09-15T02:32:14.747Z]   OpenAlex 429 on "model composition LLM" — retry 1 in 2322ms
+[2026-09-15T02:32:17.126Z]   OpenAlex 429 on "model composition LLM" — retry 2 in 4332ms
+[2026-09-15T02:32:21.661Z]   OpenAlex 429 on "model composition LLM" — retry 3 in 8427ms
+[2026-09-15T02:32:31.100Z]   OpenAlex 429 on "speculative decoding" — retry 1 in 2408ms
+[2026-09-15T02:32:33.556Z]   OpenAlex 429 on "speculative decoding" — retry 2 in 4306ms
+[2026-09-15T02:32:37.982Z]   OpenAlex 429 on "speculative decoding" — retry 3 in 8388ms
+[2026-09-15T02:32:47.907Z]   OpenAlex 429 on "model evaluation routing" — retry 1 in 2460ms
+[2026-09-15T02:32:50.426Z]   OpenAlex 429 on "model evaluation routing" — retry 2 in 4308ms
+[2026-09-15T02:32:54.866Z]   OpenAlex 429 on "model evaluation routing" — retry 3 in 8386ms
+[2026-09-15T02:33:05.517Z]   OpenAlex 429 on "query routing LLM" — retry 1 in 2132ms
+[2026-09-15T02:33:07.703Z]   OpenAlex 429 on "query routing LLM" — retry 2 in 4366ms
+[2026-09-15T02:33:12.189Z]   OpenAlex 429 on "query routing LLM" — retry 3 in 8184ms
+[2026-09-15T02:33:22.297Z]   OpenAlex 429 on "task routing LLM" — retry 1 in 2200ms
+[2026-09-15T02:33:24.553Z]   OpenAlex 429 on "task routing LLM" — retry 2 in 4097ms
+[2026-09-15T02:33:28.769Z]   OpenAlex 429 on "task routing LLM" — retry 3 in 8423ms
+[2026-09-15T02:33:39.780Z]   OpenAlex 429 on "model orchestration LLM" — retry 1 in 2165ms
+[2026-09-15T02:33:41.995Z]   OpenAlex 429 on "model orchestration LLM" — retry 2 in 4171ms
+[2026-09-15T02:33:46.279Z]   OpenAlex 429 on "model orchestration LLM" — retry 3 in 8279ms
+[2026-09-15T02:33:55.839Z]   OpenAlex 429 on "multi-model routing" — retry 1 in 2026ms
+[2026-09-15T02:33:57.929Z]   OpenAlex 429 on "multi-model routing" — retry 2 in 4009ms
+[2026-09-15T02:34:02.251Z]   OpenAlex 429 on "multi-model routing" — retry 3 in 8171ms
+[2026-09-15T02:34:12.223Z]   OpenAlex 429 on "model fallback LLM" — retry 1 in 2307ms
+[2026-09-15T02:34:14.581Z]   OpenAlex 429 on "model fallback LLM" — retry 2 in 4335ms
+[2026-09-15T02:34:19.029Z]   OpenAlex 429 on "model fallback LLM" — retry 3 in 8483ms
+[2026-09-15T02:34:29.406Z]   OpenAlex 429 on "AI gateway" — retry 1 in 2388ms
+[2026-09-15T02:34:31.841Z]   OpenAlex 429 on "AI gateway" — retry 2 in 4191ms
+[2026-09-15T02:34:36.156Z]   OpenAlex 429 on "AI gateway" — retry 3 in 8089ms
+[2026-09-15T02:34:46.290Z]   OpenAlex 429 on "model marketplace LLM" — retry 1 in 2306ms
+[2026-09-15T02:34:48.646Z]   OpenAlex 429 on "model marketplace LLM" — retry 2 in 4289ms
+[2026-09-15T02:34:53.094Z]   OpenAlex 429 on "model marketplace LLM" — retry 3 in 8080ms
+[2026-09-15T02:35:04.111Z]   OpenAlex 429 on "cost quality LLM" — retry 1 in 2165ms
+[2026-09-15T02:35:06.324Z]   OpenAlex 429 on "cost quality LLM" — retry 2 in 4151ms
+[2026-09-15T02:35:10.600Z]   OpenAlex 429 on "cost quality LLM" — retry 3 in 8330ms
+[2026-09-15T02:35:21.013Z]   OpenAlex 429 on "model ranking LLM" — retry 1 in 2124ms
+[2026-09-15T02:35:23.183Z]   OpenAlex 429 on "model ranking LLM" — retry 2 in 4224ms
+[2026-09-15T02:35:27.531Z]   OpenAlex 429 on "model ranking LLM" — retry 3 in 8355ms
+[2026-09-15T02:35:38.244Z]   OpenAlex 429 on "benchmark model selection" — retry 1 in 2236ms
+[2026-09-15T02:35:40.541Z]   OpenAlex 429 on "benchmark model selection" — retry 2 in 4365ms
+[2026-09-15T02:35:45.020Z]   OpenAlex 429 on "benchmark model selection" — retry 3 in 8033ms
+[2026-09-15T02:35:54.139Z]   OpenAlex 429 on "LLM router" — retry 1 in 2473ms
+[2026-09-15T02:35:56.671Z]   OpenAlex 429 on "LLM router" — retry 2 in 4075ms
+[2026-09-15T02:36:00.901Z]   OpenAlex 429 on "LLM router" — retry 3 in 8198ms
+[2026-09-15T02:36:11.225Z]   OpenAlex 429 on "model router" — retry 1 in 2242ms
+[2026-09-15T02:36:13.523Z]   OpenAlex 429 on "model router" — retry 2 in 4297ms
+[2026-09-15T02:36:17.997Z]   OpenAlex 429 on "model router" — retry 3 in 8031ms
+[2026-09-15T02:36:27.417Z]   OpenAlex 429 on "LLM gateway" — retry 1 in 2093ms
+[2026-09-15T02:36:29.575Z]   OpenAlex 429 on "LLM gateway" — retry 2 in 4496ms
+[2026-09-15T02:36:34.198Z]   OpenAlex 429 on "LLM gateway" — retry 3 in 8406ms
+[2026-09-15T02:36:43.720Z]   OpenAlex 429 on "routing large language models" — retry 1 in 2317ms
+[2026-09-15T02:36:46.092Z]   OpenAlex 429 on "routing large language models" — retry 2 in 4053ms
+[2026-09-15T02:36:50.276Z]   OpenAlex 429 on "routing large language models" — retry 3 in 8402ms
+[2026-09-15T02:37:00.448Z]   OpenAlex 429 on "adaptive inference LLM" — retry 1 in 2177ms
+[2026-09-15T02:37:02.692Z]   OpenAlex 429 on "adaptive inference LLM" — retry 2 in 4357ms
+[2026-09-15T02:37:07.174Z]   OpenAlex 429 on "adaptive inference LLM" — retry 3 in 8485ms
+[2026-09-15T02:37:17.511Z]   OpenAlex 429 on "LLM dispatch" — retry 1 in 2191ms
+[2026-09-15T02:37:19.756Z]   OpenAlex 429 on "LLM dispatch" — retry 2 in 4073ms
+[2026-09-15T02:37:24.026Z]   OpenAlex 429 on "LLM dispatch" — retry 3 in 8146ms
+[2026-09-15T02:37:34.048Z]   OpenAlex 429 on "model selection inference" — retry 1 in 2050ms
+[2026-09-15T02:37:36.158Z]   OpenAlex 429 on "model selection inference" — retry 2 in 4391ms
+[2026-09-15T02:37:40.694Z]   OpenAlex 429 on "model selection inference" — retry 3 in 8298ms
+[2026-09-15T02:38:49.697Z]   Crossref 429 on "latency task" — retry 1 in 2016ms
+[2026-09-15T02:38:50.010Z]   Crossref 429 on "model selection" — retry 1 in 2231ms
+[2026-09-15T02:39:02.721Z]   Crossref 429 on "prompt routing" — retry 1 in 2428ms
+[2026-09-15T02:39:18.433Z]   Crossref 429 on "model selection" — retry 1 in 2141ms
+[2026-09-15T02:39:23.704Z]   Crossref 429 on "prompt routing" — retry 1 in 2184ms
+[2026-09-15T02:39:30.100Z]   Crossref 429 on "LLM routing" — retry 1 in 2089ms
+[2026-09-15T02:40:28.471Z]   Crossref 429 on "AI gateway" — retry 1 in 2343ms
+[2026-09-15T02:40:28.803Z]   Crossref 429 on "AI gateway" — retry 1 in 2022ms
+[2026-09-15T02:40:34.490Z]   Crossref 429 on "AI gateway" — retry 1 in 2204ms
+[2026-09-15T02:40:34.752Z]   Crossref 429 on "model selection" — retry 1 in 2457ms
+[2026-09-15T02:40:41.438Z]   Crossref 429 on "routing model" — retry 1 in 2441ms
+[2026-09-15T02:41:00.125Z]   Crossref 429 on "prompt routing" — retry 1 in 2364ms
+[2026-09-15T02:41:01.383Z]   Crossref 429 on "latency" — retry 1 in 2445ms
+[2026-09-15T02:41:06.595Z]   Crossref 429 on "routing inference" — retry 1 in 2164ms
+[2026-09-15T02:42:52.274Z]   Crossref 429 on "LLM routing" — retry 1 in 2235ms
+[2026-09-15T02:43:29.738Z]   Crossref 429 on "AI gateway" — retry 1 in 2246ms
+[2026-09-15T02:43:35.635Z]   Crossref 429 on "model selection" — retry 1 in 2065ms
+[2026-09-15T02:43:49.944Z]   Crossref 429 on "LLM routing" — retry 1 in 2182ms
+[2026-09-15T02:44:13.402Z]   Crossref 429 on "LLM routing" — retry 1 in 2187ms
+[2026-09-15T02:44:24.299Z]   Crossref 429 on "automatic" — retry 1 in 2253ms
+[2026-09-15T02:44:31.765Z]   Crossref 429 on "prompt routing" — retry 1 in 2444ms
+[2026-09-15T02:44:57.437Z]   Crossref 429 on "model selection" — retry 1 in 2275ms
+[2026-09-15T02:45:16.374Z]   Crossref 429 on "LLM routing" — retry 1 in 2260ms
+[2026-09-15T02:45:24.152Z]   Crossref 429 on "prompt routing" — retry 1 in 2422ms
+[2026-09-15T02:45:36.751Z]   Crossref 429 on "LLM routing" — retry 1 in 2180ms
+[2026-09-15T02:45:39.400Z]   Crossref 429 on "AI gateway" — retry 1 in 2032ms
+[2026-09-15T02:46:07.091Z]   Crossref 429 on "AI gateway" — retry 1 in 2224ms
+[2026-09-15T02:46:19.137Z]   Crossref 429 on "LLM routing" — retry 1 in 2269ms
+[2026-09-15T02:46:19.578Z]   Crossref 429 on "prompt routing" — retry 1 in 2289ms
+[2026-09-15T02:46:49.135Z]   Crossref 429 on "LLM routing" — retry 1 in 2404ms
+[2026-09-15T02:47:09.528Z]   Crossref 429 on "strategy" — retry 1 in 2499ms
+[2026-09-15T02:49:29.342Z]   Crossref 429 on "model selection" — retry 1 in 2400ms
+[2026-09-15T02:49:34.251Z]   Crossref 429 on "LLM routing" — retry 1 in 2214ms
+[2026-09-15T02:49:36.516Z]   Crossref 429 on "LLM routing" — retry 2 in 4301ms
+[2026-09-15T02:50:07.276Z]   Crossref 429 on "prompt routing" — retry 1 in 2192ms
+[2026-09-15T02:50:07.592Z]   Crossref 429 on "classification model" — retry 1 in 2457ms
+[2026-09-15T02:50:16.747Z]   Crossref 429 on "AI gateway" — retry 1 in 2243ms
+[2026-09-15T02:50:16.793Z]   Crossref 429 on "model routing" — retry 1 in 2445ms
+[2026-09-15T02:51:07.331Z]   Crossref 429 on "language model" — retry 1 in 2431ms
+[2026-09-15T02:51:15.181Z]   Crossref 429 on "prompt routing" — retry 1 in 2375ms
+[2026-09-15T02:51:23.082Z]   Crossref 429 on "agent selection" — retry 1 in 2471ms
+[2026-09-15T02:51:26.181Z]   Crossref 429 on "language" — retry 1 in 2147ms
+[2026-09-15T02:52:36.603Z]   Crossref 429 on "routing performance" — retry 1 in 2072ms
+[2026-09-15T03:13:25.363Z]   OpenAlex 429 on "LLM routing" — retry 1 in 2314ms
+[2026-09-15T03:13:27.767Z]   OpenAlex 429 on "LLM routing" — retry 2 in 4227ms
+[2026-09-15T03:13:32.421Z]   OpenAlex 429 on "LLM routing" — retry 3 in 8023ms
+[2026-09-15T03:13:42.880Z]   OpenAlex 429 on "model routing" — retry 1 in 2374ms
+[2026-09-15T03:13:45.333Z]   OpenAlex 429 on "model routing" — retry 2 in 4376ms
+[2026-09-15T03:13:49.866Z]   OpenAlex 429 on "model routing" — retry 3 in 8465ms
+[2026-09-15T03:14:00.130Z]   OpenAlex 429 on "language model selection" — retry 1 in 2443ms
+[2026-09-15T03:14:02.674Z]   OpenAlex 429 on "language model selection" — retry 2 in 4272ms
+[2026-09-15T03:14:07.108Z]   OpenAlex 429 on "language model selection" — retry 3 in 8330ms
+[2026-09-15T03:14:18.051Z]   OpenAlex 429 on "LLM selection" — retry 1 in 2485ms
+[2026-09-15T03:14:20.632Z]   OpenAlex 429 on "LLM selection" — retry 2 in 4037ms
+[2026-09-15T03:14:24.795Z]   OpenAlex 429 on "LLM selection" — retry 3 in 8166ms
+[2026-09-15T03:14:34.369Z]   OpenAlex 429 on "large language model selection" — retry 1 in 2292ms
+[2026-09-15T03:14:36.752Z]   OpenAlex 429 on "large language model selection" — retry 2 in 4395ms
+[2026-09-15T03:14:41.360Z]   OpenAlex 429 on "large language model selection" — retry 3 in 8409ms
+[2026-09-15T03:14:51.266Z]   OpenAlex 429 on "mixture of experts routing" — retry 1 in 2123ms
+[2026-09-15T03:14:53.481Z]   OpenAlex 429 on "mixture of experts routing" — retry 2 in 4168ms
+[2026-09-15T03:14:57.818Z]   OpenAlex 429 on "mixture of experts routing" — retry 3 in 8346ms
+[2026-09-15T03:15:08.262Z]   OpenAlex 429 on "cascading language models" — retry 1 in 2111ms
+[2026-09-15T03:15:10.462Z]   OpenAlex 429 on "cascading language models" — retry 2 in 4089ms
+[2026-09-15T03:15:14.741Z]   OpenAlex 429 on "cascading language models" — retry 3 in 8367ms
+[2026-09-15T03:15:24.493Z]   OpenAlex 429 on "model cascade LLM" — retry 1 in 2295ms
+[2026-09-15T03:15:26.880Z]   OpenAlex 429 on "model cascade LLM" — retry 2 in 4176ms
+[2026-09-15T03:15:31.223Z]   OpenAlex 429 on "model cascade LLM" — retry 3 in 8047ms
+[2026-09-15T03:15:40.895Z]   OpenAlex 429 on "LLM cascade" — retry 1 in 2003ms
+[2026-09-15T03:15:42.990Z]   OpenAlex 429 on "LLM cascade" — retry 2 in 4360ms
+[2026-09-15T03:15:47.518Z]   OpenAlex 429 on "LLM cascade" — retry 3 in 8128ms
+[2026-09-15T03:15:57.993Z]   OpenAlex 429 on "cost efficient inference LLM" — retry 1 in 2473ms
+[2026-09-15T03:16:00.547Z]   OpenAlex 429 on "cost efficient inference LLM" — retry 2 in 4254ms
+[2026-09-15T03:16:04.960Z]   OpenAlex 429 on "cost efficient inference LLM" — retry 3 in 8143ms
+[2026-09-15T03:16:14.838Z]   OpenAlex 429 on "router large language models" — retry 1 in 2359ms
+[2026-09-15T03:16:17.289Z]   OpenAlex 429 on "router large language models" — retry 2 in 4416ms
+[2026-09-15T03:16:21.869Z]   OpenAlex 429 on "router large language models" — retry 3 in 8107ms
+[2026-09-15T03:16:31.904Z]   OpenAlex 429 on "prompt routing" — retry 1 in 2102ms
+[2026-09-15T03:16:34.096Z]   OpenAlex 429 on "prompt routing" — retry 2 in 4111ms
+[2026-09-15T03:16:38.368Z]   OpenAlex 429 on "prompt routing" — retry 3 in 8328ms
+[2026-09-15T03:16:48.557Z]   OpenAlex 429 on "expert selection LLM" — retry 1 in 2095ms
+[2026-09-15T03:16:50.755Z]   OpenAlex 429 on "expert selection LLM" — retry 2 in 4171ms
+[2026-09-15T03:16:55.046Z]   OpenAlex 429 on "expert selection LLM" — retry 3 in 8248ms
+[2026-09-15T03:17:06.197Z]   OpenAlex 429 on "model serving LLM" — retry 1 in 2001ms
+[2026-09-15T03:17:08.290Z]   OpenAlex 429 on "model serving LLM" — retry 2 in 4427ms
+[2026-09-15T03:17:12.887Z]   OpenAlex 429 on "model serving LLM" — retry 3 in 8047ms
+[2026-09-15T03:17:22.678Z]   OpenAlex 429 on "inference optimization LLM" — retry 1 in 2225ms
+[2026-09-15T03:17:25.012Z]   OpenAlex 429 on "inference optimization LLM" — retry 2 in 4030ms
+[2026-09-15T03:17:29.196Z]   OpenAlex 429 on "inference optimization LLM" — retry 3 in 8399ms
+[2026-09-15T03:17:38.956Z]   OpenAlex 429 on "model composition LLM" — retry 1 in 2435ms
+[2026-09-15T03:17:41.467Z]   OpenAlex 429 on "model composition LLM" — retry 2 in 4478ms
+[2026-09-15T03:17:46.101Z]   OpenAlex 429 on "model composition LLM" — retry 3 in 8407ms
+[2026-09-15T03:17:56.220Z]   OpenAlex 429 on "speculative decoding" — retry 1 in 2032ms
+[2026-09-15T03:17:58.371Z]   OpenAlex 429 on "speculative decoding" — retry 2 in 4197ms
+[2026-09-15T03:18:02.724Z]   OpenAlex 429 on "speculative decoding" — retry 3 in 8036ms
+[2026-09-15T03:18:12.721Z]   OpenAlex 429 on "model evaluation routing" — retry 1 in 2078ms
+[2026-09-15T03:18:14.897Z]   OpenAlex 429 on "model evaluation routing" — retry 2 in 4082ms
+[2026-09-15T03:18:19.144Z]   OpenAlex 429 on "model evaluation routing" — retry 3 in 8350ms
+[2026-09-15T03:18:30.374Z]   OpenAlex 429 on "query routing LLM" — retry 1 in 2028ms
+[2026-09-15T03:18:32.478Z]   OpenAlex 429 on "query routing LLM" — retry 2 in 4160ms
+[2026-09-15T03:18:36.783Z]   OpenAlex 429 on "query routing LLM" — retry 3 in 8444ms
+[2026-09-15T03:18:47.710Z]   OpenAlex 429 on "task routing LLM" — retry 1 in 2459ms
+[2026-09-15T03:18:50.244Z]   OpenAlex 429 on "task routing LLM" — retry 2 in 4112ms
+[2026-09-15T03:18:54.501Z]   OpenAlex 429 on "task routing LLM" — retry 3 in 8213ms
+[2026-09-15T03:19:04.529Z]   OpenAlex 429 on "model orchestration LLM" — retry 1 in 2445ms
+[2026-09-15T03:19:07.051Z]   OpenAlex 429 on "model orchestration LLM" — retry 2 in 4377ms
+[2026-09-15T03:19:11.584Z]   OpenAlex 429 on "model orchestration LLM" — retry 3 in 8478ms
+[2026-09-15T03:19:21.889Z]   OpenAlex 429 on "multi-model routing" — retry 1 in 2279ms
+[2026-09-15T03:19:24.246Z]   OpenAlex 429 on "multi-model routing" — retry 2 in 4498ms
+[2026-09-15T03:19:28.905Z]   OpenAlex 429 on "multi-model routing" — retry 3 in 8030ms
+[2026-09-15T03:19:38.621Z]   OpenAlex 429 on "model fallback LLM" — retry 1 in 2464ms
+[2026-09-15T03:19:41.316Z]   OpenAlex 429 on "model fallback LLM" — retry 2 in 4424ms
+[2026-09-15T03:19:45.917Z]   OpenAlex 429 on "model fallback LLM" — retry 3 in 8322ms
+[2026-09-15T03:19:55.677Z]   OpenAlex 429 on "AI gateway" — retry 1 in 2057ms
+[2026-09-15T03:19:57.813Z]   OpenAlex 429 on "AI gateway" — retry 2 in 4004ms
+[2026-09-15T03:20:01.963Z]   OpenAlex 429 on "AI gateway" — retry 3 in 8191ms
+[2026-09-15T03:20:12.275Z]   OpenAlex 429 on "model marketplace LLM" — retry 1 in 2259ms
+[2026-09-15T03:20:14.624Z]   OpenAlex 429 on "model marketplace LLM" — retry 2 in 4408ms
+[2026-09-15T03:20:19.191Z]   OpenAlex 429 on "model marketplace LLM" — retry 3 in 8434ms
+[2026-09-15T03:20:29.950Z]   OpenAlex 429 on "cost quality LLM" — retry 1 in 2389ms
+[2026-09-15T03:20:32.429Z]   OpenAlex 429 on "cost quality LLM" — retry 2 in 4239ms
+[2026-09-15T03:20:36.814Z]   OpenAlex 429 on "cost quality LLM" — retry 3 in 8494ms
+[2026-09-15T03:20:47.168Z]   OpenAlex 429 on "model ranking LLM" — retry 1 in 2381ms
+[2026-09-15T03:20:49.628Z]   OpenAlex 429 on "model ranking LLM" — retry 2 in 4249ms
+[2026-09-15T03:20:54.101Z]   OpenAlex 429 on "model ranking LLM" — retry 3 in 8409ms
+[2026-09-15T03:21:04.657Z]   OpenAlex 429 on "benchmark model selection" — retry 1 in 2381ms
+[2026-09-15T03:21:07.132Z]   OpenAlex 429 on "benchmark model selection" — retry 2 in 4363ms
+[2026-09-15T03:21:11.649Z]   OpenAlex 429 on "benchmark model selection" — retry 3 in 8058ms
+[2026-09-15T03:21:21.160Z]   OpenAlex 429 on "LLM router" — retry 1 in 2078ms
+[2026-09-15T03:21:23.335Z]   OpenAlex 429 on "LLM router" — retry 2 in 4476ms
+[2026-09-15T03:21:27.969Z]   OpenAlex 429 on "LLM router" — retry 3 in 8297ms
+[2026-09-15T03:21:37.692Z]   OpenAlex 429 on "model router" — retry 1 in 2393ms
+[2026-09-15T03:21:40.163Z]   OpenAlex 429 on "model router" — retry 2 in 4100ms
+[2026-09-15T03:21:44.442Z]   OpenAlex 429 on "model router" — retry 3 in 8052ms
+[2026-09-15T03:21:54.133Z]   OpenAlex 429 on "LLM gateway" — retry 1 in 2137ms
+[2026-09-15T03:21:56.346Z]   OpenAlex 429 on "LLM gateway" — retry 2 in 4065ms
+[2026-09-15T03:22:00.603Z]   OpenAlex 429 on "LLM gateway" — retry 3 in 8015ms
+[2026-09-15T03:22:11.110Z]   OpenAlex 429 on "routing large language models" — retry 1 in 2119ms
+[2026-09-15T03:22:13.303Z]   OpenAlex 429 on "routing large language models" — retry 2 in 4464ms
+[2026-09-15T03:22:17.905Z]   OpenAlex 429 on "routing large language models" — retry 3 in 8019ms
+[2026-09-15T03:22:27.550Z]   OpenAlex 429 on "adaptive inference LLM" — retry 1 in 2169ms
+[2026-09-15T03:22:29.795Z]   OpenAlex 429 on "adaptive inference LLM" — retry 2 in 4469ms
+[2026-09-15T03:22:34.415Z]   OpenAlex 429 on "adaptive inference LLM" — retry 3 in 8109ms
+[2026-09-15T03:22:43.801Z]   OpenAlex 429 on "LLM dispatch" — retry 1 in 2301ms
+[2026-09-15T03:22:46.179Z]   OpenAlex 429 on "LLM dispatch" — retry 2 in 4243ms
+[2026-09-15T03:22:50.577Z]   OpenAlex 429 on "LLM dispatch" — retry 3 in 8428ms
+[2026-09-15T03:23:00.974Z]   OpenAlex 429 on "model selection inference" — retry 1 in 2214ms
+[2026-09-15T03:23:03.280Z]   OpenAlex 429 on "model selection inference" — retry 2 in 4356ms
+[2026-09-15T03:23:07.809Z]   OpenAlex 429 on "model selection inference" — retry 3 in 8293ms
+[2026-09-15T03:24:58.343Z]   Crossref 429 on "LLM routing" — retry 1 in 2093ms
+[2026-09-15T03:25:01.895Z]   Crossref 429 on "routing decision" — retry 1 in 2479ms
+[2026-09-15T03:25:19.807Z]   Crossref 429 on "model selection" — retry 1 in 2412ms
+[2026-09-15T03:25:27.817Z]   Crossref 429 on "model selection" — retry 1 in 2088ms
+[2026-09-15T03:25:53.854Z]   Crossref 429 on "AI gateway" — retry 1 in 2012ms
+[2026-09-15T03:26:44.229Z]   Crossref 429 on "LLM routing" — retry 1 in 2498ms
+[2026-09-15T03:27:15.931Z]   Crossref 429 on "AI gateway" — retry 1 in 2374ms
+[2026-09-15T03:27:45.776Z]   Crossref 429 on "LLM routing" — retry 1 in 2335ms
+[2026-09-15T03:27:45.961Z]   Crossref 429 on "performance scale" — retry 1 in 2400ms
+[2026-09-15T03:27:48.414Z]   Crossref 429 on "performance scale" — retry 2 in 4344ms
+[2026-09-15T03:28:55.822Z]   Crossref 429 on "model selection" — retry 1 in 2436ms
+[2026-09-15T03:31:13.139Z]   Crossref 429 on "prompt routing" — retry 1 in 2313ms
+[2026-09-15T03:34:22.547Z]   Crossref 429 on "llms" — retry 1 in 2377ms
+[2026-09-15T03:34:53.218Z]   Crossref 429 on "LLM routing" — retry 1 in 2079ms
+[2026-09-15T03:35:14.199Z]   Crossref 429 on "LLM routing" — retry 1 in 2249ms
+[2026-09-15T03:35:31.256Z]   Crossref 429 on "study" — retry 1 in 2027ms
+[2026-09-15T03:35:31.335Z]   Crossref 429 on "prompt routing" — retry 1 in 2099ms
+[2026-09-15T03:36:20.359Z]   Crossref 429 on "LLM routing" — retry 1 in 2197ms
+[2026-09-15T03:37:27.348Z]   Crossref 429 on "model selection" — retry 1 in 2004ms
+[2026-09-15T03:38:11.957Z]   Crossref 429 on "AI gateway" — retry 1 in 2174ms
+[2026-09-15T03:38:23.987Z]   Crossref 429 on "prompt routing" — retry 1 in 2166ms
+[2026-09-15T03:39:26.852Z]   Crossref 429 on "model selection" — retry 1 in 2159ms
+[2026-09-15T03:40:00.541Z]   Crossref 429 on "prompt routing" — retry 1 in 2295ms
+[2026-09-15T03:41:29.159Z]   Crossref 429 on "LLM routing" — retry 1 in 2216ms
+[2026-09-15T03:42:21.298Z]   Crossref 429 on "model selection" — retry 1 in 2342ms
+[2026-09-15T03:42:27.009Z]   Crossref 429 on "LLM routing" — retry 1 in 2331ms
+[2026-09-15T03:42:37.196Z]   Crossref 429 on "AI gateway" — retry 1 in 2175ms
+[2026-09-15T03:42:43.228Z]   Crossref 429 on "model selection" — retry 1 in 2133ms
+[2026-09-15T03:42:50.077Z]   Crossref 429 on "model routing" — retry 1 in 2200ms
+[2026-09-15T03:43:09.439Z]   Crossref 429 on "prompt routing" — retry 1 in 2114ms
+[2026-09-15T03:43:20.676Z]   Crossref 429 on "bp-llm" — retry 1 in 2065ms
+[2026-09-15T03:43:20.762Z]   Crossref 429 on "prompt routing" — retry 1 in 2407ms
+[2026-09-15T03:44:18.398Z]   Crossref 429 on "LLM routing" — retry 1 in 2300ms
+[2026-09-15T03:45:02.347Z]   Crossref 429 on "LLM routing" — retry 1 in 2425ms
+[2026-09-15T03:45:55.243Z]   Crossref 429 on "LLM routing" — retry 1 in 2077ms
+[2026-09-15T03:47:50.240Z]   Crossref 429 on "AI gateway" — retry 1 in 2182ms
+[2026-09-15T03:47:54.119Z]   Crossref 429 on "LLM routing" — retry 1 in 2494ms
+[2026-09-15T03:48:28.833Z]   Crossref 429 on "AI gateway" — retry 1 in 2245ms
+[2026-09-15T03:49:52.312Z]   Crossref 429 on "model selection" — retry 1 in 2309ms
+[2026-09-15T03:50:14.931Z]   Crossref 429 on "model selection" — retry 1 in 2166ms
+[2026-09-15T03:53:31.557Z]   Crossref 429 on "LLM routing" — retry 1 in 2439ms
+[2026-09-15T03:53:31.638Z]   Crossref 429 on "LLM routing" — retry 1 in 2134ms
+[2026-09-15T03:53:32.047Z]   Crossref 429 on "prompt routing" — retry 1 in 2218ms
+[2026-09-15T03:55:15.962Z]   Crossref 429 on "prompt routing" — retry 1 in 2439ms
+[2026-09-15T03:55:16.479Z]   Crossref 429 on "model" — retry 1 in 2082ms
+[2026-09-15T03:55:30.827Z]   Crossref 429 on "LLM routing" — retry 1 in 2380ms
+[2026-09-15T03:55:45.479Z]   Crossref 429 on "prompt routing" — retry 1 in 2145ms
+[2026-09-15T03:56:28.633Z]   Crossref 429 on "parameter" — retry 1 in 2497ms
+[2026-09-15T03:56:40.788Z]   Crossref 429 on "study" — retry 1 in 2310ms
+[2026-09-15T03:56:53.886Z]   Crossref 429 on "prompt routing" — retry 1 in 2397ms
+[2026-09-15T03:56:54.016Z]   Crossref 429 on "throughput latency" — retry 1 in 2480ms
+[2026-09-15T03:56:54.270Z]   Crossref 429 on "prompt routing" — retry 1 in 2041ms
+[2026-09-15T03:57:21.566Z]   Crossref 429 on "AI gateway" — retry 1 in 2406ms
+[2026-09-15T03:57:24.886Z]   Crossref 429 on "benchmark large" — retry 1 in 2038ms
+[2026-09-15T03:57:24.987Z]   Crossref 429 on "LLM routing" — retry 1 in 2275ms
+[2026-09-15T03:58:26.549Z]   Crossref 429 on "LLM routing" — retry 1 in 2313ms
+[2026-09-15T03:58:43.148Z]   Crossref 429 on "4-bit" — retry 1 in 2217ms
+[2026-09-15T03:58:43.209Z]   Crossref 429 on "reproducibility" — retry 1 in 2193ms
+[2026-09-15T03:58:43.675Z]   Crossref 429 on "performance language" — retry 1 in 2274ms
+[2026-09-15T03:58:59.908Z]   Crossref 429 on "AI gateway" — retry 1 in 2273ms
+[2026-09-15T03:58:59.994Z]   Crossref 429 on "AI gateway" — retry 1 in 2301ms
+[2026-09-15T03:59:16.725Z]   Crossref 429 on "model inference" — retry 1 in 2185ms
+[2026-09-15T03:59:16.967Z]   Crossref 429 on "prompt routing" — retry 1 in 2285ms
+[2026-09-15T03:59:52.977Z]   Crossref 429 on "model selection" — retry 1 in 2189ms
+[2026-09-15T03:59:53.125Z]   Crossref 429 on "efficient deployment" — retry 1 in 2010ms
+[2026-09-15T03:59:53.274Z]   Crossref 429 on "ultra-thin" — retry 1 in 2112ms
+[2026-09-15T04:00:08.657Z]   Crossref 429 on "model selection" — retry 1 in 2051ms
+[2026-09-15T04:00:23.031Z]   Crossref 429 on "llms" — retry 1 in 2087ms
+[2026-09-15T04:02:44.782Z]   Crossref 429 on "model selection" — retry 1 in 2278ms
+[2026-09-15T04:04:06.065Z]   Crossref 429 on "model routing" — retry 1 in 2156ms
+[2026-09-15T04:04:40.490Z]   Crossref 429 on "model selection" — retry 1 in 2164ms
+[2026-09-15T04:04:59.504Z]   Crossref 429 on "model selection" — retry 1 in 2052ms
+[2026-09-15T04:05:00.075Z]   Crossref 429 on "AI gateway" — retry 1 in 2313ms
+[2026-09-15T04:05:42.994Z]   Crossref 429 on "LLM routing" — retry 1 in 2341ms
+[2026-09-15T04:06:05.826Z]   Crossref 429 on "LLM routing" — retry 1 in 2185ms
+[2026-09-15T04:06:06.279Z]   Crossref 429 on "caching" — retry 1 in 2443ms
+[2026-09-15T04:06:13.736Z]   Crossref 429 on "memory" — retry 1 in 2248ms
+[2026-09-15T04:06:14.020Z]   Crossref 429 on "AI gateway" — retry 1 in 2487ms
+[2026-09-15T04:06:23.905Z]   Crossref 429 on "prompt routing" — retry 1 in 2443ms
+[2026-09-15T04:06:30.693Z]   Crossref 429 on "LLM routing" — retry 1 in 2102ms
+[2026-09-15T04:07:07.611Z]   Crossref 429 on "reasoning" — retry 1 in 2294ms
+[2026-09-15T04:07:07.760Z]   Crossref 429 on "language model" — retry 1 in 2031ms
+[2026-09-15T04:07:48.651Z]   Crossref 429 on "supervised" — retry 1 in 2065ms
+[2026-09-15T04:08:27.930Z]   Crossref 429 on "evaluation model" — retry 1 in 2436ms
+[2026-09-15T04:08:29.098Z]   Crossref 429 on "AI gateway" — retry 1 in 2117ms
+[2026-09-15T04:08:53.810Z]   Crossref 429 on "systems" — retry 1 in 2076ms
+[2026-09-15T04:09:39.550Z]   Crossref 429 on "AI gateway" — retry 1 in 2402ms
+[2026-09-15T04:09:49.274Z]   Crossref 429 on "LLM routing" — retry 1 in 2075ms
+[2026-09-15T04:10:07.747Z]   Crossref 429 on "prompt routing" — retry 1 in 2171ms
+[2026-09-15T04:11:26.575Z]   Crossref 429 on "LLM routing" — retry 1 in 2066ms
+[2026-09-15T04:11:38.530Z]   Crossref 429 on "LLM routing" — retry 1 in 2488ms
+[2026-09-15T04:11:56.535Z]   Crossref 429 on "AI gateway" — retry 1 in 2207ms
+[2026-09-15T04:12:00.327Z]   Crossref 429 on "LLM routing" — retry 1 in 2470ms
+[2026-09-15T04:12:15.653Z]   Crossref 429 on "AI gateway" — retry 1 in 2409ms
+[2026-09-15T04:12:19.875Z]   Crossref 429 on "LLM routing" — retry 1 in 2240ms
+[2026-09-15T04:12:23.020Z]   Crossref 429 on "AI gateway" — retry 1 in 2411ms
+[2026-09-15T04:12:41.928Z]   Crossref 429 on "tornou-se" — retry 1 in 2047ms
+[2026-09-15T04:12:48.571Z]   Crossref 429 on "phase" — retry 1 in 2087ms
+[2026-09-15T04:12:48.884Z]   Crossref 429 on "model selection" — retry 1 in 2250ms
+[2026-09-15T04:12:59.982Z]   Crossref 429 on "benchmark-linked" — retry 1 in 2313ms
+[2026-09-15T04:13:06.356Z]   Crossref 429 on "model quality" — retry 1 in 2099ms
+[2026-09-15T04:13:55.579Z]   Crossref 429 on "prompt routing" — retry 1 in 2493ms
+[2026-09-15T04:13:55.807Z]   Crossref 429 on "model selection" — retry 1 in 2234ms
+[2026-09-15T04:14:29.431Z]   Crossref 429 on "control" — retry 1 in 2319ms
+[2026-09-15T04:15:35.091Z]   Crossref 429 on "LLM routing" — retry 1 in 2433ms
+[2026-09-15T04:16:08.066Z]   Crossref 429 on "AI gateway" — retry 1 in 2413ms
+[2026-09-15T04:16:12.194Z]   Crossref 429 on "LLM routing" — retry 1 in 2379ms
+[2026-09-15T04:16:26.937Z]   Crossref 429 on "quality cost" — retry 1 in 2352ms
+[2026-09-15T04:16:53.112Z]   Crossref 429 on "LLM routing" — retry 1 in 2180ms
+[2026-09-15T04:16:59.503Z]   Crossref 429 on "five-class" — retry 1 in 2142ms
+[2026-09-15T04:17:05.828Z]   Crossref 429 on "LLM routing" — retry 1 in 2301ms
+[2026-09-15T04:17:06.017Z]   Crossref 429 on "quality classification" — retry 1 in 2098ms
+[2026-09-15T04:17:13.775Z]   Crossref 429 on "LLM routing" — retry 1 in 2025ms
+[2026-09-15T04:17:27.201Z]   Crossref 429 on "efficiency" — retry 1 in 2282ms
+[2026-09-15T04:17:27.561Z]   Crossref 429 on "AI gateway" — retry 1 in 2447ms
+[2026-09-15T04:17:53.116Z]   Crossref 429 on "prompt routing" — retry 1 in 2437ms
+[2026-09-15T04:17:53.201Z]   Crossref 429 on "risk" — retry 1 in 2313ms
+[2026-09-15T04:17:53.460Z]   Crossref 429 on "quality" — retry 1 in 2136ms
+[2026-09-15T04:18:13.690Z]   Crossref 429 on "system" — retry 1 in 2339ms
+[2026-09-15T04:18:21.872Z]   Crossref 429 on "accuracy" — retry 1 in 2457ms
+[2026-09-15T04:18:43.307Z]   Crossref 429 on "model selection" — retry 1 in 2158ms
+[2026-09-15T04:19:00.349Z]   Crossref 429 on "AI gateway" — retry 1 in 2397ms
+[2026-09-15T04:19:08.907Z]   Crossref 429 on "prompt routing" — retry 1 in 2445ms
+[2026-09-15T04:19:09.271Z]   Crossref 429 on "metric" — retry 1 in 2090ms
+[2026-09-15T04:19:30.111Z]   Crossref 429 on "model selection" — retry 1 in 2429ms
+[2026-09-15T04:19:30.671Z]   Crossref 429 on "AI gateway" — retry 1 in 2363ms
+[2026-09-15T04:19:34.321Z]   Crossref 429 on "ranking" — retry 1 in 2025ms
+[2026-09-15T04:19:35.596Z]   Crossref 429 on "model selection" — retry 1 in 2025ms
+[2026-09-15T04:19:47.761Z]   Crossref 429 on "LLM routing" — retry 1 in 2200ms
+[2026-09-15T04:19:56.476Z]   Crossref 429 on "AI gateway" — retry 1 in 2448ms
+[2026-09-15T04:20:32.335Z]   Crossref 429 on "performance" — retry 1 in 2431ms
+[2026-09-15T04:21:21.840Z]   Crossref 429 on "LLM routing" — retry 1 in 2468ms
+[2026-09-15T04:22:09.424Z]   Crossref 429 on "prompt routing" — retry 1 in 2216ms
+[2026-09-15T04:22:40.606Z]   Crossref 429 on "model selection" — retry 1 in 2495ms
+[2026-09-15T04:22:46.085Z]   Crossref 429 on "prompt routing" — retry 1 in 2081ms
+[2026-09-15T04:22:46.265Z]   Crossref 429 on "prompt routing" — retry 1 in 2469ms
+[2026-09-15T04:23:01.407Z]   Crossref 429 on "LLM routing" — retry 1 in 2273ms
+[2026-09-15T04:23:03.739Z]   Crossref 429 on "LLM routing" — retry 2 in 4136ms
+[2026-09-15T04:23:43.411Z]   Crossref 429 on "LLM routing" — retry 1 in 2272ms
+[2026-09-15T04:23:43.675Z]   Crossref 429 on "monitoring" — retry 1 in 2471ms
+[2026-09-15T04:23:51.522Z]   Crossref 429 on "LLM routing" — retry 1 in 2069ms
+[2026-09-15T04:24:21.522Z]   Crossref 429 on "website-based" — retry 1 in 2148ms
+[2026-09-15T04:24:21.870Z]   Crossref 429 on "model selection" — retry 1 in 2438ms
+[2026-09-15T04:24:50.394Z]   Crossref 429 on "LLM routing" — retry 1 in 2092ms
+[2026-09-15T04:26:09.922Z]   Crossref 429 on "AI gateway" — retry 1 in 2493ms
+[2026-09-15T04:26:20.384Z]   Crossref 429 on "model selection" — retry 1 in 2237ms
+[2026-09-15T04:26:20.671Z]   Crossref 429 on "AI gateway" — retry 1 in 2335ms
+[2026-09-15T04:26:21.137Z]   Crossref 429 on "AI gateway" — retry 1 in 2166ms
+[2026-09-15T04:26:24.673Z]   Crossref 429 on "LLM routing" — retry 1 in 2302ms
+[2026-09-15T04:26:25.115Z]   Crossref 429 on "prompt routing" — retry 1 in 2210ms
+[2026-09-15T04:26:31.678Z]   Crossref 429 on "LLM routing" — retry 1 in 2050ms
+[2026-09-15T04:26:51.489Z]   Crossref 429 on "model selection" — retry 1 in 2122ms
+[2026-09-15T04:26:55.851Z]   Crossref 429 on "LLM routing" — retry 1 in 2094ms
+[2026-09-15T04:27:05.082Z]   Crossref 429 on "AI gateway" — retry 1 in 2437ms
+[2026-09-15T04:27:10.035Z]   Crossref 429 on "model selection" — retry 1 in 2359ms
+[2026-09-15T04:27:17.838Z]   Crossref 429 on "LLM routing" — retry 1 in 2369ms
+[2026-09-15T04:27:18.489Z]   Crossref 429 on "performance cost" — retry 1 in 2248ms
+[2026-09-15T04:27:28.554Z]   Crossref 429 on "model selection" — retry 1 in 2313ms
+[2026-09-15T04:27:33.261Z]   Crossref 429 on "LLM routing" — retry 1 in 2293ms
+[2026-09-15T04:27:49.826Z]   Crossref 429 on "prompt routing" — retry 1 in 2500ms
+[2026-09-15T04:27:58.122Z]   Crossref 429 on "inference performance" — retry 1 in 2123ms
+[2026-09-15T04:28:05.529Z]   Crossref 429 on "model selection" — retry 1 in 2338ms
+[2026-09-15T04:28:17.559Z]   Crossref 429 on "adaptive" — retry 1 in 2403ms
+[2026-09-15T04:28:22.340Z]   Crossref 429 on "prompt routing" — retry 1 in 2418ms
+[2026-09-15T04:28:51.971Z]   Crossref 429 on "LLM routing" — retry 1 in 2217ms
+[2026-09-15T04:28:54.600Z]   Crossref 429 on "AI gateway" — retry 1 in 2197ms
+[2026-09-15T04:30:46.507Z]   Crossref 429 on "model selection" — retry 1 in 2327ms
+[2026-09-15T04:31:23.192Z]   Crossref 429 on "model selection" — retry 1 in 2377ms
+[2026-09-15T04:32:10.425Z]   Crossref 429 on "LLM routing" — retry 1 in 2106ms
+[2026-09-15T04:32:46.740Z]   Crossref 429 on "routers" — retry 1 in 2441ms
+[2026-09-15T04:32:47.151Z]   Crossref 429 on "llms" — retry 1 in 2057ms
+[2026-09-15T04:32:53.808Z]   Crossref 429 on "retrieve-and-rerank" — retry 1 in 2326ms
+[2026-09-15T04:33:04.568Z]   Crossref 429 on "fusion" — retry 1 in 2342ms
+[2026-09-15T04:33:52.846Z]   Crossref 429 on "LLM routing" — retry 1 in 2318ms
+[2026-09-15T04:34:46.811Z]   Crossref 429 on "prompt model" — retry 1 in 2142ms
+[2026-09-15T04:34:47.098Z]   Crossref 429 on "mixture-of-models" — retry 1 in 2425ms
+[2026-09-15T04:35:09.599Z]   Crossref 429 on "planning" — retry 1 in 2285ms
+[2026-09-15T04:35:09.990Z]   Crossref 429 on "model" — retry 1 in 2341ms
+[2026-09-15T04:35:21.544Z]   Crossref 429 on "model" — retry 1 in 2143ms
+[2026-09-15T04:35:26.380Z]   Crossref 429 on "dynamic" — retry 1 in 2354ms
+[2026-09-15T04:35:34.494Z]   Crossref 429 on "model" — retry 1 in 2244ms
+[2026-09-15T04:35:49.021Z]   Crossref 429 on "model" — retry 1 in 2024ms
+[2026-09-15T04:35:49.446Z]   Crossref 429 on "model" — retry 1 in 2019ms
+[2026-09-15T04:35:59.629Z]   Crossref 429 on "chat" — retry 1 in 2105ms
+[2026-09-15T04:36:00.012Z]   Crossref 429 on "language model" — retry 1 in 2184ms
+[2026-09-15T04:36:09.099Z]   Crossref 429 on "model" — retry 1 in 2464ms
+[2026-09-15T04:36:30.253Z]   Crossref 429 on "LLM routing" — retry 1 in 2103ms
+[2026-09-15T04:36:30.514Z]   Crossref 429 on "library" — retry 1 in 2182ms
+[2026-09-15T04:36:39.515Z]   Crossref 429 on "prompt routing" — retry 1 in 2461ms
+[2026-09-15T04:37:26.330Z]   Crossref 429 on "selection" — retry 1 in 2245ms
+[2026-09-15T04:37:46.031Z]   Crossref 429 on "large language" — retry 1 in 2304ms
+[2026-09-15T04:38:02.057Z]   Crossref 429 on "LLM routing" — retry 1 in 2181ms
+[2026-09-15T04:38:30.612Z]   Crossref 429 on "model routing" — retry 1 in 2143ms
+[2026-09-15T04:38:32.937Z]   Crossref 429 on "selection" — retry 1 in 2283ms
+[2026-09-15T04:39:26.515Z]   Crossref 429 on "tool model" — retry 1 in 2202ms
+[2026-09-15T04:39:28.777Z]   Crossref 429 on "tool model" — retry 2 in 4049ms
+[2026-09-15T04:39:37.962Z]   Crossref 429 on "model routing" — retry 1 in 2158ms
+[2026-09-15T04:39:45.736Z]   Crossref 429 on "prompt routing" — retry 1 in 2385ms
+[2026-09-15T04:40:08.128Z]   Crossref 429 on "gateway" — retry 1 in 2398ms
+[2026-09-15T04:40:14.259Z]   Crossref 429 on "model routing" — retry 1 in 2351ms
+[2026-09-15T04:40:32.864Z]   Crossref 429 on "openai-compatible" — retry 1 in 2097ms
+[2026-09-15T04:41:22.709Z]   Crossref 429 on "open-source" — retry 1 in 2418ms
+[2026-09-15T04:42:09.925Z]   Crossref 429 on "inference" — retry 1 in 2366ms
+[2026-09-15T04:43:26.193Z]   Crossref 429 on "endpoint" — retry 1 in 2221ms
+[2026-09-15T04:43:26.275Z]   Crossref 429 on "remote" — retry 1 in 2220ms
+[2026-09-15T04:43:26.318Z]   Crossref 429 on "provider" — retry 1 in 2046ms
+[2026-09-15T04:44:05.927Z]   Crossref 429 on "LLM routing" — retry 1 in 2352ms
+[2026-09-15T04:44:27.535Z]   Crossref 429 on "fallback context" — retry 1 in 2412ms
+[2026-09-15T04:46:22.983Z]   Crossref 429 on "prompt" — retry 1 in 2188ms
+[2026-09-15T04:46:56.693Z]   Crossref 429 on "routing prompt" — retry 1 in 2121ms
+[2026-09-15T04:47:07.121Z]   Crossref 429 on "prompt" — retry 1 in 2117ms
+[2026-09-15T04:47:35.707Z]   Crossref 429 on "domain-specific" — retry 1 in 2177ms
+[2026-09-15T04:47:42.089Z]   Crossref 429 on "using" — retry 1 in 2412ms
+[2026-09-15T04:47:53.285Z]   Crossref 429 on "interface" — retry 1 in 2437ms
+[2026-09-15T04:47:53.543Z]   Crossref 429 on "systems" — retry 1 in 2039ms
+[2026-09-15T04:48:41.976Z]   Crossref 429 on "balancer" — retry 1 in 2086ms
+[2026-09-15T04:48:42.196Z]   Crossref 429 on "gateway" — retry 1 in 2444ms
+[2026-09-15T04:49:15.270Z]   Crossref 429 on "balancer" — retry 1 in 2281ms
+[2026-09-15T04:49:29.455Z]   Crossref 429 on "orchestration" — retry 1 in 2424ms
+[2026-09-15T04:49:48.887Z]   Crossref 429 on "cluster" — retry 1 in 2308ms
+[2026-09-15T04:50:10.536Z]   Crossref 429 on "model routing" — retry 1 in 2030ms
+[2026-09-15T04:50:32.321Z]   Crossref 429 on "tool" — retry 1 in 2371ms
+[2026-09-15T04:51:12.844Z]   Crossref 429 on "task orchestration" — retry 1 in 2229ms
+[2026-09-15T04:51:39.622Z]   Crossref 429 on "prompt routing" — retry 1 in 2109ms
+[2026-09-15T04:51:39.756Z]   Crossref 429 on "orchestration" — retry 1 in 2296ms
+[2026-09-15T04:51:44.768Z]   Crossref 429 on "plugin" — retry 1 in 2197ms
+[2026-09-15T04:51:52.064Z]   Crossref 429 on "lip-sync" — retry 1 in 2066ms
+[2026-09-15T04:51:52.786Z]   Crossref 429 on "cloud-based" — retry 1 in 2224ms
+[2026-09-15T04:52:11.884Z]   Crossref 429 on "model" — retry 1 in 2029ms
+[2026-09-15T04:52:53.946Z]   Crossref 429 on "model selection" — retry 1 in 2066ms
+[2026-09-15T04:53:21.385Z]   Crossref 429 on "request" — retry 1 in 2135ms
+[2026-09-15T04:53:21.998Z]   Crossref 429 on "inference" — retry 1 in 2158ms
+[2026-09-15T04:53:36.243Z]   Crossref 429 on "using" — retry 1 in 2221ms
+[2026-09-15T04:53:38.069Z]   Crossref 429 on "provider-agnostic" — retry 1 in 2386ms
+[2026-09-15T04:53:38.521Z]   Crossref 429 on "using" — retry 2 in 4280ms
+[2026-09-15T04:53:53.254Z]   Crossref 429 on "single" — retry 1 in 2273ms
+[2026-09-15T04:54:51.314Z]   Crossref 429 on "reasoning" — retry 1 in 2083ms
+[2026-09-15T04:55:17.127Z]   Crossref 429 on "fusion" — retry 1 in 2491ms
+[2026-09-15T04:56:08.018Z]   Crossref 429 on "LLM routing" — retry 1 in 2323ms
+[2026-09-15T04:56:09.097Z]   Crossref 429 on "AI gateway" — retry 1 in 2279ms
+[2026-09-15T04:56:26.625Z]   Crossref 429 on "agent" — retry 1 in 2279ms
+[2026-09-15T04:56:31.784Z]   Crossref 429 on "multi-model" — retry 1 in 2239ms
+[2026-09-15T04:56:43.871Z]   Crossref 429 on "context" — retry 1 in 2407ms
+[2026-09-15T04:56:44.234Z]   Crossref 429 on "saving" — retry 1 in 2295ms
+[2026-09-15T04:57:00.601Z]   Crossref 429 on "representation" — retry 1 in 2005ms
+[2026-09-15T04:57:09.879Z]   Crossref 429 on "prompt" — retry 1 in 2249ms
+[2026-09-15T04:57:10.147Z]   Crossref 429 on "prompt routing" — retry 1 in 2426ms
+[2026-09-15T04:58:38.105Z]   Crossref 429 on "LLM routing" — retry 1 in 2485ms
+[2026-09-15T04:58:38.255Z]   Crossref 429 on "per-provider" — retry 1 in 2018ms

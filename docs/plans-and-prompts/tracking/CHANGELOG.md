@@ -7,6 +7,16 @@
 
 ---
 
+## 2026-09-16 — Hermes Message Import Research + Deep-Research Skills
+
+### docs(research): Hermes message import research
+- `research/2026-09-16-hermes-message-import-research.md` (new): import external agent traffic (Hermes/Claude Code/Cursor/Codex) into 9Router observability — provider matching by model name, normalization, error reconstruction, DB schema, integration points.
+
+### skills: 2 new skills
+- `skills/9router-research/SKILL.md` (new): combined deep-research skill — Skill Reaping (harvest chat logs/session store/debug logs/research docs), Skill Seeking (discover tools/skills), 6-Level Binary Tree Research Method (4 evolutionary variants), Hermes Message Import design.
+- `skills/9router-message-import/SKILL.md` (new): message import feature skill — import sources, API, provider matching pipeline, normalization, error reconstruction, DB schema, implementation steps.
+- `skills/README.md` (updated): both new skills added to the table.
+
 ## 2026-09-15 — Interpretation Layer + Code-Bearing Implementation Plans (all 36 research impl-plans + 5 feature-area plans)
 
 ### docs(interpretation): 3 topics interpreted — 12 docs

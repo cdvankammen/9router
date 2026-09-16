@@ -77,7 +77,9 @@ const RULES = [
   },
   {
     category: "empty_response",
-    statuses: [200],
+    // No statuses: 200 is a success code and must not be decisive — an empty
+    // stream is only detectable from the error text, never from the status.
+    statuses: [],
     patterns: [
       /empty\s*(stream|response|chunk)/i, /zero\s*content/i,
       /no\s*content\s*received/i, /stream\s*completed\s*with\s*no/i,
