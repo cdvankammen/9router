@@ -8,6 +8,7 @@ import { buildAbortedResponsesTerminalBytes } from "../../utils/responsesStreamH
 import { buildStreamErrorBytes } from "../../utils/streamHelpers.js";
 import { buildRequestDetail, extractRequestConfig, saveUsageStats, formatDoneLine } from "./requestDetail.js";
 import { categorizeError } from "../../utils/errorCategorizer.js";
+import { detectClientTool, detectIDE } from "../../utils/clientDetector.js";
 import { saveRequestDetail } from "@/lib/usageDb.js";
 import { SSE_HEADERS_CORS as SSE_HEADERS } from "../../utils/sseConstants.js";
 import { upstreamResponseHeaders } from "../../utils/upstreamHeaders.js";
@@ -90,6 +91,8 @@ export async function handleStreamingResponse({ providerResponse, provider, mode
       pxpipe,
       sourceApp,
       userAgent,
+      clientTool: detectClientTool(clientRawRequest?.headers || {}, body),
+      ide: detectIDE(userAgent),
       url: providerUrl || providerResponse?.url,
       status: "error"
     })).catch(() => {});
@@ -128,6 +131,8 @@ export async function handleStreamingResponse({ providerResponse, provider, mode
     pxpipe,
     sourceApp,
     userAgent,
+    clientTool: detectClientTool(clientRawRequest?.headers || {}, body),
+    ide: detectIDE(userAgent),
     url: providerUrl || providerResponse?.url,
     status: "success"
   }, { id: streamDetailId })).catch(err => {
@@ -175,6 +180,8 @@ export function buildOnStreamComplete({ provider, model, connectionId, apiKey, r
       pxpipe,
       sourceApp,
       userAgent,
+      clientTool: detectClientTool(clientRawRequest?.headers || {}, body),
+      ide: detectIDE(userAgent),
       url: providerUrl || providerResponse?.url,
       status: isEmptyStream ? "error" : "success",
       ...(isEmptyStream ? { errorCategory: "empty_response" } : {})

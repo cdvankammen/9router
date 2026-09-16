@@ -360,3 +360,334 @@ Every folder in docs/plans-and-prompts was checked and filled:
 - Fallback rules UI: 5 views (Table / Chain Flow / Simple + Advanced / Guided Wizard / Expert Text), all editing `settings.modelFallbacks`, with provider picker, smart toggle switching, drag everywhere (chains + modal), drop indicator, sr-* cleanup toggle.
 - Smart router + observability suite from earlier chapters all still green.
 - 1718 pass / 88 baseline fail. HEAD `b520c9d6`.
+
+---
+
+## PART 8 — Webhook Receive & Act Research (2026-09-15)
+
+### The ask (verbatim, condensed)
+"Deep research the code and let me know if there is a place for where webhooks can be received by 9router with information and a place that can allow for things to happen from those. If not then make sure we research all the different options that could work that other programs do, popular included and not, and then research each of those at a minimum binary tree style depth of 5." → then: "double the expansion of research and continue what you are doing so research what you researched up to 6 branches in a binary tree worth of research."
+
+### Phase 1 — Codebase audit (the verdict)
+- `grep "webhook"` in `src/**` → **EMPTY**. All 144 matches live in docs/plans-and-prompts, gitbook/content, worktrees (docs only).
+- No inbound webhook receiver, no outbound webhook sender, no event bus / EventEmitter / pub-sub / hooks system in the backend.
+- Only UI toasts (`src/store/notificationStore.js` — Zustand) and CLI tray notifications.
+- No quota-alert webhooks implemented (`quotaAlert|quotaThreshold|alertAt|budgetAlert` → EMPTY).
+- **Docs-only plans:** `messages-page-feature-spec.md` §6 (Apprise-style URLs → Slack/Discord/ntfy/Gotify/Telegram; Alertmanager semantics: group by fingerprint, min-interval dedupe, silence window) — Deferred P3. `quota-tracking.md` (quota warnings 80%/90%/exhausted; delivery: Dashboard/Email/Webhook) — aspirational.
+- **Reusable infra identified:** API route pattern, settingsRepo (DEFAULT_SETTINGS + PATCH + PROTECTED_SETTING_KEYS), instrumentation.js background jobs, analyze-error LLM pipeline (credentials → handleChatCore), usageDb request capture, tunnel exposure, SQLite layer, quotaAutoPing scheduler.
+
+### Phase 2 — External research (depth 5, then doubled to depth 6)
+Subagent attempts hit `rate_limit_exceeded` — switched to direct `fetch_webpage` research, which worked reliably. 20+ programs researched at 6 levels (L1 Mode → L2 Events → L3 Transport & Auth → L4 Processing & Actions → L5 Configuration & Ops → L6 Pattern Classification):
+
+**LLM gateways (all send-only):** LiteLLM (alert types, alerting_args, digest mode, budget webhooks BETA), One API/new-api (Message Pusher, ENABLE_METRIC auto-disable, sandboxed JS plugins), Helicone (per-request webhooks, HMAC-SHA256, sample rate), OpenRouter/Portkey/CF (managed alert senders), Kong/APISIX/Traefik (in-process plugin hooks, not webhooks).
+
+**Automation platforms:** Home Assistant (⭐ best inbound model: `POST /api/webhook/<webhook_id>`, secret-ID auth, trigger→condition→action), n8n (webhook node, respond modes, 16MB cap), Node-RED (flow-based programming), Pipedream (⭐ `$.respond({immediate: true})` ack-then-process, 5TB uploads), Huginn (agent graph, 49.9k★), Zapier/Make/IFTTT (hosted iPaaS), Inngest (embedded event queue).
+
+**Messaging platforms:** Slack (⭐⭐ HTTP + Socket Mode: HMAC `v0:<timestamp>:<raw_body>`, 5-min tolerance, 3s rule, retries ×3, mutual TLS, "implement a queue" mandate), Discord (⭐⭐ Ed25519 signatures, 5 interaction types, 3s rule, 15-min tokens, Slack/GitHub-compatible webhook endpoints), Telegram (setWebhook vs getUpdates long polling, secret token), ntfy (topic=password, action buttons), Gotify (appToken/clientToken, OIDC), Apprise (⭐ 100+ services, one URL scheme).
+
+**Webhook infra:** Stripe (⭐⭐ gold standard: `t=<ts>,v1=<hmac>`, 5-min tolerance, dedupe by event ID, retries 3 days), GitHub (X-Hub-Signature-256, delivery GUID), Svix/Standard Webhooks (⭐ webhook-id/timestamp/signature, raw body via `req.text()` — critical for Next.js), Hookdeck (source→connection→destination, dedup/filter/transform).
+
+**Monitoring:** Uptime Kuma (91.4k★, 90+ notifications, push monitoring), Healthchecks.io (dead man's switch, alert on ABSENCE of pings).
+
+**Event patterns:** EventEmitter (in-process), Transactional Outbox (SQLite-friendly), Message Queues (overkill), SSE (9router already uses), WebSocket (Slack Socket Mode), Long-Polling (Telegram).
+
+### The taxonomy — 12 archetypes
+1. TCA Rule Engine (Home Assistant) · 2. Visual Workflow Engine (n8n) · 3. Flow-Based Programming (Node-RED) · 4. Event Source + Workflow (Pipedream) · 5. Agent Graph (Huginn) · 6. HMAC-Signed Receiver (Stripe/GitHub/Svix) · 7. Dual-Mode Receiver (Slack/Telegram) · 8. Ed25519 Receiver (Discord) · 9. Outbound Alert Router (LiteLLM/Uptime Kuma) · 10. Universal Adapter (Apprise) · 11. Dead Man's Switch (Healthchecks.io) · 12. Embedded Event Queue (Inngest).
+
+### The recommendation
+**Hybrid of #1 + #7 + #10:** `POST /api/webhooks/[id]` (Home Assistant secret UUID) + HMAC verification (Standard Webhooks spec, raw body via `req.text()`, 5-min tolerance, constant-time compare) + respond 2xx <3s + enqueue async (Slack mandate) → SQLite outbox table (`webhook_events`: event_id idempotency key, status pending→processing→delivered/failed, attempts, next_retry_at) + instrumentation.js-style worker → TCA JSON rules in settingsRepo (`webhookRules`, PATCH-able via `/api/settings`) → actions: notify (Apprise-style URLs — the P3-deferred spec), http, llm (reuse analyze-error pipeline — Slack's reacji→LLM pattern), gateway (toggle provider/fallback — One API auto-disable), dashboard (SSE feed). Outbound triggers: quota 80%/90%/exhausted, provider error spike, fallback event, new model added, daily spend report.
+
+### Key design decisions (each backed by a researched precedent)
+HMAC+timestamp (Stripe/Slack/Svix/GitHub) · raw body for HMAC (Svix/Next.js) · 2xx<3s + queue (Slack/Discord/Pipedream) · SQLite outbox not Redis/RabbitMQ (single-node local-first) · event IDs for idempotency (Stripe/GitHub/Slack/Telegram) · dual mode HTTP + long-polling (Telegram/Slack) · Apprise-style outbound (9router's own deferred spec) · TCA rules (Home Assistant/n8n/Node-RED) · LLM action reuse (analyze-error + Slack) · TCA in settings (settingsRepo pattern).
+
+### Deliverables
+- `research/2026-09-15-webhook-receive-act-research.md` (new) — full 6-level report
+- `planning/2026-09-15-webhook-receive-act-plan.md` (new) — M1 receiver → M5 dashboard UI
+- Indexes updated: research/README.md, tracking/TASKS.md, tracking/CHANGELOG.md, tracking/SESSION-HISTORY.md, tracking/SESSION-NARRATIVE.md
+
+**Status:** Research complete. Implementation deferred — awaiting user go-ahead.
+
+---
+
+## PART 9 — Webhook Binary-Tree Research Expansion (2026-09-15)
+
+### The ask (verbatim, condensed)
+"when i said binary tree all i meant was that each research or phrase or thing that you research from a document must go a minimum of 6 times deep worth of research and that expands into a crazy exponential amount of work is that what you did if not then add to what i gave you and do the research in that format this time. this does not mean you remove what you have done"
+
+### What changed
+The user clarified that "binary tree" meant **recursive expansion**: each research finding branches into 2 sub-topics, × 6 levels = 63 nodes per root (L0 + 2 L1 + 4 L2 + 8 L3 + 16 L4 + 32 L5, with L6 leaves described inside branch docs). The prior flat per-program 6-level analysis was NOT removed — the true binary tree was built **on top of it** as additional docs.
+
+### Deliverables (docs only, no code)
+- `research/2026-09-15-webhook-master-research-tree.md` (new) — the 63-node master map: L0 root → L1 INBOUND/OUTBOUND → L2 RECEIVER/PROCESSING/CHANNELS/TRIGGERS → 8 L3 branches, each with its own doc covering its 7-node subtree (L3 + 2×L4 + 4×L5) plus L6 leaf details.
+- 8 branch docs (new): `2026-09-15-webhook-branch-{a1a-transport, a1b-auth-security, a2a-event-store, a2b-rule-engine, b1a-messaging-platforms, b1b-push-services, b2a-internal-events, b2b-scheduled-monitoring}.md`
+
+### The 8 branches (each a 7-node subtree, 8 L6 leaves)
+- **A1a Transport:** POST /api/webhooks/[id] + allowed_methods; response contract 2xx <3s + challenge handshake; raw body via `req.text()` before JSON parse (HMAC requirement); payload size caps + large-payload offload.
+- **A1b Auth & security:** HMAC verification — Stripe `t=,v1=` vs Standard Webhooks `v1,` schemes; timingSafeEqual constant-time compare; 5-min timestamp tolerance; secret ID in URL (UUID-as-password, local_only binding); rotation with `whsec_` prefix + dual-secret grace.
+- **A2a Event store:** outbox table (event_id idempotency key, status machine pending→processing→delivered/failed); transactional outbox (same-DB write, at-least-once); settings-gated worker (instrumentation.js pattern); polling interval; exponential backoff; dead-letter.
+- **A2b Rule engine:** TCA model (Home Assistant trigger→condition→action); JSON rules in settingsRepo (PATCH-able via /api/settings); field/op/value ops (n8n Only Run If) + JSONPath v2 (Hookdeck Filters); action types notify/http/llm/gateway/dashboard; LLM action reuses analyze-error pipeline (Slack reacji→LLM precedent); actions in worker not route (Slack "implement a queue" mandate); idempotent actions (Stripe dedupe).
+- **B1a Messaging platforms:** Slack incoming webhooks (`hooks.slack.com/services/T/B/X`, blocks/attachments, 30k events/hr cap, sender-side retries — x-slack-retry-num semantics); Discord (`/webhooks/<id>/<token>`, slack/github-compatible endpoints → one formatter for both); Telegram (sendMessage API, chat_id = user/group/channel).
+- **B1b Push services:** ntfy (topic=password, action buttons ≤3, X-Delay 10s–3d, github/grafana/alertmanager templates); Gotify (appToken sender vs clientToken receiver, X-Gotify-Key header); Apprise (one URL → 100+ services, schema:// config, tag routing OR/AND/priority/escalation) — operationalizes the P3-deferred messages-page spec §6.
+- **B2a Internal events:** quota events at 80%/90%/exhausted (LiteLLM budget webhooks vocabulary: budget_crossed/threshold_crossed/projected_limit_exceeded), wired into quotaAutoPing scheduler, emit-on-transition dedupe; provider error spike (5 minor / 10 major per window — LiteLLM outage_alerts), auto-disable (One API ENABLE_METRIC), fallback.used, provider.cooldown (LiteLLM cooldown_deployment).
+- **B2b Scheduled & monitoring:** daily spend digest (LiteLLM digest_interval 86400, report_check_interval 3600, persist last-sent in settingsRepo — better than LiteLLM's in-memory); new_model_added alert on model catalog sync (instrumentation.js); dead man's switch (Healthchecks.io model: New→Up→Late→Down→Paused, /start /fail /<exitcode> suffixes, watchdog over background jobs, grace = 2× interval).
+
+### Indexes updated
+- `research/README.md` — added master tree + 8 branch docs rows
+- `tracking/TASKS.md` — new "Webhook Binary-Tree Research Expansion" section (T1–T9)
+- `tracking/CHANGELOG.md` — 2026-09-15 entry for master tree + 8 branch docs
+- `tracking/SESSION-HISTORY.md` — session entry
+- `tracking/SESSION-NARRATIVE.md` — this PART 9
+
+**Status:** Research complete. Implementation deferred — awaiting user go-ahead.
+
+---
+
+## PART 10 — Message-Driven Tool-Building Research (2026-09-15)
+
+### The ask (verbatim, condensed)
+"look at messages per conversation. use everything in a message request for filter/build/record/more options. IDE/agent identification as a first-class dimension. create a home in docs/plans-and-prompts."
+
+### What changed
+The user wants **every field** of a captured message to be a first-class dimension — not just the ~10 fixed filters. The session produced a research doc (requestDetails anatomy, identity signals, API surface, 9 gaps, 4 design options), a plan (M1 facets → M6 UI), and an ADR (Option 4 hybrid).
+
+### Deliverables (docs only, no code)
+- `research/9router/38-message-driven-tools-research.md` (new) — requestDetails anatomy (30+ fields), identity signals (detectClientTool, trusted headers, per-provider UAs), Messages API surface, 9 gaps, 4 design options, identity as dimension, build/record primitives, privacy, confidence, open questions
+- `planning/message-driven-tools-plan.md` (new) — M1 facet extraction + indexing, M2 JSON-path query language, M3 identity as dimension, M4 annotations + saved views, M5 per-message actions + webhook/script hooks, M6 truncation surfacing + UI
+- `tracking/decisions/ADR-010-message-driven-tools-hybrid-design.md` (new) — Option 4 hybrid (extract-and-index hot path + JSON-path long tail)
+
+### Key findings
+- **Capture pipeline:** `requestDetails.data` is a rich structured event (~30+ fields: latency, tokens, request params, providerRequest/Response, response, pxpipe, status, conversationId, sourceApp, userAgent, url, cost) — but only ~10 fixed dimensions are filterable server-side.
+- **Identity:** `detectClientTool` covers ~6 tools; governance M1 lists ~12+; no IDE-level detection; no trusted `X-9R-App/User/Session` headers yet.
+- **9 gaps:** fixed dimensions only, no JSON-path, no saved views/alerts, no per-message actions, no annotations, no conversation-level tooling, under-captured identity, silent truncation, no structured extraction.
+- **Design space:** 4 options; hybrid (extract-and-index hot path + JSON-path long tail) recommended — mirrors existing `requestDetails` columns + `data` JSON pattern (ADR-007).
+- **Build/record primitives:** annotations table, saved views, per-message action menu, webhook/script hooks with template expansion, conversation-level export/summarize/fork.
+
+### Indexes updated
+- `research/README.md` — added 38-message-driven-tools-research.md row
+- `planning/README.md` — added message-driven-tools-plan.md row
+- `tracking/DECISIONS.md` — added ADR-010
+- `tracking/CHANGELOG.md` — 2026-09-15 entry
+- `tracking/TASKS.md` — new "Message-Driven Tool-Building" section (M1–M6, P1–P6, A1)
+- `tracking/SESSION-HISTORY.md` — session entry
+- `tracking/SESSION-NARRATIVE.md` — this PART 10
+
+**Status:** Research + plan + ADR complete. Implementation deferred — awaiting user go-ahead.
+
+---
+
+## PART 11 — Webhook Exponential Research Expansion (2026-09-15)
+
+### The ask (verbatim, condensed)
+"for everything that you research from one document (and you can have more than one that you start with) and for every phrase that you decide i want to learn more about in that document that for each of those phrases you go at least 6 levels deep and for each level you may find hundreds of more phrases you want to research and then you will go and research each of those... it would be exponential not just a 1 to 2 to 4 to 8 etc kind of research tree."
+
+### What changed
+The user clarified "binary tree" a second time — it is **not** a 1→2→4→8 tree. Every phrase in the source documents is a root; each root branches **N-ary** (3–15+ children per node, up to hundreds), 6 levels deep. This is true exponential expansion. The session produced an exponential master map (48 roots R01–R48) + 11 branch docs, additive to the flat research and the 2-way binary tree — nothing removed.
+
+### Deliverables (docs only, no code)
+- `research/2026-09-15-webhook-exponential-master-map.md` (new) — 48 roots, N-ary methodology table, node-count summary (11,862 enumerated nodes), root inventory R01–R48
+- 11 branch docs `research/2026-09-15-webhook-exp-*.md` (new):
+  - exp-01 receiver & transport (R01–R04)
+  - exp-02 auth & secrets (R05–R08)
+  - exp-03 event store & worker (R09–R11)
+  - exp-04 rule engine & actions (R12–R14)
+  - exp-05 messaging platforms (R15–R17)
+  - exp-06 push services (R18–R20)
+  - exp-07 internal events (R21–R23)
+  - exp-08 scheduled & monitoring (R24–R25)
+  - exp-09 standards & infra (R26–R29)
+  - exp-10 patterns & platforms (R30–R46)
+  - exp-11 HTTP client architecture (R47–R48)
+
+### Key findings
+- **Scale:** 48 roots × 6 levels, N-ary branching — 11,862 enumerated nodes (172 L1 / 439 L2 / 912 L3 / 1,759 L4 / 3,179 L5 / 5,401 L6). With branching factor 4 ≈ 65,520 nodes; factor 6 ≈ 448,000.
+- **Every node carries** a finding + precedent + 9router application — the N-ary format makes each leaf actionable, not just a label.
+- **Root groups:** receiver/transport, auth/secrets, event store/worker, rule engine/actions, messaging platforms, push services, internal events, scheduled/monitoring, standards/infra, patterns/platforms (17 roots), HTTP client architecture.
+- **Naming fix:** the HTTP-client doc was initially created as exp-05, conflicting with the master map's reserved exp-05 (messaging platforms) — renamed to exp-11 via `mv`, roots renumbered R15–R16 → R47–R48, master map node counts updated (46→48 roots, 11,329→11,862 nodes).
+
+### Indexes updated
+- `research/README.md` — added exponential master map + exp-* rows
+- `tracking/CHANGELOG.md` — 2026-09-15 entry
+- `tracking/TASKS.md` — new "Webhook Exponential Research Expansion" section (E1–E12)
+- `tracking/SESSION-HISTORY.md` — session entry
+- `tracking/SESSION-NARRATIVE.md` — this PART 11
+
+**Status:** Research complete. Implementation deferred — awaiting user go-ahead.
+
+---
+
+## PART 12 — Webhook Interpretation Layer (2026-09-15)
+
+### The ask (verbatim, condensed)
+"have you made to do the interpretation of those documents to and make sure that your research is in full working and understandable and organized order if not. take all the documents and create a set of documents that put everything in clear readable and easy to understand the intent of work and order"
+
+### What changed
+The user asked for an **interpretation layer** — not new research, not a plan, but a set of documents that make the existing 23 webhook docs understandable, organized, and ordered. The research was dense (48KB flat research, 8 branch docs, 11 exponential branch docs, 11,862 enumerated nodes) and needed a map. The session created a new `interpretation/` category with 4 docs.
+
+### Deliverables (docs only, no code)
+- `interpretation/README.md` (new) — new category explaining the interpretation layer: plain-language guides, doc-by-doc summaries, syntheses, reading/build orders. Not new research, not a plan — the map over research/planning/tracking.
+- `interpretation/2026-09-15-webhook-interpretation-guide.md` (new) — one-page summary, the 4 phases of work, complete doc map (23 docs), key conclusions, recommended reading order, next steps
+- `interpretation/2026-09-15-webhook-doc-by-doc.md` (new) — plain-language summary of every webhook doc: what it is, what it covers, key takeaways, how it fits, what to read next
+- `interpretation/2026-09-15-webhook-synthesis.md` (new) — distilled knowledge: verdict, 12 archetypes, recommended architecture, 10 design decisions, 48 roots → 11 branches, open questions, confidence levels
+- `interpretation/2026-09-15-webhook-order-and-next-steps.md` (new) — chronological timeline, logical reading order, build order (M1–M5), deferred items, open decision points
+
+### Key findings
+- **The research exists in 4 layers:** flat research (1 doc + 1 plan), 2-way binary tree (1 master tree + 8 branch docs), exponential N-ary (1 master map + 11 branch docs), and now interpretation (4 docs).
+- **The interpretation layer is NOT new research and NOT a plan** — it is the map over research/planning/tracking, written for a reader who has NOT read the source docs.
+- **Every interpretation doc links back to its source docs** with relative paths.
+- **The recommended reading order:** interpretation guide → synthesis → flat research → plan → 2-way tree → exponential tree → tracking.
+- **The build order remains M1 (receiver) → M2 (outbox) → M3 (rules) → M4 (outbound) → M5 (UI, P2)**, each milestone mapping to specific exp branch docs.
+- **New category added to main README:** `interpretation/` now appears in the folder taxonomy table.
+
+### Indexes updated
+- `README.md` (main) — added interpretation category to folder table
+- `interpretation/README.md` — new category doc
+- `tracking/CHANGELOG.md` — 2026-09-15 entry for interpretation layer
+- `tracking/TASKS.md` — new "Webhook Interpretation Layer" section (I1–I6)
+- `tracking/SESSION-HISTORY.md` — session entry
+- `tracking/SESSION-NARRATIVE.md` — this PART 12
+
+**Status:** Interpretation complete. Implementation deferred — awaiting user go-ahead.
+
+---
+
+## PART 13 — Webhook Implementation Plans (code-level, agent-review notes)
+
+### The ask (verbatim, condensed)
+"continue your work and make sure that all the documents have been interpreted
+and that you have put all tasks and implementation work (meaning if you have not
+create all sorts of different implementation plans, no matter if we ended up
+making ones that overlap then you need to make sure that you create those
+implementation plans all the way to the point that we even have code for in the
+implementation plan and making sure that it is mentioned for agents that read
+those plans that this code is for the agent to review and make decision for if
+there are better ways to implement and make those changes happen)"
+
+### What changed
+The user asked for the next layer after interpretation: **implementation plans
+with real code**, down to the file level, in *all sorts of different* variants
+(overlapping allowed), each carrying an explicit note that agents reading the
+plans must review the code and make better-implementation decisions. The session
+created 8 plans in `planning/` — the 5 milestone plans (M1–M5) plus 3
+intentionally overlapping plans (messaging platforms, push services, standards
+compliance).
+
+### Deliverables (8 plans, code down to file level, no code written to src/ yet)
+- `planning/2026-09-15-webhook-m1-receiver-hmac-plan.md` (new) — M1 receiver:
+  `src/lib/webhooks/verify.js` (Standard Webhooks HMAC SHA-256 over
+  `id.timestamp.rawBody`, `crypto.timingSafeEqual` with length guard, 5-min
+  timestamp tolerance), `registry.js` (list/get/create/delete/rotate secret),
+  `src/app/api/webhooks/[id]/route.js` (POST via `request.text()` raw body,
+  401/404/405/OPTIONS), settingsRepo `webhooks: []` default.
+- `planning/2026-09-15-webhook-m2-outbox-worker-plan.md` (new) — M2 outbox:
+  migration `005-webhook-events.js` (webhook_events table: event_id PK,
+  webhook_id, payload, status pending/processing/delivered/failed/dead,
+  attempts, next_retry_at, created_at, processed_at, last_error + status
+  index), `webhookEventsRepo.js` (insertEvent idempotent, claimPendingEvents,
+  markDelivered, markFailed with exponential backoff 2^attempts,
+  MAX_ATTEMPTS=5), `worker.js` (global.__webhookWorker singleton, 5s poll),
+  instrumentation.js settings-gated wiring, settingsRepo `webhookWorker`
+  default.
+- `planning/2026-09-15-webhook-m3-rule-engine-actions-plan.md` (new) — M3 TCA
+  rule engine: `rules.js` (evaluateCondition and/or trees, getField dot-path,
+  compare ops eq/neq/gt/lt/contains/regex, ruleMatches, dispatchEvent with
+  ACTION_HANDLERS map), actions `notify.js` (6 Apprise schemes via
+  proxyAwareFetch), `http.js`, `llm.js` (reuses handleChatCore +
+  getProviderCredentials + getModelInfo — analyze-error pipeline), `gateway.js`
+  (provider/fallback toggle placeholder), `dashboard.js` (SSE listeners Set),
+  settingsRepo `webhookRules` + `notifyUrls` defaults.
+- `planning/2026-09-15-webhook-m4-outbound-triggers-plan.md` (new) — M4
+  outbound: `emitter.js` (fail-open → insertEvent with randomUUID),
+  quotaAutoPing edit (emitQuotaEvents with emittedThresholds dedupe, 80/90/100
+  transitions), chatCore edit (provider.error + fallback.used emits),
+  modelCatalog/sync edit (model.added), `digest.js` (maybeSendDailyDigest with
+  persisted lastSentAt — survives restart, better than LiteLLM in-memory),
+  settingsRepo `webhookDigest` default.
+- `planning/2026-09-15-webhook-m5-dashboard-ui-plan.md` (new) — M5 dashboard UI:
+  `src/app/dashboard/webhooks/page.js` + `events/page.js`, components
+  `WebhookForm` (create/toggle/delete, secret UUID), `RuleEditor` (JSON rules,
+  add/remove), `EventTable` (status/attempts/error), `src/app/api/webhooks/
+  events/route.js` (GET event log, limit + status filter).
+- `planning/2026-09-15-webhook-messaging-platforms-plan.md` (new) — overlapping:
+  Slack/Discord/Telegram platform modules, shared Slack/Discord formatter
+  (blocks + context), Discord slack-compatible endpoint reuse.
+- `planning/2026-09-15-webhook-push-services-plan.md` (new) — overlapping:
+  ntfy (public + authenticated self-hosted, priority/tags headers), Gotify
+  (token + priority), Pushover (user key + app token, priority + sound).
+- `planning/2026-09-15-webhook-standards-compliance-plan.md` (new) — overlapping:
+  Svix header aliases (svix-id/timestamp/signature), outbound signing
+  (9router as sender), Zapier-style envelope (X-Zapier-* headers + payload).
+
+### Key findings
+- **Every plan carries the AGENT REVIEW NOTE verbatim:** the code is a starting
+  point, not a final decision — every agent that reads the plan MUST review the
+  code, decide if there is a better way, make those changes happen, and proceed.
+- **Code follows verified 9router conventions:** settingsRepo DEFAULT_SETTINGS
+  nested configs, instrumentation.js settings-gated dynamic-import workers,
+  analyze-error handleChatCore reuse, migrations 001–004 registration pattern,
+  quotaAutoPing global singleton scheduler, proxyAwareFetch for outbound HTTP.
+- **Plans intentionally overlap** (messaging/push overlap M3 actions; standards
+  overlaps M1 receiver) per the user's explicit allowance — "no matter if we
+  ended up making ones that overlap".
+- **The build order remains M1 → M2 → M3 → M4 → M5**, with the three overlapping
+  plans as deep-dives on specific action/verification surfaces.
+
+### Indexes updated
+- `planning/README.md` — added 8 webhook plan rows to the contents table
+- `tracking/CHANGELOG.md` — 2026-09-15 entry for the 8 implementation plans
+- `tracking/TASKS.md` — new "Webhook Implementation Plans" section (P1–P8)
+- `tracking/SESSION-HISTORY.md` — session entry
+- `tracking/SESSION-NARRATIVE.md` — this PART 13
+
+**Status:** 8 implementation plans complete (code-level, agent-review notes).
+Code implementation deferred — awaiting user go-ahead.
+
+---
+
+## PART 14 — Full Coverage: Implementation Plans for EVERY Research Root (R01–R48)
+
+**Date:** 2026-09-15
+**User directive:** *"now did you make an implementation plan for every single option that was found and layer for things that could be an option for 9router to do? if not do that now"* — every research root must have a plan. Then: *"and did you make sure that it will do that implementation plan all the way down to the point at which code is inputted into that implementation plan as well with the notes to the agents that read it that this is for suggestions and can be changed if found that other options for code is better to implement the outcomes of the plan"* — every plan must contain code down to file level AND the agent-review note.
+
+### What was done
+Audited the 48-root master map (`research/2026-09-15-webhook-exponential-master-map.md`) against the 8 existing plans. Found 21 roots with no plan: R20, R25, R26, R27, R29, R30, R32, R33, R34, R35, R37, R38, R39, R40, R41, R42, R43, R44, R45, R46, R47–R48. Created 21 new code-level plans covering them:
+
+| Plan | Roots | Core idea |
+|------|-------|-----------|
+| `webhook-dead-mans-switch-plan.md` | R25 | Heartbeat monitor, missed-window alert, cooldown dedupe |
+| `webhook-stripe-model-plan.md` | R26 | Stripe-style envelope, Idempotency-Key, type allowlist, replay |
+| `webhook-github-model-plan.md` | R27 | X-GitHub-Event/Delivery, X-Hub-Signature-256 hex, ping |
+| `webhook-hookdeck-ingress-plan.md` | R29 | Catch-all ingress, source registry, per-source format dispatch |
+| `webhook-apprise-adapter-plan.md` | R20 | Apprise URL adapter — Option A (npm) vs Option B (native), agent decides |
+| `webhook-pubsub-core-plan.md` | R30 | Typed event bus, wildcard, fail-open, outbox bridge |
+| `webhook-message-queue-plan.md` | R32 | Queue adapter — BullMQ (Redis) vs in-process, drop-oldest |
+| `webhook-sse-feed-plan.md` | R33 | SSE stream endpoint, heartbeat, client hook |
+| `webhook-websocket-feed-plan.md` | R34 | WS hub, broadcast, ping/pong cleanup |
+| `webhook-long-polling-plan.md` | R35 | Cursor-based long-poll, 25s hold, batch return |
+| `webhook-n8n-workflows-plan.md` | R37 | Workflow DAG executor, trigger/transform/condition/action nodes |
+| `webhook-nodered-flows-plan.md` | R38 | Message-passing flows, inject/function/switch/http/notify nodes |
+| `webhook-pipedream-steps-plan.md` | R39 | Linear step runner, steps.<name> state, $ context |
+| `webhook-huginn-agents-plan.md` | R40 | Scheduled agents, watch/schedule/digest types, event chaining |
+| `webhook-inngest-functions-plan.md` | R41 | Code-first functions, trigger matching, retries, step.run |
+| `webhook-litellm-alerts-plan.md` | R42 | Budget/error-rate/latency/daily-report alerts |
+| `webhook-oneapi-metrics-plan.md` | R43 | JSON + Prometheus metrics endpoints |
+| `webhook-helicone-observability-plan.md` | R44 | Custom properties, request.completed events, feedback endpoint |
+| `webhook-uptime-kuma-plan.md` | R45 | Push API client, periodic heartbeat |
+| `webhook-healthchecks-io-plan.md` | R46 | Ping client, start/fail/log endpoints |
+| `webhook-http-client-plan.md` | R47–R48 | webhookFetch wrapper, timeout/retry/backoff/jitter |
+
+### Verification (terminal, 2026-09-15)
+- `ls planning/2026-09-15-webhook-*.md | wc -l` → **31** (29 code-level plans + 2 original outline docs)
+- `grep -l "AGENT REVIEW NOTE" planning/2026-09-15-webhook-*.md | wc -l` → **29** — every code-level plan carries the note
+- New-plan file count → **21** — all created this session
+
+### Answer to the user's second question
+**Yes.** Every one of the 29 code-level plans goes all the way down to actual code — file paths, function signatures, and implementation snippets following 9router's verified conventions (settingsRepo DEFAULT_SETTINGS, instrumentation.js settings-gated workers, Next.js route handlers, migrations registration, quotaAutoPing singleton, proxyAwareFetch). And every plan carries the **AGENT REVIEW NOTE** verbatim: the code is a starting point, not a final decision — agents MUST review it, decide if there is a better way, make those changes happen, and proceed.
+
+### Indexes updated
+- `planning/README.md` — 21 new rows (29 webhook plan rows total)
+- `tracking/CHANGELOG.md` — 2026-09-15 entry for the 21 new plans
+- `tracking/TASKS.md` — P9–P29 rows (29 plans total, all 48 roots covered)
+- `tracking/SESSION-HISTORY.md` — session entry
+- `tracking/SESSION-NARRATIVE.md` — this PART 14
+
+**Status:** 29 implementation plans complete — every research root R01–R48 covered, all code-level with agent-review notes. Code implementation deferred — awaiting user go-ahead.

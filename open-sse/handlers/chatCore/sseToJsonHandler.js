@@ -6,6 +6,7 @@ import { HTTP_STATUS } from "../../config/runtimeConfig.js";
 import { FORMATS } from "../../translator/formats.js";
 import { PROVIDERS } from "../../config/providers.js";
 import { buildRequestDetail, extractRequestConfig, saveUsageStats, formatDoneLine } from "./requestDetail.js";
+import { detectClientTool, detectIDE } from "../../utils/clientDetector.js";
 import { ROLE, RESPONSES_ITEM } from "../../translator/schema/index.js";
 
 // Responses-API providers (e.g. codex) may emit SSE without content-type + use Responses output shape
@@ -162,12 +163,17 @@ function openAICompletionToClaudeMessage(responseBody) {
 export function parseSSEToOpenAIResponse(rawSSE, fallbackModel) {
   const chunks = [];
   let streamError = null;
+  let sawDone = false;
 
   for (const line of String(rawSSE || "").split("\n")) {
     const trimmed = line.trim();
     if (!trimmed.startsWith("data:")) continue;
     const payload = trimmed.slice(5).trim();
-    if (!payload || payload === "[DONE]") continue;
+    if (!payload) continue;
+    if (payload === "[DONE]") {
+      sawDone = true;
+      continue;
+    }
     try {
       const chunk = JSON.parse(payload);
       if (chunk?.error) streamError = chunk.error;
@@ -176,7 +182,21 @@ export function parseSSEToOpenAIResponse(rawSSE, fallbackModel) {
   }
 
   if (streamError) return { error: streamError };
-  if (chunks.length === 0) return null;
+  // A properly-terminated stream that only contained [DONE] (no data events)
+  // returns a body with empty choices so the downstream validator rejects it
+  // with EMPTY_CHOICES (which triggers fallback), rather than returning null
+  // which the handler treats as "not handled" / silent skip. A completely
+  // empty stream (no [DONE] either) stays null — nothing to convert.
+  if (chunks.length === 0) {
+    if (!sawDone) return null;
+    return {
+      id: `chatcmpl-${Date.now()}`,
+      object: "chat.completion",
+      created: Math.floor(Date.now() / 1000),
+      model: fallbackModel || "unknown",
+      choices: [],
+    };
+  }
 
   const first = chunks[0];
   const contentParts = [];
@@ -242,7 +262,9 @@ export async function handleForcedSSEToJson({ providerResponse, sourceFormat, ta
     request: extractRequestConfig(body, stream),
     providerRequest: finalBody || translatedBody || null,
     sourceApp,
-    userAgent
+    userAgent,
+    clientTool: detectClientTool(clientRawRequest?.headers || {}, body),
+    ide: detectIDE(userAgent)
   };
 
   // Codex/Responses API SSE path

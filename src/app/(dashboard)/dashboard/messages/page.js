@@ -12,6 +12,10 @@ import TimelineView from "./components/TimelineView";
 import TraceTreeView from "./components/TraceTreeView";
 import BoardView from "./components/BoardView";
 import InboxView from "./components/InboxView";
+import FacetsSidebar from "./components/FacetsSidebar";
+import SavedViewsDropdown from "./components/SavedViewsDropdown";
+import ActionMenu from "./components/ActionMenu";
+import TruncatedBadge, { isTruncated } from "./components/TruncatedBadge";
 import { prettyJson, buildCurl, extractText } from "@/shared/messageFormats";
 
 // ── Provider name resolution (mirrors RequestDetailsTab) ────────────────────
@@ -262,7 +266,7 @@ function FormatTabs({ detail, onCopy }) {
 }
 
 // ── Detail drawer ───────────────────────────────────────────────────────────
-function MessageDetailDrawer({ message, onClose }) {
+function MessageDetailDrawer({ message, onClose, onChanged }) {
   const { copyToClipboard } = useCopyToClipboard();
   if (!message) return null;
 
@@ -277,7 +281,15 @@ function MessageDetailDrawer({ message, onClose }) {
             </span>
           )}
           <span className="font-mono text-sm text-text-main">{message.provider}/{message.model}</span>
-          <span className="ml-auto text-xs text-text-muted">{message.timestamp}</span>
+          {isTruncated(message) ? <TruncatedBadge /> : null}
+          <span className="ml-auto flex items-center gap-2">
+            <ActionMenu
+              message={message}
+              onCopyCurl={() => copyToClipboard(buildCurl(message))}
+              onChanged={onChanged}
+            />
+            <span className="text-xs text-text-muted">{message.timestamp}</span>
+          </span>
         </div>
 
         <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -380,6 +392,7 @@ function ConversationView({ conversation, onSelect, onExpand }) {
                 <span className="min-w-0 flex-1 truncate font-mono text-text-main">
                   {m.model || "?"}
                 </span>
+                {isTruncated(m) ? <TruncatedBadge /> : null}
               </button>
             ))
           ) : (
@@ -409,6 +422,15 @@ export default function MessagesPage() {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [page, setPage] = useState(1);
   const [pageSize] = useState(50);
+
+  // M6 facet filters (from FacetsSidebar) — each maps to an /api/messages param
+  const [clientTool, setClientTool] = useState("");
+  const [ide, setIde] = useState("");
+  const [hasTools, setHasTools] = useState("");
+  const [hasThinking, setHasThinking] = useState("");
+  const [truncated, setTruncated] = useState("");
+  const [model, setModel] = useState("");
+  const [sourceApp, setSourceApp] = useState("");
 
   // View mode
   const [viewMode, setViewMode] = useState("list"); // "list" | "conversations" | "timeline" | "trace" | "board" | "errors"
@@ -451,6 +473,13 @@ export default function MessagesPage() {
       if (errorCategory) params.set("errorCategory", errorCategory);
       if (conversationId) params.set("conversationId", conversationId);
       if (debouncedSearch) params.set("search", debouncedSearch);
+      if (model) params.set("model", model);
+      if (sourceApp) params.set("sourceApp", sourceApp);
+      if (clientTool) params.set("clientTool", clientTool);
+      if (ide) params.set("ide", ide);
+      if (hasTools !== "") params.set("hasTools", hasTools);
+      if (hasThinking !== "") params.set("hasThinking", hasThinking);
+      if (truncated !== "") params.set("truncated", truncated);
       const res = await fetch(`/api/messages?${params}`, { signal: controller.signal });
       if (!res.ok) throw new Error("Failed to load messages");
       const json = await res.json();
@@ -469,7 +498,7 @@ export default function MessagesPage() {
     } finally {
       if (loadAbortRef.current === controller) setLoading(false);
     }
-  }, [page, pageSize, provider, status, errorCategory, conversationId, debouncedSearch, viewMode]);
+  }, [page, pageSize, provider, status, errorCategory, conversationId, debouncedSearch, viewMode, model, sourceApp, clientTool, ide, hasTools, hasThinking, truncated]);
 
   // Debounce the search input (~300ms) so every keystroke doesn't fire a
   // query; page resets to 1 once the term settles.
@@ -508,6 +537,54 @@ export default function MessagesPage() {
     } catch { /* ignore */ }
   }, []);
 
+  // M6: facet toggle — clicking a facet value sets/clears the filter
+  const toggleFacet = useCallback((key, value) => {
+    const setters = {
+      provider: setProvider,
+      model: setModel,
+      status: setStatus,
+      errorCategory: setErrorCategory,
+      sourceApp: setSourceApp,
+      clientTool: setClientTool,
+      ide: setIde,
+      hasTools: setHasTools,
+      hasThinking: setHasThinking,
+      truncated: setTruncated,
+    };
+    const setter = setters[key];
+    if (!setter) return;
+    setter((cur) => (String(cur) === String(value) ? "" : String(value)));
+    setPage(1);
+  }, []);
+
+  // M6: apply a saved view — set every filter from the stored object
+  const applySavedView = useCallback((filter = {}) => {
+    setProvider(filter.provider || "");
+    setModel(filter.model || "");
+    setStatus(filter.status || "");
+    setErrorCategory(filter.errorCategory || "");
+    setSourceApp(filter.sourceApp || "");
+    setClientTool(filter.clientTool || "");
+    setIde(filter.ide || "");
+    setHasTools(filter.hasTools ?? "");
+    setHasThinking(filter.hasThinking ?? "");
+    setTruncated(filter.truncated ?? "");
+    setConversationId(filter.conversationId || "");
+    setSearch(filter.search || "");
+    setPage(1);
+  }, []);
+
+  // M6: current filter object (for saving views + sidebar highlight)
+  const currentFilters = useMemo(() => ({
+    provider, model, status, errorCategory, sourceApp, clientTool, ide,
+    hasTools, hasThinking, truncated, conversationId, search,
+  }), [provider, model, status, errorCategory, sourceApp, clientTool, ide, hasTools, hasThinking, truncated, conversationId, search]);
+
+  // M6: refresh the open detail after actions mutate annotations
+  const refreshDetail = useCallback(() => {
+    if (selected?.id) openDetail(selected.id);
+  }, [selected?.id, openDetail]);
+
   return (
     <div className="flex h-full min-h-0 flex-col gap-4">
       {/* Header */}
@@ -517,6 +594,9 @@ export default function MessagesPage() {
           <p className="text-xs text-text-muted">
             Captured request/response payloads — grouped by conversation, exportable.
           </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <SavedViewsDropdown currentFilters={currentFilters} onApply={applySavedView} />
         </div>
         <div className="flex items-center gap-1 rounded-lg bg-black/5 dark:bg-white/5 p-1">
           <button
@@ -613,13 +693,15 @@ export default function MessagesPage() {
             <option value="partial">partial</option>
             <option value="cancelled">cancelled</option>
           </select>
-          <Button size="sm" variant="ghost" onClick={() => { setProvider(""); setStatus(""); setConversationId(""); setSearch(""); setPage(1); }}>
+          <Button size="sm" variant="ghost" onClick={() => { setProvider(""); setModel(""); setStatus(""); setErrorCategory(""); setSourceApp(""); setClientTool(""); setIde(""); setHasTools(""); setHasThinking(""); setTruncated(""); setConversationId(""); setSearch(""); setPage(1); }}>
             Clear
           </Button>
         </div>
       </Card>
 
       {/* Body */}
+      <div className="flex min-h-0 flex-1 gap-3">
+        <FacetsSidebar facets={data?.facets} filters={currentFilters} onToggle={toggleFacet} />
       <Card padding="none" className="min-h-0 flex-1">
         {loading ? (
           <div className="flex items-center justify-center p-10 text-sm text-text-muted">Loading…</div>
@@ -673,6 +755,7 @@ export default function MessagesPage() {
                       <span className="font-mono text-xs text-text-main">{getProviderName(m.provider, providerNames)}</span>
                       <span className="text-text-muted"> / </span>
                       <span className="font-mono text-xs text-text-muted">{m.model || "?"}</span>
+                      {isTruncated(m) ? <TruncatedBadge className="ml-1.5" /> : null}
                     </td>
                     <td className="p-2"><StatusBadge status={m.status} category={m.errorCategory} /></td>
                     <td className="p-2 font-mono text-xs text-text-muted">
@@ -760,8 +843,9 @@ export default function MessagesPage() {
           </div>
         )}
       </Card>
+      </div>
 
-      <MessageDetailDrawer message={selected} onClose={() => setSelected(null)} />
+      <MessageDetailDrawer message={selected} onClose={() => setSelected(null)} onChanged={refreshDetail} />
     </div>
   );
 }

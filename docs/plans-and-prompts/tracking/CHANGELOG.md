@@ -7,6 +7,291 @@
 
 ---
 
+## 2026-09-15 — Interpretation Layer + Code-Bearing Implementation Plans (all 36 research impl-plans + 5 feature-area plans)
+
+### docs(interpretation): 3 topics interpreted — 12 docs
+- `interpretation/2026-09-15-governance-interpretation-guide.md` (new): keyless governance — intent, doc map, summary, reading order, next steps.
+- `interpretation/2026-09-15-governance-doc-by-doc.md` (new): plain-language summary of every governance doc.
+- `interpretation/2026-09-15-governance-synthesis.md` (new): distilled governance knowledge + design decisions + open questions.
+- `interpretation/2026-09-15-governance-order-and-next-steps.md` (new): timeline, reading order, build order.
+- `interpretation/2026-09-15-message-capture-interpretation-guide.md` (new): message capture/filtering — intent, doc map, summary, reading order, next steps.
+- `interpretation/2026-09-15-message-capture-doc-by-doc.md` (new): plain-language summary of every message-capture doc.
+- `interpretation/2026-09-15-message-capture-synthesis.md` (new): distilled message-capture knowledge + design decisions + open questions.
+- `interpretation/2026-09-15-message-capture-order-and-next-steps.md` (new): timeline, reading order, build order.
+- `interpretation/README.md` (updated): contents table now lists all 3 topics (webhook, governance, message-capture); conventions updated.
+
+### docs(planning): 36 code-bearing impl-plans (research impl-plan 01–36 counterparts)
+Every plan includes reference JS code (repos, migrations, services, routes, dashboard pages, tests), a Dependencies & Risks table, Verification steps, and the mandatory **Note to implementing agents (READ FIRST)** — code is a starting point for review; agents MUST review, decide better ways, make changes, verify, and update the plan.
+- `planning/2026-09-15-impl-plan-01-learned-routing-code.md` (new)
+- `planning/2026-09-15-impl-plan-02-cascade-fallback-code.md` (new)
+- `planning/2026-09-15-impl-plan-03-semantic-routing-code.md` (new)
+- `planning/2026-09-15-impl-plan-04-cost-quality-optimizer-code.md` (new)
+- `planning/2026-09-15-impl-plan-05-gateway-interop-code.md` (new)
+- `planning/2026-09-15-impl-plan-06-moe-aware-dispatch-code.md` (new)
+- `planning/2026-09-15-impl-plan-07-eval-harness-code.md` (new)
+- `planning/2026-09-15-impl-plan-08-routing-observability-code.md` (new)
+- `planning/2026-09-15-impl-plan-09-error-failover-hardening-code.md` (new)
+- `planning/2026-09-15-impl-plan-10-security-mitm-hardening-code.md` (new)
+- `planning/2026-09-15-impl-plan-11-oauth-credential-lifecycle-code.md` (new)
+- `planning/2026-09-15-impl-plan-12-ux-dashboard-code.md` (new)
+- `planning/2026-09-15-impl-plan-13-runtime-enforcement-code.md` (new)
+- `planning/2026-09-15-impl-plan-14-message-driven-tools-protocol-code.md` (new)
+- `planning/2026-09-15-impl-plan-15-goal-systems-integration-code.md` (new)
+- `planning/2026-09-15-impl-plan-16-divergence-malformed-response-code.md` (new)
+- `planning/2026-09-15-impl-plan-17-node-failover-networking-code.md` (new)
+- `planning/2026-09-15-impl-plan-18-model-serving-policy-code.md` (new)
+- `planning/2026-09-15-impl-plan-19-unified-error-system-code.md` (new)
+- `planning/2026-09-15-impl-plan-20-gap-merge-master-coding-rule-code.md` (new)
+- `planning/2026-09-15-impl-plan-21-multi-account-quota-code.md` (new)
+- `planning/2026-09-15-impl-plan-22-streaming-reliability-code.md` (new)
+- `planning/2026-09-15-impl-plan-23-prompt-response-caching-code.md` (new)
+- `planning/2026-09-15-impl-plan-24-rate-limiting-abuse-code.md` (new)
+- `planning/2026-09-15-impl-plan-25-cloud-sync-multidevice-code.md` (new)
+- `planning/2026-09-15-impl-plan-26-token-optimization-context-code.md` (new)
+- `planning/2026-09-15-impl-plan-27-combo-fallback-rules-engine-code.md` (new)
+- `planning/2026-09-15-impl-plan-28-embeddings-vectorstore-code.md` (new)
+- `planning/2026-09-15-impl-plan-29-cli-launcher-packaging-code.md` (new)
+- `planning/2026-09-15-impl-plan-30-i18n-localization-code.md` (new)
+- `planning/2026-09-15-impl-plan-31-performance-latency-code.md` (new)
+- `planning/2026-09-15-impl-plan-32-test-coverage-ci-code.md` (new)
+- `planning/2026-09-15-impl-plan-33-documentation-knowledge-base-code.md` (new)
+- `planning/2026-09-15-impl-plan-34-provider-registry-models-code.md` (new)
+- `planning/2026-09-15-impl-plan-35-data-privacy-compliance-code.md` (new)
+- `planning/2026-09-15-impl-plan-36-model-comparison-leaderboard-code.md` (new)
+- `planning/README.md` (updated): contents table now lists all 5 feature-area code-bearing plans + all 36 impl-plan code versions.
+
+### docs(tracking): TASKS.md updated with interpretation + code-bearing plan sections.
+
+---
+
+## 2026-09-15 — Webhook Implementation Plans, Full Coverage (29 code-level plans)
+
+### docs(planning): 21 new plans — every research root R01–R48 now covered
+- `planning/2026-09-15-webhook-dead-mans-switch-plan.md` (new): R25 — heartbeat monitor, missed-window alert, cooldown dedupe. AGENT REVIEW NOTE included.
+- `planning/2026-09-15-webhook-stripe-model-plan.md` (new): R26 — Stripe-style envelope, Idempotency-Key, type allowlist, replay endpoint. AGENT REVIEW NOTE included.
+- `planning/2026-09-15-webhook-github-model-plan.md` (new): R27 — X-GitHub-Event/Delivery, X-Hub-Signature-256 hex, ping handling. AGENT REVIEW NOTE included.
+- `planning/2026-09-15-webhook-hookdeck-ingress-plan.md` (new): R29 — catch-all ingress, source registry, per-source format dispatch. AGENT REVIEW NOTE included.
+- `planning/2026-09-15-webhook-apprise-adapter-plan.md` (new): R20 — Apprise URL adapter, Option A (npm) vs Option B (native) — agent decides. AGENT REVIEW NOTE included.
+- `planning/2026-09-15-webhook-pubsub-core-plan.md` (new): R30 — typed event bus, wildcard, fail-open, outbox bridge. AGENT REVIEW NOTE included.
+- `planning/2026-09-15-webhook-message-queue-plan.md` (new): R32 — queue adapter, BullMQ (Redis) vs in-process, drop-oldest backpressure. AGENT REVIEW NOTE included.
+- `planning/2026-09-15-webhook-sse-feed-plan.md` (new): R33 — SSE stream endpoint, heartbeat, client hook. AGENT REVIEW NOTE included.
+- `planning/2026-09-15-webhook-websocket-feed-plan.md` (new): R34 — WS hub, broadcast, ping/pong cleanup. AGENT REVIEW NOTE included.
+- `planning/2026-09-15-webhook-long-polling-plan.md` (new): R35 — cursor-based long-poll, 25s hold, batch return. AGENT REVIEW NOTE included.
+- `planning/2026-09-15-webhook-n8n-workflows-plan.md` (new): R37 — workflow DAG executor, trigger/transform/condition/action nodes. AGENT REVIEW NOTE included.
+- `planning/2026-09-15-webhook-nodered-flows-plan.md` (new): R38 — message-passing flows, inject/function/switch/http/notify nodes. AGENT REVIEW NOTE included.
+- `planning/2026-09-15-webhook-pipedream-steps-plan.md` (new): R39 — linear step runner, steps.<name> state, $ context. AGENT REVIEW NOTE included.
+- `planning/2026-09-15-webhook-huginn-agents-plan.md` (new): R40 — scheduled agents, watch/schedule/digest types, event chaining. AGENT REVIEW NOTE included.
+- `planning/2026-09-15-webhook-inngest-functions-plan.md` (new): R41 — code-first functions, trigger matching, retries, step.run. AGENT REVIEW NOTE included.
+- `planning/2026-09-15-webhook-litellm-alerts-plan.md` (new): R42 — budget/error-rate/latency/daily-report alerts. AGENT REVIEW NOTE included.
+- `planning/2026-09-15-webhook-oneapi-metrics-plan.md` (new): R43 — JSON + Prometheus metrics endpoints. AGENT REVIEW NOTE included.
+- `planning/2026-09-15-webhook-helicone-observability-plan.md` (new): R44 — custom properties, request.completed events, feedback endpoint. AGENT REVIEW NOTE included.
+- `planning/2026-09-15-webhook-uptime-kuma-plan.md` (new): R45 — push API client, periodic heartbeat. AGENT REVIEW NOTE included.
+- `planning/2026-09-15-webhook-healthchecks-io-plan.md` (new): R46 — ping client, start/fail/log endpoints. AGENT REVIEW NOTE included.
+- `planning/2026-09-15-webhook-http-client-plan.md` (new): R47–R48 — webhookFetch wrapper, timeout/retry/backoff/jitter. AGENT REVIEW NOTE included.
+
+## 2026-09-15 — Webhook Implementation Plans (code-level, agent-review notes)
+
+### docs(planning): 8 webhook implementation plans — real code down to file level
+- `planning/2026-09-15-webhook-m1-receiver-hmac-plan.md` (new): M1 receiver — `src/lib/webhooks/verify.js` (Standard Webhooks HMAC, timingSafeEqual, 5-min tolerance), `registry.js` (list/get/create/delete/rotate), `src/app/api/webhooks/[id]/route.js` (POST raw body, 401/404/405/OPTIONS), settingsRepo `webhooks: []` default. AGENT REVIEW NOTE included.
+- `planning/2026-09-15-webhook-m2-outbox-worker-plan.md` (new): M2 outbox — migration `005-webhook-events.js` (webhook_events table + status index), `webhookEventsRepo.js` (insertEvent idempotent, claimPendingEvents, markDelivered/markFailed, exponential backoff 2^attempts, MAX_ATTEMPTS=5), `worker.js` (global singleton, 5s poll), instrumentation.js wiring, settingsRepo `webhookWorker` default. AGENT REVIEW NOTE included.
+- `planning/2026-09-15-webhook-m3-rule-engine-actions-plan.md` (new): M3 TCA rule engine — `rules.js` (evaluateCondition and/or trees, getField dot-path, compare ops, ruleMatches, dispatchEvent with ACTION_HANDLERS), actions notify (6 Apprise schemes)/http/llm (handleChatCore reuse)/gateway/dashboard (SSE listeners), settingsRepo `webhookRules` + `notifyUrls`. AGENT REVIEW NOTE included.
+- `planning/2026-09-15-webhook-m4-outbound-triggers-plan.md` (new): M4 outbound — `emitter.js` (fail-open → insertEvent), quotaAutoPing emit-on-transition dedupe (80/90/100), chatCore provider.error + fallback.used, modelCatalog model.added, `digest.js` daily spend (persisted lastSentAt), settingsRepo `webhookDigest`. AGENT REVIEW NOTE included.
+- `planning/2026-09-15-webhook-m5-dashboard-ui-plan.md` (new): M5 dashboard UI — `src/app/dashboard/webhooks/page.js` + `events/page.js`, components `WebhookForm`/`RuleEditor`/`EventTable`, `src/app/api/webhooks/events/route.js` event log API. AGENT REVIEW NOTE included.
+- `planning/2026-09-15-webhook-messaging-platforms-plan.md` (new): overlapping plan — Slack/Discord/Telegram platform modules, shared Slack/Discord formatter (blocks + context). AGENT REVIEW NOTE included.
+- `planning/2026-09-15-webhook-push-services-plan.md` (new): overlapping plan — ntfy (public + auth), Gotify, Pushover modules via proxyAwareFetch. AGENT REVIEW NOTE included.
+- `planning/2026-09-15-webhook-standards-compliance-plan.md` (new): overlapping plan — Svix header aliases, outbound signing (9router as sender), Zapier envelope. AGENT REVIEW NOTE included.
+
+## 2026-09-15 — Exponential Phrase-Level Expansion (docs only)
+
+### docs(research): exponential master map — N-ary expansion, 26 roots, 26 expansion docs
+- `research/2026-09-15-exponential-master-map.md` (new): user clarified the expansion requirement — *every phrase in the source docs is a root*, each expanded ≥6 levels deep with **variable (N-ary) branching** (hundreds of phrases per level possible, exponential, not 1→2→4→8). 26 roots E01–E26 mapped to expansion docs; format spec (L1 sub-phrases → L2 → L3 → L4 → L5 → L6+, variable branching, node research, confidence, open questions, sources); status table with 9 batches. Additive — flat research, master tree, 16 branch docs, and 26 per-topic binary trees all kept.
+
+### docs(research): 26 exponential expansion docs — full N-ary subtree coverage
+- `research/2026-09-15-exp-e01-source-app-fingerprinting.md` (new): E01 — sourceApps.js rule engine, UA_RULES ordering, fingerprintSourceApp, DEFAULT_APP, addSourceAppRule
+- `research/2026-09-15-exp-e02-task-classification.md` (new): E02 — smartRouter classifyTask, 16 task types, scoreModel, selectModels, conversationFingerprint, sticky sessions
+- `research/2026-09-15-exp-e03-inbound-rate-limiter.md` (new): E03 — sliding window, LOOPBACK bypass, 429+Retry-After, sweep
+- `research/2026-09-15-exp-e04-auth-api-keys.md` (new): E04 — API-key lifecycle, JWT sessions, API_KEY_SECRET, key metadata
+- `research/2026-09-15-exp-e05-usage-logs.md` (new): E05 — usageDb capture pipeline, usage.json, log.txt, retention
+- `research/2026-09-15-exp-e06-persistence-sqlite.md` (new): E06 — SQLite adapter chain (bun → better-sqlite3 → node → sql.js), repos, migrations
+- `research/2026-09-15-exp-e07-openrouter-app-attribution.md` (new): E07 — X-App header, openrouter_metadata, app IDs
+- `research/2026-09-15-exp-e08-openrouter-guardrails.md` (new): E08 — guardrail hierarchy, budget enforcement, regex constraints, 403 semantics
+- `research/2026-09-15-exp-e09-openrouter-byok.md` (new): E09 — BYOK, key passthrough, provider keys
+- `research/2026-09-15-exp-e10-anthropic-rate-limits.md` (new): E10 — RPM/ITPM/OTPM, tier limits, spend-cap 429 semantics
+- `research/2026-09-15-exp-e11-anthropic-workspaces.md` (new): E11 — wrkspc_ keys, per-workspace limits, anthropic-workspace-id header
+- `research/2026-09-15-exp-e12-anthropic-identity-keys.md` (new): E12 — WIF/App Attest, key types, expiration
+- `research/2026-09-15-exp-e13-litellm-keys-teams-budgets.md` (new): E13 — virtual keys, teams, shared budgets, model groups
+- `research/2026-09-15-exp-e14-agent-identity-headers.md` (new): E14 — X-9R-App/User/Session, trust model, MCP identity gap
+- `research/2026-09-15-exp-e15-queue-management.md` (new): E15 — priority classes, WFQ, aging, backpressure, TTL
+- `research/2026-09-15-exp-e16-attribution-dimensions.md` (new): E16 — "where from" dimensions, signal inventory, privacy
+- `research/2026-09-15-exp-e17-routing-control-dimensions.md` (new): E17 — "where to" dimensions, allowlists, budgets, limits, headers
+- `research/2026-09-15-exp-e18-recommended-architecture.md` (new): E18 — Phase 1 attribution, Phase 2 control, Phase 3 teams
+- `research/2026-09-15-exp-e19-keyless-gating.md` (new): E19 — 10 keyless mechanisms, hybrid resolution order
+- `research/2026-09-15-exp-e20-agent-profiles.md` (new): E20 — profile JSON, precedents, resolution order, profile→routing
+- `research/2026-09-15-exp-e21-synthetic-source-tracking.md` (new): E21 — signal inventory, hash-only labels, behavioral fingerprints, embedding clusters
+- `research/2026-09-15-exp-e22-tag-priority-queues.md` (new): E22 — strict priority/WFQ/aging, bounded FIFO, TTL 60s, 503+Retry-After, leaky bucket
+- `research/2026-09-15-exp-e23-model-group-limiting.md` (new): E23 — qwen-* auto-derive, shared RPM/TPM, group cooldown, group vs combo
+- `research/2026-09-15-exp-e24-adaptive-rate-control.md` (new): E24 — AIMD+EWMA+feedback hybrid, budget-proportional pacing, UI exposure
+- `research/2026-09-15-exp-e25-gate-levels.md` (new): E25 — L0–L5 ladder, gate config JSON, highest-cleared-level-wins
+- `research/2026-09-15-exp-e26-governance-architecture.md` (new): E26 — 7-layer model (Identity/Gate/Policy/Queue/Rate/Routing/Observability), keyless-first
+
+---
+
+## 2026-09-15 — Webhook Interpretation Layer (docs only)
+
+### docs(interpretation): new category — the map over the research
+- `interpretation/README.md` (new): new category explaining the interpretation layer — plain-language guides, doc-by-doc summaries, syntheses, reading/build orders. Not new research, not a plan — the map over research/planning/tracking.
+
+### docs(interpretation): 4 webhook interpretation docs — clear, readable, ordered
+- `interpretation/2026-09-15-webhook-interpretation-guide.md` (new): one-page summary, the 4 phases of work, complete doc map (23 docs), key conclusions, recommended reading order, next steps
+- `interpretation/2026-09-15-webhook-doc-by-doc.md` (new): plain-language summary of every webhook doc — what it is, what it covers, key takeaways, how it fits, what to read next
+- `interpretation/2026-09-15-webhook-synthesis.md` (new): distilled knowledge — verdict, 12 archetypes, recommended architecture, 10 design decisions, 48 roots → 11 branches, open questions, confidence levels
+- `interpretation/2026-09-15-webhook-order-and-next-steps.md` (new): chronological timeline, logical reading order, build order (M1–M5), deferred items, open decision points
+
+---
+
+## 2026-09-15 — Webhook Exponential Research Expansion (docs only)
+
+### docs(research): webhook exponential master map — N-ary expansion, 48 roots, 11 branch docs
+- `research/2026-09-15-webhook-exponential-master-map.md` (new): user clarified the binary-tree requirement — *every phrase in the source docs is a root*, each expanded 6 levels deep with N children per node (not 2-way). 48 roots R01–R48 grouped into 11 branch docs; methodology table (N-ary vs 2-way), node-count summary (48 roots / 172 L1 / 439 L2 / 912 L3 / 1,759 L4 / 3,179 L5 / 5,401 L6 / 11,862 enumerated nodes); with branching factor 4 ≈ 65,520 nodes, factor 6 ≈ 448,000. Additive — flat research + 2-way master tree + 8 branch docs kept.
+
+### docs(research): 11 exponential branch docs — full N-ary subtree coverage
+- `research/2026-09-15-webhook-exp-01-receiver-transport.md` (new): R01–R04 — receiver modes, raw body, payload limits, response contract, idempotency keys, replay protection
+- `research/2026-09-15-webhook-exp-02-auth-secrets.md` (new): R05–R08 — HMAC, timing-safe compare, secret rotation, dual-secret grace, local-only, TLS/mTLS
+- `research/2026-09-15-webhook-exp-03-event-store-worker.md` (new): R09–R11 — transactional outbox, status machine, worker polling, backoff, dead-letter, at-least-once
+- `research/2026-09-15-webhook-exp-04-rule-engine-actions.md` (new): R12–R14 — TCA model, JSON rules, field/op/value ops, JSONPath, action types, LLM action, idempotent actions
+- `research/2026-09-15-webhook-exp-05-messaging-platforms.md` (new): R15–R17 — Slack, Discord, Telegram inbound/outbound, retry semantics, rate caps
+- `research/2026-09-15-webhook-exp-06-push-services.md` (new): R18–R20 — ntfy, Gotify, Apprise, tag routing, priority/escalation
+- `research/2026-09-15-webhook-exp-07-internal-events.md` (new): R21–R23 — quota events, provider error spikes, fallback events, emit-on-transition dedupe
+- `research/2026-09-15-webhook-exp-08-scheduled-monitoring.md` (new): R24–R25 — daily digests, dead man's switch, watchdog over instrumentation.js jobs
+- `research/2026-09-15-webhook-exp-09-standards-infra.md` (new): R26–R29 — Standard Webhooks, Svix, Hookdeck, OpenAPI, event schemas, delivery guarantees
+- `research/2026-09-15-webhook-exp-10-patterns-platforms.md` (new): R30–R46 — 17 roots: event-driven patterns, automation platforms, gateway precedents, monitoring, messaging archetypes
+- `research/2026-09-15-webhook-exp-11-http-client-architecture.md` (new): R47–R48 — outbound HTTP client, retry/backoff, connection pooling, timeouts, circuit breakers
+
+---
+
+## 2026-09-15 — Per-Topic Binary-Tree Expansion (docs only)
+
+### docs(research): master topic index — 26 topics, each with its own 6-level binary tree
+- `research/2026-09-15-master-topic-index.md` (new): user clarified the binary-tree requirement — *each research topic/phrase must go a minimum of 6 levels deep*, i.e. each topic gets its OWN full 6-level binary tree (L0 → L6, 127 nodes), exponential expansion. Index maps all 26 topics from the two prior research docs (2026-08-31 message-origin, 2026-09-14 keyless-governance) to their tree docs; 9 batches, all ✅. Additive — shared master tree + 16 branch docs kept.
+
+### docs(research): 26 per-topic tree docs — full 127-node trees
+- `research/2026-09-15-tree-t01-source-app-fingerprinting.md` (new): sourceApps.js rule engine, UA_RULES ordering, 300-char cap, spoofing detection
+- `research/2026-09-15-tree-t02-task-classification.md` (new): smartRouter classifyTask 16 task types, scoring, sticky sessions
+- `research/2026-09-15-tree-t03-inbound-rate-limiter.md` (new): custom-server.rate-limiter.js sliding window, LOOPBACK bypass, 429/Retry-After
+- `research/2026-09-15-tree-t04-auth-api-keys.md` (new): API key lifecycle, JWT sessions, key metadata/attribution
+- `research/2026-09-15-tree-t05-usage-logs.md` (new): usageDb capture, requestDetails, log.txt, quota tracking
+- `research/2026-09-15-tree-t06-persistence-sqlite.md` (new): SQLite adapter chain (bun → better-sqlite3 → node → sql.js), repos, migrations
+- `research/2026-09-15-tree-t07-openrouter-app-attribution.md` (new): X-App/User-Agent attribution, app metadata, BYOK attribution
+- `research/2026-09-15-tree-t08-openrouter-guardrails.md` (new): moderation, content policies, provider allow/deny, data policies
+- `research/2026-09-15-tree-t09-openrouter-byok.md` (new): bring-your-own-key, key routing, credit vs BYOK billing
+- `research/2026-09-15-tree-t10-anthropic-rate-limits.md` (new): RPM/ITPM/OTPM, 429 semantics, retry-after, org limits
+- `research/2026-09-15-tree-t11-anthropic-workspaces.md` (new): workspace isolation, member roles, per-workspace keys/limits
+- `research/2026-09-15-tree-t12-anthropic-identity-keys.md` (new): identity-backed keys, admin keys, key scopes
+- `research/2026-09-15-tree-t13-litellm-keys-teams-budgets.md` (new): virtual keys, teams, budgets, spend tracking, key aliases
+- `research/2026-09-15-tree-t14-agent-identity-headers.md` (new): X-9R-App/User/Session, OpenRouter header aliases, MCP identity gap
+- `research/2026-09-15-tree-t15-queue-management.md` (new): priority queues, WFQ, aging, backpressure, head-of-line protection
+- `research/2026-09-15-tree-t16-attribution-dimensions.md` (new): "where from" — app, user, session, IP, device, synthetic labels
+- `research/2026-09-15-tree-t17-routing-control-dimensions.md` (new): "where to" — model, provider, combo, group, gate level
+- `research/2026-09-15-tree-t18-recommended-architecture.md` (new): phased architecture synthesis (M1–M7), dependencies, risks
+- `research/2026-09-15-tree-t19-keyless-gating.md` (new): keyless governance option space, gate levels L0–L5
+- `research/2026-09-15-tree-t20-agent-profiles.md` (new): profile identity bundles, per-profile limits/priorities
+- `research/2026-09-15-tree-t21-synthetic-source-tracking.md` (new): programmatic + synthetic source labels, FNV-1a hash-only privacy
+- `research/2026-09-15-tree-t22-tag-priority-queues.md` (new): tag/keyword → priority mapping, queue math, predictive amounts
+- `research/2026-09-15-tree-t23-model-group-limiting.md` (new): qwen-* group auto-derive, shared budgets, group cooldown
+- `research/2026-09-15-tree-t24-adaptive-rate-control.md` (new): AIMD, EWMA surge detection, messages/s math, programmatic rate changes
+- `research/2026-09-15-tree-t25-gate-levels.md` (new): gate ladder, highest-cleared-level-wins, per-gate enforcement
+- `research/2026-09-15-tree-t26-governance-architecture.md` (new): full governance synthesis — profiles + gates + queues + groups + budgets
+
+---
+
+## 2026-09-15 — Message-Driven Tool-Building (research + plan + ADR, docs only)
+
+### docs(research): message-driven tool-building — anatomy, identity, filter/build/record opportunities
+- `research/9router/38-message-driven-tools-research.md` (new): requestDetails anatomy (30+ fields), identity signals (detectClientTool, trusted headers, per-provider UAs), Messages API surface (filters, views, detail, export, analyze-error), 9 gaps (fixed dimensions, no JSON-path, no saved views, no actions, no annotations, no conversation tooling, under-captured identity, silent truncation, no structured extraction), 4 design options (fixed-filter / JSON-path / extract-index / hybrid), identity as first-class dimension, build/record primitives, privacy, confidence levels, open questions
+
+### docs(plan): phased implementation — facets → JSON-path → identity → annotations → actions → UI
+- `planning/message-driven-tools-plan.md` (new): M1 facet extraction + indexing (message_facets table, hot-path filters), M2 JSON-path query language (JSON1, parameterized), M3 identity as dimension (extend detectClientTool, IDE detection, trusted headers), M4 annotations + saved views, M5 per-message actions + webhook/script hooks, M6 truncation surfacing + UI; scope, dependencies, risks
+
+### docs(decision): ADR-010 — hybrid facet + JSON-path design
+- `tracking/decisions/ADR-010-message-driven-tools-hybrid-design.md` (new): Option 4 hybrid (extract-and-index hot path + JSON-path long tail), identity facets, build/record primitives, alternatives rejected, reversibility
+
+---
+
+## 2026-09-15 — Binary-Tree Research Expansion (docs only)
+
+### docs(research): master research tree — 6-level binary tree (63 nodes)
+- `research/2026-09-15-master-research-tree.md` (new): master map expanding both prior research docs into a 6-level binary tree; 16 Level-3 branches, each with its own doc covering its 7-node subtree; status table
+
+### docs(research): 16 branch docs — full subtree coverage
+- `research/2026-09-15-branch-a1a-ua-fingerprinting.md` (new): sourceApps.js rule engine (ordering, 300-char cap, extensibility) + spoofing detection (header/behavior cross-checks, JA3/JA4 TLS fingerprints)
+- `research/2026-09-15-branch-a1b-header-network-identity.md` (new): X-9R-App/User/Session trust model (post-auth), OpenRouter/LiteLLM header precedents, loopback/subnet trust, XFF stripping, mTLS
+- `research/2026-09-15-branch-a2a-synthetic-labels.md` (new): FNV-1a derived labels (identity/workload/conversation), hash-only privacy, session fingerprints
+- `research/2026-09-15-branch-a2b-behavioral-fingerprints.md` (new): token-count histograms, burst detection, EWMA arrival rate, k-means/DBSCAN clustering, tool-use patterns, task-type distribution
+- `research/2026-09-15-branch-b1a-static-rate-limits.md` (new): token bucket (Anthropic RPM/ITPM/OTPM), fixed vs sliding window, GCRA/Redis, boundary-burst analysis
+- `research/2026-09-15-branch-b1b-adaptive-rate-control.md` (new): AIMD (Reno/CUBIC), 429-as-congestion-signal, EWMA surge detection, budget-proportional pacing
+- `research/2026-09-15-branch-b2a-priority-queues.md` (new): strict priority + starvation, tag/keyword → priority, WFQ proportional fairness, aging
+- `research/2026-09-15-branch-b2b-interval-pacing.md` (new): leaky-bucket drain, token dispenser, 503+Retry-After backpressure, TTL→429, head-of-line protection
+- `research/2026-09-15-branch-b3a-model-group-definitions.md` (new): qwen-* auto-derive, explicit lists, shared RPM/TPM budget, group cooldown (LiteLLM precedent)
+- `research/2026-09-15-branch-b3b-model-group-observability.md` (new): model_group in usage, attempted_fallbacks, per-group dashboard, group vs combo distinction
+- `research/2026-09-15-branch-b4a-content-guardrails.md` (new): regex PII redaction, NER tier, prompt-injection detection, fail-open convention
+- `research/2026-09-15-branch-b4b-budget-guardrails.md` (new): USD budgets (daily/weekly/monthly), soft/hard limits, model/provider allowlists with wildcards
+- `research/2026-09-15-branch-b5a-key-lifecycle.md` (new): rotation with grace period, expiry presets (Anthropic), disable/archive states
+- `research/2026-09-15-branch-b5b-alternative-auth.md` (new): short-lived tokens (WIF precedent), device attestation, device flow, OAuth reuse
+- `research/2026-09-15-branch-b6a-cooperative-identity.md` (new): validated X-9R-App, OpenRouter header aliases, Claude Code settings integration, MCP identity gap
+- `research/2026-09-15-branch-b6b-behavioral-identity.md` (new): gate levels L0–L5 ladder, highest-cleared-level-wins, profile identity bundles, resolution order
+
+---
+
+## 2026-09-15 — Webhook Binary-Tree Research Expansion (docs only)
+
+### docs(research): webhook master research tree — 6-level binary tree (63 nodes)
+- `research/2026-09-15-webhook-master-research-tree.md` (new): master map expanding the webhook receive & act research into a 6-level binary tree; 8 Level-3 branches, each with its own doc covering its 7-node subtree; status table
+
+### docs(research): 8 branch docs — full subtree coverage
+- `research/2026-09-15-webhook-branch-a1a-transport.md` (new): request handling (POST /api/webhooks/[id], allowed_methods), response contract (2xx <3s, challenge handshake), raw body for HMAC (req.text() before parse), payload limits (size caps, large-payload offload)
+- `research/2026-09-15-webhook-branch-a1b-auth-security.md` (new): HMAC verification (Stripe t=,v1= vs Standard Webhooks), timingSafeEqual, 5-min tolerance, secret ID in URL (UUID-as-password), local_only, rotation (whsec_ prefix, dual-secret grace)
+- `research/2026-09-15-webhook-branch-a2a-event-store.md` (new): outbox table (event_id idempotency key, status machine), transactional outbox (same-DB write, at-least-once), settings-gated worker, polling interval, exponential backoff, dead-letter
+- `research/2026-09-15-webhook-branch-a2b-rule-engine.md` (new): TCA model (Home Assistant trigger→condition→action), JSON rules in settingsRepo, field/op/value ops (n8n Only Run If), JSONPath (Hookdeck Filters), action types (notify/http/llm/gateway/dashboard), LLM action reusing analyze-error pipeline, async queue (Slack mandate), idempotent actions
+- `research/2026-09-15-webhook-branch-b1a-messaging-platforms.md` (new): Slack incoming webhooks (hooks.slack.com/services URL, blocks/attachments, 30k/hr cap, x-slack-retry-num semantics), Discord (/webhooks/<id>/<token>, slack/github-compatible endpoints), Telegram (sendMessage, chat_id targeting)
+- `research/2026-09-15-webhook-branch-b1b-push-services.md` (new): ntfy (topic=password, action buttons, X-Delay, templates), Gotify (appToken vs clientToken, X-Gotify-Key), Apprise (one URL → 100+ services, schema:// config, tag routing OR/AND/priority/escalation, deferred-spec alignment)
+- `research/2026-09-15-webhook-branch-b2a-internal-events.md` (new): quota events (80%/90%/exhausted, LiteLLM budget webhooks vocabulary, quotaAutoPing wiring, emit-on-transition dedupe), provider & fallback events (error spike 5/10 per window, auto-disable ENABLE_METRIC, fallback.used, cooldown)
+- `research/2026-09-15-webhook-branch-b2b-scheduled-monitoring.md` (new): daily spend digest (LiteLLM digest_interval, report_check_interval), new-model-added alert (model catalog sync), dead man's switch (Healthchecks.io model, /start /fail /<exitcode> suffixes, watchdog over instrumentation.js jobs, grace time)
+
+---
+
+## 2026-09-15 — Webhook Receive & Act (research + plan, docs only)
+
+### docs(research): webhook receive & act — 6-level binary tree across 20+ programs
+- `research/2026-09-15-webhook-receive-act-research.md` (new): codebase verdict (zero webhook infra in `src/`; docs-only plans), 6-level analysis (L1 Mode → L6 Pattern) of LLM gateways (LiteLLM, One API/new-api, Helicone, OpenRouter/Portkey/CF, Kong/APISIX/Traefik), automation platforms (Home Assistant, n8n, Node-RED, Pipedream, Huginn, Zapier/Make/IFTTT, Activepieces/Windmill/Trigger.dev/Inngest), messaging platforms (Slack HTTP+Socket Mode, Discord Ed25519, Telegram, ntfy, Gotify, Apprise), webhook infra (Stripe, GitHub, Svix/Standard Webhooks, Hookdeck), monitoring (Uptime Kuma, Healthchecks.io), event patterns (EventEmitter, Transactional Outbox, MQ, SSE, WebSocket, Long-Polling); 12-archetype taxonomy; recommended hybrid architecture (TCA Rule Engine + Dual-Mode Receiver + Universal Adapter); 10 key design decisions; sources + confidence levels
+
+### docs(plan): phased implementation — receiver → rule engine → outbound
+- `planning/2026-09-15-webhook-receive-act-plan.md` (new): M1 inbound receiver + HMAC verification (Standard Webhooks spec, `req.text()` raw body, 2xx<3s), M2 SQLite outbox + worker (`instrumentation.js` pattern), M3 TCA rule engine + actions (notify/http/llm/gateway/dashboard), M4 outbound triggers (quota 80/90/exhausted, provider error spike, fallback, new model, daily spend), M5 dashboard UI (P2); scope, dependencies, risks
+
+---
+
+## 2026-09-14 — Keyless Governance (research + plan, docs only)
+
+### docs(research): keyless governance — profiles, synthetic tracking, queues, gates, model groups, adaptive rate
+- `research/2026-09-14-keyless-governance-research.md` (new): 10 keyless gating mechanisms, agent profiles (identity bundles + industry precedents), synthetic source labels + behavioral fingerprints, tag/keyword priority queues + interval pacing, model-group limiting (shared RPM/TPM + cooldown), adaptive/predictive rate control (AIMD + EWMA + 429 feedback + budget-proportional), gate levels L0–L5, layered architecture synthesis, sources, confidence levels
+
+### docs(plan): phased implementation — profiles → governance dashboard
+- `planning/2026-09-14-keyless-governance-plan.md` (new): M1 agent profiles, M2 synthetic source tracking, M3 tag/keyword priority queues, M4 gate levels, M5 model-group limiting + interval pacing, M6 adaptive/predictive rate control, M7 unified governance dashboard; scope, dependencies, risks
+
+---
+
+## 2026-08-31 — Source-App Governance (research + plan, docs only)
+
+### docs(research): message origin & destination — 7 feature areas
+- `research/2026-08-31-message-origin-and-destination-research.md` (new): attribution dimensions, industry models (OpenRouter app-attribution/guardrails/BYOK, Anthropic rate-limits/workspaces/identity keys, LiteLLM virtual keys/teams, MCP), existing-codebase inventory (sourceApps.js, smartRouter, rate-limiter, usageDb), design space + confidence levels
+
+### docs(plan): phased implementation — attribution → agent identity
+- `planning/2026-08-31-source-app-governance-plan.md` (new): M1 attribution/observability, M2 per-key+per-app rate limits (token-bucket), M3 opt-in priority queue, M4 profile-based routing, M5 guardrails (budgets/allowlists/content filters), M6 key lifecycle, M7 trusted identity headers; scope, dependencies, risks
+
+### docs(decision): ADR-009 — API key metadata + usage attribution schema
+- `tracking/decisions/ADR-009-api-key-metadata-and-attribution.md` (new): additive migration (key name/owner/tags/expiry + usage_attribution table), repos, wiring, privacy (no raw UA)
+
+---
+
 ## v1 (branch `v1`, local only — NOT pushed)
 
 ### feat(smart-router): pre-combo interception router — `9f4c1631`

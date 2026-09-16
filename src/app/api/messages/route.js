@@ -42,6 +42,26 @@ export async function GET(request) {
     const startDate = searchParams.get("startDate");
     const endDate = searchParams.get("endDate");
 
+    // ── M1 facet filters (ADR-010 hot path) ───────────────────────────────
+    // latencyMin/Max, tokensMin/Max, costMin/Max, hasTools, hasThinking,
+    // truncated, clientTool, ide — backed by the indexed message_facets table.
+    const latencyMin = searchParams.get("latencyMin");
+    const latencyMax = searchParams.get("latencyMax");
+    const tokensMin = searchParams.get("tokensMin");
+    const tokensMax = searchParams.get("tokensMax");
+    const costMin = searchParams.get("costMin");
+    const costMax = searchParams.get("costMax");
+    const hasTools = searchParams.get("hasTools");
+    const hasThinking = searchParams.get("hasThinking");
+    const truncated = searchParams.get("truncated");
+    const clientTool = searchParams.get("clientTool");
+    const ide = searchParams.get("ide");
+
+    // ── M2 JSON-path query (ADR-010 long tail) ────────────────────────────
+    // ?jsonPath=latency.total>5000 — parsed/validated server-side; the value
+    // is always a bound parameter (injection-safe).
+    const jsonPath = searchParams.get("jsonPath");
+
     if (page < 1) {
       return NextResponse.json({ error: "Page must be >= 1" }, { status: 400 });
     }
@@ -60,6 +80,28 @@ export async function GET(request) {
     if (search) filter.search = search;
     if (startDate) filter.startDate = startDate;
     if (endDate) filter.endDate = endDate;
+
+    // M1 facet filters — numeric ranges validated (NaN → 400).
+    for (const [name, raw] of [["latencyMin", latencyMin], ["latencyMax", latencyMax], ["tokensMin", tokensMin], ["tokensMax", tokensMax], ["costMin", costMin], ["costMax", costMax]]) {
+      if (raw !== null) {
+        const n = Number(raw);
+        if (Number.isNaN(n)) {
+          return NextResponse.json({ error: `${name} must be a number` }, { status: 400 });
+        }
+        filter[name] = n;
+      }
+    }
+    // Boolean facet flags — "true"/"false" (or 1/0) accepted.
+    for (const [name, raw] of [["hasTools", hasTools], ["hasThinking", hasThinking], ["truncated", truncated]]) {
+      if (raw !== null) {
+        if (raw === "true" || raw === "1") filter[name] = true;
+        else if (raw === "false" || raw === "0") filter[name] = false;
+        else return NextResponse.json({ error: `${name} must be true or false` }, { status: 400 });
+      }
+    }
+    if (clientTool) filter.clientTool = clientTool;
+    if (ide) filter.ide = ide;
+    if (jsonPath) filter.jsonPath = jsonPath;
 
     // errorCategory/sourceApp are filtered in SQL (JSON1) so pagination math
     // stays correct — client-side filtering after pagination would produce

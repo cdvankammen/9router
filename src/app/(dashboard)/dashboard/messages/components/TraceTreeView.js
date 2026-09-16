@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { cn } from "@/shared/utils/cn";
+import TruncatedBadge, { isTruncated } from "./TruncatedBadge";
 
 /**
  * Trace Tree view — Messages 3.
@@ -106,8 +107,11 @@ export default function TraceTreeView({ conversations = [], providerNames, onSel
                     selectedMsgId === (m.id || m._id) && "bg-primary/5"
                   )}
                 >
-                  <span className="truncate font-mono text-[11px] text-text-main">
-                    {String(m.timestamp || "").slice(11, 19)} · {m.model || "?"}
+                  <span className="flex items-center gap-1.5">
+                    <span className="truncate font-mono text-[11px] text-text-main">
+                      {String(m.timestamp || "").slice(11, 19)} · {m.model || "?"}
+                    </span>
+                    {isTruncated(m) ? <TruncatedBadge /> : null}
                   </span>
                   <span className="text-[10px] text-text-muted">
                     {m.status}{m.latency?.total ? ` · ${m.latency.total}ms` : ""}

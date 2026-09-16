@@ -22,7 +22,7 @@ import { handleNonStreamingResponse } from "./chatCore/nonStreamingHandler.js";
 import { handleStreamingResponse, buildOnStreamComplete } from "./chatCore/streamingHandler.js";
 import { categorizeError } from "../utils/errorCategorizer.js";
 import { validateResponseBody, repairBodyText } from "../utils/responseValidator.js";
-import { detectClientTool, isNativePassthrough } from "../utils/clientDetector.js";
+import { detectClientTool, detectIDE, isNativePassthrough } from "../utils/clientDetector.js";
 import { dedupeTools } from "../utils/toolDeduper.js";
 import { takeRenamedToolNames } from "../utils/opencodeFingerprint.js";
 import { injectCaveman } from "../rtk/caveman.js";
@@ -174,6 +174,7 @@ export async function handleChatCore({ body, modelInfo, credentials, log, onCred
   // Native passthrough: CLI tool and provider are the same ecosystem
   // Skip all translation/normalization — only model and Bearer are swapped
   const clientTool = detectClientTool(clientRawRequest?.headers || {}, body);
+  const ide = detectIDE(userAgent);
   const passthrough = isNativePassthrough(clientTool, provider);
 
   // Expose raw client headers to translators/executors for session-id resolution
@@ -413,6 +414,8 @@ export async function handleChatCore({ body, modelInfo, credentials, log, onCred
       conversationId,
       sourceApp,
       userAgent,
+      clientTool,
+      ide,
       url: providerUrl,
       errorCategory: categorizeError(error?.status || error?.statusCode || 502, error.message),
       latency: { ttft: 0, total: Date.now() - requestStartTime },
@@ -493,6 +496,8 @@ export async function handleChatCore({ body, modelInfo, credentials, log, onCred
       conversationId,
       sourceApp,
       userAgent,
+      clientTool,
+      ide,
       url: providerUrl,
       errorCategory: categorizeError(statusCode, message),
       latency: { ttft: 0, total: Date.now() - requestStartTime },

@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { cn } from "@/shared/utils/cn";
+import TruncatedBadge, { isTruncated } from "./TruncatedBadge";
 
 /**
  * Board / Kanban triage view — Messages 4.
@@ -79,6 +80,7 @@ export default function BoardView({ messages = [], providerNames, onSelect }) {
       provider: msgs[0].provider,
       model: msgs[0].model,
       errorCategory: msgs[0].errorCategory,
+      truncated: msgs.some(isTruncated),
     }));
   }, [messages]);
 
@@ -153,7 +155,10 @@ export default function BoardView({ messages = [], providerNames, onSelect }) {
                   >
                     {g.errorCategory || "error"}
                   </span>
-                  <span className="text-[10px] text-text-muted">×{g.count}</span>
+                  <span className="flex items-center gap-1">
+                    {g.truncated ? <TruncatedBadge /> : null}
+                    <span className="text-[10px] text-text-muted">×{g.count}</span>
+                  </span>
                 </div>
                 <div className="mb-1 line-clamp-2 text-[11px] leading-snug text-text-main">
                   {g.error}

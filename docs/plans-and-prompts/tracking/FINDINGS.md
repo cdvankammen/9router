@@ -9,6 +9,7 @@ Index of all learnings in `learnings/`, newest first. Update this list when addi
 
 | File | Covers |
 |---|---|
+| `2026-09-15-message-driven-tools-research-pattern.md` | Message-driven tool-building: the "everything is a dimension" research pattern — verify companion docs, update indexes in same commit, ADR for design decisions, flag unverified dependencies |
 | `2026-08-13-openrouter-refresh-models-serial-import-hang.md` | Serial per-item POST+refetch loop mistaken for a hang; live-curl diagnosis over static review |
 | `2026-08-12-provider-observability-and-usage-fixes.md` | `include_usage` guard, quota-tracker allowlist, System A/B error split, capability overrides + cache invalidation |
 | `2026-08-09-messages-page-audit-and-refactor.md` | Messages page audit and refactor (origin of "System B" error grouping) |

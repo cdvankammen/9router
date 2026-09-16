@@ -11,6 +11,7 @@ import {
   Cell,
 } from "recharts";
 import { cn } from "@/shared/utils/cn";
+import TruncatedBadge, { isTruncated } from "./TruncatedBadge";
 
 /**
  * Timeline / Waterfall view — Messages 2.
@@ -142,7 +143,10 @@ export default function TimelineView({ histogram = [], messages = [], providerNa
                       {String(m.timestamp || "").slice(11, 19)}
                     </td>
                     <td className="p-2">
-                      <div className="truncate font-mono text-xs text-text-main">{m.model || "?"}</div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="truncate font-mono text-xs text-text-main">{m.model || "?"}</span>
+                        {isTruncated(m) ? <TruncatedBadge /> : null}
+                      </div>
                       <div className="truncate text-[10px] text-text-muted">
                         {resolveProviderName(m.provider, providerNames)}
                       </div>

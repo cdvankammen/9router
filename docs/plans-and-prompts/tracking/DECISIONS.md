@@ -9,6 +9,8 @@ Index of all ADRs in `decisions/`, newest first. Update this list when adding a 
 
 | ADR | Title |
 |---|---|
+| `ADR-010` | Message-driven tool-building — hybrid facet + JSON-path design |
+| `ADR-009` | API key metadata + usage attribution schema |
 | `ADR-008` | Provider page observability reuse (System B error history over System A chip) |
 | `ADR-007` | Messages JSON blob vs. messages table |
 | `ADR-006` | Drop indicator approach |

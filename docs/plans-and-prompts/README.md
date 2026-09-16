@@ -18,6 +18,7 @@ This folder is the centralized knowledge base for research, plans, decisions, le
 | `operations/` | Runbooks, living test-workflow plans, release process. Start at `OPERATIONS.md` (day-to-day commands), `TESTING.md` (test-workflow index). |
 | `planning/` | Project plans, feature specs, roadmaps, task breakdowns. |
 | `research/` | Deep-dive research notes, code-tour write-ups, competitive/ecosystem analysis. Repo-specific work goes under `research/<repo>/`. |
+| `interpretation/` | The map over the research: plain-language guides, doc-by-doc summaries, syntheses, and reading/build orders that make dense research understandable. Start at `interpretation/README.md`. |
 | `tracking/` | The durable historical record: `TASKS.md`, `CHANGELOG.md`, `SESSION-HISTORY.md`, `SESSION-NARRATIVE.md`, `CODE-CHANGES.md`, `DECISIONS.md`/`decisions/` (ADRs), `FINDINGS.md`/`learnings/` (postmortems), `meetings/`. Start at `tracking/README.md`. |
 | `templates/` | Reusable skeletons (`WORK-ITEM-TEMPLATE.md`, `RESEARCH-NOTE-TEMPLATE.md`) and prompt-engineering artifacts. |
 | `temp/` | Scratch space, WIP drafts, ephemeral notes. Gitignored. Clean up periodically — **not** part of the durable taxonomy above, and never a place to assume secrets are "safe." |

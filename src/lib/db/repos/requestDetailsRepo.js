@@ -95,6 +95,99 @@ function truncateField(obj, maxSize) {
   return obj || {};
 }
 
+// ── Facet extraction (ADR-010 Option 4 hot path) ───────────────────────────
+// Denormalize the top ~15 filterable dimensions from a captured detail at
+// capture time into message_facets. FAIL-OPEN: any error returns a zeroed
+// facet row so capture can never be broken by facet extraction.
+//
+// Field sources (see research §A):
+//   has_tools/tool_count      — request.tools (array) or request.tool_choice
+//   has_thinking/thinking_tokens — request.thinking/reasoning + tokens.thinking_tokens
+//   image_count               — messages[] content parts with type image_url/image
+//   truncated                 — any _truncated flag on request/providerRequest/response
+//   latency_ms                — latency.total
+//   prompt/completion_tokens  — tokens.prompt_tokens/completion_tokens
+//   cost_usd                  — detail.cost
+//   source_app                — detail.sourceApp
+//   client_tool/ide           — detail.clientTool/detail.ide (M3; absent on legacy rows)
+//   error_category            — detail.errorCategory
+//   request_params            — OPTIONAL_PARAMS subset of request (temperature,
+//                               tools, response_format, ...) for the long tail
+const FACET_OPTIONAL_PARAMS = [
+  "temperature", "top_p", "top_k",
+  "max_tokens", "max_completion_tokens",
+  "thinking", "reasoning", "enable_thinking",
+  "presence_penalty", "frequency_penalty",
+  "seed", "stop", "tools", "tool_choice",
+  "response_format", "prediction", "store", "metadata",
+  "n", "logprobs", "top_logprobs", "logit_bias",
+  "user", "parallel_tool_calls"
+];
+
+export function extractFacets(detail) {
+  try {
+    const request = detail.request || {};
+    const tokens = detail.tokens || {};
+    const latency = detail.latency || {};
+
+    // Tools: request.tools array (OpenAI/Anthropic) or tool_choice object.
+    const tools = Array.isArray(request.tools) ? request.tools : [];
+    const hasTools = tools.length > 0 || !!request.tool_choice;
+
+    // Thinking: request.thinking/reasoning/enable_thinking flags or
+    // tokens.thinking_tokens > 0.
+    const thinkingRequested = !!(request.thinking || request.reasoning || request.enable_thinking);
+    const thinkingTokens = tokens.thinking_tokens || 0;
+    const hasThinking = thinkingRequested || thinkingTokens > 0;
+
+    // Images: count content parts with type image_url/image across messages.
+    let imageCount = 0;
+    const messages = Array.isArray(request.messages) ? request.messages : [];
+    for (const msg of messages) {
+      const content = msg?.content;
+      if (Array.isArray(content)) {
+        for (const part of content) {
+          if (part && (part.type === "image_url" || part.type === "image")) imageCount += 1;
+        }
+      }
+    }
+
+    // Truncation: any _truncated flag on the captured blobs.
+    const truncated = !!(request._truncated || detail.providerRequest?._truncated || detail.response?._truncated);
+
+    // request_params: OPTIONAL_PARAMS subset (JSON for the long tail).
+    const requestParams = {};
+    for (const p of FACET_OPTIONAL_PARAMS) {
+      if (request[p] !== undefined) requestParams[p] = request[p];
+    }
+
+    return {
+      has_tools: hasTools ? 1 : 0,
+      tool_count: tools.length,
+      has_thinking: hasThinking ? 1 : 0,
+      thinking_tokens: thinkingTokens,
+      image_count: imageCount,
+      truncated: truncated ? 1 : 0,
+      latency_ms: Math.round(latency.total || 0),
+      prompt_tokens: tokens.prompt_tokens || 0,
+      completion_tokens: tokens.completion_tokens || 0,
+      cost_usd: typeof detail.cost === "number" ? detail.cost : 0,
+      source_app: detail.sourceApp || null,
+      client_tool: detail.clientTool || null,
+      ide: detail.ide || null,
+      error_category: detail.errorCategory || null,
+      request_params: Object.keys(requestParams).length ? stringifyJson(requestParams) : null,
+    };
+  } catch {
+    return {
+      has_tools: 0, tool_count: 0, has_thinking: 0, thinking_tokens: 0,
+      image_count: 0, truncated: 0, latency_ms: 0, prompt_tokens: 0,
+      completion_tokens: 0, cost_usd: 0, source_app: null, client_tool: null,
+      ide: null, error_category: null, request_params: null,
+    };
+  }
+}
+
 // ── Full-text search (FTS5 with LIKE fallback) ──────────────────────────────
 // Search over captured request payloads. When the SQLite build supports FTS5
 // (better-sqlite3 / node:sqlite / bun:sqlite all ship it), we maintain a
@@ -248,6 +341,28 @@ async function flushToDatabase() {
             [record.id, record.timestamp, record.provider, record.model, record.connectionId, record.status, stringifyJson(record), record.conversationId]
           );
 
+          // Facet row (ADR-010 hot path): denormalized filterable dimensions,
+          // written in the same transaction so facets never drift from the
+          // parent row. ON CONFLICT upsert keeps re-captures consistent.
+          const facets = extractFacets(record);
+          db.run(
+            `INSERT INTO message_facets(request_id, has_tools, tool_count, has_thinking, thinking_tokens, image_count, truncated, latency_ms, prompt_tokens, completion_tokens, cost_usd, source_app, client_tool, ide, error_category, request_params, created_at)
+             VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             ON CONFLICT(request_id) DO UPDATE SET
+               has_tools = excluded.has_tools, tool_count = excluded.tool_count,
+               has_thinking = excluded.has_thinking, thinking_tokens = excluded.thinking_tokens,
+               image_count = excluded.image_count, truncated = excluded.truncated,
+               latency_ms = excluded.latency_ms, prompt_tokens = excluded.prompt_tokens,
+               completion_tokens = excluded.completion_tokens, cost_usd = excluded.cost_usd,
+               source_app = excluded.source_app, client_tool = excluded.client_tool,
+               ide = excluded.ide, error_category = excluded.error_category,
+               request_params = excluded.request_params`,
+            [record.id, facets.has_tools, facets.tool_count, facets.has_thinking, facets.thinking_tokens,
+             facets.image_count, facets.truncated, facets.latency_ms, facets.prompt_tokens,
+             facets.completion_tokens, facets.cost_usd, facets.source_app, facets.client_tool,
+             facets.ide, facets.error_category, facets.request_params, record.timestamp]
+          );
+
           // Keep the FTS index in sync (delete+insert = upsert; FTS5 has no
           // UNIQUE constraint to target with ON CONFLICT).
           if (fts) {
@@ -267,6 +382,10 @@ async function flushToDatabase() {
             `DELETE FROM requestDetails WHERE id IN (SELECT id FROM requestDetails ORDER BY timestamp ASC LIMIT ?)`,
             [dropCount]
           );
+          // Facet rows are FK-cascaded (PRAGMA foreign_keys=ON), but the
+          // sql.js fallback may not enforce FKs — clean explicitly so facets
+          // never outlive their parent row.
+          db.run(`DELETE FROM message_facets WHERE request_id NOT IN (SELECT id FROM requestDetails)`);
           // Retention janitor: purge the same ids from the FTS index. The
           // NOT IN form is the safest — it also repairs any drift from
           // earlier bugs (e.g. rows deleted while FTS was unavailable).
@@ -325,9 +444,9 @@ export async function getRequestDetails(filter = {}) {
   const db = await getAdapter();
   const conds = [];
   const params = [];
-  const { where, searchMode } = await buildWhere(filter, conds, params);
+  const { where, searchMode, join } = await buildWhere(filter, conds, params);
 
-  const cntRow = db.get(`SELECT COUNT(*) as c FROM requestDetails ${where}`, params);
+  const cntRow = db.get(`SELECT COUNT(*) as c FROM requestDetails ${join} ${where}`, params);
   const totalItems = cntRow ? cntRow.c : 0;
 
   const pageSize = filter.pageSize || 50;
@@ -349,7 +468,7 @@ export async function getRequestDetails(filter = {}) {
       // Fetch pageSize+1 rows to know definitively whether a next page
       // exists (hasNext) and to build the next cursor.
       const raw = db.all(
-        `SELECT id, timestamp, data FROM requestDetails ${keysetWhere} ${ORDER_SQL} LIMIT ?`,
+        `SELECT id, timestamp, data FROM requestDetails ${join} ${keysetWhere} ${ORDER_SQL} LIMIT ?`,
         [...params, decoded.timestamp, decoded.timestamp, decoded.id, pageSize + 1]
       );
       rows = raw.slice(0, pageSize);
@@ -361,7 +480,7 @@ export async function getRequestDetails(filter = {}) {
       // Unparseable cursor → fall back to offset math (page 1).
       page = 1;
       rows = db.all(
-        `SELECT id, timestamp, data FROM requestDetails ${where} ${ORDER_SQL} LIMIT ? OFFSET ?`,
+        `SELECT id, timestamp, data FROM requestDetails ${join} ${where} ${ORDER_SQL} LIMIT ? OFFSET ?`,
         [...params, pageSize, 0]
       );
       // Still anchor a valid next cursor so the UI can switch to keyset on
@@ -378,7 +497,7 @@ export async function getRequestDetails(filter = {}) {
     // keyset pagination on the following page.
     const offset = (page - 1) * pageSize;
     rows = db.all(
-      `SELECT id, timestamp, data FROM requestDetails ${where} ${ORDER_SQL} LIMIT ? OFFSET ?`,
+      `SELECT id, timestamp, data FROM requestDetails ${join} ${where} ${ORDER_SQL} LIMIT ? OFFSET ?`,
       [...params, pageSize, offset]
     );
     if (rows.length > 0 && page < totalPages) {
@@ -428,11 +547,16 @@ export async function getRequestFacets(filter = {}) {
   const db = await getAdapter();
   const conds = [];
   const params = [];
-  const { where } = await buildWhere(filter, conds, params);
+  const { where, join } = await buildWhere(filter, conds, params);
+  // The facet groups below ALWAYS reference f.* columns (client_tool, ide,
+  // has_tools, …), so message_facets must be joined unconditionally — not
+  // only when a facet filter is active. message_facets is a 1:1 companion
+  // (request_id PK), so the JOIN never multiplies rows.
+  const facetsJoin = join || "JOIN message_facets f ON f.request_id = requestDetails.id";
 
   const countGroup = async (expr) => {
     const rows = db.all(
-      `SELECT ${expr} AS value, COUNT(*) AS c FROM requestDetails ${where} GROUP BY ${expr} ORDER BY c DESC LIMIT 20`,
+      `SELECT ${expr} AS value, COUNT(*) AS c FROM requestDetails ${facetsJoin} ${where} GROUP BY ${expr} ORDER BY c DESC LIMIT 20`,
       params
     );
     return rows
@@ -446,6 +570,12 @@ export async function getRequestFacets(filter = {}) {
     status: await countGroup("status"),
     errorCategory: await countGroup("json_extract(data, '$.errorCategory')"),
     sourceApp: await countGroup("json_extract(data, '$.sourceApp')"),
+    // M1 facet groups — from the indexed message_facets table.
+    clientTool: await countGroup("f.client_tool"),
+    ide: await countGroup("f.ide"),
+    hasTools: await countGroup("f.has_tools"),
+    hasThinking: await countGroup("f.has_thinking"),
+    truncated: await countGroup("f.truncated"),
   };
 
   // Histogram: last 24h, hourly buckets (UTC), errors counted separately.
@@ -458,7 +588,7 @@ export async function getRequestFacets(filter = {}) {
   const start = hourStart.getTime() - 23 * 60 * 60 * 1000; // 23 full + current = 24
   const histWhere = where ? `${where} AND timestamp >= ?` : `WHERE timestamp >= ?`;
   const rows = db.all(
-    `SELECT timestamp, status FROM requestDetails ${histWhere}`,
+    `SELECT timestamp, status FROM requestDetails ${facetsJoin} ${histWhere}`,
     [...params, new Date(start).toISOString()]
   );
   const buckets = new Map();
@@ -481,12 +611,67 @@ export async function getRequestFacets(filter = {}) {
 }
 
 /**
+ * Parse a JSON-path query string into a safe SQL fragment.
+ *
+ * Grammar (ADR-010 long tail, M2):
+ *   <path> <op> <value>
+ *   <path>            — dot/bracket path into the `data` blob, e.g.
+ *                       `latency.total`, `request.tools`, `tokens.prompt_tokens`
+ *   <op>              — one of: = != > >= < <= (whitelisted)
+ *   <value>           — number, string (single-quoted), true/false, null
+ *
+ * The path is converted to a SQLite JSON1 path expression (`$.latency.total`)
+ * and the VALUE is ALWAYS returned as a bound parameter — never interpolated
+ * into SQL. Invalid paths/operators return null (filter is ignored).
+ *
+ * @param {string} raw
+ * @returns {{pathExpr: string, op: string, value: (string|number|boolean|null)}|null}
+ */
+export function parseJsonPathQuery(raw) {
+  if (!raw || typeof raw !== "string") return null;
+  const trimmed = raw.trim();
+  if (!trimmed || trimmed.length > 200) return null;
+
+  // <path> <op> <value> — path is [A-Za-z0-9_.\[\]'"]+ (no spaces), op is
+  // one of the whitelist, value is the rest.
+  const m = trimmed.match(/^([A-Za-z0-9_.\[\]'"]+)\s*(==|!=|>=|<=|>|<|=)\s*(.+)$/);
+  if (!m) return null;
+
+  const [, pathRaw, opRaw, valueRaw] = m;
+  const op = opRaw === "==" ? "=" : opRaw;
+  if (!["=", "!=", ">", ">=", "<", "<="].includes(op)) return null;
+
+  // Path → JSON1 path expression. Support dot notation (latency.total) and
+  // bracket notation (request['tools']). Reject anything that could escape
+  // the path string (quotes, semicolons, comments).
+  if (/[;"']/.test(pathRaw.replace(/\[['"]|['"]\]/g, ""))) return null;
+  const pathExpr = pathRaw
+    .replace(/\[['"]([^'"]+)['"]\]/g, ".$1") // request['tools'] → request.tools
+    .replace(/\./g, ".")
+    .replace(/^\./, "");
+  if (!pathExpr || pathExpr.length > 100) return null;
+  const jsonPath = `$.${pathExpr}`;
+
+  // Value: number, boolean, null, or single-quoted string. Never interpolate.
+  let value;
+  if (valueRaw === "true") value = true;
+  else if (valueRaw === "false") value = false;
+  else if (valueRaw === "null") value = null;
+  else if (/^-?\d+(\.\d+)?$/.test(valueRaw)) value = Number(valueRaw);
+  else if (/^'[^']*'$/.test(valueRaw)) value = valueRaw.slice(1, -1);
+  else return null;
+
+  return { pathExpr: jsonPath, op, value };
+}
+
+/**
  * Shared WHERE-builder for getRequestDetails / getRequestFacets.
- * Mutates conds/params (caller-owned), returns { where, searchMode }.
+ * Mutates conds/params (caller-owned), returns { where, searchMode, join }.
  * Async because the FTS probe + MATCH need the adapter.
  */
 async function buildWhere(filter, conds, params) {
   let searchMode;
+  let needsFacetsJoin = false;
   if (filter.search) {
     const sc = await getSearchCondition(filter.search);
     conds.push(sc.cond);
@@ -505,7 +690,41 @@ async function buildWhere(filter, conds, params) {
   if (filter.endDate) { conds.push("timestamp <= ?"); params.push(new Date(filter.endDate).toISOString()); }
   if (filter.errorCategory) { conds.push(`json_extract(data, '$.errorCategory') = ?`); params.push(filter.errorCategory); }
   if (filter.sourceApp) { conds.push(`json_extract(data, '$.sourceApp') = ?`); params.push(filter.sourceApp); }
-  return { where: conds.length ? `WHERE ${conds.join(" AND ")}` : "", searchMode };
+
+  // ── Facet filters (ADR-010 hot path, M1) ────────────────────────────────
+  // Backed by the message_facets table (indexed columns) so filtering is
+  // fast and pagination-correct. Each maps 1:1 to a /api/messages param.
+  // When any facet filter is present, the caller must JOIN message_facets
+  // (the returned `join` clause) — the `f.` prefix disambiguates columns.
+  if (filter.latencyMin !== undefined) { conds.push("f.latency_ms >= ?"); params.push(Number(filter.latencyMin)); needsFacetsJoin = true; }
+  if (filter.latencyMax !== undefined) { conds.push("f.latency_ms <= ?"); params.push(Number(filter.latencyMax)); needsFacetsJoin = true; }
+  if (filter.tokensMin !== undefined) { conds.push("(f.prompt_tokens + f.completion_tokens) >= ?"); params.push(Number(filter.tokensMin)); needsFacetsJoin = true; }
+  if (filter.tokensMax !== undefined) { conds.push("(f.prompt_tokens + f.completion_tokens) <= ?"); params.push(Number(filter.tokensMax)); needsFacetsJoin = true; }
+  if (filter.costMin !== undefined) { conds.push("f.cost_usd >= ?"); params.push(Number(filter.costMin)); needsFacetsJoin = true; }
+  if (filter.costMax !== undefined) { conds.push("f.cost_usd <= ?"); params.push(Number(filter.costMax)); needsFacetsJoin = true; }
+  if (filter.hasTools !== undefined) { conds.push("f.has_tools = ?"); params.push(filter.hasTools ? 1 : 0); needsFacetsJoin = true; }
+  if (filter.hasThinking !== undefined) { conds.push("f.has_thinking = ?"); params.push(filter.hasThinking ? 1 : 0); needsFacetsJoin = true; }
+  if (filter.truncated !== undefined) { conds.push("f.truncated = ?"); params.push(filter.truncated ? 1 : 0); needsFacetsJoin = true; }
+  if (filter.clientTool) { conds.push("f.client_tool = ?"); params.push(filter.clientTool); needsFacetsJoin = true; }
+  if (filter.ide) { conds.push("f.ide = ?"); params.push(filter.ide); needsFacetsJoin = true; }
+
+  // ── JSON-path query (ADR-010 long tail, M2) ─────────────────────────────
+  // Arbitrary queries on the `data` blob via SQLite JSON1. The path and
+  // operator are validated/whitelisted by parseJsonPathQuery — the VALUE is
+  // always a bound parameter (never string-interpolated), so this is
+  // injection-safe. Composable with every other filter above.
+  if (filter.jsonPath) {
+    const parsed = parseJsonPathQuery(filter.jsonPath);
+    if (parsed) {
+      conds.push(`json_extract(data, ?) ${parsed.op} ?`);
+      params.push(parsed.pathExpr, parsed.value);
+    }
+  }
+
+  const join = needsFacetsJoin
+    ? "JOIN message_facets f ON f.request_id = requestDetails.id"
+    : "";
+  return { where: conds.length ? `WHERE ${conds.join(" AND ")}` : "", searchMode, join };
 }
 
 export async function getRequestDetailById(id) {
@@ -537,11 +756,11 @@ export async function getConversationSummary(filter = {}) {
   const db = await getAdapter();
   const conds = [];
   const params = [];
-  const { where } = await buildWhere({ ...filter, conversationId: undefined }, conds, params);
+  const { where, join } = await buildWhere({ ...filter, conversationId: undefined }, conds, params);
 
   // Totals for pagination: distinct conversations in the filtered set.
   const totalRow = db.get(
-    `SELECT COUNT(DISTINCT COALESCE(conversationId, '(none)')) AS c FROM requestDetails ${where}`,
+    `SELECT COUNT(DISTINCT COALESCE(conversationId, '(none)')) AS c FROM requestDetails ${join} ${where}`,
     params
   );
   const totalItems = totalRow ? totalRow.c : 0;
@@ -561,7 +780,7 @@ export async function getConversationSummary(filter = {}) {
             COALESCE(SUM(COALESCE(json_extract(data, '$.cost'), 0)), 0) AS cost,
             MAX(timestamp) AS lastTimestamp,
             MIN(timestamp) AS firstTimestamp
-     FROM requestDetails ${where}
+     FROM requestDetails ${join} ${where}
      GROUP BY COALESCE(conversationId, '(none)')
      ORDER BY lastTimestamp DESC
      LIMIT ? OFFSET ?`,
@@ -603,13 +822,13 @@ export async function getConversationMessages(conversationId, filter = {}) {
     conds.push("conversationId = ?");
     params.push(conversationId);
   }
-  await buildWhere({ ...filter, conversationId: undefined }, conds, params);
+  const { join } = await buildWhere({ ...filter, conversationId: undefined }, conds, params);
 
   const pageSize = Math.min(filter.pageSize || 500, 500); // safety cap
   const offset = ((filter.page || 1) - 1) * pageSize;
 
   const rows = db.all(
-    `SELECT data FROM requestDetails WHERE ${conds.join(" AND ")} ORDER BY timestamp ASC, id ASC LIMIT ? OFFSET ?`,
+    `SELECT data FROM requestDetails ${join} WHERE ${conds.join(" AND ")} ORDER BY timestamp ASC, id ASC LIMIT ? OFFSET ?`,
     [...params, pageSize, offset]
   );
   return rows.map((r) => parseJson(r.data, {}));
@@ -662,11 +881,15 @@ export async function getErrorSummary(filter = {}) {
   const db = await getAdapter();
   const conds = [];
   const params = [];
-  const { where } = await buildWhere({ ...filter, status: "error" }, conds, params);
+  const { where, join } = await buildWhere({ ...filter, status: "error" }, conds, params);
+  // Always join message_facets so each group can report whether ANY of its
+  // rows was truncated at capture time (M6 badge). buildWhere already joins
+  // when a facet filter is active — reuse that clause instead of duplicating.
+  const facetsJoin = join || "JOIN message_facets f ON f.request_id = requestDetails.id";
 
   // Totals for pagination: distinct fingerprint groups in the filtered set.
   const totalRow = db.get(
-    `SELECT COUNT(*) AS c FROM (SELECT 1 FROM requestDetails ${where} GROUP BY ${ERROR_GROUP_EXPRS})`,
+    `SELECT COUNT(*) AS c FROM (SELECT 1 FROM requestDetails ${facetsJoin} ${where} GROUP BY ${ERROR_GROUP_EXPRS})`,
     params
   );
   const totalItems = totalRow ? totalRow.c : 0;
@@ -681,7 +904,7 @@ export async function getErrorSummary(filter = {}) {
   // representative (carries `detailId` + the live row's fields). COALESCE
   // keeps display strings stable so the JS fingerprint matches triage keys.
   const rows = db.all(
-    `SELECT provider, model, errorCategory, count, firstTimestamp, lastTimestamp, cost, sampleError, detailId
+    `SELECT provider, model, errorCategory, count, firstTimestamp, lastTimestamp, cost, sampleError, detailId, truncated
      FROM (
        SELECT
          COALESCE(provider, 'unknown') AS provider,
@@ -692,9 +915,10 @@ export async function getErrorSummary(filter = {}) {
          MAX(timestamp) OVER (PARTITION BY ${ERROR_GROUP_EXPRS}) AS lastTimestamp,
          COALESCE(SUM(COALESCE(json_extract(data, '$.cost'), 0)) OVER (PARTITION BY ${ERROR_GROUP_EXPRS}), 0) AS cost,
          MIN(json_extract(data, '$.response.error')) OVER (PARTITION BY ${ERROR_GROUP_EXPRS}) AS sampleError,
+         MAX(COALESCE(f.truncated, 0)) OVER (PARTITION BY ${ERROR_GROUP_EXPRS}) AS truncated,
          id AS detailId,
          ROW_NUMBER() OVER (PARTITION BY ${ERROR_GROUP_EXPRS} ORDER BY timestamp DESC, id DESC) AS rn
-       FROM requestDetails ${where}
+       FROM requestDetails ${facetsJoin} ${where}
      )
      WHERE rn = 1
      ORDER BY count DESC, lastTimestamp DESC
@@ -714,6 +938,7 @@ export async function getErrorSummary(filter = {}) {
       cost: r.cost,
       sampleError: r.sampleError,
       detailId: r.detailId,
+      truncated: !!r.truncated,
     })),
     pagination: { page, pageSize, totalItems, totalPages, hasNext: page < totalPages, hasPrev: page > 1 },
     totals: { errorGroupCount: totalItems },

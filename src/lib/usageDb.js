@@ -6,4 +6,6 @@ export {
   saveRequestDetail, getRequestDetails, getRequestDetailById,
   getRequestFacets, getDroppedRecordsCount,
   getConversationSummary, getConversationMessages, getErrorSummary,
+  getAnnotations, addAnnotation, deleteAnnotation, toggleStar,
+  getSavedViews, saveView, deleteSavedView,
 } from "@/lib/db/index.js";

@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import Button from "@/shared/components/Button";
 import { cn } from "@/shared/utils/cn";
+import TruncatedBadge, { isTruncated } from "./TruncatedBadge";
 
 /**
  * Error Inbox (Messages P2) — server-aggregated fingerprint view.
@@ -228,7 +229,10 @@ export default function InboxView({
                       >
                         {g.errorCategory || "unknown"}
                       </span>
-                      <span className="text-[10px] text-text-muted">×{g.count}</span>
+                      <span className="flex items-center gap-1">
+                        {g.truncated ? <TruncatedBadge /> : null}
+                        <span className="text-[10px] text-text-muted">×{g.count}</span>
+                      </span>
                     </div>
                     <div
                       className="mb-1 truncate font-mono text-[11px] text-text-main"

@@ -2,6 +2,7 @@ import { saveRequestUsage, appendRequestLog, saveRequestDetail } from "@/lib/usa
 import { COLORS } from "../../utils/stream.js";
 import { canonicalizeUsage } from "../../utils/usageTracking.js";
 import { getPricingForModel, calculateCostFromTokens, MODEL_PRICING, PROVIDER_PRICING, PATTERN_PRICING } from "../../providers/pricing.js";
+import { detectClientTool, detectIDE } from "../../utils/clientDetector.js";
 
 const OPTIONAL_PARAMS = [
   "temperature", "top_p", "top_k",
@@ -139,6 +140,8 @@ export function buildRequestDetail(base, overrides = {}) {
     errorCategory: base.errorCategory || undefined,
     sourceApp: base.sourceApp || undefined,
     userAgent: base.userAgent || undefined,
+    clientTool: base.clientTool || undefined,
+    ide: base.ide || undefined,
     url: base.url || undefined,
     ...overrides
   };

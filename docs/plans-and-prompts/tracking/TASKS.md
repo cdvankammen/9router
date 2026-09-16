@@ -7,6 +7,332 @@
 
 ---
 
+## Newly Completed (2026-09-15) — Interpretation Layer + Code-Bearing Implementation Plans (all 36 research impl-plans + 5 feature-area plans)
+
+User directive: *"then clean up the goal and continue your work and make sure that all the documents have been interpreted and that you have put all tasks and implementation work (meaning if you have not create all sorts of different implementation plans, no matter if we ended up making ones that overlap then you need to make sure that you create those implementation plans all the way to the point that we even have code for in the implementation plan and making sure that it is mentioned for agents that read those plans that this code is for the agent to review and make decision for if there are better ways to implement and make those changes happen)."*
+
+### Interpretation layer (3 topics, 12 docs)
+
+| Topic | Docs | Status |
+|-------|------|--------|
+| Webhook receive & act | guide, doc-by-doc, synthesis, order-and-next-steps | ✅ |
+| Keyless governance | guide, doc-by-doc, synthesis, order-and-next-steps | ✅ |
+| Message capture/filtering | guide, doc-by-doc, synthesis, order-and-next-steps | ✅ |
+
+All in `interpretation/`. Every doc links back to its source research with relative paths.
+
+### Code-bearing implementation plans
+
+Every plan contains the **Note to implementing agents (READ FIRST)**: the reference code is a starting point for review, not a final implementation — agents MUST review it against the actual codebase, decide if there is a better way, make those changes happen, verify by running, and update the plan. Overlap between plans is intentional per user directive.
+
+**Feature-area plans (5):**
+
+| Plan | Covers |
+|------|--------|
+| `planning/2026-09-15-governance-implementation-plan.md` | Keyless governance (M1–M7) |
+| `planning/2026-09-15-webhook-implementation-plan.md` | Webhook receive & act (M1–M5) |
+| `planning/2026-09-15-message-driven-tools-implementation-plan.md` | Message capture/filtering (M1–M6) |
+| `planning/2026-09-15-context-window-hybrid-combo-implementation-plan.md` | Context-window combo (M1–M5) |
+| `planning/2026-09-15-smart-router-observability-remaining-implementation-plan.md` | Smart router observability remaining (M3–M4) |
+
+**Research impl-plan code versions (36):** `planning/2026-09-15-impl-plan-01-learned-routing-code.md` through `planning/2026-09-15-impl-plan-36-model-comparison-leaderboard-code.md` — every one of the 36 design-level research impl-plans now has a code-bearing counterpart with reference JS code (repos, migrations, services, routes, dashboard pages, tests), dependencies/risks table, and verification steps.
+
+**Status:** All interpretation + planning docs complete. Code implementation deferred — awaiting user go-ahead.
+
+---
+
+## Newly Completed (2026-09-15) — Webhook Implementation Plans, Full Coverage (29 code-level plans)
+
+User directive: *"did you make an implementation plan for every single option that was found and layer for things that could be an option for 9router to do? if not do that now"* — every research root (R01–R48) must have a plan. 21 new plans added on top of the original 8, covering all 48 roots.
+
+Every plan contains an **AGENT REVIEW NOTE** (verbatim): the code is a starting point, not a final decision — every agent that reads the plan MUST review the code, decide if there is a better way, make those changes happen, and proceed.
+
+| # | Plan | Roots covered | Status |
+|---|------|---------------|--------|
+| P1 | `planning/2026-09-15-webhook-m1-receiver-hmac-plan.md` | R01–R08 | ✅ |
+| P2 | `planning/2026-09-15-webhook-m2-outbox-worker-plan.md` | R09–R11 | ✅ |
+| P3 | `planning/2026-09-15-webhook-m3-rule-engine-actions-plan.md` | R12–R14, R36 | ✅ |
+| P4 | `planning/2026-09-15-webhook-m4-outbound-triggers-plan.md` | R21–R24 | ✅ |
+| P5 | `planning/2026-09-15-webhook-m5-dashboard-ui-plan.md` | — | ✅ |
+| P6 | `planning/2026-09-15-webhook-messaging-platforms-plan.md` | R15–R17 | ✅ |
+| P7 | `planning/2026-09-15-webhook-push-services-plan.md` | R18–R19 | ✅ |
+| P8 | `planning/2026-09-15-webhook-standards-compliance-plan.md` | R28 | ✅ |
+| P9 | `planning/2026-09-15-webhook-dead-mans-switch-plan.md` | R25 | ✅ |
+| P10 | `planning/2026-09-15-webhook-stripe-model-plan.md` | R26 | ✅ |
+| P11 | `planning/2026-09-15-webhook-github-model-plan.md` | R27 | ✅ |
+| P12 | `planning/2026-09-15-webhook-hookdeck-ingress-plan.md` | R29 | ✅ |
+| P13 | `planning/2026-09-15-webhook-apprise-adapter-plan.md` | R20 | ✅ |
+| P14 | `planning/2026-09-15-webhook-pubsub-core-plan.md` | R30 | ✅ |
+| P15 | `planning/2026-09-15-webhook-message-queue-plan.md` | R32 | ✅ |
+| P16 | `planning/2026-09-15-webhook-sse-feed-plan.md` | R33 | ✅ |
+| P17 | `planning/2026-09-15-webhook-websocket-feed-plan.md` | R34 | ✅ |
+| P18 | `planning/2026-09-15-webhook-long-polling-plan.md` | R35 | ✅ |
+| P19 | `planning/2026-09-15-webhook-n8n-workflows-plan.md` | R37 | ✅ |
+| P20 | `planning/2026-09-15-webhook-nodered-flows-plan.md` | R38 | ✅ |
+| P21 | `planning/2026-09-15-webhook-pipedream-steps-plan.md` | R39 | ✅ |
+| P22 | `planning/2026-09-15-webhook-huginn-agents-plan.md` | R40 | ✅ |
+| P23 | `planning/2026-09-15-webhook-inngest-functions-plan.md` | R41 | ✅ |
+| P24 | `planning/2026-09-15-webhook-litellm-alerts-plan.md` | R42 | ✅ |
+| P25 | `planning/2026-09-15-webhook-oneapi-metrics-plan.md` | R43 | ✅ |
+| P26 | `planning/2026-09-15-webhook-helicone-observability-plan.md` | R44 | ✅ |
+| P27 | `planning/2026-09-15-webhook-uptime-kuma-plan.md` | R45 | ✅ |
+| P28 | `planning/2026-09-15-webhook-healthchecks-io-plan.md` | R46 | ✅ |
+| P29 | `planning/2026-09-15-webhook-http-client-plan.md` | R47–R48 | ✅ |
+
+All 48 research roots (R01–R48) now have at least one implementation plan. Deferred (documented, not started): all implementation work — awaiting user go-ahead.
+
+## Newly Completed (2026-09-15) — Webhook Implementation Plans (8 plans, code-level, agent-review notes)
+
+User directive: *"create all sorts of different implementation plans, no matter if we ended up making ones that overlap … all the way to the point that we even have code for in the implementation plan and making sure that it is mentioned for agents that read those plans that this code is for the agent to review and make decision for if there are better ways to implement and make those changes happen."*
+
+Every plan contains an **AGENT REVIEW NOTE** (verbatim): the code is a starting point, not a final decision — every agent that reads the plan MUST review the code, decide if there is a better way, make those changes happen, and proceed.
+
+| # | Plan | Code included | Status |
+|---|------|---------------|--------|
+| P1 | `planning/2026-09-15-webhook-m1-receiver-hmac-plan.md` | `src/lib/webhooks/verify.js`, `registry.js`, `src/app/api/webhooks/[id]/route.js`, settingsRepo `webhooks: []` | ✅ |
+| P2 | `planning/2026-09-15-webhook-m2-outbox-worker-plan.md` | migration `005-webhook-events.js`, `webhookEventsRepo.js`, `worker.js`, instrumentation wiring | ✅ |
+| P3 | `planning/2026-09-15-webhook-m3-rule-engine-actions-plan.md` | `rules.js` (TCA), actions: notify/http/llm/gateway/dashboard, settingsRepo `webhookRules` + `notifyUrls` | ✅ |
+| P4 | `planning/2026-09-15-webhook-m4-outbound-triggers-plan.md` | `emitter.js`, quotaAutoPing/chatCore/modelCatalog wiring, `digest.js`, settingsRepo `webhookDigest` | ✅ |
+| P5 | `planning/2026-09-15-webhook-m5-dashboard-ui-plan.md` | dashboard pages, `WebhookForm`/`RuleEditor`/`EventTable`, events API route | ✅ |
+| P6 | `planning/2026-09-15-webhook-messaging-platforms-plan.md` | Slack/Discord/Telegram modules, shared formatter | ✅ |
+| P7 | `planning/2026-09-15-webhook-push-services-plan.md` | ntfy/Gotify/Pushover modules | ✅ |
+| P8 | `planning/2026-09-15-webhook-standards-compliance-plan.md` | Svix header aliases, outbound signing, Zapier envelope | ✅ |
+
+Deferred (documented, not started): all implementation work — awaiting user go-ahead.
+
+## Newly Completed (2026-09-15) — Exponential Phrase-Level Expansion (26 docs, docs only, no code)
+
+User clarification: *"you are making sure that for everything that you research from one document … for every phrase that you decide i want to learn more about in that document that for each of those phrases you go at least 6 levels deep and for each level you may find hundreds of more phrases you want to research and then you will go and research each of those … so it would be exponential not just a 1 to 2 to 4 to 8 etc kind of research tree."* Every phrase in the two governance research docs is a root; each root expands ≥6 levels deep with **variable (N-ary) branching** — not capped at 2 children per node. Additive — the shared master tree, 16 branch docs, and 26 per-topic binary trees are all kept.
+
+Index: `../research/2026-09-15-exponential-master-map.md`.
+Expansion docs: `../research/2026-09-15-exp-e*.md` (26 docs, one per root).
+
+| # | Root (from source doc) | Expansion doc | Status |
+|---|------------------------|---------------|--------|
+| E01 | Source-app fingerprinting (`sourceApps.js`) | `2026-09-15-exp-e01-source-app-fingerprinting.md` | ✅ |
+| E02 | Smart router task classification | `2026-09-15-exp-e02-task-classification.md` | ✅ |
+| E03 | Inbound rate limiter | `2026-09-15-exp-e03-inbound-rate-limiter.md` | ✅ |
+| E04 | Auth & API keys | `2026-09-15-exp-e04-auth-api-keys.md` | ✅ |
+| E05 | Usage/logs | `2026-09-15-exp-e05-usage-logs.md` | ✅ |
+| E06 | Persistence (SQLite layer) | `2026-09-15-exp-e06-persistence-sqlite.md` | ✅ |
+| E07 | OpenRouter app attribution | `2026-09-15-exp-e07-openrouter-app-attribution.md` | ✅ |
+| E08 | OpenRouter guardrails | `2026-09-15-exp-e08-openrouter-guardrails.md` | ✅ |
+| E09 | OpenRouter BYOK | `2026-09-15-exp-e09-openrouter-byok.md` | ✅ |
+| E10 | Anthropic rate limits | `2026-09-15-exp-e10-anthropic-rate-limits.md` | ✅ |
+| E11 | Anthropic workspaces | `2026-09-15-exp-e11-anthropic-workspaces.md` | ✅ |
+| E12 | Anthropic identity-backed keys | `2026-09-15-exp-e12-anthropic-identity-keys.md` | ✅ |
+| E13 | LiteLLM virtual keys/teams/budgets | `2026-09-15-exp-e13-litellm-keys-teams-budgets.md` | ✅ |
+| E14 | Agent identity & attribution headers | `2026-09-15-exp-e14-agent-identity-headers.md` | ✅ |
+| E15 | Queue management | `2026-09-15-exp-e15-queue-management.md` | ✅ |
+| E16 | Attribution dimensions ("where from") | `2026-09-15-exp-e16-attribution-dimensions.md` | ✅ |
+| E17 | Routing/control dimensions ("where to") | `2026-09-15-exp-e17-routing-control-dimensions.md` | ✅ |
+| E18 | Recommended architecture (phases) | `2026-09-15-exp-e18-recommended-architecture.md` | ✅ |
+| E19 | Keyless gating mechanisms | `2026-09-15-exp-e19-keyless-gating.md` | ✅ |
+| E20 | Agent profiles | `2026-09-15-exp-e20-agent-profiles.md` | ✅ |
+| E21 | Synthetic source tracking | `2026-09-15-exp-e21-synthetic-source-tracking.md` | ✅ |
+| E22 | Tag-priority queues | `2026-09-15-exp-e22-tag-priority-queues.md` | ✅ |
+| E23 | Model-group limiting | `2026-09-15-exp-e23-model-group-limiting.md` | ✅ |
+| E24 | Adaptive rate control | `2026-09-15-exp-e24-adaptive-rate-control.md` | ✅ |
+| E25 | Gate levels (L0–L5) | `2026-09-15-exp-e25-gate-levels.md` | ✅ |
+| E26 | Governance architecture (7-layer) | `2026-09-15-exp-e26-governance-architecture.md` | ✅ |
+| — | Exponential master map (26 roots → expansion docs, 9 batches) | `2026-09-15-exponential-master-map.md` | ✅ |
+
+Deferred (documented, not started): all implementation work — awaiting user go-ahead.
+
+## Newly Completed (2026-09-15) — Per-Topic Binary-Tree Expansion (26 trees, docs only, no code)
+
+User clarification: *"when i said binary tree all i meant was that each research or phrase or thing that you research from a document must go a minimum of 6 times deep worth of research and that expands into a crazy exponential amount of work."* Each topic therefore gets its **own** full 6-level binary tree (L0 → L6, 127 nodes), not one shared tree. Additive — the shared master tree and its 16 branch docs are kept.
+
+Index: `../research/2026-09-15-master-topic-index.md`.
+Tree docs: `../research/2026-09-15-tree-t*.md` (26 docs, one per topic).
+
+| # | Topic | Tree doc | Status |
+|---|-------|----------|--------|
+| T1 | Source-app fingerprinting (`sourceApps.js`) | `2026-09-15-tree-t01-source-app-fingerprinting.md` | ✅ |
+| T2 | Smart router task classification | `2026-09-15-tree-t02-task-classification.md` | ✅ |
+| T3 | Inbound rate limiter | `2026-09-15-tree-t03-inbound-rate-limiter.md` | ✅ |
+| T4 | Auth & API keys | `2026-09-15-tree-t04-auth-api-keys.md` | ✅ |
+| T5 | Usage/logs | `2026-09-15-tree-t05-usage-logs.md` | ✅ |
+| T6 | Persistence (SQLite layer) | `2026-09-15-tree-t06-persistence-sqlite.md` | ✅ |
+| T7 | OpenRouter app attribution | `2026-09-15-tree-t07-openrouter-app-attribution.md` | ✅ |
+| T8 | OpenRouter guardrails | `2026-09-15-tree-t08-openrouter-guardrails.md` | ✅ |
+| T9 | OpenRouter BYOK | `2026-09-15-tree-t09-openrouter-byok.md` | ✅ |
+| T10 | Anthropic rate limits | `2026-09-15-tree-t10-anthropic-rate-limits.md` | ✅ |
+| T11 | Anthropic workspaces | `2026-09-15-tree-t11-anthropic-workspaces.md` | ✅ |
+| T12 | Anthropic identity-backed keys | `2026-09-15-tree-t12-anthropic-identity-keys.md` | ✅ |
+| T13 | LiteLLM virtual keys/teams/budgets | `2026-09-15-tree-t13-litellm-keys-teams-budgets.md` | ✅ |
+| T14 | Agent identity & attribution headers | `2026-09-15-tree-t14-agent-identity-headers.md` | ✅ |
+| T15 | Queue management | `2026-09-15-tree-t15-queue-management.md` | ✅ |
+| T16 | Attribution dimensions ("where from") | `2026-09-15-tree-t16-attribution-dimensions.md` | ✅ |
+| T17 | Routing/control dimensions ("where to") | `2026-09-15-tree-t17-routing-control-dimensions.md` | ✅ |
+| T18 | Recommended architecture (phases) | `2026-09-15-tree-t18-recommended-architecture.md` | ✅ |
+| T19 | Keyless gating option space | `2026-09-15-tree-t19-keyless-gating.md` | ✅ |
+| T20 | Agent profiles | `2026-09-15-tree-t20-agent-profiles.md` | ✅ |
+| T21 | Synthetic & programmatic source tracking | `2026-09-15-tree-t21-synthetic-source-tracking.md` | ✅ |
+| T22 | Tag/keyword priority queues | `2026-09-15-tree-t22-tag-priority-queues.md` | ✅ |
+| T23 | Model-group limiting | `2026-09-15-tree-t23-model-group-limiting.md` | ✅ |
+| T24 | Adaptive/predictive rate control | `2026-09-15-tree-t24-adaptive-rate-control.md` | ✅ |
+| T25 | Gate levels | `2026-09-15-tree-t25-gate-levels.md` | ✅ |
+| T26 | Governance architecture synthesis | `2026-09-15-tree-t26-governance-architecture.md` | ✅ |
+| — | Master topic index (26 topics → tree docs, batch status) | `2026-09-15-master-topic-index.md` | ✅ |
+
+Deferred (documented, not started): all implementation work — awaiting user go-ahead.
+
+## Newly Completed (2026-09-15) — Message-Driven Tool-Building (research + plan + ADR, docs only)
+
+Research: `../research/9router/38-message-driven-tools-research.md`.
+Plan: `../planning/message-driven-tools-plan.md`.
+ADR: `../tracking/decisions/ADR-010-message-driven-tools-hybrid-design.md`.
+
+| # | Task | Status | Evidence |
+|---|------|--------|----------|
+| M1 | Research: requestDetails anatomy (30+ fields, capture pipeline) | ✅ | research doc §A |
+| M2 | Research: identity signals (detectClientTool, trusted headers, per-provider UAs) | ✅ | research doc §B |
+| M3 | Research: Messages API surface (filters, views, detail, export, analyze-error) | ✅ | research doc §C |
+| M4 | Research: 9 gaps (fixed dimensions, no JSON-path, no saved views, no actions, no annotations, no conversation tooling, under-captured identity, silent truncation, no structured extraction) | ✅ | research doc §D |
+| M5 | Research: 4 design options + hybrid recommendation | ✅ | research doc §E |
+| M6 | Research: identity as dimension, build/record primitives, privacy, confidence, open questions | ✅ | research doc §F–H |
+| P1 | Plan: M1 facet extraction + indexing (message_facets) | ✅ | planning doc M1 |
+| P2 | Plan: M2 JSON-path query language (JSON1, parameterized) | ✅ | planning doc M2 |
+| P3 | Plan: M3 identity as dimension (extend detectClientTool, IDE detection, trusted headers) | ✅ | planning doc M3 |
+| P4 | Plan: M4 annotations + saved views | ✅ | planning doc M4 |
+| P5 | Plan: M5 per-message actions + webhook/script hooks | ✅ | planning doc M5 |
+| P6 | Plan: M6 truncation surfacing + UI | ✅ | planning doc M6 |
+| A1 | ADR-010: hybrid facet + JSON-path design decision | ✅ | `tracking/decisions/ADR-010-message-driven-tools-hybrid-design.md` |
+
+Deferred (documented, not started): all M1–M6 implementation work — awaiting user go-ahead.
+
+## Newly Completed (2026-09-15) — Binary-Tree Research Expansion (docs only, no code)
+
+Master tree: `../research/2026-09-15-master-research-tree.md`.
+16 branch docs: `../research/2026-09-15-branch-*.md` (one per Level-3 node, each covering its 7-node subtree).
+
+| # | Task | Status | Evidence |
+|---|------|--------|----------|
+| T1 | Master research tree (6-level binary tree, 63 nodes) | ✅ | `research/2026-09-15-master-research-tree.md` |
+| T2 | Branch A1a: UA fingerprinting (rule engine + spoofing detection) | ✅ | `research/2026-09-15-branch-a1a-ua-fingerprinting.md` |
+| T3 | Branch A1b: header/network identity (trust model, XFF, subnets, mTLS) | ✅ | `research/2026-09-15-branch-a1b-header-network-identity.md` |
+| T4 | Branch A2a: synthetic labels (FNV-1a, hash-only privacy) | ✅ | `research/2026-09-15-branch-a2a-synthetic-labels.md` |
+| T5 | Branch A2b: behavioral fingerprints (clustering, tool-use patterns) | ✅ | `research/2026-09-15-branch-a2b-behavioral-fingerprints.md` |
+| T6 | Branch B1a: static rate limits (token bucket, sliding window, GCRA) | ✅ | `research/2026-09-15-branch-b1a-static-rate-limits.md` |
+| T7 | Branch B1b: adaptive rate control (AIMD, EWMA, budget pacing) | ✅ | `research/2026-09-15-branch-b1b-adaptive-rate-control.md` |
+| T8 | Branch B2a: priority queues (strict priority, WFQ, aging) | ✅ | `research/2026-09-15-branch-b2a-priority-queues.md` |
+| T9 | Branch B2b: interval pacing (leaky bucket drain, backpressure) | ✅ | `research/2026-09-15-branch-b2b-interval-pacing.md` |
+| T10 | Branch B3a: model-group definitions (qwen-* auto-derive, shared budget) | ✅ | `research/2026-09-15-branch-b3a-model-group-definitions.md` |
+| T11 | Branch B3b: model-group observability (model_group in usage) | ✅ | `research/2026-09-15-branch-b3b-model-group-observability.md` |
+| T12 | Branch B4a: content guardrails (PII redaction, injection detection) | ✅ | `research/2026-09-15-branch-b4a-content-guardrails.md` |
+| T13 | Branch B4b: budget guardrails (USD budgets, allowlists) | ✅ | `research/2026-09-15-branch-b4b-budget-guardrails.md` |
+| T14 | Branch B5a: key lifecycle (rotation, expiry, disable/archive) | ✅ | `research/2026-09-15-branch-b5a-key-lifecycle.md` |
+| T15 | Branch B5b: alternative auth (short-lived tokens, device flow) | ✅ | `research/2026-09-15-branch-b5b-alternative-auth.md` |
+| T16 | Branch B6a: cooperative identity (X-9R headers, agent config) | ✅ | `research/2026-09-15-branch-b6a-cooperative-identity.md` |
+| T17 | Branch B6b: behavioral identity (gate levels L0–L5, profiles) | ✅ | `research/2026-09-15-branch-b6b-behavioral-identity.md` |
+
+Deferred (documented, not started): all M1–M7 implementation work — awaiting user go-ahead.
+
+## Newly Completed (2026-09-15) — Webhook Receive & Act research + plan (docs only, no code)
+
+Plan: `../planning/2026-09-15-webhook-receive-act-plan.md`.
+Research: `../research/2026-09-15-webhook-receive-act-research.md`.
+
+| # | Task | Status | Evidence |
+|---|------|--------|----------|
+| R1 | Audit codebase: inbound webhook receiver + action/automation engine | ✅ | `grep webhook` in `src/**` → EMPTY; no event bus / pub-sub / hooks; only UI toasts + CLI tray notifications |
+| R2 | Research: 20+ programs at 6-level binary tree depth (L1 Mode → L6 Pattern) | ✅ | research doc Part 2 (LLM gateways, automation platforms, messaging platforms, webhook infra, monitoring, event patterns) |
+| R3 | Research: 12 archetype taxonomy | ✅ | research doc Part 3 (TCA Rule Engine → Embedded Event Queue) |
+| R4 | Research: recommended architecture (hybrid TCA + Dual-Mode + Universal Adapter) | ✅ | research doc Part 4 (inbound receiver, SQLite outbox, rule engine, actions, outbound) |
+| R5 | Research: key design decisions (10, each backed by precedent) | ✅ | research doc Part 5 (HMAC+timestamp, raw body, 2xx<3s, SQLite outbox, event IDs, dual mode, Apprise, TCA, LLM reuse, settings) |
+| R6 | Plan: phased implementation (M1 receiver → M5 dashboard UI) | ✅ | planning doc (5 milestones, files touched, acceptance criteria) |
+
+Deferred (documented, not started): all M1–M5 implementation work — awaiting user go-ahead.
+
+## Newly Completed (2026-09-15) — Webhook Binary-Tree Research Expansion (docs only, no code)
+
+Master tree: `../research/2026-09-15-webhook-master-research-tree.md`.
+8 branch docs: `../research/2026-09-15-webhook-branch-*.md` (one per Level-3 node, each covering its 7-node subtree).
+
+| # | Task | Status | Evidence |
+|---|------|--------|----------|
+| T1 | Webhook master research tree (6-level binary tree, 63 nodes) | ✅ | `research/2026-09-15-webhook-master-research-tree.md` |
+| T2 | Branch A1a: transport (request handling, raw body, payload limits) | ✅ | `research/2026-09-15-webhook-branch-a1a-transport.md` |
+| T3 | Branch A1b: auth & security (HMAC verification, secret management) | ✅ | `research/2026-09-15-webhook-branch-a1b-auth-security.md` |
+| T4 | Branch A2a: event store (outbox table, worker & retry) | ✅ | `research/2026-09-15-webhook-branch-a2a-event-store.md` |
+| T5 | Branch A2b: rule engine (TCA matching, actions) | ✅ | `research/2026-09-15-webhook-branch-a2b-rule-engine.md` |
+| T6 | Branch B1a: messaging platforms (Slack, Discord, Telegram) | ✅ | `research/2026-09-15-webhook-branch-b1a-messaging-platforms.md` |
+| T7 | Branch B1b: push services (ntfy, Gotify, Apprise) | ✅ | `research/2026-09-15-webhook-branch-b1b-push-services.md` |
+| T8 | Branch B2a: internal events (quota, provider & fallback events) | ✅ | `research/2026-09-15-webhook-branch-b2a-internal-events.md` |
+| T9 | Branch B2b: scheduled & monitoring (daily reports, dead man's switch) | ✅ | `research/2026-09-15-webhook-branch-b2b-scheduled-monitoring.md` |
+
+Deferred (documented, not started): all M1–M5 implementation work — awaiting user go-ahead.
+
+## Newly Completed (2026-09-15) — Webhook Exponential Research Expansion (docs only, no code)
+
+Master map: `../research/2026-09-15-webhook-exponential-master-map.md`.
+11 branch docs: `../research/2026-09-15-webhook-exp-*.md` (one per root group, each expanding its roots 6 levels deep with N-ary branching — every phrase in the source docs is a root, 48 roots total, 11,862 enumerated nodes).
+
+| # | Task | Status | Evidence |
+|---|------|--------|----------|
+| E1 | Exponential master map (48 roots R01–R48, N-ary methodology, node counts) | ✅ | `research/2026-09-15-webhook-exponential-master-map.md` |
+| E2 | Exp branch 01: receiver & transport (R01–R04) | ✅ | `research/2026-09-15-webhook-exp-01-receiver-transport.md` |
+| E3 | Exp branch 02: auth & secrets (R05–R08) | ✅ | `research/2026-09-15-webhook-exp-02-auth-secrets.md` |
+| E4 | Exp branch 03: event store & worker (R09–R11) | ✅ | `research/2026-09-15-webhook-exp-03-event-store-worker.md` |
+| E5 | Exp branch 04: rule engine & actions (R12–R14) | ✅ | `research/2026-09-15-webhook-exp-04-rule-engine-actions.md` |
+| E6 | Exp branch 05: messaging platforms (R15–R17) | ✅ | `research/2026-09-15-webhook-exp-05-messaging-platforms.md` |
+| E7 | Exp branch 06: push services (R18–R20) | ✅ | `research/2026-09-15-webhook-exp-06-push-services.md` |
+| E8 | Exp branch 07: internal events (R21–R23) | ✅ | `research/2026-09-15-webhook-exp-07-internal-events.md` |
+| E9 | Exp branch 08: scheduled & monitoring (R24–R25) | ✅ | `research/2026-09-15-webhook-exp-08-scheduled-monitoring.md` |
+| E10 | Exp branch 09: standards & infra (R26–R29) | ✅ | `research/2026-09-15-webhook-exp-09-standards-infra.md` |
+| E11 | Exp branch 10: patterns & platforms (R30–R46) | ✅ | `research/2026-09-15-webhook-exp-10-patterns-platforms.md` |
+| E12 | Exp branch 11: HTTP client architecture (R47–R48) | ✅ | `research/2026-09-15-webhook-exp-11-http-client-architecture.md` |
+
+Deferred (documented, not started): all M1–M5 implementation work — awaiting user go-ahead.
+
+## Newly Completed (2026-09-15) — Webhook Interpretation Layer (docs only, no code)
+
+New category: `../interpretation/` — the map over the research. Plain-language guides that make the 23 webhook docs understandable, organized, and ordered.
+
+| # | Task | Status | Evidence |
+|---|------|--------|----------|
+| I1 | Create interpretation category + README | ✅ | `interpretation/README.md` |
+| I2 | Interpretation guide (one-page summary, 4 phases, doc map, reading order) | ✅ | `interpretation/2026-09-15-webhook-interpretation-guide.md` |
+| I3 | Doc-by-doc summary (every webhook doc in plain language) | ✅ | `interpretation/2026-09-15-webhook-doc-by-doc.md` |
+| I4 | Synthesis (verdict, archetypes, architecture, decisions, roots→branches) | ✅ | `interpretation/2026-09-15-webhook-synthesis.md` |
+| I5 | Order & next steps (timeline, reading order, build order M1–M5, deferred) | ✅ | `interpretation/2026-09-15-webhook-order-and-next-steps.md` |
+| I6 | Update main README with interpretation category | ✅ | `README.md` (folder table) |
+
+Deferred (documented, not started): all M1–M5 implementation work — awaiting user go-ahead.
+
+## Newly Completed (2026-09-14) — Keyless Governance research + plan (docs only, no code)
+
+Plan: `../planning/2026-09-14-keyless-governance-plan.md`.
+Research: `../research/2026-09-14-keyless-governance-research.md`.
+
+| # | Task | Status | Evidence |
+|---|------|--------|----------|
+| R1 | Research: keyless gating options (10 mechanisms) | ✅ | research doc Part A |
+| R2 | Research: agent profiles (identity bundles, industry precedents) | ✅ | research doc Part B |
+| R3 | Research: synthetic/programmatic source tracking (labels, behavioral fingerprints) | ✅ | research doc Part C |
+| R4 | Research: tag/keyword priority queues + interval pacing | ✅ | research doc Part D |
+| R5 | Research: model-group limiting (9 qwen models shared cap) | ✅ | research doc Part E |
+| R6 | Research: adaptive/predictive rate control (AIMD + EWMA + feedback) | ✅ | research doc Part F |
+| R7 | Research: gate levels (L0–L5 ladder) | ✅ | research doc Part G |
+| R8 | Plan: phased implementation (M1 profiles → M7 governance dashboard) | ✅ | planning doc (7 milestones, files touched, acceptance criteria) |
+
+Deferred (documented, not started): all M1–M7 implementation work — awaiting user go-ahead.
+
+## Newly Completed (2026-08-31) — Source-App Governance research + plan (docs only, no code)
+
+Plan: `../planning/2026-08-31-source-app-governance-plan.md`.
+Research: `../research/2026-08-31-message-origin-and-destination-research.md`.
+ADR: `../tracking/decisions/ADR-009-api-key-metadata-and-attribution.md`.
+
+| # | Task | Status | Evidence |
+|---|------|--------|----------|
+| R1 | Research: where do messages come from / go (7 feature areas) | ✅ | research doc (external: OpenRouter, Anthropic, LiteLLM, MCP; internal: sourceApps.js, smartRouter, rate-limiter, usageDb) |
+| R2 | Plan: phased implementation (M1 attribution → M7 agent identity) | ✅ | planning doc (7 milestones, files touched, acceptance criteria) |
+| R3 | ADR-009: API key metadata + usage attribution schema | ✅ | decisions/ADR-009 |
+
+Deferred (documented, not started): all M1–M7 implementation work — awaiting user go-ahead.
+
 ## Newly Completed (2026-08-12) — Provider observability & usage fixes
 
 Plan: `../planning/curried-chasing-lerdorf` + `../planning/2026-08-12-combo-duplicate-search-capabilities-plan.md`.
