@@ -59,15 +59,15 @@ export async function POST(request, { params }) {
       case "summarize":
         return await summarize(detail, body);
       case "send-to-webhook":
-        return await sendToWebhook(detail, body);
+        return await sendToWebhook(id, detail, body);
       case "add-note":
-        return await addNote(detail, body);
+        return await addNote(id, detail, body);
       case "tag":
-        return await addTag(detail, body);
+        return await addTag(id, detail, body);
       case "remove-tag":
-        return await removeTag(detail, body);
+        return await removeTag(id, detail, body);
       case "alert-on-match":
-        return await alertOnMatch(detail, body);
+        return await alertOnMatch(id, detail, body);
       default:
         return NextResponse.json({ error: `Unknown action: ${action}` }, { status: 400 });
     }
@@ -143,7 +143,7 @@ async function summarize(detail, body) {
   return NextResponse.json({ ok: res.ok, status: res.status, summary });
 }
 
-async function sendToWebhook(detail, body) {
+async function sendToWebhook(messageId, detail, body) {
   const { url, template, headers, timeoutMs } = body;
   if (!url) {
     return NextResponse.json({ error: "url is required" }, { status: 400 });
@@ -153,7 +153,7 @@ async function sendToWebhook(detail, body) {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      messageId: detail._id,
+      messageId,
       url,
       template,
       headers,
@@ -164,13 +164,15 @@ async function sendToWebhook(detail, body) {
   return NextResponse.json(json, { status: hooksRes.status });
 }
 
-async function addNote(detail, body) {
-  const { value, conversationId } = body;
+async function addNote(requestId, detail, body) {
+  // UI sends { note }; API also accepts { value }.
+  const value = body.note ?? body.value;
+  const { conversationId } = body;
   if (!value) {
-    return NextResponse.json({ error: "value is required" }, { status: 400 });
+    return NextResponse.json({ error: "note is required" }, { status: 400 });
   }
   const annotation = await addAnnotation({
-    requestId: detail._id,
+    requestId,
     conversationId: conversationId || detail.conversationId || null,
     kind: "note",
     value,
@@ -178,13 +180,15 @@ async function addNote(detail, body) {
   return NextResponse.json({ annotation }, { status: 201 });
 }
 
-async function addTag(detail, body) {
-  const { value, conversationId } = body;
+async function addTag(requestId, detail, body) {
+  // UI sends { tag }; API also accepts { value }.
+  const value = body.tag ?? body.value;
+  const { conversationId } = body;
   if (!value) {
-    return NextResponse.json({ error: "value is required" }, { status: 400 });
+    return NextResponse.json({ error: "tag is required" }, { status: 400 });
   }
   const annotation = await addAnnotation({
-    requestId: detail._id,
+    requestId,
     conversationId: conversationId || detail.conversationId || null,
     kind: "tag",
     value,
@@ -192,16 +196,16 @@ async function addTag(detail, body) {
   return NextResponse.json({ annotation }, { status: 201 });
 }
 
-async function removeTag(detail, body) {
+async function removeTag(requestId, detail, body) {
   const { value } = body;
   if (!value) {
     return NextResponse.json({ error: "value is required" }, { status: 400 });
   }
-  const deleted = await deleteAnnotation({ requestId: detail._id, kind: "tag", value });
+  const deleted = await deleteAnnotation({ requestId, kind: "tag", value });
   return NextResponse.json({ deleted });
 }
 
-async function alertOnMatch(detail, body) {
+async function alertOnMatch(messageId, detail, body) {
   const { url, match, template, headers } = body;
   if (!url || !match) {
     return NextResponse.json({ error: "url and match are required" }, { status: 400 });
@@ -228,7 +232,7 @@ async function alertOnMatch(detail, body) {
   const hooksRes = await fetch(new URL("/api/hooks", requestBaseUrl()).toString(), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ messageId: detail._id, url, template, headers }),
+    body: JSON.stringify({ messageId, url, template, headers }),
   });
   const json = await hooksRes.json().catch(() => ({}));
   return NextResponse.json({ ...json, matched: true });

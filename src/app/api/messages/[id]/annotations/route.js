@@ -36,7 +36,9 @@ export async function POST(request, { params }) {
       return NextResponse.json({ error: "Message not found" }, { status: 404 });
     }
     const body = await request.json().catch(() => ({}));
-    const { kind, value, conversationId } = body;
+    const { kind, conversationId } = body;
+    // Accept { value } (API) or { note }/{ tag } (UI convenience).
+    const value = body.value ?? body.note ?? body.tag;
     if (!kind || !value) {
       return NextResponse.json({ error: "kind and value are required" }, { status: 400 });
     }
