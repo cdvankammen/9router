@@ -7,6 +7,14 @@
 
 ---
 
+## 2026-09-16 — v3 branch policy (branch isolation) + completed-card record
+
+### docs(policy): branch isolation
+- `tracking/GIT-BRANCH-POLICY.md` (new): canonical branch policy — ALL work on `v3`; NO agent-created branches or worktrees; NO merge to `master` without explicit Chris instruction; `v2` frozen read-only.
+- `tracking/decisions/ADR-011-v3-branch-isolation.md` (new): ADR for v3 sole-write-branch decision (context, alternatives, reversibility).
+- Branch `v3` created 2026-09-16 as exact copy of `v2` (`d7a9ee5d`, tree `7b164f57`).
+- Completed-card records written to `~/Documents/hermesResearch/9router/V3/` (24h/48h verdict = ZERO; 7-day list = 130 cards; merge disposition).
+
 ## 2026-09-16 — Hermes Message Import Research + Deep-Research Skills
 
 ### docs(research): Hermes message import research

@@ -9,6 +9,23 @@
 
 ## Newly Completed (2026-09-16) — Hermes Message Import Research + Deep-Research Skills
 
+## 2026-09-16 — v3 branch policy: recorded and enforced across all 9router kanban boards
+
+| Task | Status |
+|------|--------|
+| Policy written: `tracking/GIT-BRANCH-POLICY.md` + `tracking/decisions/ADR-011-v3-branch-isolation.md` | ✅ |
+| Branch `v3` created from `v2` tip (`d7a9ee5d`), repo now checked out on `v3` | ✅ |
+| Policy committed to `v3` (`75268083`) — v2 byte-identical afterward (`d7a9ee5d` untouched) | ✅ |
+| Completed-card audit (last 24h/48h/7d) on `9router`, `9router-mcp-hub-kanban`, `9router-mcp-hub-skills` boards → reports in `~/Documents/hermesResearch/9router/V3/` | ✅ |
+| Board descriptions updated on `9router`, `9router-mcp-hub-kanban`, `9router-mcp-hub-skills` with the `BRANCH-RULE` block | ✅ |
+| All 13 open cards on `9router` board body-appended with the `BRANCH-RULE` block | ✅ |
+| Discord delivery to thread 1544031399110119588 | ✅ |
+
+### Still open (per policy)
+- 13 blocked cards on `9router` board — resume only on `v3`.
+- Reconcile `pr-3610` / `pr-3625` / `feat/multi-protocol-custom-providers` INTO `v3` (explicit decision).
+- The 3 MCP-hub boards carry zero open repo-building work; only informational.
+
 User directive: *"import all the message requests from hermes agents... there has to be a log of all the message requests and what they looked like to and from the provider... match it up with current providers based on the name of the models... even if I didn't initially go through 9router, I could still record and figure out the codes, the messages, the errors and everything as though it did go through 9router... use all skills and deep research everything possible and utilize that 6 branch node binary tree like research model... learn about this research method and learn about all the different ways it was carried out then pull all that information together to create a skill."*
 
 ### Research method learned (from chat logs, last 24h)
