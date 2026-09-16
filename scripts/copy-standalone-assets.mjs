@@ -37,6 +37,17 @@ export function copyStandaloneAssets({ projectRoot = process.cwd(), distDir = pr
     cpSync(serverWrapperSource, serverWrapperDestination, { force: true });
     console.log(`[standalone-assets] Copied custom-server.js to ${serverWrapperDestination}`);
   }
+
+  // custom-server.js requires the per-IP rate limiter at boot — without it the
+  // standalone build crashes with MODULE_NOT_FOUND. Mirrors cli/scripts/build-cli.js.
+  const rateLimiterSource = resolve(projectRoot, "custom-server.rate-limiter.js");
+  const rateLimiterDestination = resolve(standaloneDir, "custom-server.rate-limiter.js");
+  if (existsSync(rateLimiterSource)) {
+    cpSync(rateLimiterSource, rateLimiterDestination, { force: true });
+    console.log(`[standalone-assets] Copied custom-server.rate-limiter.js to ${rateLimiterDestination}`);
+  } else {
+    console.warn("[standalone-assets] custom-server.rate-limiter.js not found — per-IP rate limiting disabled");
+  }
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === resolve(dirname(fileURLToPath(import.meta.url)), "copy-standalone-assets.mjs")) {
