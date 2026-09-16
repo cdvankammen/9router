@@ -81,9 +81,9 @@ describe("OpenCode Go per-model supportedFormats", () => {
     }
   });
 
-  it("declares [openai, claude, openai-responses] for DeepSeek models", () => {
+  it("declares [openai, openai-responses] for DeepSeek models (zen-go /v1/messages rejects tool declarations)", () => {
     for (const m of RESPONSES_CAPABLE) {
-      expect(getModelSupportedFormats("opencode-go", m)).toEqual(["openai", "claude", "openai-responses"]);
+      expect(getModelSupportedFormats("opencode-go", m)).toEqual(["openai", "openai-responses"]);
     }
   });
 
