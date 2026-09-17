@@ -9,6 +9,17 @@
 
 ## Newly Completed (2026-09-16) — Hermes Message Import Research + Deep-Research Skills
 
+## 2026-09-16 — Card QA gate enforced (self-verification)
+
+| Task | Status |
+|------|--------|
+| QA gate block (`CARD-QA-GATE-START`) injected into all open card bodies (9router board) | ✅ |
+| QA gate added to board descriptions of 9router + 9router-mcp-hub-kanban + 9router-mcp-hub-skills | ✅ |
+| QA gate written into `tracking/GIT-BRANCH-POLICY.md` | ✅ |
+| Audit of last 130 completed cards for QA evidence in `result`: 3 with, 127 without | ✅ (gap recorded) |
+| Test suite actually run on `v3`: 76 failures / 29 files (baseline documented, pre-existing) | ✅ |
+| Live app functional check via headless browser on `:20127` | ✅ |
+
 ## 2026-09-16 — v3 branch policy: recorded and enforced across all 9router kanban boards
 
 | Task | Status |

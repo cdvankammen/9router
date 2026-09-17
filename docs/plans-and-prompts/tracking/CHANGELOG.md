@@ -7,6 +7,26 @@
 
 ---
 
+## 2026-09-16 — Mandatory QA gate added to branch policy (card self-verification)
+
+### directive: cards must verify their own work
+- Chris directive: every card must scrupulously QA its own work before `done` — run the test
+  suite on `v3`, functionally exercise the change against the running app (headless browser /
+  curl / CLI), and record the evidence in `result`.
+- QA gate added to `tracking/GIT-BRANCH-POLICY.md` ("Mandatory QA gate") and injected as a
+  `<!-- CARD-QA-GATE-START -->` block into every open card body on the `9router` board plus the
+  board descriptions of `9router`, `9router-mcp-hub-kanban`, `9router-mcp-hub-skills`.
+- Audit finding (evidence): of the last 130 completed cards, only **3** carry explicit test/QA
+  evidence in their `result`; **127** record only a title-level summary. Historical gap recorded
+  so future cards are held to the gate.
+- Test suite state on `v3` (measured): `tests/` vitest run → **76 failing tests across 29 files**
+  (pre-existing; e.g. `unit/cursor-agent-proto.test.js` fails identically on `v2` because
+  upstream `open-sse/utils/cursorProtobuf.js` lacks `encodeAgentValue`/`encodeMcpToolDefinition`;
+  `unit/security-audit.test.js` has a path bug expecting `tests/src/...`). No card may report
+  green while these are unbaselined — baseline them first.
+- Functional check (live): dashboard on `:20127` — `/api/health` 200, `/` 307→login, `/login` 200,
+  rendered title "9Router - AI Infrastructure Management" (headless Edge via CDP).
+
 ## 2026-09-16 — v3 branch policy (branch isolation) + completed-card record
 
 ### docs(policy): branch isolation
