@@ -52,17 +52,10 @@ export async function applyMemoryEnhancements(body, options = {}) {
     return { body, stats };
   }
 
-  // Phase 4: Pending Handoff Injection (if enabled + projectKey available)
-  if (settings.memoryHandoffEnabled && projectKey) {
-    const handoffRes = injectPendingHandoff(body, {
-      enabled: true,
-      projectKey,
-    });
-    if (handoffRes.injected) {
-      stats.handoff.applied = true;
-      log?.debug?.("MEMORY", `Injected previous session handoff for project: ${projectKey}`);
-    }
-  }
+  // Phase 4: Cross-session handoff — REMOVED from shipped pipeline
+  // handoffStore.js module exists but has no capture path (in-memory only, no persistence).
+  // Toggle removed from dashboard/CLI until real capture path is designed.
+  stats.handoff = { applied: false, reason: "not wired" };
 
   // Phase 1a: Historical Media Pruning (default: disabled, opt-in)
   if (settings.memoryMediaPruningEnabled === true) {

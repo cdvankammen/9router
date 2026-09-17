@@ -597,8 +597,6 @@ test("applyMemoryEnhancements: handoff is not wired (removed from shipped pipeli
   assert.equal(res.stats.handoff.applied, false);
   assert.equal(res.stats.handoff.reason, "not wired");
 });
-  assert.equal(res.stats.handoff.applied, false);
-});
 
 test("applyMemoryEnhancements: tool pruning runs when enabled", async () => {
   const body = {

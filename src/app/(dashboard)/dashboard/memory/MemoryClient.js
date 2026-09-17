@@ -262,19 +262,9 @@ export default function MemoryClient() {
         </p>
       </Card>
 
-      {/* Phase 4: Cross-Session Handoff Store */}
-      <Card id="handoff">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-primary">sync_alt</span>
-            <h2 className="text-lg font-semibold">Cross-Session Handoff Continuity</h2>
-          </div>
-          <Toggle checked={memoryHandoffEnabled} onChange={handleMemoryHandoff} />
-        </div>
-        <p className="text-sm text-text-muted">
-          Maintains a bounded project handoff store across CLI agent switches (e.g. Claude Code → Codex → Cline) in the same directory, automatically injecting the previous session handoff summary into the new session.
-        </p>
-      </Card>
+      {/* Phase 4: Cross-Session Handoff Store — REMOVED from UI
+         Module exists (open-sse/services/memory/handoffStore.js) but has no capture path.
+         In-memory Map dies with process — needs persistent storage + capture triggers. */}
     </div>
   );
 }
