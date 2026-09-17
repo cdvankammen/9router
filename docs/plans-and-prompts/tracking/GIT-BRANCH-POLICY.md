@@ -65,11 +65,21 @@ base:     d7a9ee5d  (v2 tip at time of policy creation — v3 == v2, byte-identi
 
 ### Worktree and branch strategy (Chris directive 2026-09-17)
 
-- **ONE shared worktree** on the build host (mini3/4/5) for ALL cards. No per-card worktrees.
-- **Branch strategy**: Cards MAY create feature branches (e.g., `feature/bug-3692-fix`) within the
+- **ONE shared worktree** for ALL cards on the 9router boards. No per-card worktrees.
+- **Cards are FORBIDDEN from working in the main worktree** (`/Users/chris/Documents/GitHub/9router`).
+  The main worktree is used by Chris and by VS Code; agents must NOT create, change, commit, or
+  branch anything there.
+- **Cards must NOT change the main worktree's checked-out branch.** The main worktree may sit on
+  whatever branch Chris/VS Code left it on (e.g. `v4-vscode-works`); agents never `git checkout`,
+  `git switch`, or `git worktree`-operate in it.
+- **The shared card worktree** is at `/Users/chris/Documents/GitHub/9router-wt-cards`, on branch
+  `card-work-v3` (branched FROM `v3`). ALL card work happens here.
+- **Branch strategy**: Cards MAY create feature branches (e.g., `feature/bug-3692-fix`) WITHIN the
   shared worktree for isolation during development. However:
+  - Cards may ONLY create branches in the shared card worktree, never in the main worktree
   - All work must be **tested** on the feature branch
-  - All work must be **merged into v3** (the integration branch) after testing passes
+  - All work must be **merged into v3** (the integration branch) after testing passes —
+    merge from the shared worktree, not from the main worktree
   - **v3 must always be working** — it is the stable integration target
   - No card may leave work stranded on a feature branch without merging to v3
 - This allows parallel card work while maintaining v3 as the verified, working integration point.
