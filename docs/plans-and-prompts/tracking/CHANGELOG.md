@@ -7,6 +7,28 @@
 
 ---
 
+## 2026-09-17 — Definitive branch/worktree audit (answers: did cards create branches?)
+
+### audit result
+- **Branches created in this repo (reflog evidence, `git reflog --all`):**
+  - `v3` created from `v2` on 2026-09-16 16:52 (policy action — intended).
+  - `master-backup-20260914`, `v2` (from v1), and ~45 task branches (gap-*/bug-*/sec-*/9router/t_*)
+    all created **2026-09-10 → 2026-09-14, BEFORE the v3 policy** — merged into `v2` on 09-14 and
+    left behind. They are frozen leftovers, NOT active work.
+  - **No branch and no worktree was created on or after 2026-09-16 16:52 (policy moment) by any card.**
+- **Worktrees present (36 total):** all registered before the policy; belong to the same frozen
+  leftovers. `v2-wt` (detached at v2 tip) + `pr3607-wt` (feat/multi-protocol) exist but were not
+  touched by this session.
+- **Master / v2 / v3:**
+  - `master = 17c4cc76` (dates from 2026-09-14 origin/master) — never committed to after policy.
+  - `v2 = d7a9ee5d` — byte-identical to policy-moment (frozen, verified repeatedly).
+  - `v3 = 1d12566e` — sole write branch; carries 10 policy/QA commits on top of v2 tip.
+  - `git log v2..v3` = only the 6 policy/QA commits + 4 PR-3599 memory-module commits (additive
+    feature work done on v3 after policy — intended).
+- **Open cards with pre-policy worktrees flagged (kanban comments):** `t_02fa41a6`
+  (security/3673-settings-mass-assignment), `t_828425aa` (bug-3692/claude-model-echo) — bodies +
+  comments now say DO NOT use the old worktree; work on v3 only.
+
 ## 2026-09-16 — Mandatory QA gate added to branch policy (card self-verification)
 
 ### directive: cards must verify their own work
