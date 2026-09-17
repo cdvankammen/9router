@@ -15,7 +15,7 @@ import { pruneHistoricalTools } from "./toolPruner.js";
 import { pruneHistoricalMedia } from "./mediaPruner.js";
 import { compactContextWindow } from "./contextCompactor.js";
 import { anchorPromptCache } from "./cacheAnchor.js";
-import { injectPendingHandoff } from "./handoffStore.js";
+
 
 /**
  * Apply all enabled memory enhancements to a request body in sequence.

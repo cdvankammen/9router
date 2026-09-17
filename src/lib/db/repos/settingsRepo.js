@@ -140,7 +140,7 @@ const DEFAULT_SETTINGS = {
   memoryCompactionThresholdTokens: 128000,
   memoryRecentTurnsToKeep: 8,
   memoryCacheAnchorEnabled: false,
-  memoryHandoffEnabled: false,
+  
 };
 
 async function readRaw() {

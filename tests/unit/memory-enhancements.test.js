@@ -586,15 +586,17 @@ test("applyMemoryEnhancements: cacheAnchor SKIPS on Claude passthrough (v2 ancho
   assert.deepEqual(body.system, "sys");
 });
 
-test("applyMemoryEnhancements: handoff injection requires projectKey (no-op without)", async () => {
+test("applyMemoryEnhancements: handoff is not wired (removed from shipped pipeline)", async () => {
   const body = {
-    system: "sys",
-    messages: [{ role: "user", content: "hi" }],
+    messages: [{ role: "user", content: "hello" }],
   };
-  // enabled but no projectKey → no handoff applied
   const res = await applyMemoryEnhancements(body, {
-    settings: { memoryHandoffEnabled: true },
+    settings: {},
   });
+  // Handoff toggle removed — module exists but no capture path
+  assert.equal(res.stats.handoff.applied, false);
+  assert.equal(res.stats.handoff.reason, "not wired");
+});
   assert.equal(res.stats.handoff.applied, false);
 });
 

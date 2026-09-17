@@ -18,6 +18,7 @@ export async function GET(request) {
 
     const res = await fetch("https://api.inworld.ai/tts/v1/voices", {
       headers: { "Authorization": `Basic ${apiKey}` },
+      signal: AbortSignal.timeout(10_000),
     });
     if (!res.ok) {
       const text = await res.text().catch(() => "");

@@ -13,7 +13,7 @@ export default function MemoryClient() {
   const [memoryRecentTurnsToKeep, setMemoryRecentTurnsToKeep] = useState(8);
   const [memoryCacheAnchorEnabled, setMemoryCacheAnchorEnabled] = useState(false);
   const [patchError, setPatchError] = useState(null);
-  const [memoryHandoffEnabled, setMemoryHandoffEnabled] = useState(false);
+  // Handoff toggle removed — module exists but no capture path wired yet
 
   const patchSetting = async (patch) => {
     setPatchError(null);
@@ -46,7 +46,7 @@ export default function MemoryClient() {
           if (typeof data.memoryCompactionThresholdTokens === "number") setMemoryCompactionThresholdTokens(data.memoryCompactionThresholdTokens);
           if (typeof data.memoryRecentTurnsToKeep === "number") setMemoryRecentTurnsToKeep(data.memoryRecentTurnsToKeep);
           setMemoryCacheAnchorEnabled(!!data.memoryCacheAnchorEnabled);
-          setMemoryHandoffEnabled(!!data.memoryHandoffEnabled);
+          // memoryHandoffEnabled removed from settings
         }
       } catch (err) {
         console.error("Failed to load memory settings:", err);
@@ -75,10 +75,7 @@ export default function MemoryClient() {
     patchSetting({ memoryCacheAnchorEnabled: value });
   };
 
-  const handleMemoryHandoff = (value) => {
-    setMemoryHandoffEnabled(value);
-    patchSetting({ memoryHandoffEnabled: value });
-  };
+  // handleMemoryHandoff removed — no capture path wired yet
 
   return (
     <div className="space-y-6 p-6">

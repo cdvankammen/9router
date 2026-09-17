@@ -59,12 +59,20 @@ base:     d7a9ee5d  (v2 tip at time of policy creation — v3 == v2, byte-identi
 
 - **CODE CHANGES**: on `mini` only, working directly in the v3 branch checkout at
   `/Users/chris/Documents/GitHub/9router`.
-- **BUILD + RUN + VERIFY**: on `mini3`, `mini4`, or `mini5` ONLY. **NEVER mini** (another agent
-  runs there — interference risk). **NEVER mini2** (separate Slack bot host).
+- **BUILD + RUN + VERIFY**: on `mini3`, `mini4`, or `mini5` ONLY. **NEVER mini** (VS Code may be
+  running builds there — conflict risk). **NEVER mini2** (separate Slack bot host).
 - **NEVER run the CLI version** — must run the actual app (Next.js dev server / production build).
-- **ONE canonical worktree** for ALL cards. No per-card worktrees. All cards share the same
-  workspace on the build host. If a card needs isolation, use the shared worktree — do not create
-  a new one.
+
+### Worktree and branch strategy (Chris directive 2026-09-17)
+
+- **ONE shared worktree** on the build host (mini3/4/5) for ALL cards. No per-card worktrees.
+- **Branch strategy**: Cards MAY create feature branches (e.g., `feature/bug-3692-fix`) within the
+  shared worktree for isolation during development. However:
+  - All work must be **tested** on the feature branch
+  - All work must be **merged into v3** (the integration branch) after testing passes
+  - **v3 must always be working** — it is the stable integration target
+  - No card may leave work stranded on a feature branch without merging to v3
+- This allows parallel card work while maintaining v3 as the verified, working integration point.
 
 ### Mandatory QA gate (Chris directive, 2026-09-16)
 

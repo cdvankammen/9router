@@ -4,6 +4,14 @@
  * Inspired by ai-memory's Session Handoff mechanism:
  * Allows persisting and recovering structured handoff packets across CLI agent
  * switches (e.g. Claude Code → Codex → Cline) in the same project directory.
+ *
+ * STATUS: NOT WIRED — removed from shipped pipeline 2026-09-17.
+ * The in-memory Map dies with the process, which defeats "cross-session" handoff.
+ * Before re-wiring, needs:
+ *   1. Persistent storage (file in project dir, or DB)
+ *   2. Capture trigger (session end, proxy completion, request completion)
+ *   3. projectKey plumbing from request metadata into applyMemoryEnhancements
+ * See TIER3-MEMORY-HANDOFF kanban card for design notes.
  */
 
 // In-memory runtime handoff registry keyed by project key or session key

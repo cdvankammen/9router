@@ -28,13 +28,13 @@ async function showMemoryMenu(breadcrumb = []) {
       const mediaOn = settings.memoryMediaPruningEnabled === true;
       const compactOn = settings.memoryCompactionEnabled === true;
       const cacheOn = settings.memoryCacheAnchorEnabled !== false;
-      const handoffOn = settings.memoryHandoffEnabled === true;
+      // Handoff toggle removed — module exists but no capture path wired yet
 
       lines.push(`  Tool Pruner:     ${toolOn ? `${COLORS.green}ON${COLORS.reset}` : `${COLORS.red}OFF${COLORS.reset}`} ${COLORS.dim}(keep ${settings.memoryMaxToolTurnsKeepFull ?? 2} recent turns, max ${settings.memoryMaxHistoricalToolChars ?? 4000} chars)${COLORS.reset}`);
       lines.push(`  Media Pruner:    ${mediaOn ? `${COLORS.green}ON${COLORS.reset}` : `${COLORS.red}OFF${COLORS.reset}`} ${COLORS.dim}(prune old base64 images/audio)${COLORS.reset}`);
       lines.push(`  Context Compact: ${compactOn ? `${COLORS.green}ON${COLORS.reset}` : `${COLORS.red}OFF${COLORS.reset}`} ${COLORS.dim}(threshold: ${settings.memoryCompactionThresholdTokens ?? 128000} tokens)${COLORS.reset}`);
       lines.push(`  Cache Anchor:    ${cacheOn ? `${COLORS.green}ON${COLORS.reset}` : `${COLORS.red}OFF${COLORS.reset}`} ${COLORS.dim}(Anthropic / Gemini prompt cache)${COLORS.reset}`);
-      lines.push(`  Handoff Store:   ${handoffOn ? `${COLORS.green}ON${COLORS.reset}` : `${COLORS.red}OFF${COLORS.reset}`} ${COLORS.dim}(cross-agent session continuity)${COLORS.reset}`);
+      lines.push(`  Handoff Store:   ${COLORS.dim}(not wired — module exists, no capture path)${COLORS.reset}`);
 
       return lines.join("\n");
     },
@@ -87,11 +87,11 @@ async function showMemoryMenu(breadcrumb = []) {
       },
       {
         label: (d) => {
-          const on = d?.settings?.memoryHandoffEnabled === true;
-          return `Cross-Session Handoff Continuity: ${on ? "ON" : "OFF"} → toggle`;
+          return `Cross-Session Handoff Continuity: (not wired)`;
         },
         action: async (d) => {
-          await toggleMemorySetting("memoryHandoffEnabled", d?.settings?.memoryHandoffEnabled === true, "Cross-Session Handoff");
+          // Handoff toggle removed — no capture path wired yet
+          console.log(`${COLORS.yellow}Handoff store not yet wired — module exists but needs persistent capture path${COLORS.reset}`);
           return true;
         }
       }
