@@ -1528,3 +1528,9 @@ no schema changes, no new SSRF surface.
 - Prior background run on mini used `--reporter=basic` → crashed with known vitest 4.1.11 ERR_LOAD_URL (custom-reporter module load). No code state changed; run invalid for tally.
 - tests/package.json "test" script itself uses `--reporter=verbose` — same crash class. Correct invocation: `npx vitest run` (default reporter).
 - Per HOST-ISOLATION: verification moved to mini3 (node 26.8.1/npm 11.19.0). Cloned v3 from bundle (tip 562e30e2), npm install tests (45 packages), full suite running via default reporter (proc background, notify on done).
+
+## 2026-09-17 — v3 full-suite QA baseline (mini3, default reporter, root deps installed)
+- mini3 ~/9router-v3 (v3 @ 562e30e2) — `npx vitest run` (default reporter; basic/verbose crash ERR_LOAD_URL).
+- TALLY: Test Files 30 failed | 272 passed | 11 skipped (313); Tests 87 failed | 2697 passed | 17 expected fail | 66 skipped (2867). Duration 28s.
+- Root-deps fix moved 115→87 failures (missing root node_modules → 'Cannot find package open' class).
+- Failure classes are pre-existing test drift (e.g. windsurf-executor baseUrl expects windsurf.com, impl returns codeium.com) — not v3 regressions from merges. Baseline for QA gate: 87 pre-existing failures.
