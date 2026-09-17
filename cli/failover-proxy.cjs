@@ -36,6 +36,7 @@ function hasFlag(name) {
 
 const LISTEN_PORT = Number(arg("listen", 20140));
 const LOCAL = arg("local", "http://localhost:20130");
+const STATUS_PATH = "/api/failover-status";
 // Peer can be:
 //   - a bare HOSTNAME (e.g. "mini2-9.local") → auto-discover ALL its addresses
 //     (LAN, WiFi, Tailscale, mDNS, IPv6) dynamically — no hardcoded IPs.
@@ -135,6 +136,7 @@ function parsePeer(raw) {
 // Optimistic: local is probably up at boot (avoids a startup flap to peer).
 // peers: [{ url, up }] — the first UP peer wins.
 const state = { localUp: true, peers: [] };
+const BOOT_MS = Date.now();
 
 function probe(url) {
   return new Promise((resolve) => {
@@ -177,6 +179,22 @@ function pickTarget() {
 
 const server = http.createServer((req, res) => {
   const target = pickTarget();
+
+  // Local control-plane endpoint: the proxy answers failover status itself,
+  // never forwards it to an upstream (dashboard integration surface).
+  if (req.url === STATUS_PATH || req.url.startsWith(STATUS_PATH + "?")) {
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({
+      ok: true,
+      port: LISTEN_PORT,
+      local: { url: LOCAL, up: state.localUp },
+      activeTarget: target,
+      peers: state.peers.map((p) => ({ url: p.url, up: p.up })),
+      loopProtected: true,
+      uptimeMs: Date.now() - BOOT_MS,
+    }));
+    return;
+  }
 
   if (req.headers["x-9r-failover"] === "1") {
     res.writeHead(502, { "Content-Type": "application/json" });

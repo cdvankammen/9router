@@ -250,4 +250,23 @@ describe("failover-proxy (L2) — node-DOWN protection", () => {
     await new Promise((r) => t8local.close(r));
     await new Promise((r) => t8peer.close(r));
   }, 25000);
+
+  it("T9: /api/failover-status returns live state without forwarding upstream", async () => {
+    // Hit the proxy's own control-plane endpoint — it should be answered
+    // LOCALLY (not forwarded to any upstream) and return current probe state.
+    const r = await request(PROXY_PORT, { method: "GET", path: "/api/failover-status", timeoutMs: 3000 });
+    expect(r.status).toBe(200);
+    const body = JSON.parse(r.body);
+    expect(body.ok).toBe(true);
+    expect(typeof body.port).toBe("number");
+    expect(typeof body.local).toBe("object");
+    expect(typeof body.local.up).toBe("boolean");
+    expect(typeof body.local.url).toBe("string");
+    expect(typeof body.activeTarget).toBe("string");
+    expect(Array.isArray(body.peers)).toBe(true);
+    expect(typeof body.loopProtected).toBe("boolean");
+    expect(typeof body.uptimeMs).toBe("number");
+    // Loop protection must NOT trigger on the control-plane endpoint itself
+    expect(body.loopProtected).toBe(true);
+  });
 });
