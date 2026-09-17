@@ -11,18 +11,24 @@ export default function MemoryClient() {
   const [memoryCompactionEnabled, setMemoryCompactionEnabled] = useState(false);
   const [memoryCompactionThresholdTokens, setMemoryCompactionThresholdTokens] = useState(128000);
   const [memoryRecentTurnsToKeep, setMemoryRecentTurnsToKeep] = useState(8);
-  const [memoryCacheAnchorEnabled, setMemoryCacheAnchorEnabled] = useState(true);
+  const [memoryCacheAnchorEnabled, setMemoryCacheAnchorEnabled] = useState(false);
+  const [patchError, setPatchError] = useState(null);
   const [memoryHandoffEnabled, setMemoryHandoffEnabled] = useState(false);
 
   const patchSetting = async (patch) => {
+    setPatchError(null);
     try {
-      await fetch("/api/settings", {
+      const res = await fetch("/api/settings", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(patch),
       });
+      if (!res.ok) {
+        const text = await res.text().catch(() => res.statusText);
+        setPatchError(`Failed to save: ${text}`);
+      }
     } catch (error) {
-      console.log("Error updating memory setting:", error);
+      setPatchError(`Network error: ${error.message}`);
     }
   };
 
@@ -39,7 +45,7 @@ export default function MemoryClient() {
           setMemoryCompactionEnabled(!!data.memoryCompactionEnabled);
           if (typeof data.memoryCompactionThresholdTokens === "number") setMemoryCompactionThresholdTokens(data.memoryCompactionThresholdTokens);
           if (typeof data.memoryRecentTurnsToKeep === "number") setMemoryRecentTurnsToKeep(data.memoryRecentTurnsToKeep);
-          setMemoryCacheAnchorEnabled(data.memoryCacheAnchorEnabled !== false);
+          setMemoryCacheAnchorEnabled(!!data.memoryCacheAnchorEnabled);
           setMemoryHandoffEnabled(!!data.memoryHandoffEnabled);
         }
       } catch (err) {
@@ -101,6 +107,15 @@ export default function MemoryClient() {
           </div>
         </div>
       </div>
+
+      {/* Error banner */}
+      {patchError && (
+        <div className="bg-red-500/10 border border-red-500/30 text-red-400 text-sm rounded-lg px-4 py-2 flex items-center gap-2">
+          <span className="material-symbols-outlined text-base">error</span>
+          {patchError}
+          <button onClick={() => setPatchError(null)} className="ml-auto text-xs underline hover:opacity-80">Dismiss</button>
+        </div>
+      )}
 
       {/* Phase 1: Tool Output Pruning */}
       <Card id="tool-pruning">

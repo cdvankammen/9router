@@ -9,6 +9,7 @@ import { compactContextWindow, validateSequence } from "../../open-sse/services/
 // index tests once those modules land on the branch.
 
 import { anchorPromptCache } from "../../open-sse/services/memory/cacheAnchor.js";
+import { applyMemoryEnhancements } from "../../open-sse/services/memory/index.js";
 
 test("Tool Pruner: preserves recent tool turns and truncates older ones", () => {
   const largeOutput1 = "Line 1: error in compilation\n".repeat(50);
@@ -531,4 +532,184 @@ test("Cache Anchor: non-Claude formats → no-op", () => {
   const res = anchorPromptCache(body, { enabled: true, format: "openai" });
   assert.equal(res.anchored, false);
   assert.deepEqual(body, { system: "sys", messages: [{ role: "user", content: "hi" }] });
+});
+
+test("applyMemoryEnhancements: defaults to safe non-lossy behavior (nothing applied)", async () => {
+  const body = {
+    system: "sys",
+    messages: [
+      { role: "user", content: "hi" },
+      { role: "assistant", content: "hello" },
+    ],
+  };
+  const res = await applyMemoryEnhancements(body, { settings: {} });
+  assert.equal(res.stats.toolPruning.applied, false);
+  assert.equal(res.stats.mediaPruning.applied, false);
+  assert.equal(res.stats.compaction.applied, false);
+  assert.equal(res.stats.cacheAnchor.applied, false);
+  assert.equal(res.stats.handoff.applied, false);
+  assert.deepEqual(res.body, body, "body must be untouched with all defaults off");
+});
+
+test("applyMemoryEnhancements: null/undefined body → untouched + stats", async () => {
+  const res = await applyMemoryEnhancements(null, { settings: { memoryToolPruningEnabled: true } });
+  assert.equal(res.body, null);
+  assert.equal(res.stats.toolPruning.applied, false);
+});
+
+test("applyMemoryEnhancements: cacheAnchor runs on translated Claude route (v2 delegation)", async () => {
+  const body = {
+    system: "sys",
+    messages: [{ role: "user", content: "hi" }],
+  };
+  const res = await applyMemoryEnhancements(body, {
+    settings: { memoryCacheAnchorEnabled: true },
+    targetFormat: "claude",
+    passthrough: false,
+    clientTool: "codex",
+  });
+  assert.equal(res.stats.cacheAnchor.applied, true);
+});
+
+test("applyMemoryEnhancements: cacheAnchor SKIPS on Claude passthrough (v2 anchor covers it)", async () => {
+  const body = {
+    system: "sys",
+    messages: [{ role: "user", content: "hi" }],
+  };
+  const res = await applyMemoryEnhancements(body, {
+    settings: { memoryCacheAnchorEnabled: true },
+    targetFormat: "claude",
+    passthrough: true,
+    clientTool: "claude",
+  });
+  assert.equal(res.stats.cacheAnchor.applied, false);
+  assert.deepEqual(body.system, "sys");
+});
+
+test("applyMemoryEnhancements: handoff injection requires projectKey (no-op without)", async () => {
+  const body = {
+    system: "sys",
+    messages: [{ role: "user", content: "hi" }],
+  };
+  // enabled but no projectKey → no handoff applied
+  const res = await applyMemoryEnhancements(body, {
+    settings: { memoryHandoffEnabled: true },
+  });
+  assert.equal(res.stats.handoff.applied, false);
+});
+
+test("applyMemoryEnhancements: tool pruning runs when enabled", async () => {
+  const body = {
+    messages: [
+      { role: "user", content: "u1" },
+      { role: "assistant", content: "a1", tool_calls: [{ id: "c1", type: "function", function: { name: "read_file", arguments: "{}" } }] },
+      { role: "tool", tool_call_id: "c1", content: "DATA ".repeat(2000) },
+      { role: "user", content: "u2" },
+      { role: "assistant", content: "a2", tool_calls: [{ id: "c2", type: "function", function: { name: "ls", arguments: "{}" } }] },
+      { role: "tool", tool_call_id: "c2", content: "FILE ".repeat(2000) },
+      { role: "user", content: "u3" },
+      { role: "assistant", content: "a3", tool_calls: [{ id: "c3", type: "function", function: { name: "git_diff", arguments: "{}" } }] },
+      { role: "tool", tool_call_id: "c3", content: "DIFF ".repeat(2000) },
+      { role: "user", content: "u4" },
+      { role: "assistant", content: "a4" },
+    ],
+  };
+  // 3 tool results, keepRecentTurns=2 → the oldest (c1) is eligible for pruning
+  const res = await applyMemoryEnhancements(body, {
+    settings: {
+      memoryToolPruningEnabled: true,
+      memoryMaxToolTurnsKeepFull: 2,
+      memoryMaxHistoricalToolChars: 500,
+    },
+  });
+  assert.equal(res.stats.toolPruning.applied, true);
+  assert.ok(res.stats.toolPruning.savedChars > 0);
+  assert.equal(body.messages[2].content.includes("truncated by 9router memory optimizer"), true);
+  // Recent two tool results stay intact
+  assert.equal(body.messages[5].content.includes("truncated"), false);
+  assert.equal(body.messages[8].content.includes("truncated"), false);
+});
+
+test("applyMemoryEnhancements: media pruning runs when enabled", async () => {
+  const body = {
+    messages: [
+      {
+        role: "user",
+        content: [
+          { type: "text", text: "old" },
+          { type: "image_url", image_url: { url: "data:image/png;base64,AAAA" } },
+        ],
+      },
+      { role: "assistant", content: "ok" },
+      { role: "user", content: [{ type: "text", text: "current" }] },
+    ],
+  };
+  const res = await applyMemoryEnhancements(body, {
+    settings: { memoryMediaPruningEnabled: true },
+  });
+  assert.equal(res.stats.mediaPruning.applied, true);
+});
+
+test("applyMemoryEnhancements: compaction runs when enabled and threshold exceeded", async () => {
+  // Build a conversation that clearly exceeds a tiny threshold
+  const messages = [];
+  for (let i = 0; i < 12; i++) {
+    messages.push({ role: "user", content: `message number ${i} `.repeat(50) });
+    messages.push({ role: "assistant", content: `response number ${i} `.repeat(50) });
+  }
+  const body = { messages };
+  const res = await applyMemoryEnhancements(body, {
+    settings: {
+      memoryCompactionEnabled: true,
+      memoryCompactionThresholdTokens: 10,
+      memoryRecentTurnsToKeep: 3,
+    },
+  });
+  assert.equal(res.stats.compaction.applied, true);
+  assert.ok(res.stats.compaction.savedTokens > 0);
+});
+
+test("applyMemoryEnhancements: all toggles together produce valid final sequence", async () => {
+  const messages = [
+    { role: "user", content: "u1" },
+    { role: "assistant", content: "a1", tool_calls: [{ id: "c1", type: "function", function: { name: "read_file", arguments: "{}" } }] },
+    { role: "tool", tool_call_id: "c1", content: "DATA ".repeat(2000) },
+    { role: "user", content: "u2" },
+    { role: "assistant", content: "a2", tool_calls: [{ id: "c2", type: "function", function: { name: "ls", arguments: "{}" } }] },
+    { role: "tool", tool_call_id: "c2", content: "FILE ".repeat(2000) },
+  ];
+  for (let i = 0; i < 8; i++) {
+    messages.push({ role: "user", content: `extra ${i} `.repeat(100) });
+    messages.push({ role: "assistant", content: `extra-a ${i} `.repeat(100) });
+  }
+  const body = { system: "sys", messages };
+  const res = await applyMemoryEnhancements(body, {
+    settings: {
+      memoryToolPruningEnabled: true,
+      memoryMaxToolTurnsKeepFull: 2,
+      memoryMaxHistoricalToolChars: 200,
+      memoryMediaPruningEnabled: false,
+      memoryCompactionEnabled: true,
+      memoryCompactionThresholdTokens: 10,
+      memoryRecentTurnsToKeep: 4,
+      memoryCacheAnchorEnabled: true,
+    },
+    targetFormat: "claude",
+    passthrough: false,
+    clientTool: "codex",
+  });
+  assert.equal(res.stats.cacheAnchor.applied, true);
+  // Final sequence must be valid: no dangling tool_call_id, no consecutive same-role
+  const finalMessages = res.body.messages;
+  for (let i = 1; i < finalMessages.length; i++) {
+    const prev = finalMessages[i - 1];
+    const cur = finalMessages[i];
+    if (cur.role === "tool") {
+      const hasCall = finalMessages.some(
+        (m) => m.role === "assistant" && m.tool_calls?.some((tc) => tc.id === cur.tool_call_id)
+      );
+      assert.ok(hasCall, `dangling tool result at index ${i} (tool_call_id=${cur.tool_call_id})`);
+    }
+    assert.notEqual(prev.role, cur.role, `consecutive same-role at ${i}: ${prev.role}->${cur.role}`);
+  }
 });
