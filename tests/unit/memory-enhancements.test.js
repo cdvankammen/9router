@@ -4,9 +4,11 @@ import assert from "node:assert/strict";
 import { pruneHistoricalTools } from "../../open-sse/services/memory/toolPruner.js";
 import { compactContextWindow, validateSequence } from "../../open-sse/services/memory/contextCompactor.js";
 
-// NOTE: This file currently covers the Tool Pruner and Context Compactor
-// modules. TIER3-MEMORY-INTEGRATE extends it with mediaPruner / cacheAnchor /
-// handoffStore / index tests once those modules land on the branch.
+// NOTE: This file covers the Tool Pruner, Context Compactor, and Cache Anchor
+// modules. TIER3-MEMORY-INTEGRATE extends it with mediaPruner / handoffStore /
+// index tests once those modules land on the branch.
+
+import { anchorPromptCache } from "../../open-sse/services/memory/cacheAnchor.js";
 
 test("Tool Pruner: preserves recent tool turns and truncates older ones", () => {
   const largeOutput1 = "Line 1: error in compilation\n".repeat(50);
@@ -387,4 +389,146 @@ test("Context Compactor: input field (not messages) → compacted via input arra
   assert.ok(Array.isArray(body.input));
   assert.ok(body.input.length < messages.length);
   assert.equal(validateSequence(body.input).valid, true);
+});
+// =========================================================================
+// Cache Anchor — reimplemented on v2 anchorClaudeCache semantics (TIER3-MEMORY-CACHE)
+// =========================================================================
+
+test("Cache Anchor: enabled=false → no anchoring, anchored=false", () => {
+  const body = { system: "sys", messages: [{ role: "user", content: "hi" }] };
+  const res = anchorPromptCache(body, { enabled: false, format: "claude" });
+  assert.equal(res.anchored, false);
+  assert.deepEqual(body, { system: "sys", messages: [{ role: "user", content: "hi" }] });
+});
+
+test("Cache Anchor: null/undefined body → no anchoring", () => {
+  assert.deepEqual(anchorPromptCache(null, { enabled: true }), { body: null, anchored: false });
+  assert.deepEqual(anchorPromptCache(undefined, { enabled: true }), { body: undefined, anchored: false });
+});
+
+test("Cache Anchor: Claude passthrough (clientTool=claude) → SKIP (v2 anchor covers it)", () => {
+  const body = {
+    system: "sys",
+    tools: [{ name: "bash", description: "run" }],
+    messages: [{ role: "user", content: "hello" }],
+  };
+  const res = anchorPromptCache(body, {
+    enabled: true,
+    format: "claude",
+    passthrough: true,
+    clientTool: "claude",
+  });
+  // Must NOT anchor: v2's anchorClaudeCache runs later in chatCore and handles
+  // this case. Anchoring here would be redundant (double-anchor) and could emit
+  // intermediate invalid shapes (defer_loading + cache_control).
+  assert.equal(res.anchored, false);
+  assert.equal(typeof body.system, "string", "system must stay a string on passthrough");
+  assert.equal(body.system, "sys");
+  assert.equal(body.tools[0].cache_control, undefined, "tools must not get cache_control");
+  assert.equal(body.messages[0].content, "hello");
+});
+
+test("Cache Anchor: Claude translated route → delegates to v2 anchorClaudeCache (1h TTL)", () => {
+  // v2's anchorClaudeCache does NOT convert system string→array — that was the
+  // naive PR's mistake. It only anchors when system is already an array (the
+  // translator pipeline handles string→array conversion separately). Pass system
+  // as an array to test the anchoring path that v2 actually exercises.
+  const body = {
+    system: [{ type: "text", text: "sys" }],
+    tools: [{ name: "bash", description: "run" }],
+    messages: [{ role: "user", content: "hello" }],
+  };
+  const res = anchorPromptCache(body, {
+    enabled: true,
+    format: "claude",
+    passthrough: false,
+    clientTool: null, // translated route — not the claude passthrough
+  });
+  assert.equal(res.anchored, true);
+
+  // v2 semantics: last system block gets 1h TTL
+  assert.ok(Array.isArray(body.system), "system stays as array");
+  assert.equal(body.system.length, 1);
+  assert.deepEqual(body.system[0].cache_control, { type: "ephemeral", ttl: "1h" });
+
+  // Tool gets 1h TTL
+  assert.deepEqual(body.tools[0].cache_control, { type: "ephemeral", ttl: "1h" });
+});
+
+test("Cache Anchor: system string stays string on translated route (v2 does not convert)", () => {
+  // Regression: the naive PR impl converted system string→array with 5m TTL.
+  // v2's anchorClaudeCache only anchors Array.isArray(body.system) — it does
+  // NOT do string→array conversion. That's the translator's job.
+  const body = {
+    system: "plain string system",
+    tools: [{ name: "bash", description: "run" }],
+    messages: [{ role: "user", content: "hello" }],
+  };
+  const res = anchorPromptCache(body, {
+    enabled: true,
+    format: "claude",
+    passthrough: false,
+  });
+  assert.equal(res.anchored, true);
+  assert.equal(typeof body.system, "string", "system must stay string — v2 does not convert");
+  assert.equal(body.system, "plain string system");
+  // Tool still gets anchored with 1h TTL
+  assert.deepEqual(body.tools[0].cache_control, { type: "ephemeral", ttl: "1h" });
+});
+
+test("Cache Anchor: defer_loading tool NEVER carries cache_control (#3567)", () => {
+  const body = {
+    system: "sys",
+    tools: [
+      { name: "normal", description: "cachable" },
+      { name: "deferred", description: "deferred", defer_loading: true },
+    ],
+    messages: [{ role: "user", content: "hello" }],
+  };
+  const res = anchorPromptCache(body, {
+    enabled: true,
+    format: "claude",
+  });
+  assert.equal(res.anchored, true);
+
+  // The cache anchor lands on the LAST cacheable tool (normal), NOT the deferred one
+  assert.equal(body.tools[0].defer_loading, undefined);
+  assert.deepEqual(body.tools[0].cache_control, { type: "ephemeral", ttl: "1h" });
+  assert.equal(body.tools[1].cache_control, undefined, "defer_loading tool must NOT carry cache_control");
+});
+
+test("Cache Anchor: all tools defer_loading → no tool cache_control (budget still works)", () => {
+  const body = {
+    system: "sys",
+    tools: [
+      { name: "d1", description: "deferred", defer_loading: true },
+      { name: "d2", description: "deferred", defer_loading: true },
+    ],
+    messages: [{ role: "user", content: "hi" }],
+  };
+  const res = anchorPromptCache(body, { enabled: true, format: "claude" });
+  assert.equal(res.anchored, true);
+  assert.equal(body.tools[0].cache_control, undefined);
+  assert.equal(body.tools[1].cache_control, undefined);
+});
+
+test("Cache Anchor: system stays string on passthrough — v2 anchor does the string→array only when needed", () => {
+  // Regression for the review finding: naive PR impl mutated system string → array
+  // even on passthrough, then v2 re-anchored. Now passthrough is skipped entirely.
+  const body = { system: "plain string", messages: [{ role: "user", content: "x" }] };
+  const res = anchorPromptCache(body, {
+    enabled: true,
+    format: "claude",
+    passthrough: true,
+    clientTool: "claude",
+  });
+  assert.equal(res.anchored, false);
+  assert.equal(typeof body.system, "string", "must not convert string→array on passthrough");
+});
+
+test("Cache Anchor: non-Claude formats → no-op", () => {
+  const body = { system: "sys", messages: [{ role: "user", content: "hi" }] };
+  const res = anchorPromptCache(body, { enabled: true, format: "openai" });
+  assert.equal(res.anchored, false);
+  assert.deepEqual(body, { system: "sys", messages: [{ role: "user", content: "hi" }] });
 });

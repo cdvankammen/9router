@@ -5,6 +5,7 @@ const { showApiKeysMenu } = require("./menus/apiKeys");
 const { showCombosMenu } = require("./menus/combos");
 const { showSettingsMenu } = require("./menus/settings");
 const { showCliToolsMenu } = require("./menus/cliTools");
+const { showMemoryMenu } = require("./menus/memory");
 
 const COLORS = {
   reset: "\x1b[0m",
@@ -96,6 +97,13 @@ async function startTerminalUI(port) {
         label: "Combos",
         action: async () => {
           await showCombosMenu([...basePath, "Combos"]);
+          return true;
+        }
+      },
+      {
+        label: "Memory & Context",
+        action: async () => {
+          await showMemoryMenu([...basePath, "Memory & Context"]);
           return true;
         }
       },

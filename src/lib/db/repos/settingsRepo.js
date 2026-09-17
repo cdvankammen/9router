@@ -131,6 +131,16 @@ const DEFAULT_SETTINGS = {
   // "glm-5.3" or "glm-5*"). Consumed by open-sse/providers/capabilities.js
   // via setContextWindowOverrides(); managed on /dashboard/model-context.
   contextWindowOverrides: {},
+  // ── AI Memory & Context Optimization (PR #3599 additive) ──
+  memoryToolPruningEnabled: false,
+  memoryMaxToolTurnsKeepFull: 2,
+  memoryMaxHistoricalToolChars: 4000,
+  memoryMediaPruningEnabled: false,
+  memoryCompactionEnabled: false,
+  memoryCompactionThresholdTokens: 128000,
+  memoryRecentTurnsToKeep: 8,
+  memoryCacheAnchorEnabled: false,
+  memoryHandoffEnabled: false,
 };
 
 async function readRaw() {
