@@ -55,6 +55,29 @@ path:     /Users/chris/Documents/GitHub/9router
 base:     d7a9ee5d  (v2 tip at time of policy creation — v3 == v2, byte-identical)
 ```
 
+### Mandatory QA gate (Chris directive, 2026-09-16)
+
+Before ANY card on the 9router boards may be marked `done`, the worker MUST:
+
+1. **Run the repo test suite on `v3`** and record pass/fail counts (e.g. `cd tests && npx vitest run`).
+   Baseline at policy time (2026-09-16): **2657 passed / 76 failed / 17 expected-fail / 66 skipped** —
+   known pre-existing failures include `unit/cursor-agent-proto.test.js` (35; upstream
+   `open-sse/utils/cursorProtobuf.js` lacks `encodeAgentValue`) and `unit/security-audit.test.js`
+   (13; test references `tests/src/...` path that does not exist). Any NEW failure introduced by a
+   card must be fixed or justified before completion.
+2. **Verify the change functionally** with at least one REAL check, choosing from:
+   - headless browser (Playwright/Puppeteer/browser_exec) against the running dashboard —
+     screenshot saved as evidence;
+   - direct API/CLI invocation (curl / node script) proving the end-to-end behavior;
+   - automated unit/integration test exercising the changed path (must pass).
+3. **Record the evidence IN THE CARD** (`result` / comments): test counts, screenshots, or
+   reproduction steps.
+4. **NEVER commit outside `v3`.** No new branches. No worktrees. No merges to `master` without
+   explicit, word-for-word instruction.
+
+This gate is mirrored in every card body on the `9router`, `9router-mcp-hub-kanban`, and
+`9router-mcp-hub-skills` boards as the `CARD-QA-GATE` block.
+
 ---
 
 ## 2. Why (context, 2026-09-16)
