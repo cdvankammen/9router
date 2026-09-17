@@ -64,7 +64,10 @@
    - `open-sse/executors/index.js` — removed dead `NineRouterExecutor` import (abandoned approach; file never existed in git)
    - Committed as `26ba46db` `fix(build): restore lost untracked files + merge artifacts for v2 build`
    - Note: first build attempt hit webpack `WasmHash` crash — fixed by `rm -rf .next/cache`
-3. ⏳ `npm run cli:pack` — running in background
+3. ✅ `npm run cli:pack` — **DONE 2026-09-17**: `9router-0.5.75.tgz` (14.9 MB, 3421 files). Notes:
+   - Requires `JWT_SECRET` exported at build time (route config collection) — `env JWT_SECRET=$(cat ~/.9router/jwt-secret) npm run cli:pack`
+   - First attempts crashed with `uncaughtException TypeError: Cannot read properties of undefined (reading 'length')` right after "Creating an optimized production build" — caused by a **stale `.next-cli-build/cache`**; fixed with `rm -rf .next-cli-build/cache .next-cli-build/diagnostics`
+   - Verified: extracted tarball boots (`node custom-server.js` → Ready, DB migrations applied, `/api/health` 200, `/login` 200, `/v1/models` 200, `/dashboard` 307→login)
 4. `cd tests && npm install && npx vitest run`
 5. Compare vs `known-fails.txt` baseline — only pre-existing failures allowed
 
