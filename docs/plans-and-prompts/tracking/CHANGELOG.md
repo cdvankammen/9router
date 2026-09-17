@@ -1510,3 +1510,16 @@ no schema changes, no new SSRF surface.
 - Files: `src/app/(dashboard)/dashboard/providers/[id]/page.js`
   (`handleImportModels`, new `importModelsProgress` state, button JSX).
 - See: `learnings/2026-08-13-openrouter-refresh-models-serial-import-hang.md`
+
+## 2026-09-17 — chat-log review: missing-task reconciliation (user directive)
+- Directive: "make sure your reviewing this whole chat log for tasks that are missing as well that you have not recorded and put them in their proper places on the board"
+- Reviewed full session history (state.db sessions referencing thread 1544031399110119588).
+- Created 7 missing cards on 9router board (all blocked, subscribed to thread):
+  - t_28c8f59f — RETRO pr-3610 reconciliation (merge c9d9bfc4)
+  - t_a3a90267 — RETRO pr-3625 reconciliation (merge aa529821)
+  - t_6f84b086 — RETRO feat/multi-protocol-custom-providers (merge 4dc8da37)
+  - t_f6ee400b — RETRO pr3604-review conflict resolution (merge d1b889b3)
+  - t_a2f1db7d — RETRO BUG-ERR-02 branch merge (merge fd50eeb4)
+  - t_00a1575b — RETRO dual-instance model-loading conflict research (28-dual-instance-conflicts-and-cleanup.md)
+  - t_9682b6d7 — OPS chat-log review itself
+- Board-level rules updated: HOST-ISOLATION block added to board.json (was only on cards).

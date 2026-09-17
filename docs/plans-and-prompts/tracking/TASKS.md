@@ -917,3 +917,11 @@ Open questions for user (block 83/84/85): auto-disable behavior; pricing re-fetc
 - Live browser click-through re-verification of the fixed button (backend/API
   behavior confirmed via curl; UI interaction not yet re-tested in-browser this
   session)
+
+## 2026-09-17 — chat-log missing-task reconciliation
+- [x] Review full chat log (state.db sessions referencing 1544031399110119588) for unrecorded tasks
+- [x] Create 5 RETRO reconciliation cards (pr-3610, pr-3625, multi-protocol, pr3604-review, BUG-ERR-02)
+- [x] Create RETRO dual-instance research card (28-dual-instance-conflicts-and-cleanup.md)
+- [x] Create OPS chat-log-review tracking card
+- [x] Add HOST-ISOLATION block to board.json description
+- [x] Subscribe all 7 new cards to thread 1544031399110119588
