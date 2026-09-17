@@ -55,6 +55,17 @@ path:     /Users/chris/Documents/GitHub/9router
 base:     d7a9ee5d  (v2 tip at time of policy creation — v3 == v2, byte-identical)
 ```
 
+### Host isolation (Chris directive 2026-09-17)
+
+- **CODE CHANGES**: on `mini` only, working directly in the v3 branch checkout at
+  `/Users/chris/Documents/GitHub/9router`.
+- **BUILD + RUN + VERIFY**: on `mini3`, `mini4`, or `mini5` ONLY. **NEVER mini** (another agent
+  runs there — interference risk). **NEVER mini2** (separate Slack bot host).
+- **NEVER run the CLI version** — must run the actual app (Next.js dev server / production build).
+- **ONE canonical worktree** for ALL cards. No per-card worktrees. All cards share the same
+  workspace on the build host. If a card needs isolation, use the shared worktree — do not create
+  a new one.
+
 ### Mandatory QA gate (Chris directive, 2026-09-16)
 
 Before ANY card on the 9router boards may be marked `done`, the worker MUST:
