@@ -6,13 +6,15 @@ vi.mock("../../open-sse/utils/proxyFetch.js", () => ({
 
 import { proxyAwareFetch } from "../../open-sse/utils/proxyFetch.js";
 import { getUsageForProvider } from "../../open-sse/services/usage.js";
+import { buildOpenRouterQuota } from "../../open-sse/services/usage/openrouter.js";
 import {
   USAGE_SUPPORTED_PROVIDERS,
   USAGE_APIKEY_PROVIDERS,
 } from "../../src/shared/constants/providers.js";
 import { parseQuotaData } from "../../src/app/(dashboard)/dashboard/usage/components/ProviderLimits/utils.js";
 
-const USAGE_URL = "https://openrouter.ai/api/v1/auth/key";
+const USAGE_URL = "https://openrouter.ai/api/v1/key";
+const TEST_KEY = "sk-or-test";
 
 function response(body, { status = 200, headers = {} } = {}) {
   return new Response(JSON.stringify(body), {
@@ -28,27 +30,57 @@ describe("openrouter registry usage flags", () => {
   });
 });
 
+describe("buildOpenRouterQuota", () => {
+  it("prefers limit_remaining over computed total - used", () => {
+    const q = buildOpenRouterQuota({
+      usage: 3,
+      limit: 10,
+      limit_remaining: 5,
+    });
+    expect(q).toMatchObject({
+      name: "credits",
+      used: 3,
+      total: 10,
+      remaining: 5,
+      unlimited: false,
+    });
+    expect(q.remainingPercentage).toBe(50);
+  });
+
+  it("falls back to total - used when limit_remaining is absent", () => {
+    const q = buildOpenRouterQuota({ usage: 2, limit: 10 });
+    expect(q.remaining).toBe(8);
+    expect(q.remainingPercentage).toBe(80);
+  });
+
+  it("flags unlimited when limit is null", () => {
+    const q = buildOpenRouterQuota({ usage: 500, limit: null });
+    expect(q).toMatchObject({ used: 500, total: 0, unlimited: true });
+    expect(q.remainingPercentage).toBe(100);
+  });
+});
+
 describe("getUsageForProvider(openrouter)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("GETs the auth/key endpoint with Bearer apiKey", async () => {
+  it("GETs the key endpoint with Bearer apiKey", async () => {
     proxyAwareFetch.mockResolvedValueOnce(
       response({
         data: {
           label: "My Key",
-          usage: 1000,
-          limit: 5000,
+          usage: 2,
+          limit: 10,
+          limit_remaining: 8,
           is_free_tier: false,
-          credits: { total: 10, used: 2, remaining: 8 },
         },
       }),
     );
 
     const usage = await getUsageForProvider({
       provider: "openrouter",
-      apiKey: "sk-or-test",
+      apiKey: TEST_KEY,
     });
 
     expect(usage.message).toBeUndefined();
@@ -57,58 +89,55 @@ describe("getUsageForProvider(openrouter)", () => {
     const [url, opts, proxyOptions] = proxyAwareFetch.mock.calls[0];
     expect(url).toBe(USAGE_URL);
     expect(opts.method).toBe("GET");
-    expect(opts.headers.Authorization).toBe("Bearer sk-or-test");
+    expect(opts.headers.Authorization).toBe("Bearer " + TEST_KEY);
     expect(proxyOptions).toBeNull();
   });
 
-  it("parses credits + token quotas", async () => {
+  it("maps paid-tier credits to a single credits quota", async () => {
     proxyAwareFetch.mockResolvedValueOnce(
       response({
         data: {
           label: "My Key",
-          usage: 1000,
-          limit: 5000,
+          usage: 2,
+          limit: 10,
+          limit_remaining: 8,
           is_free_tier: false,
-          credits: { total: 10, used: 2, remaining: 8 },
         },
       }),
     );
 
     const usage = await getUsageForProvider({
       provider: "openrouter",
-      apiKey: "sk-or-test",
+      apiKey: TEST_KEY,
     });
 
-    expect(usage.quotas["Credits (USD)"]).toMatchObject({
+    expect(Object.keys(usage.quotas)).toEqual(["credits"]);
+    expect(usage.quotas.credits).toMatchObject({
       used: 2,
       total: 10,
+      remaining: 8,
       remainingPercentage: 80,
       unlimited: false,
-    });
-    expect(usage.quotas["Tokens (monthly)"]).toMatchObject({
-      used: 1000,
-      total: 5000,
-      remainingPercentage: 80,
-      unlimited: false,
+      resetAt: null,
     });
   });
 
-  it("handles free tier (is_free_tier true)", async () => {
+  it("handles free tier (is_free_tier true, no credit data)", async () => {
     proxyAwareFetch.mockResolvedValueOnce(
       response({
         data: {
           label: "Free Key",
-          usage: null,
+          usage: 0,
           limit: null,
+          limit_remaining: null,
           is_free_tier: true,
-          credits: null,
         },
       }),
     );
 
     const usage = await getUsageForProvider({
       provider: "openrouter",
-      apiKey: "sk-or-test",
+      apiKey: TEST_KEY,
     });
 
     expect(usage.plan).toBe("OpenRouter (Free Tier)");
@@ -116,25 +145,25 @@ describe("getUsageForProvider(openrouter)", () => {
     expect(usage.message).toMatch(/no quota data/i);
   });
 
-  it("handles unlimited token key (limit null) with usage present", async () => {
+  it("handles unlimited key (limit null) with usage present", async () => {
     proxyAwareFetch.mockResolvedValueOnce(
       response({
         data: {
           label: "Unlimited Key",
           usage: 500,
           limit: null,
+          limit_remaining: null,
           is_free_tier: false,
-          credits: null,
         },
       }),
     );
 
     const usage = await getUsageForProvider({
       provider: "openrouter",
-      apiKey: "sk-or-test",
+      apiKey: TEST_KEY,
     });
 
-    expect(usage.quotas["Tokens (monthly)"]).toMatchObject({
+    expect(usage.quotas.credits).toMatchObject({
       used: 500,
       total: 0,
       unlimited: true,
@@ -152,7 +181,7 @@ describe("getUsageForProvider(openrouter)", () => {
     );
     const auth = await getUsageForProvider({
       provider: "openrouter",
-      apiKey: "sk-or-test",
+      apiKey: TEST_KEY,
     });
     expect(auth.message).toMatch(/auth|key/i);
   });
@@ -163,7 +192,7 @@ describe("getUsageForProvider(openrouter)", () => {
     );
     const usage = await getUsageForProvider({
       provider: "openrouter",
-      apiKey: "sk-or-test",
+      apiKey: TEST_KEY,
     });
     expect(usage.error).toBeUndefined();
     expect(usage.message).toMatch(/429/i);
@@ -171,25 +200,27 @@ describe("getUsageForProvider(openrouter)", () => {
 });
 
 describe("parseQuotaData(openrouter)", () => {
-  it("forwards used/total/remainingPercentage for the dashboard table", () => {
+  it("forwards the credits row for the dashboard table", () => {
     const rows = parseQuotaData("openrouter", {
       plan: "OpenRouter",
       quotas: {
-        "Credits (USD)": { used: 2, total: 10, remainingPercentage: 80 },
-        "Tokens (monthly)": { used: 1000, total: 5000, remainingPercentage: 80 },
+        credits: {
+          used: 2,
+          total: 10,
+          remaining: 8,
+          remainingPercentage: 80,
+          unlimited: false,
+        },
       },
     });
 
-    expect(rows).toHaveLength(2);
+    expect(rows).toHaveLength(1);
     expect(rows[0]).toMatchObject({
-      name: "Credits (USD)",
+      name: "credits",
       used: 2,
       total: 10,
-    });
-    expect(rows[1]).toMatchObject({
-      name: "Tokens (monthly)",
-      used: 1000,
-      total: 5000,
+      remainingPercentage: 80,
+      unlimited: false,
     });
   });
 });

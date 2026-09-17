@@ -1,55 +1,61 @@
 /**
- * OpenRouter usage — GET https://openrouter.ai/api/v1/auth/key
+ * OpenRouter usage — GET https://openrouter.ai/api/v1/key
  * Auth: Authorization: Bearer <apiKey>
  *
- * Response (2026):
- *   { data: { label, usage, limit, is_free_tier, rate_limit, credits } }
- *   - usage:  tokens used (null when key predates limits tracking)
- *   - limit:  token limit (null = unlimited key)
- *   - credits: { total, used, remaining } in USD (null when not on credits)
+ * Response (per official docs, 2026):
+ *   { data: { label, limit, limit_reset, limit_remaining,
+ *             usage, usage_daily, usage_weekly, usage_monthly,
+ *             is_free_tier, rate_limit } }
+ * All money figures are USD credits:
+ *   - limit:          credit limit for the key (null = unlimited)
+ *   - limit_remaining: remaining credits (null = unlimited)
+ *   - usage:          credits used (all time)
  *
- * Docs: https://openrouter.ai/docs/api-reference/auth-key
+ * Docs: https://openrouter.ai/docs/api-reference/limits
  */
 
 import { proxyAwareFetch } from "../../utils/proxyFetch.js";
-import { U, toFiniteNumber } from "./shared.js";
+import { toFiniteNumber } from "./shared.js";
 
-const USAGE_URL = U("openrouter").url;
+// Official documented endpoint (https://openrouter.ai/docs/api-reference/limits).
+// NOTE: registry usage.url still carries the legacy /auth/key alias — both
+// routes exist and behave identically; /api/v1/key is the documented one.
+const USAGE_URL = "https://openrouter.ai/api/v1/key";
 
-function buildCreditsQuota(credits) {
-  if (!credits || typeof credits !== "object") return null;
-  const total = toFiniteNumber(credits.total, 0);
-  const used = toFiniteNumber(credits.used, 0);
-  const remaining = toFiniteNumber(
-    credits.remaining,
-    Math.max(0, total - used),
-  );
+/**
+ * Map OpenRouter credit figures to the UI's normalized quota shape.
+ * `limit_remaining` is the authoritative "remaining" value per the API;
+ * fall back to total − used only when it is absent.
+ */
+export function buildOpenRouterQuota(data = {}) {
+  const limit = toFiniteNumber(data.limit, 0);
+  const limitRemaining = toFiniteNumber(data.limit_remaining, null);
+  const used = toFiniteNumber(data.usage, 0);
+
+  // null / absent limit => unlimited key
+  let unlimited;
+  if (data.limit === null || data.limit === undefined || data.limit === "") {
+    unlimited = true;
+  } else {
+    unlimited = !Number.isFinite(Number(data.limit));
+  }
+
+  let remaining;
+  if (limitRemaining !== null) {
+    remaining = limitRemaining;
+  } else {
+    remaining = Math.max(0, limit - used);
+  }
+
   return {
+    name: "credits",
     used,
-    total,
+    total: limit,
+    remaining,
     remainingPercentage:
-      total > 0
-        ? Math.max(0, Math.min(100, (remaining / total) * 100))
-        : 0,
+      limit > 0 ? Math.max(0, Math.min(100, (remaining / limit) * 100)) : 100,
     resetAt: null,
-    unlimited: false,
-  };
-}
-
-function buildTokenQuota(data) {
-  const used = toFiniteNumber(data.usage, -1);
-  if (used < 0) return null; // usage absent (null/undefined)
-  // limit null/undefined = unlimited key; still surface usage context.
-  const total = toFiniteNumber(data.limit, 0);
-  return {
-    used,
-    total,
-    remainingPercentage:
-      total > 0
-        ? Math.max(0, Math.min(100, ((total - used) / total) * 100))
-        : 100,
-    resetAt: null,
-    unlimited: total <= 0,
+    unlimited,
   };
 }
 
@@ -110,22 +116,19 @@ export async function getOpenRouterUsage(apiKey = null, proxyOptions = null) {
 
     const plan =
       data.is_free_tier === true ? "OpenRouter (Free Tier)" : "OpenRouter";
-    const quotas = {};
-    const creditsQuota = buildCreditsQuota(data.credits);
-    if (creditsQuota) quotas["Credits (USD)"] = creditsQuota;
-    const tokenQuota = buildTokenQuota(data);
-    if (tokenQuota) quotas["Tokens (monthly)"] = tokenQuota;
+    const quota = buildOpenRouterQuota(data);
 
-    if (Object.keys(quotas).length === 0) {
+    // Only surface a quota row when the key actually carries a credit
+    // figure to show (limit or usage present).
+    if (quota.used <= 0 && quota.total <= 0 && quota.remaining <= 0) {
       return {
         plan,
-        message:
-          "OpenRouter connected. No quota data returned for this key.",
+        message: "OpenRouter connected. No quota data returned for this key.",
         quotas: {},
       };
     }
 
-    return { plan, quotas };
+    return { plan, quotas: { [quota.name]: quota } };
   } catch (error) {
     return { message: `OpenRouter error: ${error.message}` };
   }
