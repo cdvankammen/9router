@@ -1,5 +1,19 @@
 # TASK-LOG — Smart Router & Observability Session
 
+## 2026-09-17 15:57 — Shared-worktree rule + branch reconciliation (v3)
+
+- [x] Create shared card worktree 9router-wt-cards (branch card-work-v3) from v3
+- [x] Update GIT-BRANCH-POLICY.md with shared-worktree rule; commit on v3
+- [x] Inject SHARED-WORKTREE block into all 13 open card bodies + 3 board descriptions
+- [x] Update hermesResearch/V3 mirror + agent memory
+- [x] Merge BUG-ERR-02 stranded work (a236b6b3) into v3
+- [x] Merge pr-3610, pr-3625, feat/multi-protocol-custom-providers into v3
+- [x] Merge pr3604-review with conflict resolution (SCHEMA_VERSION 3 + both features, migration 005)
+- [ ] Run full test suite on v3 (QA gate) — IN PROGRESS
+- [ ] Verify app functional check (headless/curl) on v3
+- [ ] Update card t_bfabba37 (BUG-ERR-02) result with merge evidence
+
+
 **Date:** 2026-08-05 → 2026-08-06
 **Author:** GitHub Copilot agent (main session)
 **Status:** active

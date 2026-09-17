@@ -1,5 +1,30 @@
 # CHANGELOG — Smart Router & Observability Session
 
+## 2026-09-17 15:57 — Shared-worktree rule + branch reconciliation (v3)
+
+**Directive (Chris, 2026-09-17):** All cards work in ONE shared card worktree
+`/Users/chris/Documents/GitHub/9router-wt-cards` (branch `card-work-v3`, branched from v3).
+Cards are FORBIDDEN from the main worktree (`/Users/chris/Documents/GitHub/9router`), from
+changing its branch, and from creating branches there. Feature branches allowed ONLY inside
+the shared worktree; all tested work merged into v3 from the shared worktree.
+
+**Actions taken:**
+- Created shared card worktree `9router-wt-cards` on branch `card-work-v3` from v3.
+- Policy doc updated with shared-worktree rule; committed on v3 (0d666c2d, merge 7f8717eb).
+- All 13 open card bodies + all 3 board descriptions updated with SHARED-WORKTREE block.
+- hermesResearch mirror + agent memory updated.
+- Reconciled stranded branches into v3 (policy: reconcile INTO v3, never master):
+  - BUG-ERR-02 (`a236b6b3`) -> merged (fd50eeb4) — card t_bfabba37 done but stranded
+  - pr-3610 (`f9b271d8`) -> merged (c9d9bfc4)
+  - pr-3625 (`13784656`) -> merged (aa529821)
+  - feat/multi-protocol-custom-providers (`7d669a44`) -> merged (4dc8da37)
+  - pr3604-review (New Models discovery) -> merged (d1b889b3) with conflicts resolved:
+    kept SCHEMA_VERSION 3 + both message-facets/annotations AND seen-models;
+    renamed migration 002-seen-models.js -> 005-seen-models.js (internal version 2 -> 5)
+    to avoid collision with 002-fk-provider-connections.
+- Main worktree left on v4-vscode-works with branch UNCHANGED; my erroneous merge aborted + residue unstaged/restored.
+
+
 **Date:** 2026-08-05 → 2026-08-06
 **Author:** GitHub Copilot agent (main session)
 **Status:** active
