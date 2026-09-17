@@ -1523,3 +1523,8 @@ no schema changes, no new SSRF surface.
   - t_00a1575b — RETRO dual-instance model-loading conflict research (28-dual-instance-conflicts-and-cleanup.md)
   - t_9682b6d7 — OPS chat-log review itself
 - Board-level rules updated: HOST-ISOLATION block added to board.json (was only on cards).
+
+## 2026-09-17 — v3 full-suite QA run (mini3, corrected reporter)
+- Prior background run on mini used `--reporter=basic` → crashed with known vitest 4.1.11 ERR_LOAD_URL (custom-reporter module load). No code state changed; run invalid for tally.
+- tests/package.json "test" script itself uses `--reporter=verbose` — same crash class. Correct invocation: `npx vitest run` (default reporter).
+- Per HOST-ISOLATION: verification moved to mini3 (node 26.8.1/npm 11.19.0). Cloned v3 from bundle (tip 562e30e2), npm install tests (45 packages), full suite running via default reporter (proc background, notify on done).
