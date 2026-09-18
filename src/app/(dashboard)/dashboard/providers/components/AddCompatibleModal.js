@@ -57,6 +57,8 @@ function AddCompatibleModal({ variant, isOpen, onClose, onCreated }) {
           supportsResponses: false,
         }
       : { baseUrl: config.defaultBaseUrl }),
+    usageUrl: "",
+    usageAuthMode: "bearer",
   });
 
   const [formData, setFormData] = useState(initialFormData);
@@ -100,6 +102,8 @@ function AddCompatibleModal({ variant, isOpen, onClose, onCreated }) {
               }
             : { baseUrl: formData.baseUrl }),
           type: config.type,
+          usageUrl: formData.usageUrl?.trim() || undefined,
+          usageAuthMode: formData.usageAuthMode,
         }),
       });
       const data = await res.json();
@@ -238,6 +242,27 @@ function AddCompatibleModal({ variant, isOpen, onClose, onCreated }) {
           value={checkKey}
           onChange={(e) => setCheckKey(e.target.value)}
         />
+        {!config.isMulti && (
+          <>
+            <Input
+              label="Usage API URL (optional)"
+              value={formData.usageUrl}
+              onChange={(e) => setFormData({ ...formData, usageUrl: e.target.value })}
+              placeholder="https://provider.example/v1/usage"
+              hint="Optional. GET endpoint returning quota JSON ({used, limit}). Enables the quota page for this node."
+            />
+            <Select
+              label="Usage Auth Mode"
+              value={formData.usageAuthMode}
+              onChange={(e) => setFormData({ ...formData, usageAuthMode: e.target.value })}
+              options={[
+                { value: "bearer", label: "Bearer token (Authorization header)" },
+                { value: "header", label: "x-api-key header" },
+                { value: "none", label: "No auth header" },
+              ]}
+            />
+          </>
+        )}
         <Input
           label={config.isMulti ? "Model ID" : "Model ID (optional)"}
           value={checkModelId}

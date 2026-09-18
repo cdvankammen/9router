@@ -139,6 +139,7 @@ export async function POST(request) {
         baseUrl: node.baseUrl,
         nodeName: node.name,
         ...(Array.isArray(node.transports) ? { transports: node.transports } : {}),
+        ...(node.usageUrl ? { usageUrl: node.usageUrl, usageAuthMode: node.usageAuthMode || "bearer" } : {}),
       };
     } else if (isAnthropicCompatibleProvider(provider)) {
       const node = await getProviderNodeById(provider);
@@ -149,6 +150,7 @@ export async function POST(request) {
         prefix: node.prefix,
         baseUrl: node.baseUrl,
         nodeName: node.name,
+        ...(node.usageUrl ? { usageUrl: node.usageUrl, usageAuthMode: node.usageAuthMode || "bearer" } : {}),
       };
     } else if (isCustomEmbeddingProvider(provider)) {
       const node = await getProviderNodeById(provider);
@@ -159,6 +161,7 @@ export async function POST(request) {
         prefix: node.prefix,
         baseUrl: node.baseUrl,
         nodeName: node.name,
+        ...(node.usageUrl ? { usageUrl: node.usageUrl, usageAuthMode: node.usageAuthMode || "bearer" } : {}),
       };
     }
 

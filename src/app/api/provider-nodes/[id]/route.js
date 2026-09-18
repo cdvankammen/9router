@@ -5,6 +5,15 @@ import { canonicalEndpoint, openAIEndpoints } from "../endpointUrls.js";
 const BEARER_AUTH = { combined: true, header: "Authorization", scheme: "bearer" };
 const ANTHROPIC_AUTH = { combined: true, header: "x-api-key", scheme: "raw", anthropicVersion: true };
 
+// Optional user-facing usage/quota endpoint fields for custom nodes.
+const USAGE_AUTH_MODES = ["bearer", "header", "none"];
+function normalizeUsageFields(body) {
+  if (!("usageUrl" in body)) return {};
+  const usageUrl = typeof body.usageUrl === "string" ? body.usageUrl.trim() : "";
+  const usageAuthMode = USAGE_AUTH_MODES.includes(body.usageAuthMode) ? body.usageAuthMode : "bearer";
+  return { usageUrl, usageAuthMode };
+}
+
 // PUT /api/provider-nodes/[id] - Update provider node
 export async function PUT(request, { params }) {
   try {
@@ -75,6 +84,7 @@ export async function PUT(request, { params }) {
       prefix: prefix.trim(),
       baseUrl: sanitizedBaseUrl,
       ...(node.type === "multi-compatible" ? { transports } : {}),
+      ...normalizeUsageFields(body),
     };
 
     if (node.type === "openai-compatible") {
@@ -84,6 +94,7 @@ export async function PUT(request, { params }) {
     const updated = await updateProviderNode(id, updates);
 
     const connections = await getProviderConnections({ provider: id });
+    const usageFields = normalizeUsageFields(body);
     await Promise.all(connections.map((connection) => (
       updateProviderConnection(connection.id, {
         providerSpecificData: {
@@ -93,6 +104,7 @@ export async function PUT(request, { params }) {
           baseUrl: sanitizedBaseUrl,
           nodeName: updated.name,
           ...(node.type === "multi-compatible" ? { transports } : {}),
+          ...usageFields,
         }
       })
     )));

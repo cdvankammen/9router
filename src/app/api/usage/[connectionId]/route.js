@@ -146,13 +146,20 @@ export async function GET(request, { params }) {
     // Allow OAuth connections, plus whitelisted apikey providers (glm/minimax/kiro/...)
     // Kiro's headless api-key flow persists authType "api_key" (underscore) while
     // generic apikey providers persist "apikey" — accept both spellings here.
+    // Custom provider nodes that declare a user-facing usageUrl are also eligible
+    // (the explicit field IS the capability declaration; see custom.js).
     const isOAuth = connection.authType === "oauth";
     const isApikeyAuth =
       connection.authType === "apikey" || connection.authType === "api_key";
     const isApikeyEligible =
       isApikeyAuth && USAGE_APIKEY_PROVIDERS.includes(connection.provider);
+    const hasCustomUsageUrl = Boolean(
+      connection.providerSpecificData?.usageUrl &&
+      typeof connection.providerSpecificData.usageUrl === "string" &&
+      connection.providerSpecificData.usageUrl.trim()
+    );
 
-    if (!isOAuth && !isApikeyEligible) {
+    if (!isOAuth && !isApikeyEligible && !hasCustomUsageUrl) {
       return Response.json({ message: "Usage not available for this connection" });
     }
 

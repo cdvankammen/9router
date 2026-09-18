@@ -25,6 +25,8 @@ export default function EditCompatibleNodeModal({
     openaiUrl: "",
     anthropicUrl: "",
     supportsResponses: false,
+    usageUrl: "",
+    usageAuthMode: "bearer",
   });
   const [saving, setSaving] = useState(false);
   const [checkKey, setCheckKey] = useState("");
@@ -49,6 +51,8 @@ export default function EditCompatibleNodeModal({
       openaiUrl: node.baseUrl || transportUrl("openai"),
       anthropicUrl: transportUrl("claude"),
       supportsResponses: Boolean(transportUrl("openai-responses")),
+      usageUrl: node.usageUrl || "",
+      usageAuthMode: node.usageAuthMode || "bearer",
     });
     setValidationResult(null);
   }, [node, isAnthropic]);
@@ -71,6 +75,8 @@ export default function EditCompatibleNodeModal({
               supportsResponses: formData.supportsResponses,
             }
           : { baseUrl: formData.baseUrl }),
+        usageUrl: formData.usageUrl?.trim() || undefined,
+        usageAuthMode: formData.usageAuthMode,
       };
       if (!isAnthropic && !isMulti) payload.apiType = formData.apiType;
       await onSave(payload);
@@ -190,6 +196,27 @@ export default function EditCompatibleNodeModal({
           value={checkKey}
           onChange={(e) => setCheckKey(e.target.value)}
         />
+        {!isMulti && (
+          <>
+            <Input
+              label="Usage API URL (optional)"
+              value={formData.usageUrl}
+              onChange={(e) => setFormData({ ...formData, usageUrl: e.target.value })}
+              placeholder="https://provider.example/v1/usage"
+              hint="Optional. GET endpoint returning quota JSON ({used, limit}). Enables the quota page for this node."
+            />
+            <Select
+              label="Usage Auth Mode"
+              value={formData.usageAuthMode}
+              onChange={(e) => setFormData({ ...formData, usageAuthMode: e.target.value })}
+              options={[
+                { value: "bearer", label: "Bearer token (Authorization header)" },
+                { value: "header", label: "x-api-key header" },
+                { value: "none", label: "No auth header" },
+              ]}
+            />
+          </>
+        )}
         <Input
           label={isMulti ? "Model ID" : "Model ID (optional)"}
           value={checkModelId}

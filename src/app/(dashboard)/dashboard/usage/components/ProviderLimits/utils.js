@@ -751,6 +751,8 @@ export function parseQuotaData(provider, data) {
         }
         break;
 
+      // Custom provider nodes (openai-compatible-*, anthropic-compatible-*, custom-embedding-*)
+      // declared via usageUrl field. Generic handler returns {name, used, total, remainingPercentage, unlimited, resetAt}.
       default:
         // Generic fallback for unknown providers
         if (data.quotas) {
@@ -760,6 +762,8 @@ export function parseQuotaData(provider, data) {
               used: quota.used || 0,
               total: quota.total || 0,
               resetAt: quota.resetAt || null,
+              remainingPercentage: quota.remainingPercentage,
+              unlimited: quota.unlimited,
             });
           });
         }
