@@ -15,7 +15,6 @@ import { DEFAULT_HEADROOM_URL } from "@/lib/headroom/detect";
 import { getTransform as getPxpipeTransform } from "@/lib/pxpipe/loader.js";
 import { appendPxpipeEvent } from "@/lib/pxpipe/events.js";
 import { errorResponse, unavailableResponse } from "open-sse/utils/error.js";
-import { upstreamResponseHeaders } from "open-sse/utils/upstreamHeaders.js";
 import { handleComboChat, handleFusionChat, detectRequiredCapabilities } from "open-sse/services/combo.js";
 import { augmentModelsWithCapacityAdapter, withCapacityAdapterStripping, getActiveAdapterStrategy } from "open-sse/services/capacityAdapter.js";
 import { handleBypassRequest } from "open-sse/utils/bypassHandler.js";
@@ -24,6 +23,8 @@ import { detectFormatByEndpoint } from "open-sse/translator/formats.js";
 import * as log from "../utils/logger.js";
 import { updateProviderCredentials, checkAndRefreshToken } from "../services/tokenRefresh.js";
 import { getProjectIdForConnection } from "open-sse/services/projectId.js";
+import { resolveSmartRouter, trackRequestStart, trackRequestEnd } from "../services/smartRouter.js";
+import { looksLikeClaudeWrappedModel, normalizeClaudeModelName, buildClaudeRoutingIndex, readClaudeCompat } from "@/lib/claudeCompat";
 import { stripModelContextMarker } from "open-sse/utils/modelMarkers.js";
 
 /**
@@ -52,8 +53,13 @@ export async function handleChat(request, clientRawRequest = null) {
   // Claude Code marks a 1M-context request as `<model>[1m]`; the marker matches
   // no combo, alias or provider/model pair, so it must not reach resolution.
   // The capability travels in the anthropic-beta header, forwarded as-is.
-  const { model: modelStr, contextMarker } = stripModelContextMarker(body.model);
-  if (contextMarker) body.model = modelStr;
+  const { model, contextMarker } = stripModelContextMarker(body.model);
+  if (contextMarker) body.model = model;
+  // claude-compat may rewrite it (normalizeClaudeModelName below), so it must
+  // stay re-assignable — merging it into a const broke every compat request.
+  let modelStr = model;
+  let smartRouterTaskType = null; // set by smart router interception; used for usage analytics
+  let smartRouterMeta = null;     // top-N candidate scores (why did it pick X?) — threaded to usage meta
 
   // Request summary is emitted as the unified "▶" line in chatCore (has fmt/thinking/account)
 
@@ -86,12 +92,41 @@ export async function handleChat(request, clientRawRequest = null) {
     return errorResponse(HTTP_STATUS.BAD_REQUEST, "Missing model");
   }
 
+  // Claude compat layer: Anthropic clients echo back ids like
+  // "claude-bai/deepseek-v4-flash[1m]" from our rewritten /v1/models. Strip
+  // the markers back to the routable name before combo/account selection so
+  // the whole pipeline (and usage records) sees the real model.
+  if (
+    looksLikeClaudeWrappedModel(modelStr) &&
+    process.env.DISABLE_CLAUDE_COMPAT !== "true"
+  ) {
+    const compat = readClaudeCompat(settings);
+    if (compat.enabled) {
+      const normalized = normalizeClaudeModelName(modelStr, await buildClaudeRoutingIndex());
+      if (normalized !== modelStr) {
+        log.info("CHAT", `Claude compat: "${modelStr}" -> "${normalized}"`);
+        body.model = normalized;
+        modelStr = normalized;
+      }
+    }
+  }
+
   // Bypass naming/warmup requests before combo rotation to avoid wasting rotation slots
   const userAgent = request?.headers?.get("user-agent") || "";
   const bypassResponse = handleBypassRequest(body, modelStr, userAgent, !!settings.ccFilterNaming);
   if (bypassResponse) return bypassResponse.response || bypassResponse;
 
   const requiredCapabilities = detectRequiredCapabilities(body);
+
+  // ── SMART ROUTER: resolve virtual model to dynamic combo BEFORE translation ──
+  const smartRouterResult = await resolveSmartRouter(modelStr, body, settings);
+  if (smartRouterResult) {
+    modelStr = smartRouterResult.comboName;
+    // Thread the classified task type through for usage analytics (meta.taskType)
+    smartRouterTaskType = smartRouterResult.taskType;
+    // Score breakdown (why did it pick X?) for usage analytics (meta.smartRouterScores)
+    smartRouterMeta = smartRouterResult.scores || null;
+  }
 
   // Check if model is a combo (has multiple models with fallback)
   const comboModels = await getComboModels(modelStr);
@@ -114,7 +149,7 @@ export async function handleChat(request, clientRawRequest = null) {
             const { tools, tool_choice, ...cleanBody } = clientRawRequest.body || {};
             cleanRawReq = { ...clientRawRequest, body: cleanBody };
           }
-          return handleSingleModelChat(b, m, cleanRawReq, request, apiKey);
+          return handleSingleModelChat(b, m, cleanRawReq, request, apiKey, smartRouterTaskType, false, smartRouterMeta);
         },
         log,
         comboName: modelStr,
@@ -124,18 +159,21 @@ export async function handleChat(request, clientRawRequest = null) {
     }
 
     const comboStickyLimit = settings.comboStickyRoundRobinLimit;
+    const contextAwareRouting = comboStrategies[modelStr]?.contextAwareRouting || null;
     log.info("CHAT", `Combo "${modelStr}" with ${augmentedModels.length} models (strategy: ${comboStrategy}, sticky: ${comboStickyLimit})`);
     return handleComboChat({
       body,
       models: augmentedModels,
       handleSingleModel: withCapacityAdapterStripping(
-        (b, m) => handleSingleModelChat(b, m, clientRawRequest, request, apiKey),
+        (b, m) => handleSingleModelChat(b, m, clientRawRequest, request, apiKey, smartRouterTaskType, false, smartRouterMeta),
         adapterAdded
       ),
       log,
       comboName: modelStr,
       comboStrategy,
-      comboStickyLimit
+      comboStickyLimit,
+      contextAwareRouting,
+      onFallbackEvent: (a) => log.debug("FALLBACK", `${modelStr} → ${a.model} ${a.ok ? "ok" : `failed ${a.status}`} (${a.latencyMs}ms)`),
     });
   }
 
@@ -149,22 +187,26 @@ export async function handleChat(request, clientRawRequest = null) {
       body,
       models: soloAugmented,
       handleSingleModel: withCapacityAdapterStripping(
-        (b, m) => handleSingleModelChat(b, m, clientRawRequest, request, apiKey),
+        (b, m) => handleSingleModelChat(b, m, clientRawRequest, request, apiKey, smartRouterTaskType, false, smartRouterMeta),
         adapterAdded
       ),
       log,
       comboName: modelStr,
-      comboStrategy: getActiveAdapterStrategy(requiredCapabilities, settings)
+      comboStrategy: getActiveAdapterStrategy(requiredCapabilities, settings),
+      onFallbackEvent: (a) => log.debug("FALLBACK", `${modelStr} → ${a.model} ${a.ok ? "ok" : `failed ${a.status}`} (${a.latencyMs}ms)`),
     });
   }
 
-  return handleSingleModelChat(body, modelStr, clientRawRequest, request, apiKey, contextMarker ? `${modelStr.slice(modelStr.indexOf("/") + 1)}[${contextMarker}]` : null);
+  return handleSingleModelChat(body, modelStr, clientRawRequest, request, apiKey, smartRouterTaskType, false, smartRouterMeta);
 }
 
 /**
  * Handle single model chat request
+ * @param {boolean} [skipModelFallback] - Internal guard: when true, don't
+ *   re-apply settings.modelFallbacks (prevents infinite recursion from the
+ *   fallback chain's own handleSingleModel callback).
  */
-async function handleSingleModelChat(body, modelStr, clientRawRequest = null, request = null, apiKey = null, requestedModel = null) {
+async function handleSingleModelChat(body, modelStr, clientRawRequest = null, request = null, apiKey = null, taskType = null, skipModelFallback = false, smartRouterMeta = null) {
   const modelInfo = await getModelInfo(modelStr);
 
   // If provider is null, this might be a combo name - check and handle
@@ -191,7 +233,7 @@ async function handleSingleModelChat(body, modelStr, clientRawRequest = null, re
               const { tools, tool_choice, ...cleanBody } = clientRawRequest.body || {};
               cleanRawReq = { ...clientRawRequest, body: cleanBody };
             }
-            return handleSingleModelChat(b, m, cleanRawReq, request, apiKey);
+            return handleSingleModelChat(b, m, cleanRawReq, request, apiKey, taskType, false, smartRouterMeta);
           },
           log,
           comboName: modelStr,
@@ -201,18 +243,21 @@ async function handleSingleModelChat(body, modelStr, clientRawRequest = null, re
       }
 
       const comboStickyLimit = chatSettings.comboStickyRoundRobinLimit;
+      const contextAwareRouting = comboStrategies[modelStr]?.contextAwareRouting || null;
       log.info("CHAT", `Combo "${modelStr}" with ${augmentedModels.length} models (strategy: ${comboStrategy}, sticky: ${comboStickyLimit})`);
       return handleComboChat({
         body,
         models: augmentedModels,
         handleSingleModel: withCapacityAdapterStripping(
-          (b, m) => handleSingleModelChat(b, m, clientRawRequest, request, apiKey),
+          (b, m) => handleSingleModelChat(b, m, clientRawRequest, request, apiKey, taskType, false, smartRouterMeta),
           adapterAdded
         ),
         log,
         comboName: modelStr,
         comboStrategy,
-        comboStickyLimit
+        comboStickyLimit,
+        contextAwareRouting,
+        onFallbackEvent: (a) => log.debug("FALLBACK", `${modelStr} → ${a.model} ${a.ok ? "ok" : `failed ${a.status}`} (${a.latencyMs}ms)`),
       });
     }
     log.warn("CHAT", "Invalid model format", { model: modelStr });
@@ -221,6 +266,56 @@ async function handleSingleModelChat(body, modelStr, clientRawRequest = null, re
 
   const { provider, model } = modelInfo;
 
+  // ── PER-MODEL / PER-PROVIDER FALLBACK CHAINS ─────────────────────────────
+  // settings.modelFallbacks lets users attach an ordered fallback list to an
+  // exact model ("openai/gpt-4o") or an entire provider ("openai"). When
+  // configured, the single-model request becomes a fallback chain through the
+  // combo engine — automatic retry on failure, same semantics as combos, but
+  // configured directly on the model/provider the client actually requested.
+  //
+  // Two storage shapes (backward compatible):
+  //   Simple:  { target: ["fallback1", "fallback2"] }
+  //   Advanced:{ target: { models: [...], retries: N, perModelRetries: {...} } }
+  if (!skipModelFallback) {
+    const fbSettings = await getSettings();
+    const fbMap = fbSettings.modelFallbacks || {};
+    const raw = fbMap[modelStr] || fbMap[provider];
+
+    // Normalize either shape into { models: string[], retries, perModelRetries }
+    let fbConfig = null;
+    if (Array.isArray(raw)) {
+      fbConfig = { models: raw, retries: null, perModelRetries: null };
+    } else if (raw && typeof raw === "object" && Array.isArray(raw.models)) {
+      fbConfig = {
+        models: raw.models,
+        retries: Number.isFinite(Number(raw.retries)) ? Math.max(1, Number(raw.retries)) : null,
+        perModelRetries: raw.perModelRetries && typeof raw.perModelRetries === "object" ? raw.perModelRetries : null,
+      };
+    }
+
+    if (fbConfig && fbConfig.models.length > 0) {
+      const chain = [modelStr, ...fbConfig.models.filter((f) => typeof f === "string" && f && f !== modelStr)];
+      const requiredCapabilities = detectRequiredCapabilities(body);
+      const augmented = augmentModelsWithCapacityAdapter(chain, requiredCapabilities, fbSettings);
+      const adapterAdded = augmented.filter((m) => !chain.includes(m));
+      log.info("CHAT", `Model fallback "${modelStr}" → [${chain.join(" → ")}]${fbConfig.retries ? ` (retries: ${fbConfig.retries})` : ""}`);
+      return handleComboChat({
+        body,
+        models: augmented,
+        handleSingleModel: withCapacityAdapterStripping(
+          (b, m) => handleSingleModelChat(b, m, clientRawRequest, request, apiKey, taskType, true, smartRouterMeta),
+          adapterAdded
+        ),
+        log,
+        comboName: `${modelStr}-fallback`,
+        comboStrategy: "fallback",
+        retriesPerModel: fbConfig.retries || 1,
+        perModelRetries: fbConfig.perModelRetries || null,
+        onFallbackEvent: (a) => log.debug("FALLBACK", `${modelStr} → ${a.model} ${a.ok ? "ok" : `failed ${a.status}`} (${a.latencyMs}ms)`),
+      });
+    }
+  }
+
   // Routing shown in the unified "▶" line (client model → provider/model)
 
   // Extract userAgent from request
@@ -228,12 +323,16 @@ async function handleSingleModelChat(body, modelStr, clientRawRequest = null, re
 
   // Try with available accounts (fallback on errors)
   const excludeConnectionIds = new Set();
+  // Per-connection consecutive-failure counter: the SAME account is retried
+  // up to ACCOUNT_RETRY_LIMIT times before the loop excludes it and switches.
+  const ACCOUNT_RETRY_LIMIT = 3;
+  const failCountByConn = new Map();
   let lastError = null;
   let lastStatus = null;
-  let lastHeaders = null;
 
   while (true) {
-    const credentials = await getProviderCredentials(provider, excludeConnectionIds, model, { requestedModel: requestedModel || model });
+    const lastFailedConn = failCountByConn.size ? [...failCountByConn.entries()].find(([id, c]) => c >= 1 && c < ACCOUNT_RETRY_LIMIT)?.[0] : null;
+    const credentials = await getProviderCredentials(provider, excludeConnectionIds, model, lastFailedConn ? { ignoreModelLockConnId: lastFailedConn } : {});
 
     // All accounts unavailable
     if (!credentials || credentials.allRateLimited) {
@@ -241,14 +340,14 @@ async function handleSingleModelChat(body, modelStr, clientRawRequest = null, re
         const errorMsg = lastError || credentials.lastError || "Unavailable";
         const status = HTTP_STATUS.SERVICE_UNAVAILABLE;
         log.warn("CHAT", `[${provider}/${model}] ${errorMsg} (${credentials.retryAfterHuman})`);
-        return unavailableResponse(status, `[${provider}/${model}] ${errorMsg}`, credentials.retryAfter, credentials.retryAfterHuman, lastHeaders);
+        return unavailableResponse(status, `[${provider}/${model}] ${errorMsg}`, credentials.retryAfter, credentials.retryAfterHuman);
       }
       if (excludeConnectionIds.size === 0) {
         log.warn("AUTH", `No active credentials for provider: ${provider}`);
         return errorResponse(HTTP_STATUS.NOT_FOUND, `No active credentials for provider: ${provider}`);
       }
       log.warn("CHAT", "No more accounts available", { provider });
-      return errorResponse(lastStatus || HTTP_STATUS.SERVICE_UNAVAILABLE, lastError || "All accounts unavailable", lastHeaders);
+      return errorResponse(lastStatus || HTTP_STATUS.SERVICE_UNAVAILABLE, lastError || "All accounts unavailable");
     }
 
     // Account selection shown in the unified "▶" line (acc:...)
@@ -260,17 +359,30 @@ async function handleSingleModelChat(body, modelStr, clientRawRequest = null, re
       if (pid) {
         refreshedCredentials.projectId = pid;
         // Persist to DB in background so subsequent requests have it immediately
-        updateProviderCredentials(credentials.connectionId, { projectId: pid }).catch(() => { });
+        updateProviderCredentials(credentials.connectionId, { projectId: pid }).catch((e) => log.warn('CHAT', `projectId persist failed for ${credentials.connectionId}: ${e.message}`));
       }
     }
 
     // Use shared chatCore
     const chatSettings = await getSettings();
     const providerThinking = (chatSettings.providerThinking || {})[provider] || null;
+
+    // Resolve conversationId for per-chat observability grouping:
+    // 1. explicit header (OpenRouter-style x-conversation-id)
+    // 2. extra_body.conversation_id (client can't set headers)
+    // 3. null → caller falls back to message-hash fingerprint
+    const conversationId =
+      request?.headers?.get("x-conversation-id") ||
+      body?.extra_body?.conversation_id ||
+      null;
+
     const result = await handleChatCore({
       body: { ...body, model: `${provider}/${model}` },
       modelInfo: { provider, model },
       credentials: refreshedCredentials,
+      conversationId,
+      taskType,
+      smartRouterMeta,
       log,
       clientRawRequest,
       connectionId: credentials.connectionId,
@@ -293,8 +405,6 @@ async function handleSingleModelChat(body, modelStr, clientRawRequest = null, re
       pxpipeTransform: chatSettings.pxpipeEnabled ? await getPxpipeTransform() : null,
       onPxpipeEvent: appendPxpipeEvent,
       providerThinking,
-      // Per-provider user overrides (custom headers / connect timeout) from settings
-      providerOverrides: (chatSettings.providerOverrides || {})[provider] || null,
       memorySettings: chatSettings,
       // Detect source format by endpoint + body
       sourceFormatOverride: request?.url ? detectFormatByEndpoint(new URL(request.url).pathname, body) : null,
@@ -332,11 +442,18 @@ async function handleSingleModelChat(body, modelStr, clientRawRequest = null, re
       : (await markAccountUnavailable(credentials.connectionId, result.status, result.error, provider, model, resetsAtMs)).shouldFallback;
 
     if (shouldFallback) {
-      log.warn("FALLBACK", `⇄ ACC:${credentials.connectionName} UNAVAILABLE (${result.status}) → NEXT ACCOUNT`);
-      excludeConnectionIds.add(credentials.connectionId);
       lastError = result.error;
       lastStatus = result.status;
-      lastHeaders = upstreamResponseHeaders(result.response?.headers);
+      const fails = (failCountByConn.get(credentials.connectionId) || 0) + 1;
+      failCountByConn.set(credentials.connectionId, fails);
+      if (fails < ACCOUNT_RETRY_LIMIT) {
+        // Same account, immediate retry — cooldown was skipped for transient
+        // errors, so this is a fast re-dispatch rather than a wait.
+        log.warn("RETRY", `⇄ ACC:${credentials.connectionName} failed (${result.status}) attempt ${fails}/${ACCOUNT_RETRY_LIMIT} → RETRY SAME`);
+        continue;
+      }
+      log.warn("FALLBACK", `⇄ ACC:${credentials.connectionName} UNAVAILABLE after ${ACCOUNT_RETRY_LIMIT} tries (${result.status}) → NEXT ACCOUNT`);
+      excludeConnectionIds.add(credentials.connectionId);
       continue;
     }
 

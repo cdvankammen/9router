@@ -17,6 +17,11 @@ const DEFAULT_SETTINGS = {
   comboStrategy: "fallback",
   comboStickyRoundRobinLimit: 1,
   comboStrategies: {},
+  // Per-combo context-aware routing: comboStrategies[comboName].contextAwareRouting
+  // = { enabled, overflowTarget, thresholdTokens }. When enabled and the estimated
+  // prompt exceeds thresholdTokens, the overflowTarget floats to the front of the
+  // attempt list instead of failing a small-context model (see
+  // open-sse/services/combo.js applyContextAwareRouting).
   smartRouter: {
     enabled: false,
     names: ["modelRouter"],
