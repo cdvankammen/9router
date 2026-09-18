@@ -19,6 +19,7 @@ import { getOpenCodeZenUsage } from "./usage/opencode-zen.js";
 import { getGroqUsage } from "./usage/groq.js";
 import { getOpenRouterUsage } from "./usage/openrouter.js";
 import { getZedUsage } from "./usage/zed.js";
+import { getTraeUsage } from "./usage/trae.js";
 import { getXiaomiMimoUsage } from "./usage/xiaomi-mimo.js";
 import { resolveQoderCredentials } from "./qoderModels.js";
 import { getGlmUsage } from "./usage/glm.js";
@@ -63,6 +64,7 @@ const USAGE_HANDLERS = {
   groq: (c) => getGroqUsage(c.apiKey, c.proxyOptions),
   openrouter: (c) => getOpenRouterUsage(c.apiKey, c.proxyOptions),
   zed: (c) => getZedUsage(c.accessToken, c.providerSpecificData, c.proxyOptions),
+  trae: (c) => getTraeUsage(c.accessToken, c.providerSpecificData, c.proxyOptions),
   "xiaomi-mimo": (c) => getXiaomiMimoUsage(c.accessToken, c.providerSpecificData, c.proxyOptions),
   commandcode: (c) => getCommandCodeUsage(c.apiKey, c.proxyOptions),
 };
