@@ -937,12 +937,15 @@ export async function getErrorSummary(filter = {}) {
          id AS detailId,
          ROW_NUMBER() OVER (PARTITION BY ${ERROR_GROUP_EXPRS} ORDER BY timestamp DESC, id DESC) AS rn,
          (
-           SELECT GROUP_CONCAT(DISTINCT connectionId, ',')
-           FROM requestDetails r2
-           WHERE r2.provider = requestDetails.provider
-             AND r2.model = requestDetails.model
-             AND COALESCE(json_extract(r2.data, '$.errorCategory'), 'unknown') = COALESCE(json_extract(requestDetails.data, '$.errorCategory'), 'unknown')
-             AND r2.connectionId IS NOT NULL
+           SELECT GROUP_CONCAT(connectionId, ',')
+           FROM (
+             SELECT DISTINCT connectionId
+             FROM requestDetails r2
+             WHERE r2.provider = requestDetails.provider
+               AND r2.model = requestDetails.model
+               AND COALESCE(json_extract(r2.data, '$.errorCategory'), 'unknown') = COALESCE(json_extract(requestDetails.data, '$.errorCategory'), 'unknown')
+               AND r2.connectionId IS NOT NULL
+           )
          ) AS connectionIds
        FROM requestDetails ${facetsJoin} ${where}
      )
