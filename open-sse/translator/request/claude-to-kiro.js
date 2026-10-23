@@ -325,6 +325,7 @@ export function claudeToKiroRequest(model, body, stream, credentials) {
   };
 
   const payload = {
+    systemPrompt,
     conversationState: {
       chatTriggerType: "MANUAL",
       conversationId,
