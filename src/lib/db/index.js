@@ -73,6 +73,12 @@ export {
   seedSeenModels,
 } from "./repos/seenModelsRepo.js";
 
+// Annotations + saved views
+export {
+  getAnnotations, addAnnotation, deleteAnnotation, toggleStar,
+  getSavedViews, saveView, deleteSavedView,
+} from "./repos/annotationsRepo.js";
+
 // Export/import full DB
 export async function exportDb() {
   const db = await getAdapter();

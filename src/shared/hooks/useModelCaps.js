@@ -37,6 +37,17 @@ function loadModelCaps() {
   return inflight;
 }
 
+// Drop the shared cache and notify mounted hooks to refetch.
+// Fired after context-window overrides / custom model changes so capability
+// lookups re-resolve. Dispatching "customModelChanged" lets every mounted
+// useModelCaps instance resync via its existing event listener.
+export function invalidateModelCaps() {
+  cache = null;
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent("customModelChanged"));
+  }
+}
+
 // Resolve caps from a "provider/model" string or a bare model id.
 function resolveCaps(byFull, byId, key) {
   if (!key) return null;
