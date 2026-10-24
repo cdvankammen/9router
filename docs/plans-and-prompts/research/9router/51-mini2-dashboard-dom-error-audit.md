@@ -567,7 +567,11 @@ Although 002–004 and the limiter were committed ~11 hours before the publish t
 
 ## Proposed follow-up research (for future sessions)
 
-1. **Rate-limiter bucket redesign.** Split into `static`, `rsc`, `api`, `chat`, `auth` buckets with independent limits. Replace magic-string URL detection with proper route classification.
+1. **Rate-limiter bucket redesign.** ✅ Done 2026-10-24. Both limiter layers now use per-(IP, category) buckets with a shared route classifier:
+   - `src/lib/middleware/routeClassifier.js` (ESM, used by the Next middleware layer) and an inline CJS twin in `custom-server.rate-limiter.js` (loads before ESM is available). Behaviour pinned to identical fixtures by `tests/unit/route-classifier.test.js` (35 tests), `tests/unit/rate-limiter-buckets.test.cjs` (8 tests), and the original `tests/unit/rate-limiter.test.cjs` (9 tests, all still green).
+   - Buckets: `static`/`rsc` bypass entirely (framework traffic, Finding #16); `auth` 10/min — **narrowed to POST login/setup/reset-password only** because `/api/auth/status` is polled by `Header.js` on every page load and must stay in `api`; `chat` 20/min (POST completions only — GET uses `api`); `api` 120/min (other `/api/*` + `/v1/*`); `general` 120/min fallback.
+   - `checkRateLimit` now classifies on `pathname + search` so the classifier can see `?_rsc=` prefetches; `dashboardGuard.isNextInternalRequest` remains as a redundant guard.
+   - Test totals: TCP 9/9 + multi-bucket 8/8 + vitest classifier 35/35 + middleware 24/24 = **76/76 passing**.
 2. **Migration runner hardening.** Add a dry-run mode that refuses to apply migrations if the installed registry differs from the expected set; surface a warning in the dashboard instead of silently corrupting.
 3. **Dashboard error boundaries.** ✅ Done 2026-10-24. Sweep confirmed **zero** `error.js` / `global-error.js` files existed anywhere under `src/app` — all 29 dashboard pages fell through to Next.js's default error screen on any uncaught render error. Added two boundaries:
    - `src/app/(dashboard)/error.js` — dashboard-group boundary. Sits INSIDE `DashboardLayout`, so sidebar/header stay visible during a page error and users can navigate away without reloading. Detects transient HTTP errors (429 / 5xx) via `error.message`/`digest` and shows a targeted "Rate limited" / "Server error" retry UI; otherwise a generic "Something went wrong" with reset + back-to-dashboard. Self-contained (inline buttons, no shared-component imports) so it cannot be taken down by the same failure it catches.
@@ -619,7 +623,13 @@ Although 002–004 and the limiter were committed ~11 hours before the publish t
 - `tests/unit/provider-add-guard.test.js` — 17 new unit tests for the helpers, all passing
 - `src/app/(dashboard)/error.js` — NEW dashboard-group error boundary with transient 429/5xx retry UI (backlog #3)
 - `src/app/global-error.js` — NEW root error boundary (self-contained, zero layout deps) (backlog #3)
-- `docs/plans-and-prompts/research/9router/51-mini2-dashboard-dom-error-audit.md` — this document, Finding #12 "Fix applied (2026-10-24)" section + Finding #13 remediation note + Finding #15 Resolution table + Finding #16 resolution + Finding #17 (published-package audit) + backlog items #3/#4/#5/#6/#7/#8/#9/#10/#11/#12 marked resolved
+- `src/lib/middleware/routeClassifier.js` — NEW shared ESM route classifier for rate-limit buckets (backlog #1)
+- `src/lib/middleware/rateLimiter.js` — rewritten to per-(IP, category) buckets; `checkRateLimit` classifies on `pathname + search` (backlog #1)
+- `custom-server.rate-limiter.js` — TCP-layer limiter rewritten to 4 counted buckets (auth/chat/api/general) + static/rsc bypass, keyed by `ip|category` (backlog #1)
+- `cli/app/custom-server.rate-limiter.js` — synced to match the root TCP limiter (backlog #1)
+- `tests/unit/route-classifier.test.js` — 35 fixture tests pinning the ESM classifier (backlog #1)
+- `tests/unit/rate-limiter-buckets.test.cjs` — 8 tests for per-bucket isolation on the TCP layer (backlog #1)
+- `docs/plans-and-prompts/research/9router/51-mini2-dashboard-dom-error-audit.md` — this document, Finding #12 "Fix applied (2026-10-24)" section + Finding #13 remediation note + Finding #15 Resolution table + Finding #16 resolution + Finding #17 (published-package audit) + backlog items #1/#3/#4/#5/#6/#7/#8/#9/#10/#11/#12 marked resolved
 
 ## See also
 

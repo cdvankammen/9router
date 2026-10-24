@@ -3,29 +3,36 @@
 // Resets on process restart. Uses trusted peer headers when available.
 
 import { getClientIp } from "@/lib/auth/loginLimiter.js";
+import { classifyRoute, shouldBypass, getBucketLimit } from "./routeClassifier.js";
 
 let cachedNextResponse = null;
 export function __setNextResponse(nr) { cachedNextResponse = nr; }
 
 const DEFAULT_WINDOW_MS = 60_000; // 1 minute sliding window
-const DEFAULT_MAX_REQUESTS = 120; // 2 req/s average
+const DEFAULT_MAX_REQUESTS = 120; // 2 req/s average (fallback when bucket unknown)
 const BURST_LIMIT = 30; // max requests in a short burst before throttling
 const BURST_WINDOW_MS = 5_000; // 5s burst window
 
-const buckets = new Map(); // ip → { count, resetAt, burstCount, burstResetAt }
+// Per-(IP, category) state: ip → Map(category → { count, resetAt, burstCount, burstResetAt })
+const buckets = new Map();
 
 function now() {
   return Date.now();
 }
 
-function getBucket(ip, windowMs, maxRequests) {
+function getCategoryBucket(ip, category) {
   const t = now();
-  let b = buckets.get(ip);
+  let ipMap = buckets.get(ip);
+  if (!ipMap) {
+    ipMap = new Map();
+    buckets.set(ip, ipMap);
+  }
+  const windowMs = DEFAULT_WINDOW_MS;
+  let b = ipMap.get(category);
   if (!b || t >= b.resetAt) {
     b = { count: 0, resetAt: t + windowMs, burstCount: 0, burstResetAt: t + BURST_WINDOW_MS };
-    buckets.set(ip, b);
+    ipMap.set(category, b);
   }
-  // Reset burst counter independently
   if (t >= b.burstResetAt) {
     b.burstCount = 0;
     b.burstResetAt = t + BURST_WINDOW_MS;
@@ -35,17 +42,37 @@ function getBucket(ip, windowMs, maxRequests) {
 
 /**
  * Check if a request should be rate-limited.
+ *
+ * Routes are classified into buckets (static, rsc, auth, chat, api, general)
+ * via routeClassifier.js. Static/RSC bypass entirely; each other bucket has
+ * its own per-IP counter so auth brute-force can't starve dashboard traffic.
+ *
  * @param {Request} request - The incoming request
- * @param {object} options - Optional overrides
- * @param {number} options.windowMs - Sliding window duration (default 60s)
- * @param {number} options.maxRequests - Max requests per window (default 120)
- * @returns {{ limited: boolean, remaining: number, retryAfter?: number, resetAt: number }}
+ * @param {object} options - Optional overrides (kept for backward compat with tests)
+ * @param {number} options.windowMs - Ignored when classifier is active; kept for API compat
+ * @param {number} options.maxRequests - When provided AND no classifier match, overrides the bucket limit
+ * @returns {{ limited: boolean, remaining: number, retryAfter?: number, resetAt: number, category?: string }}
  */
 export function checkRateLimit(request, options = {}) {
-  const windowMs = options.windowMs || DEFAULT_WINDOW_MS;
-  const maxRequests = options.maxRequests || DEFAULT_MAX_REQUESTS;
+  // Classify on path + query so the classifier can see ?_rsc= prefetches.
+  const nu = request.nextUrl;
+  const url = nu ? `${nu.pathname || ""}${nu.search || ""}` : (request.url || "");
+  const method = request.method || "GET";
+  const category = classifyRoute(url, method);
+
+  // Framework traffic bypasses entirely — no counter increment.
+  if (shouldBypass(category)) {
+    return {
+      limited: false,
+      remaining: Number.MAX_SAFE_INTEGER,
+      resetAt: now() + DEFAULT_WINDOW_MS,
+      category,
+    };
+  }
+
   const ip = getClientIp(request);
-  const bucket = getBucket(ip, windowMs, maxRequests);
+  const bucket = getCategoryBucket(ip, category);
+  const maxRequests = options.maxRequests || getBucketLimit(category);
   const t = now();
 
   bucket.count++;
@@ -59,6 +86,7 @@ export function checkRateLimit(request, options = {}) {
       remaining: 0,
       retryAfter,
       resetAt: bucket.resetAt,
+      category,
     };
   }
 
@@ -70,6 +98,7 @@ export function checkRateLimit(request, options = {}) {
       remaining: 0,
       retryAfter,
       resetAt: bucket.resetAt,
+      category,
     };
   }
 
@@ -77,6 +106,7 @@ export function checkRateLimit(request, options = {}) {
     limited: false,
     remaining: maxRequests - bucket.count,
     resetAt: bucket.resetAt,
+    category,
   };
 }
 
@@ -126,7 +156,7 @@ export function __resetBuckets() {
 }
 
 export const __test__ = {
-  getBucket,
+  getCategoryBucket,
   BURST_LIMIT,
   BURST_WINDOW_MS,
   DEFAULT_WINDOW_MS,
