@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSettings, updateSettings } from "@/lib/localDb";
 import { applyOutboundProxyEnv } from "@/lib/network/outboundProxy";
+import { validateOidcConfigForSave } from "@/lib/auth/oidc";
 import { resetComboRotation } from "open-sse/services/combo.js";
 import bcrypt from "bcryptjs";
 
@@ -73,6 +74,85 @@ export async function PATCH(request) {
     if (Object.prototype.hasOwnProperty.call(body, "oidcClientSecret")) {
       if (!body.oidcClientSecret || !String(body.oidcClientSecret).trim()) {
         delete body.oidcClientSecret;
+      }
+    }
+
+    // SECURITY: OIDC save-time validation (Finding #13 remediation).
+    // Prevent persisting an unreachable/malformed issuer that would brick
+    // password-disabled logins. Escape hatch: `skipOidcValidation: true`
+    // for air-gapped or not-yet-reachable IdP setups.
+    const skipOidcValidation = body.skipOidcValidation === true;
+    delete body.skipOidcValidation; // never persist the flag itself
+
+    const oidcFieldsTouched =
+      Object.prototype.hasOwnProperty.call(body, "oidcIssuerUrl") ||
+      Object.prototype.hasOwnProperty.call(body, "oidcClientId") ||
+      Object.prototype.hasOwnProperty.call(body, "oidcClientSecret");
+    const authTouched =
+      oidcFieldsTouched ||
+      Object.prototype.hasOwnProperty.call(body, "authMode") ||
+      Object.prototype.hasOwnProperty.call(body, "ssoType");
+
+    if (!skipOidcValidation && authTouched) {
+      const existing = await getSettings();
+      // When OIDC fields are touched, validate the new value. When only
+      // authMode is switching to password-disabled, validate the stored
+      // issuer so we don't lock the operator out of an unreachable IdP.
+      const issuerToValidate = Object.prototype.hasOwnProperty.call(body, "oidcIssuerUrl")
+        ? body.oidcIssuerUrl
+        : existing.oidcIssuerUrl;
+
+      // Effective auth mode after this PATCH. OIDC discovery validation only
+      // applies when password login would be BLOCKED by the new mode. Per
+      // src/app/api/auth/login/route.js, only "oidc", "saml", and "sso"
+      // (with matching ssoType) disable password login — and only when the
+      // respective SSO is fully configured. "both" always keeps password
+      // login enabled, so it gets the soft probe (no lockout risk).
+      const ssoType = body.ssoType || existing.ssoType || "oidc";
+      const effectiveMode = Object.prototype.hasOwnProperty.call(body, "authMode")
+        ? body.authMode
+        : existing.authMode;
+      const oidcFieldsComplete = !!(issuerToValidate && String(issuerToValidate).trim());
+      const isPasswordDisabled =
+        (effectiveMode === "oidc" && oidcFieldsComplete) ||
+        (effectiveMode === "sso" && ssoType === "oidc" && oidcFieldsComplete);
+      // Note: "saml" mode is excluded entirely — it has its own config
+      // surface and does not use OIDC discovery.
+
+      if (isPasswordDisabled) {
+        // Hard gate: full discovery validation with network call. A bad issuer
+        // here means the operator cannot log in at all.
+        const result = await validateOidcConfigForSave({ issuerUrl: issuerToValidate });
+        if (!result.ok) {
+          return NextResponse.json(
+            {
+              error: result.message,
+              oidcValidation: { ok: false, reason: result.reason },
+              hint: "Pass `skipOidcValidation: true` to save anyway (e.g. the IdP is not yet reachable).",
+            },
+            { status: 400 },
+          );
+        }
+      } else if (oidcFieldsTouched && issuerToValidate && String(issuerToValidate).trim()) {
+        // Soft probe: only validate URL format and HTTPS (no network call).
+        // Password login is still enabled, so an unreachable issuer is merely
+        // inert — not a lockout risk. We still reject obviously-malformed URLs
+        // to catch typos early.
+        try {
+          const parsed = new URL(String(issuerToValidate).trim());
+          const isLocalDev = parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1" || parsed.hostname === "::1";
+          if (parsed.protocol !== "https:" && !isLocalDev) {
+            return NextResponse.json(
+              { error: `Issuer URL must use HTTPS (got ${parsed.protocol}).`, oidcValidation: { ok: false, reason: "insecure" } },
+              { status: 400 },
+            );
+          }
+        } catch {
+          return NextResponse.json(
+            { error: `Issuer URL is not a valid URL: ${String(issuerToValidate).trim()}`, oidcValidation: { ok: false, reason: "invalid-url" } },
+            { status: 400 },
+          );
+        }
       }
     }
 
