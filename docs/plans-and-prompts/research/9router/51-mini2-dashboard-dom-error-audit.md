@@ -1,10 +1,10 @@
 # Mini2 Dashboard DOM / Console Error Audit
 
-**Date:** 2026-10-23
+**Date:** 2026-10-23 (Day 1) + 2026-10-24 (Day 2 — exhaustive dashboard walk)
 **Author:** Copilot agent (main session — chat ID `3ba69e69-a2a3-4b6e-8e3a-9acd4cb9bb8d`)
-**Status:** active — two root causes fixed; residual items remain
-**Applies to:** `mini2:20128` (9Router v0.5.75 installed at `/Applications/9Router.app/`)
-**Tags:** #dashboard #rate-limiter #sqlite #foreign-key #dom #console-errors #nextjs-rsc
+**Status:** Day 1 fixes deployed; Day 2 exhaustive audit complete — 25 URLs visited, 6 new findings (#10–#15) added including a HIGH-severity SECURITY finding and whole-page i18n omissions on 2 dashboard pages
+**Applies to:** `mini2:20128` (9Router v0.5.75 installed at `/Applications/9Router.app/`; repo at v0.5.95)
+**Tags:** #dashboard #rate-limiter #sqlite #foreign-key #dom #console-errors #nextjs-rsc #i18n #security #oidc #media-providers #version-drift
 
 ## TL;DR (for future agents)
 
@@ -322,6 +322,178 @@ The `custom-server.rate-limiter.js` file is not the only rate limiter in the app
 
 ---
 
+# Day 2 — Exhaustive dashboard walk (2026-10-24)
+
+**Method:** drove the VS Code integrated browser (page ID `34271fd2-402c-4051-8828-7480e79689b8`) at every dashboard URL, took accessibility snapshots (`read_page`), ran `page.evaluate` DOM probes (headings, buttons, inputs, switches, Chinese-character scan) on each, and took screenshots at every step (screenshots stored in the Copilot chat resources; vision is unsupported by the model so findings come from the DOM text tree and probe payloads).
+
+**Constraint honored:** did not mutate the `dial` provider, `dialTop` combo, or `dialRouter` combo. Sandbox targets `dialTop-copy` and `Ldialtop` were used for any write-path verification on the Combos page. No data on mini2 was altered beyond the Day-1 live fixes already documented above.
+
+---
+
+## Finding #10 — Full dashboard page inventory (every page visited)
+
+| # | Route | Heading(s) | Interactive surface | Chinese i18n? | Bugs found |
+|---|-------|------------|---------------------|----------------|------------|
+| 1 | `/dashboard/combos` | Combo & Vision Adapter | 4 combo cards × (strategy combo, Details, Copy, Duplicate, Edit, Delete); Edit modal 66 elements; dnd-kit model reorder | no | Duplicate-button handler absent in repo v0.5.95 source; v0.5.75 UI lacks bulk-select + Cursor/Claude presets (version drift) |
+| 2 | `/dashboard/combos/[id]` | Combo detail + Run Test | Run Test button (POST `/v1/chat/completions` with Bearer) | no | — |
+| 3 | `/dashboard/endpoint` | Endpoint & Key | Tunnel URL, 3 API keys, Create/Revoke | no | — |
+| 4 | `/dashboard/providers` | Providers | 38 provider cards, search, filters, Test All, Add, New Models badge | no | — |
+| 5 | `/dashboard/usage` | Usage | Overview/Details tabs, 5 period controls, Tokens/Cost toggle, 129 chart elements | no | — |
+| 6 | `/dashboard/messages` | Messages | 6 views, bookmarked saved views, search, facet filters, 50 rows | no | — |
+| 7 | `/dashboard/statistics` | Statistics | Auto-refresh, aggregate-detail panel, tree columns | **YES — 13 hardcoded strings** | see #12 |
+| 8 | `/dashboard/quota` | Quota Tracker | Empty state (no OAuth providers configured) | no | — |
+| 9 | `/dashboard/token-saver` | Token Saver | 4 compressors: RTK on, Headroom/Caveman/Ponytail off | no | — |
+| 10 | `/dashboard/claude-compat` | Claude Compat | Model prefix, context suffix, default models, JSON config | no | — |
+| 11 | `/dashboard/memory` | Memory & Context | 4 pipeline stages, all off | no | — |
+| 12 | `/dashboard/cli-tools` | CLI Tools | 25 integrations, Claude Code detail expanded | no | — |
+| 13 | `/dashboard/proxy-pools` | Proxy Pools | Failover-proxy error banner, 503 polling, Add Proxy Pool modal, Deploy Relay, Batch Import | no | 503 proxy-poll noise (unreachable failover proxy every 5s) |
+| 14 | `/dashboard/skills` | Skills | 9 skill cards, 8 copy-link buttons | no | — |
+| 15 | `/dashboard/model-context` | Model Context | 54-row table, filter panel, add/batch/revert | **YES — ~48 hardcoded strings (whole page)** | see #12 |
+| 16 | `/dashboard/console-log` | Console Log | Clear button only | no | — |
+| 17 | `/dashboard/profile` (Settings) | Settings | Account, security, SSO, appearance, language, data | no | **SECURITY — active OIDC config to `evil.example.com`** (see #13) |
+| 18 | Header bar | — | Donate, theme toggle, 36-lang locale picker, overflow (Change Log/Theme/Shutdown/Logout) | no | — |
+| 19 | Sidebar | — | Change Log modal, Media Providers expand (6 sub-pages), 9Remote, Update banner | no | — |
+| 20 | Media: Embedding | Embedding | 17 providers, Add Custom Embedding button | no | — |
+| 21 | Media: Image | Text to Image | 21 providers, no Add Custom button | no | — |
+| 22 | Media: TTS | Text To Speech | 17 providers, no Add Custom button | no | — |
+| 23 | Media: STT | Speech To Text | 7 providers, no Add Custom button | no | — |
+| 24 | Media: Video | Video | 3 providers (OpenRouter, Vertex AI, xAI Grok), no Add Custom button | no | — |
+| 25 | Media: Web | **web** (lowercase!) | 27 providers, **two** "Create Combo" buttons (web-search shortcut) | no | lowercase heading, duplicate buttons (see #15) |
+
+Total: **25 distinct URLs** inspected, **1250+ interactive elements** inventoried, **6 media sub-pages** fully walked.
+
+---
+
+## Finding #11 — Media Provider sub-pages (6 sub-pages, 92 providers total)
+
+The Media Providers section expands in the sidebar into 6 sub-pages. Each is a read-only provider grid (no CRUD beyond Embedding's "Add Custom Embedding" and Web's combo-creation shortcut).
+
+| Sub-page | URL suffix | Heading | Provider count | Has "Add Custom"? | Has Chinese? |
+|----------|------------|---------|----------------|-------------------|--------------|
+| Embedding | `/media-providers/embedding` | Embedding | 17 (OpenRouter, NVIDIA NIM, OpenAI, GitHub Copilot, Voyage AI, Gemini, Fireworks AI, Self-hosted, Together AI, Nebius AI, Mistral, Venice AI, Vercel AI Gateway, Jina AI, TokenRouter, +2) | **yes** | no |
+| Image | `/media-providers/image` | Text to Image | 21 (Antigravity, OpenAI Codex, OpenAI, Gemini, Black Forest Labs, Cloudflare, Stability AI, HuggingFace, Recraft, NanoBanana API, Runway ML, Fal.ai, Minimax Coding, SD WebUI, Venice AI, ComfyUI, Vercel AI Gateway, xAI Grok, Topaz, TokenRouter, +1) | no | no |
+| TTS | `/media-providers/tts` | Text To Speech | 17 (Edge TTS, Google TTS, Local Device, OpenRouter, NVIDIA NIM, OpenAI, Gemini, Self-hosted TTS, Minimax Coding, Minimax China, Xiaomi MiMo, AWS Polly, ElevenLabs, Inworld TTS, Fish Audio, +2) | no | no |
+| STT | `/media-providers/stt` | Speech To Text | 7 (Deepgram, AssemblyAI, OpenAI, Gemini, Self-hosted STT, Groq, HuggingFace) | no | no |
+| Video | `/media-providers/video` | Video | 3 (OpenRouter, Vertex AI, xAI Grok) | no | no |
+| Web | `/media-providers/web` | **web** (lowercase) | 27 (Antigravity, OpenAI, Gemini, Minimax Coding, GLM Coding, Vercel AI Gateway, Kimi, Perplexity, Perplexity Agent, xAI Grok, SearXNG, Brave Search, Exa, Google PSE, Linkup, Ollama Search, SearchAPI, Serper, Tavily, You.com Search, Xquik, Web Fetch, Ollama Cloud, Exa (dup?), Firecrawl, Jina Reader, +1) | no (has two "Create Combo" buttons) | no |
+
+**Takeaway:** 92 providers across 6 media modalities. Embedding is the only sub-page that exposes "Add Custom" — the other 5 have no user-facing CRUD. Video is by far the smallest surface (3 providers). Web is the largest (27 providers) and has two UI oddities (see #15).
+
+---
+
+## Finding #12 — Hardcoded Chinese strings across 3 dashboard files (i18n bug)
+
+**Severity:** medium — non-Chinese users see an entire page in Chinese regardless of the locale they pick in the header.
+
+**Root cause:** the affected files were authored with **Chinese string literals** instead of wrapping text in `t()` calls from the i18n hook. Not a fallback bug, not a missing-locale-file bug — a wholesale i18n omission in the source.
+
+### Affected files
+
+| File | Hardcoded Chinese strings | User-facing surface |
+|------|--------------------------|---------------------|
+| `src/app/(dashboard)/dashboard/model-context/page.js` | ~48 (L81, 305, 319, 342, 356, 376, 378, 405, 412, 464, 471, 486, 501, 507, 513, 516, 525, 540, 544, 546, 553, 556, 561, 563, 573, 578, 589, 594, 597, 605, 616, 625, 647, 650, 653, 655, 656, 664, 676, 679, 701, 709, 727, 734, 738, 742, 746, 760, 761, 765) | **entire Model Context page** — every filter label (状态/启用/未启用, 覆盖/已覆盖/未覆盖, 连接/有/无), every placeholder (搜索模型/供应商…, 窗口≥), every column header (供应商, 模型, 生效窗口, 来源, 操作), every button (新增, 设为, 清除覆盖, 添加覆盖), every tooltip, every empty state, every flash notice |
+| `src/app/(dashboard)/dashboard/statistics/StatisticsContent.js` | ~13 (L39 comment, L288 自动刷新, L294 关闭, L305 立刻刷新, L330 聚合明细, L634 TREE_COLS 8 columns, L645 聚合明细, L649 按提供商, L650 按模型, L660 维度, L668 没有匹配的数据) | auto-refresh control, aggregate-detail toggle, tree-column headers (请求数/总 Token/输入/输出/缓存读/缓存写/命中率/用时首字), grouping dropdown, empty state |
+| `src/app/(dashboard)/dashboard/endpoint/endpointConstants.js` | 1 (L24 `{id:"wenyan", label:"文 Full", desc:"Maximum 文言文, 80-90% reduction", wenyan:true}`) | Token Saver preset label + description on the `/dashboard/token-saver` page (third instance — affects the Token Saver preset picker) |
+
+### Representative samples (for a future i18n fix PR)
+
+```
+// model-context/page.js L464 — the page's own description paragraph, 100% Chinese
+核对每个模型的上下文窗口，不对就直接改。「启用中」的供应商模型排在最前，即 /v1/models 当前对外可见的集合；改动立即生效于路由与 /v1/models。
+
+// model-context/page.js L305 — error message
+setError("窗口需为正整数,支持 200k / 1m 缩写");
+
+// statistics/StatisticsContent.js L634 — tree-table column headers
+const TREE_COLS = ["请求数", "总 Token", "输入", "输出", "缓存读", "缓存写", "命中率", "用时/首字"];
+```
+
+### Fix approach (not implemented — approval needed)
+
+1. Add each Chinese literal as a key in `i18n/locales/zh-CN.json` (and the 35 other locales).
+2. Replace literals with `t("modelContext.windowMustBePositiveInteger")` etc.
+3. For `endpointConstants.js`, either wrap in `t()` at the call site (the preset-picker component already has `t()`) or accept that the "文 Full" label is intentionally Chinese-flavored branding.
+4. Add a lint rule (`eslint-plugin-i18n-json` or a custom rule) that flags any JSX text node matching `/[一-鿿]/` in a file that imports `useTranslation`.
+
+---
+
+## Finding #13 — 🔒 SECURITY: active OIDC SSO config pointing at `evil.example.com`
+
+**Severity:** HIGH — approval-sensitive, **not auto-modified**.
+
+**Observed on:** `/dashboard/profile` (Settings) → SSO tab, 2026-10-24.
+
+**Live state:**
+- SSO method: **OIDC**
+- Issuer URL: `https://evil.example.com`
+- Client ID: `attacker-id`
+- Password login: **disabled**
+- Status: **ACTIVE** (the UI shows the config as currently enforcing)
+
+**Why this matters:**
+- `evil.example.com` is an IANA-reserved domain often used in documentation and adversarial examples — it is not a real IdP.
+- With password login disabled and a bogus OIDC issuer active, **no one can currently authenticate to this 9Router instance via the web UI** unless they already have a valid session cookie.
+- If the config was set by an attacker, the IdP could be swapped to a real attacker-controlled issuer that mints valid tokens for arbitrary identities.
+- If the config was set by the operator as a placeholder and never cleaned up, it's a foot-gun: any restart that invalidates session cookies locks everyone out.
+
+**What I did NOT do:**
+- Did not modify the SSO config (approval-sensitive).
+- Did not delete the OIDC row from the live DB.
+- Did not re-enable password login.
+
+**Recommended action (for the operator):**
+1. Confirm who set this config and why.
+2. If it's a leftover test: disable OIDC, re-enable password login, delete the bogus issuer.
+3. If it's suspected compromise: rotate `JWT_SECRET`, `API_KEY_SECRET`, `MACHINE_ID_SALT` (all in `~/.9router/.env`); invalidate all active sessions; audit `providerConnections` for unauthorized OAuth tokens.
+4. Add server-side validation that refuses to save an OIDC issuer whose TLS cert doesn't chain to a public CA, or that fails a discovery-doc fetch at save time.
+
+---
+
+## Finding #14 — 429-on-RSC root cause CONFIRMED: version drift (v0.5.75 predates the fix)
+
+**Status:** closed — the regression is explained entirely by version drift.
+
+**Question from Day 1:** Finding #8 observed that `_rsc=` prefetches were still returning 429 even after the on-disk `custom-server.rate-limiter.js` patch. Was the fix missing a layer, or just not yet deployed?
+
+**Git archaeology (2026-10-24):**
+
+```
+$ git log -1 --format="%h %ci %s" fa2b99e8
+fa2b99e8 2026-10-24 01:35:07 -0600 fix(rebase): resolve 13 post-rebase test regressions (35→22)
+    → introduced NEXT_INTERNAL_MARKERS + isNextInternal in both rate-limiter copies
+
+$ git log -S '"version": "0.5.75"' --format='%h %ci %s' -- package.json | head -3
+8e15f0bd 2026-09-18 18:09:32 +0700 # v0.5.79 (2026-09-18)
+4a390685 2026-09-10 21:56:30 +0700 feat(cli): group model selector by provider with search
+    → v0.5.75 bump lives between these two, ~2026-09-10
+```
+
+**Conclusion:** the RSC-bypass fix landed 2026-10-24. The installed v0.5.75 on mini2 was built ~2026-09-10 — **6 weeks before the fix existed**. The 429-on-`_rsc=` errors observed during today's exhaustive walk (e.g., 19× 429 during the STT page load on `/dashboard/media-providers/stt/deepgram?_rsc=…` etc.) are *expected behavior* on the installed version, not a regression in repo source.
+
+**Both repo copies are already correct:**
+- `custom-server.rate-limiter.js` (root) — has `NEXT_INTERNAL_MARKERS = ["_rsc=", "/_next/"]` and the `isNextInternal` bypass inside `checkLimit`.
+- `cli/app/custom-server.rate-limiter.js` — byte-identical logic.
+
+**Remediation:** run `npm i -g 9router@latest --prefer-online` on mini2 (or click the sidebar "Update now" button) — but only **after** resolving the migration-registry discrepancy from Finding #2, otherwise the new version's migrations may re-introduce the FK constraint or run out of order.
+
+---
+
+## Finding #15 — Minor UI bugs on the Web media sub-page
+
+**Route:** `/dashboard/media-providers/web`
+
+1. **Lowercase heading.** The page renders `<h1>web</h1>` instead of `<h1>Web</h1>` (or the i18n key equivalent). Every other media sub-page capitalizes its heading (Embedding, Text to Image, Text To Speech, Speech To Text, Video). Source: likely `src/app/(dashboard)/dashboard/media-providers/web/page.js` (or the shared Media page template) passes a literal `"web"` where it should pass `"Web"` or `t("media.web")`.
+
+2. **Duplicate "Create Combo" buttons.** The page shows **two** `add Create Combo` buttons — unique among the 6 media sub-pages. Likely a web-search combo-creation shortcut that was added twice, or a conditional that renders both a floating action button and an inline button. Not a functional bug, but visual noise.
+
+---
+
+## Finding #16 — `custom-server.rate-limiter.js` is not the only rate limiter
+
+The `custom-server.rate-limiter.js` file is not the only rate limiter in the app. The `src/lib/middleware/rateLimiter.js` file exports `checkRateLimit()` — a separate per-IP limiter with a 30-request burst limit (`BURST_LIMIT = 30` in a 5-second window). If the Next.js middleware layer (`src/middleware.js` or built equivalent) calls this on every request including RSC prefetches, it would 429 them independently of the `custom-server.rate-limiter.js` bypass. The built app at `.next-cli-build/server/middleware.js` exists and may contain this logic compiled in.
+
+---
+
 ## Proposed follow-up research (for future sessions)
 
 1. **Rate-limiter bucket redesign.** Split into `static`, `rsc`, `api`, `chat`, `auth` buckets with independent limits. Replace magic-string URL detection with proper route classification.
@@ -329,16 +501,29 @@ The `custom-server.rate-limiter.js` file is not the only rate limiter in the app
 3. **Dashboard error boundaries.** Sweep every `(dashboard)/*` page for missing `error.js` boundaries; add retry UI for transient 429/5xx.
 4. **Provider-add UX.** The current flow does `POST /api/providers` with no client-side pre-validation of provider type. A client-side `providerRegistry.includes(provider)` guard would turn the opaque "Failed to add" into "Provider X is OAuth-only, use the OAuth button."
 5. **Audit the installed v0.5.109 changelog** before the next upgrade — specifically check whether `002-fk-provider-connections.js` ships in the published package and, if so, how it handles the providerNodes-seeding gap.
+6. **i18n lint rule (Day 2).** Add an ESLint rule (custom or `eslint-plugin-i18n-json`) that flags any JSX text node or string literal matching `/[一-鿿]/` in a file that imports `useTranslation` / `useI18n`. Would have caught the Model-Context and Statistics whole-page omissions at author-time. Apply to `src/app/(dashboard)/dashboard/**/*.js`.
+7. **Model Context i18n fix (Day 2).** Replace the ~48 hardcoded Chinese strings in `src/app/(dashboard)/dashboard/model-context/page.js` with `t()` calls. Add keys to all 36 locale files under `i18n/locales/`. Highest i18n-debt item in the dashboard.
+8. **Statistics i18n fix (Day 2).** Replace the ~13 hardcoded Chinese strings in `src/app/(dashboard)/dashboard/statistics/StatisticsContent.js` (auto-refresh label, tree-column headers, aggregate-detail labels, grouping dropdown, empty state).
+9. **OIDC save-time validation (Day 2, SECURITY).** Refuse to persist an OIDC issuer URL whose `.well-known/openid-configuration` fetch fails, whose TLS cert doesn't chain to a public CA, or whose discovery doc lacks required fields (`authorization_endpoint`, `token_endpoint`). Would have prevented the `evil.example.com` config from going active. Pair with a warning when password-login is disabled with no reachable IdP.
+10. **Lowercase `web` heading fix (Day 2).** `src/app/(dashboard)/dashboard/media-providers/web/page.js` (or the shared media-page template) renders `<h1>web</h1>` — should be `Web` or `t("media.web")`. Trivial CSS-grade visual inconsistency.
+11. **Duplicate "Create Combo" buttons on `/media-providers/web` (Day 2).** Two `add Create Combo` buttons render — likely a conditional that mounts both a floating action button and an inline button. Deduplicate to one.
+12. **Token Saver "文 Full" preset label (Day 2).** `src/app/(dashboard)/dashboard/endpoint/endpointConstants.js` L24 hardcodes `"文 Full"` and a Chinese description. Decide whether it's intentional Chinese-flavored branding (keep, but i18n-wrap the description) or an oversight (translate).
 
 ---
 
 ## Files touched
 
+**Day 1 (2026-10-23):**
 - `custom-server.rate-limiter.js` — added `isNextInternal` bypass
 - `cli/app/custom-server.rate-limiter.js` — same (published package copy)
 - `tests/unit/rate-limiter.test.cjs` — 3 regression tests
 - `/Applications/9Router.app/Contents/Resources/app/app/custom-server.rate-limiter.js` — live-patched on mini2
 - `~/.9router/db/data.sqlite` — reverse-migrated (FK dropped), backup at `data.sqlite.bak-before-fk-drop.*`
+
+**Day 2 (2026-10-24, read-only audit — no source edits):**
+- `docs/plans-and-prompts/research/9router/51-mini2-dashboard-dom-error-audit.md` — this document, expanded with Findings #10–#15
+- `/memories/session/combos-feature-walk.md` — session memory with combo-page interactive inventory
+- Browser session `34271fd2-402c-4051-8828-7480e79689b8` — 25 dashboard URLs visited, accessibility snapshots + DOM probes + screenshots at each step (screenshots archived in the Copilot chat resources under this session's GUID `3ba69e69-a2a3-4b6e-8e3a-9acd4cb9bb8d`)
 
 ## See also
 

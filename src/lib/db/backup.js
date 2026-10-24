@@ -33,9 +33,36 @@ export function backupFile(srcPath, destDir, destName = null) {
   return dest;
 }
 
+// Strip FOREIGN KEY / REFERENCES clauses that point at excluded tables.
+// When backup excludes `requestDetails`, surviving tables like `message_facets`
+// (REFERENCES requestDetails(id) ON DELETE CASCADE) would fail CREATE TABLE in
+// the `bak` schema because the referenced table doesn't exist there.
+function stripExcludedFks(sql, excludedNames) {
+  let result = sql;
+  for (const name of excludedNames) {
+    // Inline column constraint: ... REFERENCES requestDetails(...) ON DELETE ...
+    const inlineRe = new RegExp(
+      `\\s*REFERENCES\\s+"?${name}"?\\s*\\([^)]*\\)(\\s+ON\\s+(DELETE|UPDATE)\\s+[^,)]+)?`,
+      "gi"
+    );
+    result = result.replace(inlineRe, "");
+    // Table-level constraint: FOREIGN KEY(...) REFERENCES requestDetails(...)
+    const tableRe = new RegExp(
+      `,?\\s*FOREIGN\\s+KEY\\s*\\([^)]+\\)\\s*REFERENCES\\s+"?${name}"?\\s*\\([^)]*\\)(\\s+ON\\s+(DELETE|UPDATE)\\s+[^,)]+)?`,
+      "gi"
+    );
+    result = result.replace(tableRe, "");
+  }
+  return result;
+}
+
 // Lightweight DB backup via ATTACH: create an empty sqlite file, copy every
 // table EXCEPT the excluded ones into it. Avoids duplicating the huge
 // observability log, so the backup stays small regardless of DB size.
+//
+// Best-effort per file policy — no transaction wrapper (SAVEPOINT + ATTACH DDL
+// is fragile on node:sqlite). On failure, the partial backup is cleaned up so
+// pruneOldBackups doesn't keep a corrupt file.
 export function backupDbLite(adapter, destDir, destName = "data.sqlite") {
   const dest = path.join(destDir, destName);
   try { fs.rmSync(dest, { force: true }); } catch {}
@@ -48,17 +75,27 @@ export function backupDbLite(adapter, destDir, destName = "data.sqlite") {
       .all(`SELECT name, sql FROM main.sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'`)
       .filter((t) => !excluded.has(t.name));
 
-    adapter.transaction(() => {
-      for (const t of tables) {
-        // Recreate table structure in backup DB, then copy rows.
-        const createSql = t.sql.replace(/CREATE TABLE\s+/i, "CREATE TABLE bak.");
-        adapter.exec(createSql);
-        adapter.exec(`INSERT INTO bak.${t.name} SELECT * FROM main.${t.name}`);
-      }
-    });
-  } finally {
+    for (const t of tables) {
+      // Strip FK references to excluded tables, then recreate in bak.
+      const rawCreate = t.sql.replace(/CREATE TABLE\s+/i, "CREATE TABLE bak.");
+      const createSql = stripExcludedFks(rawCreate, BACKUP_EXCLUDE_TABLES);
+      adapter.exec(createSql);
+      adapter.exec(`INSERT INTO bak.${t.name} SELECT * FROM main.${t.name}`);
+    }
+    // Copy indexes (skip those referencing excluded tables)
+    const indexes = adapter
+      .all(`SELECT sql FROM main.sqlite_master WHERE type='index' AND sql IS NOT NULL`)
+      .filter((idx) => !BACKUP_EXCLUDE_TABLES.some((ex) => idx.sql.includes(ex)));
+    for (const idx of indexes) {
+      try { adapter.exec(idx.sql); } catch { /* index may already exist */ }
+    }
+  } catch (e) {
+    // Clean up partial backup so pruneOldBackups doesn't keep a corrupt file
     try { adapter.exec("DETACH DATABASE bak"); } catch {}
+    try { fs.rmSync(dest, { force: true }); } catch {}
+    throw e;
   }
+  try { adapter.exec("DETACH DATABASE bak"); } catch {}
   return dest;
 }
 

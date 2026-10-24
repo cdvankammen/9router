@@ -983,6 +983,12 @@ export async function getErrorSummary(filter = {}) {
 const _shutdownHandler = async () => {
   if (flushTimer) { clearTimeout(flushTimer); flushTimer = null; }
   if (writeBuffer.length > 0) await flushToDatabase();
+}
+
+// Public alias for the buffered-write flush — callers (tests, API routes)
+// should not need to know the internal function name.
+export async function flushRequestDetails() {
+  await flushToDatabase();
 };
 
 function ensureShutdownHandler() {
