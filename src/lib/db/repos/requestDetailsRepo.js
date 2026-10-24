@@ -73,6 +73,7 @@ async function getObservabilityConfig() {
 let writeBuffer = [];
 let flushTimer = null;
 let isFlushing = false;
+let flushInFlight = null;
 
 function sanitizeHeaders(headers) {
   if (!headers || typeof headers !== "object") return {};
@@ -294,9 +295,12 @@ async function getSearchCondition(term) {
 }
 
 async function flushToDatabase() {
-  if (isFlushing) return;
+  // Wait for any in-flight drain to complete — avoids the stranded-items
+  // race where a caller resolves before the active drain commits.
+  while (flushInFlight) await flushInFlight;
   if (writeBuffer.length === 0) return;
   isFlushing = true;
+  const run = (async () => {
   try {
     // Drain entire buffer (loop in case more pushed during await)
     while (writeBuffer.length > 0) {
@@ -406,6 +410,9 @@ async function flushToDatabase() {
   } finally {
     isFlushing = false;
   }
+  })();
+  flushInFlight = run;
+  try { await run; } finally { flushInFlight = null; }
 }
 
 export async function saveRequestDetail(detail) {

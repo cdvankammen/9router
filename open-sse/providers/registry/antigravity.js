@@ -26,7 +26,10 @@ export default {
     },
     retry: {
       "429": {
-        attempts: 3,
+        // Intentional increase: 429 (rate-limit) retries raised to 6 to absorb
+        // bursty quota exhaustion on the Antigravity IDE endpoint (test contract
+        // in tests/unit/executor-const-guard.test.js).
+        attempts: 6,
       },
       "500": {
         attempts: 3,
