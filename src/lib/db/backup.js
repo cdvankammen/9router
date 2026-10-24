@@ -71,9 +71,19 @@ export function backupDbLite(adapter, destDir, destName = "data.sqlite") {
   adapter.exec(`ATTACH DATABASE '${escaped}' AS bak`);
   try {
     const excluded = new Set(BACKUP_EXCLUDE_TABLES);
+    // Also exclude FTS5 shadow tables (<name>_fts, _data, _idx, _config, _docsize)
+    // of excluded tables — they cannot be re-created via CREATE TABLE and would
+    // collide with the parent virtual table's implicit shadows.
+    const isExcluded = (name) => {
+      if (excluded.has(name)) return true;
+      for (const ex of excluded) {
+        if (name === `${ex}_fts` || name.startsWith(`${ex}_fts_`)) return true;
+      }
+      return false;
+    };
     const tables = adapter
       .all(`SELECT name, sql FROM main.sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'`)
-      .filter((t) => !excluded.has(t.name));
+      .filter((t) => !isExcluded(t.name));
 
     for (const t of tables) {
       // Strip FK references to excluded tables, then recreate in bak.
