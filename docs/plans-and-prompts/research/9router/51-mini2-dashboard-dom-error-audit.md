@@ -389,11 +389,11 @@ The Media Providers section expands in the sidebar into 6 sub-pages. Each is a r
 
 ### Affected files
 
-| File | Hardcoded Chinese strings | User-facing surface |
-|------|--------------------------|---------------------|
-| `src/app/(dashboard)/dashboard/model-context/page.js` | ~48 (L81, 305, 319, 342, 356, 376, 378, 405, 412, 464, 471, 486, 501, 507, 513, 516, 525, 540, 544, 546, 553, 556, 561, 563, 573, 578, 589, 594, 597, 605, 616, 625, 647, 650, 653, 655, 656, 664, 676, 679, 701, 709, 727, 734, 738, 742, 746, 760, 761, 765) | **entire Model Context page** — every filter label (状态/启用/未启用, 覆盖/已覆盖/未覆盖, 连接/有/无), every placeholder (搜索模型/供应商…, 窗口≥), every column header (供应商, 模型, 生效窗口, 来源, 操作), every button (新增, 设为, 清除覆盖, 添加覆盖), every tooltip, every empty state, every flash notice |
-| `src/app/(dashboard)/dashboard/statistics/StatisticsContent.js` | ~13 (L39 comment, L288 自动刷新, L294 关闭, L305 立刻刷新, L330 聚合明细, L634 TREE_COLS 8 columns, L645 聚合明细, L649 按提供商, L650 按模型, L660 维度, L668 没有匹配的数据) | auto-refresh control, aggregate-detail toggle, tree-column headers (请求数/总 Token/输入/输出/缓存读/缓存写/命中率/用时首字), grouping dropdown, empty state |
-| `src/app/(dashboard)/dashboard/endpoint/endpointConstants.js` | 1 (L24 `{id:"wenyan", label:"文 Full", desc:"Maximum 文言文, 80-90% reduction", wenyan:true}`) | Token Saver preset label + description on the `/dashboard/token-saver` page (third instance — affects the Token Saver preset picker) |
+| File | Hardcoded Chinese strings | User-facing surface | Status |
+|------|--------------------------|---------------------|--------|
+| `src/app/(dashboard)/dashboard/model-context/page.js` | ~48 (L81, 305, 319, 342, 356, 376, 378, 405, 412, 464, 471, 486, 501, 507, 513, 516, 525, 540, 544, 546, 553, 556, 561, 563, 573, 578, 589, 594, 597, 605, 616, 625, 647, 650, 653, 655, 656, 664, 676, 679, 701, 709, 727, 734, 738, 742, 746, 760, 761, 765) | **entire Model Context page** — filter labels, placeholders, column headers, buttons, tooltips, empty states, flash notices | ✅ **Fixed 2026-10-24** — all rewritten to English source; `zh-CN.json` +53 keys, `zh-TW.json` +56 keys |
+| `src/app/(dashboard)/dashboard/statistics/StatisticsContent.js` | ~13 (L39 comment, L288 自动刷新, L294 关闭, L305 立刻刷新, L330 聚合明细, L634 TREE_COLS 8 columns, L645 聚合明细, L649 按提供商, L650 按模型, L660 维度, L668 没有匹配的数据) | auto-refresh control, Refresh Now button, Aggregated Breakdown label, TREE_COLS headers, By Provider / By Model, Dimension, empty state | ✅ **Fixed 2026-10-24** — 11 strings rewritten to English source; `zh-CN.json` +8 keys (1 benign collision: `"Requests"` → `"请求"` already existed, kept as-is), `zh-TW.json` +13 keys |
+| `src/app/(dashboard)/dashboard/endpoint/endpointConstants.js` | 3 wenyan presets (L23–25: `文 Lite`, `文 Full`, `文 Ultra` + `文言文` description) | Token Saver preset labels — **only visible to `zh-CN` / `zh-TW` locales** | ⚪ **Intentional locale-gated branding** — `TokenSaverClient.js:71-73` filters them out via `CAVEMAN_LEVELS.filter(lvl => !lvl.wenyan)` when `!WENYAN_LOCALES.includes(locale)`. English users never see them. No fix needed. |
 
 ### Representative samples (for a future i18n fix PR)
 
@@ -408,12 +408,30 @@ setError("窗口需为正整数,支持 200k / 1m 缩写");
 const TREE_COLS = ["请求数", "总 Token", "输入", "输出", "缓存读", "缓存写", "命中率", "用时/首字"];
 ```
 
-### Fix approach (not implemented — approval needed)
+### Fix applied (2026-10-24)
 
-1. Add each Chinese literal as a key in `i18n/locales/zh-CN.json` (and the 35 other locales).
-2. Replace literals with `t("modelContext.windowMustBePositiveInteger")` etc.
-3. For `endpointConstants.js`, either wrap in `t()` at the call site (the preset-picker component already has `t()`) or accept that the "文 Full" label is intentionally Chinese-flavored branding.
-4. Add a lint rule (`eslint-plugin-i18n-json` or a custom rule) that flags any JSX text node matching `/[一-鿿]/` in a file that imports `useTranslation`.
+**Runtime i18n architecture (discovered during the fix):** the dashboard uses a **runtime DOM-walking translator**, not compile-time key lookup.
+
+- `src/i18n/runtime.js` exports `translate(text)` which looks up the *exact English source string* (trimmed) in a map loaded from `/i18n/literals/{locale}.json`. English is the source language; the `en` locale is the no-op identity (`translationMap = {}`).
+- A `MutationObserver` walks all DOM text nodes (including `characterData` mutations from React re-renders) and swaps them in place. Each node stores `_originalText` so locale switches stay idempotent.
+- `RuntimeI18nProvider` (mounted at the dashboard root) initializes on mount and re-processes on every route change via double-`requestAnimationFrame` to land after React commit.
+- Locale files live in `public/i18n/literals/` (34 locales, alphabetical key order, `ensure_ascii: false`).
+
+**What was done:**
+
+1. Rewrote all ~48 hardcoded Chinese strings in `src/app/(dashboard)/dashboard/model-context/page.js` to English source text (filter labels, placeholders, column headers, buttons, tooltips, empty states, flash notices, footer). Added 53 new keys to `zh-CN.json` and 56 to `zh-TW.json`; 10/7 existing keys skipped as duplicates.
+2. Rewrote 11 hardcoded Chinese strings in `src/app/(dashboard)/dashboard/statistics/StatisticsContent.js` to English source text (auto-refresh label, Off option, Refresh Now button, Aggregated Breakdown label ×2, TREE_COLS 8 headers, By Provider/By Model, Dimension, No matching data). Added 8 keys to `zh-CN.json` and 13 to `zh-TW.json`. One benign collision: `"Requests"` already mapped to `"请求"` — kept the existing value since it's a valid translation for both contexts.
+3. Confirmed `src/app/(dashboard)/dashboard/endpoint/endpointConstants.js` wenyan presets (`文 Lite`, `文 Full`, `文 Ultra` + `文言文` description) are **intentional locale-gated branding**: `TokenSaverClient.js:71-73` filters them out via `CAVEMAN_LEVELS.filter(lvl => !lvl.wenyan)` when `!WENYAN_LOCALES.includes(locale)`, and auto-downgrades an active wenyan selection to `ultra` if the user switches away from a Chinese locale. No code change needed.
+4. Fixed one ESLint `react/no-unescaped-entities` error I introduced (apostrophe in `model's` on line 464) by rephrasing to `"of each model"`.
+
+**Verification:**
+- `python3 -c 're.findall(r"[一-龯]+", open(f).read())'` → 0 Chinese fragments in either fixed file
+- `json.load()` succeeds on both `zh-CN.json` (1512 keys) and `zh-TW.json` (264 keys)
+- ESLint exits 0 on both files (4 pre-existing `react-hooks/exhaustive-deps` warnings in `StatisticsContent.js`, unrelated)
+- `tests/unit/model-context-marker.test.js`: 6/6 passing
+- `git diff --numstat`: `page.js` +50/-50, `StatisticsContent.js` +11/-11, `zh-CN.json` +121/-60, `zh-TW.json` +233/-164
+
+**i18n lint guard-rail** (implemented 2026-10-24): added a local ESLint plugin `local-i18n` with the `no-chinese-literals` rule in `eslint.config.mjs`, scoped to `src/app/(dashboard)/dashboard/**/*.js`. The rule walks every `Literal`, `JSXText`, and `TemplateLiteral` quasis, flags any value matching `/[一-龯]/`, and points the author at `public/i18n/literals/*.json` in the message. The only Chinese fragments that remain in the scoped tree are the three intentional wenyan presets in `endpointConstants.js`, wrapped in an explicit `/* eslint-disable local-i18n/no-chinese-literals */` block with a rationale comment. Sanity probe verified the rule fires on a fresh violation; production run reports 0 violations across the whole dashboard tree.
 
 ---
 
@@ -447,6 +465,10 @@ const TREE_COLS = ["请求数", "总 Token", "输入", "输出", "缓存读", "�
 3. If it's suspected compromise: rotate `JWT_SECRET`, `API_KEY_SECRET`, `MACHINE_ID_SALT` (all in `~/.9router/.env`); invalidate all active sessions; audit `providerConnections` for unauthorized OAuth tokens.
 4. Add server-side validation that refuses to save an OIDC issuer whose TLS cert doesn't chain to a public CA, or that fails a discovery-doc fetch at save time.
 
+### Remediation (2026-10-24) — item 4 implemented
+
+Server-side save-time validation is now in place (see backlog item #9 below). Re-saving this exact `evil.example.com` config today would be **rejected** by the hard gate: `validateOidcConfigForSave()` fetches `https://evil.example.com/.well-known/openid-configuration` with a 5s timeout, gets a DNS/fetch failure, and returns `{ ok: false, reason: "fetch-failed" }` → the PATCH route responds 400 before `updateSettings()` runs. The existing live config on mini2 is untouched by this code change — it still needs operator action (items 1–3 above) to clear.
+
 ---
 
 ## Finding #14 — 429-on-RSC root cause CONFIRMED: version drift (v0.5.75 predates the fix)
@@ -476,6 +498,8 @@ $ git log -S '"version": "0.5.75"' --format='%h %ci %s' -- package.json | head -
 
 **Remediation:** run `npm i -g 9router@latest --prefer-online` on mini2 (or click the sidebar "Update now" button) — but only **after** resolving the migration-registry discrepancy from Finding #2, otherwise the new version's migrations may re-introduce the FK constraint or run out of order.
 
+**Update (2026-10-24, Finding #17):** the FK risk is cleared — published 0.5.109 ships only migration 001, and 002 is unregistered in repo HEAD, so no upgrade path can re-add the constraint. However, installing published 0.5.109 would remove rate limiting entirely (it predates the GAP-P1-17 limiter); prefer a local build of repo HEAD, which also carries the middleware-layer RSC exemption from the Finding #16 resolution.
+
 ---
 
 ## Finding #15 — Minor UI bugs on the Web media sub-page
@@ -486,11 +510,58 @@ $ git log -S '"version": "0.5.75"' --format='%h %ci %s' -- package.json | head -
 
 2. **Duplicate "Create Combo" buttons.** The page shows **two** `add Create Combo` buttons — unique among the 6 media sub-pages. Likely a web-search combo-creation shortcut that was added twice, or a conditional that renders both a floating action button and an inline button. Not a functional bug, but visual noise.
 
+### Resolution (2026-10-24)
+
+| # | Status | Notes |
+|---|--------|-------|
+| 1 | ✅ Fixed | Root cause was **not** in `web/page.js` — that file renders `"Web Search"` and `"Web Fetch"` Section titles correctly capitalized. The lowercase `web` came from `src/shared/components/Header.js` L40-49: the `mediaKindMatch` branch derives the page title via `MEDIA_PROVIDER_KINDS.find((k) => k.id === kindId)`, but `src/shared/constants/providers.js` only declares `webSearch` and `webFetch` entries — there is no `id: "web"`. For the combined `/media-providers/web` route, `kindId = "web"` fell through to the raw-slug fallback (`kindConfig?.label || kindId`), rendering the lowercase URL segment as the H1. Fix: added a special case for `kindId === "web"` that returns `{ title: "Web", description: "Manage your Web Search and Web Fetch providers", icon: "travel_explore" }`. Added matching `zh-CN.json` and `zh-TW.json` translations for the two new strings (`Web` kept as-is in both, description localized). ESLint clean. |
+| 2 | ⚪ By design | The two buttons are **not** duplicates — the page renders two `<Section>` components (Web Search + Web Fetch), each with its own `Create Combo` button that creates a combo of the matching `kind` via `handleCreateCombo("webSearch")` / `handleCreateCombo("webFetch")`. Other media sub-pages have one button because they host one kind; this page hosts two. No change needed. |
+
 ---
 
 ## Finding #16 — `custom-server.rate-limiter.js` is not the only rate limiter
 
 The `custom-server.rate-limiter.js` file is not the only rate limiter in the app. The `src/lib/middleware/rateLimiter.js` file exports `checkRateLimit()` — a separate per-IP limiter with a 30-request burst limit (`BURST_LIMIT = 30` in a 5-second window). If the Next.js middleware layer (`src/middleware.js` or built equivalent) calls this on every request including RSC prefetches, it would 429 them independently of the `custom-server.rate-limiter.js` bypass. The built app at `.next-cli-build/server/middleware.js` exists and may contain this logic compiled in.
+
+### Resolution (2026-10-24)
+
+**Confirmed and fixed.** The middleware-layer limiter is real and wired into `src/dashboardGuard.js:proxy()` (invoked from `src/proxy.js`, the Next middleware entry): every `/api/*` and `/dashboard/*` request passes through `checkRateLimit()` (120 req/min sliding window + 30 req/5s burst, per IP). The original code had **no exemption** for Next-internal requests — `?_rsc=` prefetches fired against a page's own path counted against the same bucket as ordinary navigation, so a burst of RSC prefetches from a heavy dashboard page could 429 the very navigation that triggered them (the middleware-layer twin of the Finding #8/#14 TCP-layer bug).
+
+**Fix:** added `isNextInternalRequest()` in `dashboardGuard.js` exempting `/_next/*` paths and any request carrying a `_rsc` query param, mirroring `isNextInternal` in the TCP-layer `custom-server.rate-limiter.js`. Three regression tests added to `tests/unit/middleware.test.js` (RSC prefetch exempt when the bucket is exhausted; `/_next/` asset not 429'd; ordinary dashboard requests still limited). 24/24 middleware tests pass; ESLint clean.
+
+**Published-package note:** this limiter exists only in repo HEAD — it was committed 2026-10-22 (`437cd60f`, GAP-P1-17) and is **absent** from published 0.5.109 (see Finding #17).
+
+---
+
+## Finding #17 — Published `9router@0.5.109` package audit (backlog #5)
+
+**Date:** 2026-10-24. **Method:** downloaded `https://registry.npmjs.org/9router/-/9router-0.5.109.tgz` to `/tmp/9router-audit/` and inspected it without installing (read-only). **npm publish time:** 2026-10-23T08:35:50Z.
+
+### What actually ships
+
+1. **The runtime is the compiled `.next-cli-build/` standalone bundle** (`server.js` + a `custom-server.js` wrapper). The `package/app/src/` tree is **vestigial**: `src/lib/db/migrate.js` imports `./migrations/index.js`, `./paths.js`, `./schema.js`, `./helpers/metaStore.js`, `./backup.js`, `./version.js` — none of which exist in the package, so loading it directly would crash. `custom-server.js` likewise treats `src/sse/services/backgroundTokenRefresh.js` as fail-open ("Expected in published CLI standalone (src/ not on disk)"). The compiled chunks are what runs.
+2. **Only migration 001 ships.** Compiled chunks `4055.js`/`5217.js` carry the migration runner (`[DB][migrate` log markers) with exactly `version:1` / `name:"initial"`. **ABSENT** from the entire bundle: `fk-provider-connections`, `message-facets`, `message-annotations`, `add-seen-models`, and the tables they create (`message_facets`, `message_annotations`, `saved_views`, `seenModels`). No `REFERENCES providerNodes` FK clause anywhere.
+3. **No rate limiting of any kind ships.** No `*rate-limiter*` file exists; the published `custom-server.js` (reviewed in full) wires socket-IP stamping + h2c downgrade but contains no limiter require/call. The compiled 380KB `middleware.js` and all server chunks have **zero** occurrences of `checkRateLimit`, `BURST_LIMIT`, `Too many requests`, `X-RateLimit-Limit`, or `burstCount`. Control checks pass — the auth layer ships (`Too many failed attempts` present in the login + SAML ACS routes; `x-9r-cli-token` in 5 files) — so the absence is specific to the general limiter, not a grep artifact.
+
+### Why: timeline divergence
+
+| Event | Date |
+|---|---|
+| Migration 002 (FK) added | 2026-10-22 15:04 -0600 (`cf4dfefb`) |
+| Middleware rateLimiter added (GAP-P1-17) | 2026-10-22 15:41 -0600 (`437cd60f`) |
+| Migrations 003/004 added | 2026-10-22 15:51 -0600 (`4013bfbf`) |
+| **0.5.109 published** | **2026-10-23 08:35 UTC (02:35 -0600)** |
+| Migration 005 added | 2026-10-23 19:38 -0600 (`2b63e0dd`) |
+
+Although 002–004 and the limiter were committed ~11 hours before the publish timestamp, the bundle contains none of them: it was cut from a checkout lacking the 2026-10-22 work — the embedded `nextConfig` shows the build machine is a different tree (`outputFileTracingRoot: "/Users/Working/router4"`, `repoRoot: "/Users/Working/router4/9router"`), not this repo. Corroborating drift: `CHANGELOG.md` ends at v0.5.95 (2026-10-01) — versions 0.5.99/0.5.104/0.5.109 were published **without changelog entries**, which is why the changelog audit requested by backlog #5 was impossible and this tarball inspection substitutes for it.
+
+### Consequences for the mini2 upgrade (Finding #14 remediation)
+
+1. **The FK risk from Findings #2/#14 is fully cleared.** `002-fk-provider-connections.js` does not ship in 0.5.109, and it is **UNREGISTERED** in repo HEAD's `src/lib/db/migrations/index.js` (comment: "FK providerConnections.provider → providerNodes(id) was too restrictive in practice"). Neither an npm upgrade nor a build-from-HEAD can re-introduce the FK constraint — the Day-1 reverse-migration on mini2 is forward-compatible with both paths.
+2. **Installing published 0.5.109 removes rate limiting entirely.** The TCP-layer limiter would be replaced by a `custom-server.js` with no limiter wiring, and the middleware-layer limiter never shipped. The Day-1 live patch on mini2 (`/Applications/9Router.app/.../custom-server.rate-limiter.js`) would be discarded. The RSC-429 symptom disappears (nothing left to 429), but so does the GAP-P1-17 DoS protection.
+3. **Building from repo HEAD is the only path that keeps both** — and as of today it is safe: the middleware limiter now exempts RSC prefetches (Finding #16 resolution), migrations run 001→003→004→005 (002 skipped by the registry), and the FK is never re-added. Requires `npm run build` + `scripts/copy-standalone-assets.mjs` (the same pipeline the app/CLI packager uses).
+
+**Recommendation:** do **not** upgrade mini2 to published 0.5.109 (via npm or the sidebar "Update now" flow) — it trades one bug (RSC 429s) for a security regression (no rate limiting) plus loss of everything committed after the 2026-10-23 bundle cut. Upgrade from a local build of repo HEAD instead, after operator sign-off. Note the version-field inversion: repo HEAD is `0.5.95` while the published line is `0.5.109` — the published line is ahead in version number but behind in security work.
 
 ---
 
@@ -500,14 +571,14 @@ The `custom-server.rate-limiter.js` file is not the only rate limiter in the app
 2. **Migration runner hardening.** Add a dry-run mode that refuses to apply migrations if the installed registry differs from the expected set; surface a warning in the dashboard instead of silently corrupting.
 3. **Dashboard error boundaries.** Sweep every `(dashboard)/*` page for missing `error.js` boundaries; add retry UI for transient 429/5xx.
 4. **Provider-add UX.** The current flow does `POST /api/providers` with no client-side pre-validation of provider type. A client-side `providerRegistry.includes(provider)` guard would turn the opaque "Failed to add" into "Provider X is OAuth-only, use the OAuth button."
-5. **Audit the installed v0.5.109 changelog** before the next upgrade — specifically check whether `002-fk-provider-connections.js` ships in the published package and, if so, how it handles the providerNodes-seeding gap.
-6. **i18n lint rule (Day 2).** Add an ESLint rule (custom or `eslint-plugin-i18n-json`) that flags any JSX text node or string literal matching `/[一-鿿]/` in a file that imports `useTranslation` / `useI18n`. Would have caught the Model-Context and Statistics whole-page omissions at author-time. Apply to `src/app/(dashboard)/dashboard/**/*.js`.
-7. **Model Context i18n fix (Day 2).** Replace the ~48 hardcoded Chinese strings in `src/app/(dashboard)/dashboard/model-context/page.js` with `t()` calls. Add keys to all 36 locale files under `i18n/locales/`. Highest i18n-debt item in the dashboard.
-8. **Statistics i18n fix (Day 2).** Replace the ~13 hardcoded Chinese strings in `src/app/(dashboard)/dashboard/statistics/StatisticsContent.js` (auto-refresh label, tree-column headers, aggregate-detail labels, grouping dropdown, empty state).
-9. **OIDC save-time validation (Day 2, SECURITY).** Refuse to persist an OIDC issuer URL whose `.well-known/openid-configuration` fetch fails, whose TLS cert doesn't chain to a public CA, or whose discovery doc lacks required fields (`authorization_endpoint`, `token_endpoint`). Would have prevented the `evil.example.com` config from going active. Pair with a warning when password-login is disabled with no reachable IdP.
-10. **Lowercase `web` heading fix (Day 2).** `src/app/(dashboard)/dashboard/media-providers/web/page.js` (or the shared media-page template) renders `<h1>web</h1>` — should be `Web` or `t("media.web")`. Trivial CSS-grade visual inconsistency.
-11. **Duplicate "Create Combo" buttons on `/media-providers/web` (Day 2).** Two `add Create Combo` buttons render — likely a conditional that mounts both a floating action button and an inline button. Deduplicate to one.
-12. **Token Saver "文 Full" preset label (Day 2).** `src/app/(dashboard)/dashboard/endpoint/endpointConstants.js` L24 hardcodes `"文 Full"` and a Chinese description. Decide whether it's intentional Chinese-flavored branding (keep, but i18n-wrap the description) or an oversight (translate).
+5. **Audit the installed v0.5.109 changelog** ✅ Done 2026-10-24 — see Finding #17. The changelog itself ends at v0.5.95 (0.5.99–0.5.109 have no entries), so the audit was done by direct tarball inspection: published 0.5.109 ships only migration 001 (the FK migration neither ships there nor can it ever run — it is unregistered in repo HEAD), and ships **no rate limiter at all** (the GAP-P1-17 middleware limiter landed 2026-10-22 but the bundle was cut from a different checkout lacking it). Recommendation: upgrade mini2 from a local build of repo HEAD, not from the published 0.5.109 package.
+6. **i18n lint rule (Day 2).** ✅ Done 2026-10-24. `eslint.config.mjs` now declares a local `local-i18n` plugin with the `no-chinese-literals` rule scoped to `src/app/(dashboard)/dashboard/**/*.{js,jsx}`. Catches `Literal`, `JSXText`, and `TemplateLiteral` quasis matching `/[一-龯]/`. Would have flagged both whole-page omissions at author time.
+7. **Model Context i18n fix (Day 2).** ✅ Done 2026-10-24. ~48 Chinese strings rewritten to English source text; 53 keys added to `zh-CN.json`, 56 to `zh-TW.json`. See Finding #12 resolution.
+8. **Statistics i18n fix (Day 2).** ✅ Done 2026-10-24. 11 Chinese strings rewritten; 8 keys added to `zh-CN.json`, 13 to `zh-TW.json`. See Finding #12 resolution.
+9. **OIDC save-time validation (Day 2, SECURITY).** ✅ Done 2026-10-24. Server-side gate added to the `/api/settings` PATCH handler (`src/app/api/settings/route.js`) backed by new `validateOidcConfigForSave()` in `src/lib/auth/oidc.js`. **Hard gate** (full discovery fetch, 5s timeout) fires when the effective authMode would disable password login — `"oidc"`, or `"sso"` with `ssoType === "oidc"` — and rejects: unreachable hosts (`fetch-failed`), timeouts (`timeout`), non-HTTPS except localhost (`insecure`), malformed URLs (`invalid-url`), non-JSON responses (`bad-json`), and discovery docs missing `authorization_endpoint`/`token_endpoint` (`missing-fields`). **Soft probe** (URL format + HTTPS only, no network call) fires when OIDC fields are touched but password login stays enabled — no lockout risk, so no reachability requirement. **Escape hatch:** `skipOidcValidation: true` in the request body (never persisted) for air-gapped / not-yet-reachable IdP setups. **Mode semantics verified against `src/app/api/auth/login/route.js`:** `"both"` never blocks password login (soft probe only); `"saml"` mode is excluded entirely (own config surface); hard gate requires OIDC fields to actually be complete. 13 unit tests in `tests/unit/oidc-save-validation.test.js`, all passing. TLS cert-chain validation is delegated to Node's default TLS verification (the discovery fetch fails on untrusted certs) rather than a custom CA check.
+10. **Lowercase `web` heading fix (Day 2).** ✅ Done 2026-10-24. Root cause was in `src/shared/components/Header.js` (the `mediaKindMatch` branch looked up `MEDIA_PROVIDER_KINDS` by `id`, but `/media-providers/web` has `kindId="web"` and no such entry exists — fell through to raw-slug fallback). Added special case returning `{title:"Web", description:"Manage your Web Search and Web Fetch providers", icon:"travel_explore"}` plus zh-CN/zh-TW translations. See Finding #15 resolution.
+11. **Duplicate "Create Combo" buttons on `/media-providers/web` (Day 2).** ⚪ By design — the page renders two `<Section>` components (Web Search + Web Fetch), each with its own `Create Combo` button wired to `handleCreateCombo("webSearch")` / `handleCreateCombo("webFetch")`. Other media sub-pages have one button because they host one kind; this page hosts two. No change needed.
+12. **Token Saver "文 Full" preset label (Day 2).** ⚪ Intentional locale-gated branding — `TokenSaverClient.js:71-73` filters the wenyan presets out via `CAVEMAN_LEVELS.filter(lvl => !lvl.wenyan)` when the active locale is not in `WENYAN_LOCALES` (`["zh-CN", "zh-TW"]`), and auto-downgrades an active wenyan selection to `ultra` on locale switch. Added `/* eslint-disable local-i18n/no-chinese-literals */` block with rationale comment.
 
 ---
 
@@ -524,6 +595,22 @@ The `custom-server.rate-limiter.js` file is not the only rate limiter in the app
 - `docs/plans-and-prompts/research/9router/51-mini2-dashboard-dom-error-audit.md` — this document, expanded with Findings #10–#15
 - `/memories/session/combos-feature-walk.md` — session memory with combo-page interactive inventory
 - Browser session `34271fd2-402c-4051-8828-7480e79689b8` — 25 dashboard URLs visited, accessibility snapshots + DOM probes + screenshots at each step (screenshots archived in the Copilot chat resources under this session's GUID `3ba69e69-a2a3-4b6e-8e3a-9acd4cb9bb8d`)
+
+**Day 3 (2026-10-24, remediation):**
+- `src/app/(dashboard)/dashboard/model-context/page.js` — 48 Chinese strings rewritten to English source text
+- `src/app/(dashboard)/dashboard/statistics/StatisticsContent.js` — 11 Chinese strings rewritten to English source text
+- `src/shared/components/Header.js` — added `/media-providers/web` special case for properly-capitalized title
+- `public/i18n/literals/zh-CN.json` — added 53 Model-Context keys + 8 Statistics keys + 2 Web-header keys (total 1514), re-sorted alphabetically
+- `public/i18n/literals/zh-TW.json` — added 56 Model-Context keys + 13 Statistics keys + 2 Web-header keys (total 266), re-sorted alphabetically
+- `eslint.config.mjs` — added inline `local-i18n/no-chinese-literals` rule scoped to dashboard files
+- `src/app/(dashboard)/dashboard/endpoint/endpointConstants.js` — wrapped intentional wenyan presets in `eslint-disable` block with rationale comment
+- `src/lib/auth/oidc.js` — added `validateOidcConfigForSave()`; extended `fetchOidcDiscovery()` with `{signal}` support
+- `src/app/api/settings/route.js` — added OIDC save-time validation gate (hard gate for password-disabled modes, soft probe otherwise, `skipOidcValidation` escape hatch)
+- `tests/unit/oidc-save-validation.test.js` — 13 new unit tests for the validation gate, all passing
+- `src/dashboardGuard.js` — added `isNextInternalRequest()` RSC/`_next/` exemption to the middleware rate limiter (Finding #16 remediation)
+- `tests/unit/middleware.test.js` — `fakeRequest` helper gained `searchParams`; 3 RSC-exemption regression tests added (24/24 passing)
+- `/tmp/9router-audit/` — extracted `9router-0.5.109.tgz` for read-only inspection (Finding #17 evidence)
+- `docs/plans-and-prompts/research/9router/51-mini2-dashboard-dom-error-audit.md` — this document, Finding #12 "Fix applied (2026-10-24)" section + Finding #13 remediation note + Finding #15 Resolution table + Finding #16 resolution + Finding #17 (published-package audit) + backlog items #5/#6/#7/#8/#9/#10/#11/#12 marked resolved
 
 ## See also
 
