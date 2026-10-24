@@ -132,7 +132,8 @@ describe("rewriteModelsListForClaude", () => {
     expect(out[0].display_name).toBe("bai/deepseek-v4-flash");
     expect(out[1].id).toBe("claude-glm/glm-4.7");
     expect(out[2].id).toBe("claude-x/big-window[1m]");
-    expect(out[2].display_name).toBe("x/big-window");
+    // display_name mirrors the [1m] suffix so the picker shows the 1M window
+    expect(out[2].display_name).toBe("x/big-window[1m]");
   });
 
   it("does not double-suffix ids that already carry [1m]", () => {
