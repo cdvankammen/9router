@@ -40,6 +40,15 @@ const getPageInfo = (pathname) => {
   const mediaKindMatch = pathname.match(/\/media-providers\/([^/]+)$/);
   if (mediaKindMatch) {
     const kindId = mediaKindMatch[1];
+    // Special case: /media-providers/web is a combined page for webSearch + webFetch
+    if (kindId === "web") {
+      return {
+        title: "Web",
+        description: "Manage your Web Search and Web Fetch providers",
+        icon: "travel_explore",
+        breadcrumbs: [],
+      };
+    }
     const kindConfig = MEDIA_PROVIDER_KINDS.find((k) => k.id === kindId);
     return {
       title: kindConfig?.label || kindId,

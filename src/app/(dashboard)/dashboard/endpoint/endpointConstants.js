@@ -20,9 +20,13 @@ export const CAVEMAN_LEVELS = [
   { id: "lite", label: "Lite", desc: "Drop filler, keep grammar" },
   { id: "full", label: "Full", desc: "Drop articles, fragments OK" },
   { id: "ultra", label: "Ultra", desc: "Telegraphic, max compression" },
+  // Intentional Chinese-flavored branding — hidden from non-Chinese locales via
+  // TokenSaverClient.js WENYAN_LOCALES filter. See Finding #12 resolution.
+  /* eslint-disable local-i18n/no-chinese-literals */
   { id: "wenyan-lite", label: "文 Lite", desc: "Classical Chinese, light compression", wenyan: true },
   { id: "wenyan", label: "文 Full", desc: "Maximum 文言文, 80-90% reduction", wenyan: true },
   { id: "wenyan-ultra", label: "文 Ultra", desc: "Extreme classical compression", wenyan: true },
+  /* eslint-enable local-i18n/no-chinese-literals */
 ];
 
 export const PONYTAIL_LEVELS = [

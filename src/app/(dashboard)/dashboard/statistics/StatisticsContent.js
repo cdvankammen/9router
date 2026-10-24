@@ -36,7 +36,7 @@ const fmtTokens = (n) => {
 
 const fmtPct = (n) => `${((n || 0) * 100).toFixed(1)}%`;
 const fmtDur = (ms) => (ms ? `${(ms / 1000).toFixed(1)}s` : "-");
-// "用时/首字" — total latency / time-to-first-token, e.g. 2.6s/0.3s
+// "Duration/TTFT" — total latency / time-to-first-token, e.g. 2.6s/0.3s
 const fmtLatencyPair = (total, ttft) => {
   if (!total && !ttft) return "-";
   return `${fmtDur(total)}/${fmtDur(ttft)}`;
@@ -285,13 +285,13 @@ export default function StatisticsContent({ initialData }) {
           )}
           <div className="ml-auto flex items-end gap-2">
             <div className="flex flex-col gap-1.5">
-              <span className="text-sm font-medium text-text-main">自动刷新</span>
+              <span className="text-sm font-medium text-text-main">Auto Refresh</span>
               <select
                 value={autoRefresh}
                 onChange={(e) => setAutoRefresh(e.target.value)}
                 className="h-9 rounded-lg border border-border bg-surface-2 px-2 text-sm text-text-main focus:outline-none focus:ring-2 focus:ring-brand-500/30 cursor-pointer"
               >
-                <option value="off">关闭</option>
+                <option value="off">Off</option>
                 <option value="5">5s</option>
                 <option value="10">10s</option>
                 <option value="30">30s</option>
@@ -302,7 +302,7 @@ export default function StatisticsContent({ initialData }) {
               onClick={refreshNow}
               className="h-9 px-3 rounded-lg border border-border bg-surface-2 text-sm font-medium text-text-main hover:bg-surface hover:border-brand-400 transition-colors cursor-pointer whitespace-nowrap"
             >
-              立刻刷新
+              Refresh Now
             </button>
           </div>
         </div>
@@ -327,7 +327,7 @@ export default function StatisticsContent({ initialData }) {
           }`}
         >
           <span className="material-symbols-outlined">{breakdownOpen ? "unfold_less" : "unfold_more"}</span>
-          <span className="text-xs font-medium whitespace-nowrap">聚合明细</span>
+          <span className="text-xs font-medium whitespace-nowrap">Aggregated Breakdown</span>
         </button>
       </div>
 
@@ -631,7 +631,7 @@ const DEPTH_STYLES = [
   "bg-brand-500/10 hover:bg-brand-500/15",
 ];
 
-const TREE_COLS = ["请求数", "总 Token", "输入", "输出", "缓存读", "缓存写", "命中率", "用时/首字"];
+const TREE_COLS = ["Requests", "Total Tokens", "Input", "Output", "Cache Read", "Cache Write", "Hit Rate", "Duration/TTFT"];
 
 function BreakdownTable({ rows, mode, onModeChange, providerNames, accountNames, expanded, onToggle }) {
   const tree = useMemo(
@@ -642,12 +642,12 @@ function BreakdownTable({ rows, mode, onModeChange, providerNames, accountNames,
   return (
     <Card padding="none" className="min-w-0">
       <div className="flex items-center justify-between px-4 py-2.5 border-b border-border-subtle">
-        <span className="text-sm font-semibold text-text-main">聚合明细</span>
+        <span className="text-sm font-semibold text-text-main">Aggregated Breakdown</span>
         <SegmentedControl
           size="sm"
           options={[
-            { value: "provider", label: "按提供商" },
-            { value: "model", label: "按模型" },
+            { value: "provider", label: "By Provider" },
+            { value: "model", label: "By Model" },
           ]}
           value={mode}
           onChange={onModeChange}
@@ -657,7 +657,7 @@ function BreakdownTable({ rows, mode, onModeChange, providerNames, accountNames,
         <table className="w-full text-sm min-w-[860px]">
           <thead>
             <tr className="border-b border-border-subtle text-left text-xs text-text-muted">
-              <th className="pl-4 pr-2 py-2.5 font-medium">维度</th>
+              <th className="pl-4 pr-2 py-2.5 font-medium">Dimension</th>
               {TREE_COLS.map((h) => (
                 <th key={h} className="px-2 py-2.5 font-medium text-right whitespace-nowrap">{h}</th>
               ))}
@@ -665,7 +665,7 @@ function BreakdownTable({ rows, mode, onModeChange, providerNames, accountNames,
           </thead>
           <tbody>
             {tree.length === 0 && (
-              <tr><td colSpan={9} className="px-4 py-6 text-center text-text-muted">没有匹配的数据。</td></tr>
+              <tr><td colSpan={9} className="px-4 py-6 text-center text-text-muted">No matching data.</td></tr>
             )}
             {tree.map((n) => (
               <BreakdownNode key={n.key} node={n} depth={0} expanded={expanded} onToggle={onToggle} />

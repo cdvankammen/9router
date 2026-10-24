@@ -78,7 +78,7 @@ function ModelContextPage() {
   const [q, setQ] = useState("");
   const [providersSel, setProvidersSel] = useState([]);
   // Default to the in-use world (models actually exposed in /v1/models);
-  // click 状态 again (or 未启用) to see the dormant catalog.
+  // click Status again (or Inactive) to see the dormant catalog.
   const [statusF, setStatusF] = useState("active"); // all | active | inactive
   const [covF, setCovF] = useState("all"); // all | covered | uncovered
   const [connF, setConnF] = useState("all"); // all | yes | no
@@ -302,7 +302,7 @@ function ModelContextPage() {
     if (!row) { setEditing(null); return; }
     const window = parseWindow(editing.value);
     if (window === null) {
-      setError("窗口需为正整数,支持 200k / 1m 缩写");
+      setError("Window must be a positive integer; 200k / 1m abbreviations supported");
       return;
     }
     if (await saveOverride(row.fullKey, window)) {
@@ -316,7 +316,7 @@ function ModelContextPage() {
   // must be removed in the overrides panel.
   const revertRow = async (row) => {
     await deleteKeysBulk([row.src.key]);
-    flashNotice(`${row.model} 已恢复默认值`);
+    flashNotice(`${row.model} reverted to default`);
   };
 
   const toggleSelectAll = () => {
@@ -339,7 +339,7 @@ function ModelContextPage() {
   const handleBatchSet = async () => {
     const window = parseWindow(batchVal);
     if (window === null) {
-      setError("窗口需为正整数,支持 200k / 1m 缩写");
+      setError("Window must be a positive integer; 200k / 1m abbreviations supported");
       return;
     }
     const set = [...selected].map((k) => ({ key: k, contextWindow: window }));
@@ -353,7 +353,7 @@ function ModelContextPage() {
       if (!res.ok) throw new Error(data.error || "Failed to save");
       setOverrides(data.overrides || {});
       invalidateModelCaps();
-      flashNotice(`已批量设置 ${set.length} 项 → ${window.toLocaleString()}`);
+      flashNotice(`Batch set ${set.length} items → ${window.toLocaleString()}`);
       setSelected(new Set());
       setBatchVal("");
     } catch (e) {
@@ -373,9 +373,9 @@ function ModelContextPage() {
     const skipped = selected.size - new Set(ownKeys).size;
     await deleteKeysBulk([...new Set(ownKeys)]);
     if (skipped > 0) {
-      flashNotice(`已清除 ${ownKeys.length} 项覆盖;${skipped} 项受全局/glob 覆盖控制,未改动`);
+      flashNotice(`Cleared ${ownKeys.length} overrides; ${skipped} controlled by bare/glob overrides, unchanged`);
     } else {
-      flashNotice(`已清除 ${ownKeys.length} 项覆盖`);
+      flashNotice(`Cleared ${ownKeys.length} overrides`);
     }
     setSelected(new Set());
   };
@@ -402,14 +402,14 @@ function ModelContextPage() {
     const window = parseWindow(formWindow);
     if (!key) { setFormError("Key required"); return; }
     if (window === null) {
-      setFormError("窗口需为正整数,支持 200k / 1m 缩写");
+      setFormError("Window must be a positive integer; 200k / 1m abbreviations supported");
       return;
     }
     if (await saveOverride(key, window)) {
       setFormKey("");
       setFormWindow("");
       setFormError("");
-      flashNotice(`已添加覆盖 ${key} → ${window.toLocaleString()}`);
+      flashNotice(`Added override ${key} → ${window.toLocaleString()}`);
     }
   };
 
@@ -461,14 +461,14 @@ function ModelContextPage() {
       <div>
         <h1 className="text-xl font-semibold">Model Context</h1>
         <p className="text-sm text-text-muted mt-1">
-          核对每个模型的上下文窗口，不对就直接改。「启用中」的供应商模型排在最前，即 <code>/v1/models</code> 当前对外可见的集合；改动立即生效于路由与 <code>/v1/models</code>。
+          Audit the context window of each model and fix it inline. Active provider models appear first — the set currently exposed via <code>/v1/models</code>; changes apply immediately to routing and <code>/v1/models</code>.
         </p>
       </div>
 
       {error && (
         <div className="text-xs text-red-500 bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2 flex items-center justify-between">
           <span>{error}</span>
-          <button onClick={() => setError("")} title="关闭">
+          <button onClick={() => setError("")} title="Dismiss">
             <span className="material-symbols-outlined text-sm">close</span>
           </button>
         </div>
@@ -483,7 +483,7 @@ function ModelContextPage() {
         {/* Toolbar */}
         <div className="flex flex-wrap items-center gap-2 px-4 py-3 border-b border-border-subtle">
           <Input
-            placeholder="搜索模型 / 供应商…"
+            placeholder="Search models / providers…"
             icon="search"
             value={q}
             onChange={(e) => setQ(e.target.value)}
@@ -498,22 +498,22 @@ function ModelContextPage() {
           />
           <SegmentedControl
             size="sm"
-            options={[{ value: "all", label: "状态" }, { value: "active", label: "启用" }, { value: "inactive", label: "未启用" }]}
+            options={[{ value: "all", label: "Status" }, { value: "active", label: "Active" }, { value: "inactive", label: "Inactive" }]}
             value={statusF}
             onChange={segToggle(setStatusF)}
           />
           <SegmentedControl
             size="sm"
-            options={[{ value: "all", label: "覆盖" }, { value: "covered", label: "已覆盖" }, { value: "uncovered", label: "未覆盖" }]}
+            options={[{ value: "all", label: "Coverage" }, { value: "covered", label: "Covered" }, { value: "uncovered", label: "Uncovered" }]}
             value={covF}
             onChange={segToggle(setCovF)}
           />
           {/* connF = the provider has been configured with at least one connection record,
               enabled or not — orthogonal to model enablement. */}
-          <span title="连接 = 该供应商配置过连接(含已停用)。有连接但模型仍未启用 → 去供应商页勾选该模型">
+          <span title="Connection = the provider has at least one connection record (enabled or not). Connected but model still inactive → enable the model on the provider page">
             <SegmentedControl
               size="sm"
-              options={[{ value: "all", label: "连接" }, { value: "yes", label: "有" }, { value: "no", label: "无" }]
+              options={[{ value: "all", label: "Connection" }, { value: "yes", label: "Yes" }, { value: "no", label: "No" }]
               }
               value={connF}
               onChange={segToggle(setConnF)}
@@ -522,7 +522,7 @@ function ModelContextPage() {
           <div className="flex items-center gap-1">
             <input
               type="number"
-              placeholder="窗口 ≥"
+              placeholder="Window ≥"
               value={minW}
               onChange={(e) => setMinW(e.target.value)}
               className="h-9 w-24 rounded-lg border border-border bg-surface-2 px-2.5 text-sm text-text-main focus:outline-none focus:ring-2 focus:ring-brand-500/30"
@@ -537,30 +537,30 @@ function ModelContextPage() {
           </div>
           <div className="ml-auto flex items-center gap-2">
             <Button size="sm" variant="ghost" icon={keysOpen ? "expand_less" : "tune"} onClick={() => setKeysOpen(!keysOpen)}>
-              覆盖键 ({coveredCount})
+              Override keys ({coveredCount})
             </Button>
             <Button size="sm" variant={hiddenView ? "primary" : "ghost"} icon="visibility_off"
               onClick={() => setHiddenView(!hiddenView)}>
-              已隐藏 ({hidden.size})
+              Hidden ({hidden.size})
             </Button>
-            <Button size="sm" icon="add" onClick={() => setAddOpen(!addOpen)}>新增</Button>
+            <Button size="sm" icon="add" onClick={() => setAddOpen(!addOpen)}>Add</Button>
           </div>
         </div>
 
         {/* Batch bar */}
         {selected.size > 0 && (
           <div className="flex flex-wrap items-center gap-2 px-4 py-2.5 bg-brand-500/10 border-b border-border-subtle">
-            <span className="text-sm font-medium">已选 {selected.size} 项</span>
+            <span className="text-sm font-medium">{selected.size} selected</span>
             <input
               type="text"
-              placeholder="如 200k / 1m"
+              placeholder="e.g. 200k / 1m"
               value={batchVal}
               onChange={(e) => setBatchVal(e.target.value)}
               className="h-8 w-28 rounded-lg border border-border bg-surface-2 px-2.5 text-sm text-text-main focus:outline-none focus:ring-2 focus:ring-brand-500/30"
             />
-            <Button size="sm" onClick={handleBatchSet} disabled={saving}>设为</Button>
+            <Button size="sm" onClick={handleBatchSet} disabled={saving}>Set</Button>
             <Button size="sm" variant="ghost" onClick={handleBatchClear} disabled={saving}>
-              清除覆盖
+              Clear overrides
             </Button>
           </div>
         )}
@@ -570,12 +570,12 @@ function ModelContextPage() {
           <div className="flex flex-wrap items-end gap-3 px-4 py-3 border-b border-border-subtle bg-sidebar/40">
             <div className="flex-1 min-w-[240px]">
               <label className="block text-xs text-text-muted mb-1">
-                Key(裸名全局生效,provider/model 限单供应商,* 通配)
+                Key (bare = global, provider/model = single provider, * = wildcard)
               </label>
               <input
                 list="mc-key-options"
                 className="w-full h-9 rounded-lg border border-border bg-surface-2 px-3 text-sm text-text-main focus:outline-none focus:ring-2 focus:ring-brand-500/30"
-                placeholder="e.g. zhipu/glm-5.3 或 glm-*"
+                placeholder="e.g. zhipu/glm-5.3 or glm-*"
                 value={formKey}
                 onChange={(e) => setFormKey(e.target.value)}
               />
@@ -586,15 +586,15 @@ function ModelContextPage() {
               </datalist>
               {formPreview && (
                 <p className={`text-[11px] mt-1 ${formPreview.count > 0 ? "text-text-muted" : "text-amber-500"}`}>
-                  将命中 {formPreview.count} 个模型{formPreview.count === 0 && " — 检查拼写"}
+                  Will match {formPreview.count} models{formPreview.count === 0 && " — check spelling"}
                 </p>
               )}
             </div>
             <div className="w-36">
-              <Input label="窗口(tokens)" placeholder="e.g. 200k" value={formWindow}
+              <Input label="Window (tokens)" placeholder="e.g. 200k" value={formWindow}
                 onChange={(e) => setFormWindow(e.target.value)} />
             </div>
-            <Button onClick={submitAddForm} disabled={saving}>添加覆盖</Button>
+            <Button onClick={submitAddForm} disabled={saving}>Add override</Button>
           </div>
         )}
 
@@ -602,7 +602,7 @@ function ModelContextPage() {
         {keysOpen && (
           <div className="px-4 py-3 border-b border-border-subtle bg-sidebar/40">
             {Object.keys(overrides).length === 0 ? (
-              <p className="text-sm text-text-muted">还没有覆盖配置。</p>
+              <p className="text-sm text-text-muted">No overrides configured yet.</p>
             ) : (
               <div className="flex flex-col gap-1.5">
                 {Object.entries(overrides).map(([k, v]) => {
@@ -613,7 +613,7 @@ function ModelContextPage() {
                         <code className="text-xs font-mono bg-sidebar px-1.5 py-0.5 rounded">{k}</code>
                         <span className="text-sm font-mono">{fmtInt(v)}</span>
                         {hitCount === 0 && (
-                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/10 text-red-500">未命中任何模型</span>
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/10 text-red-500">Matches no models</span>
                         )}
                       </div>
                       <div className="flex items-center gap-2">
@@ -622,7 +622,7 @@ function ModelContextPage() {
                           onClick={() => deleteKeysBulk([k])}
                           disabled={saving}
                           className="p-1 hover:bg-red-500/10 rounded text-text-muted hover:text-red-500"
-                          title="删除此覆盖"
+                          title="Delete this override"
                         >
                           <span className="material-symbols-outlined text-sm">close</span>
                         </button>
@@ -644,16 +644,16 @@ function ModelContextPage() {
                   <input type="checkbox" checked={allVisibleSelected} onChange={toggleSelectAll} className="h-4 w-4 cursor-pointer" />
                 </th>
                 <th className="px-2 py-2 font-medium cursor-pointer hover:text-text-main" onClick={() => toggleSort("provider")}>
-                  供应商{sortIcon("provider")}
+                  Provider{sortIcon("provider")}
                 </th>
                 <th className="px-2 py-2 font-medium cursor-pointer hover:text-text-main" onClick={() => toggleSort("model")}>
-                  模型{sortIcon("model")}
+                  Model{sortIcon("model")}
                 </th>
                 <th className="px-2 py-2 font-medium cursor-pointer hover:text-text-main" onClick={() => toggleSort("eff")}>
-                  生效窗口{sortIcon("eff")}
+                  Effective window{sortIcon("eff")}
                 </th>
-                <th className="px-2 py-2 font-medium">来源</th>
-                <th className="pl-2 pr-4 py-2 font-medium text-right">操作</th>
+                <th className="px-2 py-2 font-medium">Source</th>
+                <th className="pl-2 pr-4 py-2 font-medium text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -661,7 +661,7 @@ function ModelContextPage() {
                 <tr><td colSpan={6} className="px-4 py-8 text-center text-text-muted">Loading…</td></tr>
               ) : visible.length === 0 ? (
                 <tr><td colSpan={6} className="px-4 py-8 text-center text-text-muted">
-                  {hiddenView ? "没有已隐藏的模型。" : "没有匹配的模型。"}
+                  {hiddenView ? "No hidden models." : "No matching models."}
                 </td></tr>
               ) : (
                 visible.map((r) => (
@@ -673,10 +673,10 @@ function ModelContextPage() {
                       <span>{r.providerName}</span>
                       {!r.enabledModel && (
                         <span
-                          title={r.providerActive ? "供应商已有启用的连接，但该模型不在 /v1/models 中（未勾选）" : "该供应商没有启用的连接"}
+                          title={r.providerActive ? "Provider has an enabled connection, but this model is not in /v1/models (unchecked)" : "Provider has no enabled connection"}
                           className="text-[10px] px-1.5 py-0.5 rounded bg-surface-2 text-text-muted/60 ml-1"
                         >
-                          未启用
+                          Inactive
                         </span>
                       )}
                       <code className="text-[10px] font-mono bg-sidebar px-1 py-0.5 rounded text-text-muted/60 ml-1">{r.provider}</code>
@@ -698,7 +698,7 @@ function ModelContextPage() {
                           />
                           <button
                             onClick={commitEdit}
-                            title="确认（Enter）"
+                            title="Confirm (Enter)"
                             className="h-7 w-7 flex items-center justify-center rounded bg-brand-500 text-white hover:bg-brand-600 disabled:opacity-40 shrink-0"
                             disabled={saving || editing.value.trim() === ""}
                           >
@@ -706,7 +706,7 @@ function ModelContextPage() {
                           </button>
                           <button
                             onClick={() => setEditing(null)}
-                            title="取消（Esc）"
+                            title="Cancel (Esc)"
                             className="h-7 w-7 flex items-center justify-center rounded border border-border text-text-muted hover:bg-surface-2 hover:text-text-main shrink-0"
                           >
                             <span className="material-symbols-outlined" style={{ fontSize: 16 }}>close</span>
@@ -724,26 +724,26 @@ function ModelContextPage() {
                     <td className="px-2 py-2 whitespace-nowrap">
                       {r.src ? (
                         <span title={r.src.key} className={r.src.type === "scoped" ? "text-[10px] px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-600" : "text-[10px] px-1.5 py-0.5 rounded bg-purple-500/15 text-purple-600"}>
-                          {r.src.type === "scoped" ? "手动" : r.src.type === "bare" ? "全局" : "glob"}
+                          {r.src.type === "scoped" ? "Manual" : r.src.type === "bare" ? "Global" : "glob"}
                         </span>
                       ) : (
                         <span className="text-text-muted/40">—</span>
                       )}
                     </td>
                     <td className="pl-2 pr-4 py-2 text-right whitespace-nowrap">
-                      <button onClick={() => startEdit(r)} title="编辑生效窗口" className="p-1 hover:bg-surface-2 rounded text-text-muted hover:text-primary">
+                      <button onClick={() => startEdit(r)} title="Edit effective window" className="p-1 hover:bg-surface-2 rounded text-text-muted hover:text-primary">
                         <span className="material-symbols-outlined text-sm">edit</span>
                       </button>
                       {r.src?.type === "scoped" ? (
-                        <button onClick={() => revertRow(r)} disabled={saving} title="恢复默认（移除此行的覆盖）" className="p-1 hover:bg-red-500/10 rounded text-text-muted hover:text-red-500">
+                        <button onClick={() => revertRow(r)} disabled={saving} title="Revert to default (remove this row's override)" className="p-1 hover:bg-red-500/10 rounded text-text-muted hover:text-red-500">
                           <span className="material-symbols-outlined text-sm">restart_alt</span>
                         </button>
                       ) : r.src ? (
-                        <span title="由此行的覆盖键控制，可在「覆盖键」面板管理" className="inline-block p-1 text-text-muted/30">
+                        <span title="Controlled by this row's override key; manage in the Override keys panel" className="inline-block p-1 text-text-muted/30">
                           <span className="material-symbols-outlined text-sm">restart_alt</span>
                         </span>
                       ) : null}
-                      <button onClick={() => toggleHideRow(r)} title={hiddenView ? "取消隐藏" : "隐藏此行"} className="p-1 hover:bg-surface-2 rounded text-text-muted hover:text-primary">
+                      <button onClick={() => toggleHideRow(r)} title={hiddenView ? "Unhide" : "Hide this row"} className="p-1 hover:bg-surface-2 rounded text-text-muted hover:text-primary">
                         <span className="material-symbols-outlined text-sm">{hiddenView ? "visibility" : "visibility_off"}</span>
                       </button>
                     </td>
@@ -757,12 +757,12 @@ function ModelContextPage() {
         {/* Footer */}
         <div className="flex items-center justify-between px-4 py-2.5 border-t border-border-subtle text-xs text-text-muted">
           <span>
-            {hiddenView ? `已隐藏 ${filtered.length} 项` : `显示 ${visible.length} / ${filtered.length} 项`}
-            {coveredCount > 0 && hiddenView === false && ` · 已覆盖 ${coveredCount} 项`}
+            {hiddenView ? `${filtered.length} hidden` : `Showing ${visible.length} / ${filtered.length}`}
+            {coveredCount > 0 && hiddenView === false && ` · ${coveredCount} overridden`}
           </span>
           {!hiddenView && !showAll && filtered.length > ROW_CAP && (
             <button onClick={() => setShowAll(true)} className="text-primary hover:underline cursor-pointer">
-              显示全部 {filtered.length} 行
+              Show all {filtered.length} rows
             </button>
           )}
         </div>
