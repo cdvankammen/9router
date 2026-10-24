@@ -105,8 +105,12 @@ describe("Kiro external_idp (CLIProxyAPI) import and refresh", () => {
     expect(headers.TokenType).toBe("EXTERNAL_IDP");
     expect(headers.tokentype).toBeUndefined();
 
+    // Since 7e5f5a88: kiro.dev must never be first for any auth method (deprecated
+    // path gateway returns 400 REQUEST_BODY_INVALID). q.* is always first for all
+    // auth methods — Amazon surfaces reject foreign tokens with 401/403 which DO
+    // fall through safely.
     expect(executor.buildUrl("claude-sonnet-4.5", true, 0, credentials)).toBe(
-      "https://codewhisperer.us-east-1.amazonaws.com/generateAssistantResponse"
+      "https://q.us-east-1.amazonaws.com/generateAssistantResponse"
     );
   });
 
