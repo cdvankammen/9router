@@ -1,0 +1,106 @@
+d2f9017758485f6ab0ffeaaa72f66831c6cd9d26|d2f90177|decolua|2026-10-07 18:51:36 +0700|feat(systemone): support Cloudflare AI clef-flash endpoint
+e10da16031cf1d327f84b88747f19219f9bfb4ec|e10da160|Đào Văn Hùng|2026-10-07 18:52:13 +0700|fix(usage): track exact Codex image token usage
+625df74db62e3f6725be3ae141f0fd6d1dbc92c1|625df74d|Badroel07|2026-10-07 19:01:12 +0700|fix(gemini): rename $ref keys in functionResponse payloads
+85bc33ceafefda393bc039f0a6b0c8fc4657ac14|85bc33ce|kelongyan|2026-10-07 19:05:43 +0700|feat(providers): add MiniMax Code (mcode) credits provider
+cbd594acaea2a3cc30ac09f5177b7a97ec880458|cbd594ac|mannnrachman|2026-10-07 19:11:45 +0700|fix(cursor): reject empty AgentService turns without successful stop
+18ad1a89ff4f91636b4f08135b8efcfcc36af7c7|18ad1a89|mannnrachman|2026-10-07 19:13:45 +0700|fix(cursor): forward reasoning effort to AgentService Run
+b677bfce34ddc072d797f5997c7baae66d4acdd4|b677bfce|semihisikman|2026-10-07 19:16:11 +0700|fix(cli): store model IDs in TUI combos
+0dd4d6be24a1f996be73b9bc470cb0861ac2df75|0dd4d6be|semihisikman|2026-10-07 19:20:57 +0700|fix(codex): preserve explicit tool strict flags
+63de82b8e5a17f0b87b47bf12fabdab7158dd62e|63de82b8|zmf|2026-10-07 19:22:07 +0700|feat(codebuddy-cn): sync catalog with 2026-09-30 server config
+b00ba1aa4b2bf4290fa0e9772cba7ffe8db23d8e|b00ba1aa|Dasep Moch Luay|2026-10-07 19:24:32 +0700|fix(muse): route Responses-only models to their declared transport + nest reasoning effort
+466272490beec96bef0cde1f454c344b559cedc7|46627249|dnridwn|2026-10-07 19:30:11 +0700|fix(ollama): report prompt_eval_cached_count as cached_tokens in usage tracking
+a07ed95beae8ce295907082220c386e8e7db138b|a07ed95b|Nim|2026-10-07 19:31:54 +0700|feat(antigravity): add Claude Sonnet 5.5 and Opus 5.5 support
+6e4f82db33cf944d544fb2c2c4d698a21c180616|6e4f82db|Nikan Wystaf|2026-10-07 19:42:12 +0700|fix(translator): uniquify duplicate tool_call_ids for Gemini (#4532)
+ee3234003a4b3e0f665753c9ef9e39e24295dc8d|ee323400|semihisikman|2026-10-07 19:46:40 +0700|fix(tts): accept server model and voice in self-hosted example
+4fa46034abcdcb22981137c09a7f9d15e8a5bc48|4fa46034|anojndr|2026-10-07 19:50:27 +0700|feat(proxy-pools): add Netlify relay proxy pool
+d8c585fb7def1ea674ec23b518af6213585ef5c0|d8c585fb|omar-nahhas|2026-10-07 19:52:23 +0700|feat(keys): per-API-key access control: restrict a key to selected combos and models
+3125ac2bd127d925873fd6c4ef788b4262dad112|3125ac2b|warelik|2026-10-07 19:59:40 +0700|fix(kimi): route Responses clients to the Kimi Code /responses endpoint
+8a90d3c9d644f82484e2b4fd9b7edbe641e2ac89|8a90d3c9|B1nh M1nh|2026-10-07 20:02:28 +0700|fix(cli): take `connect` models from the server; add `show`, `--save`, Pi and Oh My Pi
+0f7f6e72a9a63678e2d7801be0cd907fc67df739|0f7f6e72|Nikan Wystaf|2026-10-07 20:05:23 +0700|fix(capabilities): GLM-5.2/5.3 context is 1M, not the stale 200k pin (#4544)
+2f827bcf7cf426f76d2ae9f28204a475e7bfc2cf|2f827bcf|Mochamad Muzayyid Al Hakim|2026-10-07 20:17:20 +0700|feat(elevenlabs): add Scribe speech-to-text support (#4537)
+6a1573ebafd1b9cc1b509650e15d3d669e56df94|6a1573eb|Wnghao|2026-10-08 15:48:55 +0700|fix(combo): show compatible node models in picker without a connection (#4659)
+c61ee37dde5bc0bfff8ea50fcefb57c54a8c3a82|c61ee37d|Nikan Wystaf|2026-10-08 15:53:07 +0700|fix(capabilities): GLM-5.3 cannot disable thinking (#4656)
+09f6d3956cd9abc176832ea5db5703fe992eab67|09f6d395|ves|2026-10-08 16:06:53 +0700|fix(gemini): do not treat properties map as schema node when tool param named properties (#4620)
+a9d0ad269f1c904b0e420d95f669b0fff1305912|a9d0ad26|Amirsalar Sojoudi|2026-10-08 16:26:17 +0700|feat(bedrock): add AWS Bedrock provider with AWS SSO credential support (#4157)
+a9c9f68364fa929f9217c58fccabf2ed854a061f|a9c9f683|vergiLgood1|2026-10-08 16:32:06 +0700|feat(hermes): per-profile configuration across API, Dashboard and CLI (#4660)
+2d94d3ab8eac8a509190cda5eca178428b6b0b09|2d94d3ab|decolua|2026-10-08 16:39:22 +0700|feat(dashboard): open 9Remote sidebar item directly to website
+eea082157b382d25f8425e262c84aa02c3104523|eea08215|decolua|2026-10-08 17:35:44 +0700|fix(dashboard): fix mobile layouts for endpoint, provider models and cli-tools
+24034f69c7cc0a3f106c6ead6e24d9d6c7cf24a6|24034f69|decolua|2026-10-08 17:37:05 +0700|feat(antigravity): refresh model catalog and update MITM defaults to Gemini 3.8
+ce4460ef79382bfddb4aa5fc0ff9f3cb0d5f95a8|ce4460ef|decolua|2026-10-08 19:48:53 +0700|# v0.5.99 (2026-10-08)
+3ef4d8e311ee17c8d0280b73eef3618011d7426e|3ef4d8e3|mannnrachman|2026-10-11 09:10:36 +0700|feat(usage): Cursor IDE quota via DashboardService (spend + request buckets) (#4689)
+cff2b1d976528860521781f42c8da468bc49a9e4|cff2b1d9|AhooraZen|2026-10-11 09:12:27 +0700|feat(antigravity): bump IDE version to 2.22.0
+e7f41c1332fdeca313af664be01a2f1169ae494f|e7f41c13|mannnrachman|2026-10-11 09:15:15 +0700|fix(cursor): recover long sessions from empty AgentService turns (#4690)
+f6c26d8ea3eb1c35fabc6d33c817116953bd4da9|f6c26d8e|mannnrachman|2026-10-11 09:19:57 +0700|feat(cursor): resolve Auto (Server Picks) to the account's default agent model (#4692)
+f7708c9d724d49d9207ae8d03699552a1caca6f2|f7708c9d|mannnrachman|2026-10-11 09:23:44 +0700|test(cursor): lock KV ack metadata echo with round-trip tests (#4694)
+cfd8c61849ae8968f57794ebf1e2a01ae8cf95e1|cfd8c618|mannnrachman|2026-10-11 09:30:34 +0700|fix(cursor): hold strictProxy on the AgentService h2 path (#4696)
+ef4679dfa4a160c6e0977e0ad0a101e89fc3db4f|ef4679df|ShayNeeo|2026-10-13 17:18:24 +0700|fix(opencode): encode inverted timestamp in translated session IDs (#4780)
+f5f880394eee7719a36181a0e9be9dfb18ba4161|f5f88039|mj10612|2026-10-13 17:25:15 +0700|fix(capabilities): advertise PDF input for current Claude models (#4761)
+468aa7d9ed8f34c4a94255def591e99634bfecb9|468aa7d9|smhc|2026-10-13 17:30:09 +0700|fix(param-support): drop response_format for opencode-go deepseek models
+90f89471c0415daf294863f5d8f8f6fb2dc8880a|90f89471|IlyaKhalafi|2026-10-13 17:31:00 +0700|fix(nous): add API-key attribution tags (#4770)
+4c58e7f318fcd0a59cd05a10fa8f777c258b8b0c|4c58e7f3|kuroringo90|2026-10-13 17:34:53 +0700|fix(capabilities): add missing OpenCode Free reasoning entries (space-bunny & co)
+b2aaf83bbc4cd6c566cf5262f0af9527c6242ef6|b2aaf83b|Wnghao|2026-10-13 17:35:52 +0700|fix(qoder): surface add-on (free-credit promo) quota in the quota tracker (#4758)
+59e9b5264c52f3e8bdceed0858888affb41bdb41|59e9b526|alwaghani|2026-10-13 17:44:15 +0700|fix(opencode-zen): use attested free-tier identity for -free models on keyed lane (#4784)
+8f4e380073151d2626e5104afbee2d95738eaf26|8f4e3800|Rick Sanchez|2026-10-13 17:46:30 +0700|fix(combo): fallback when model returns HTTP 200 with zero usable content (#4750)
+d6431f8b7518eab30084940b48b5632b2748c266|d6431f8b|vergiLgood1|2026-10-13 17:49:37 +0700|feat(cli-tools): Hermes audio transcription via 9router (#4763)
+c86443689135c624fe4afd1d990b503a27eed10c|c8644368|Spoon94|2026-10-13 17:54:58 +0700|fix(opencode-go): route claude-haiku-5-5 to /messages with adaptive thinking (#4727)
+1d4335d44d94f18b4d8c1dde70db800c2600e88b|1d4335d4|duongloc216|2026-10-13 18:03:36 +0700|fix(translator): return Claude messages for forced SSE JSON responses (#4789)
+9c1419100c2c3db083e850f9572968d942fac7f9|9c141910|Giulio V|2026-10-14 15:06:30 +0700|fix(vertex): honor API-key project/location for Gemini 4 Argon (#4821)
+51a1827e2d1e5170eb5e13e421dcca3409245d78|51a1827e|tmaarcxs|2026-10-14 15:17:23 +0700|fix(github): route Copilot embeddings to api.githubcopilot.com (#4793)
+29fc880ec090464e4181befff1f65477274d4db7|29fc880e|decolua|2026-10-14 16:32:31 +0700|feat(gemini): add Gemini 4 Argon (gemini/vertex/antigravity)
+165f9b90a254cdbbe31a579687a82d2b61b401df|165f9b90|fdkgenie|2026-10-15 09:22:04 +0700|feat(providers): add Nous Research OAuth + free-tier provider
+e964e4826715f3f9590d55314e968bcdfca194b6|e964e482|ErfanBagheri404|2026-10-15 09:36:45 +0700|fix(opencode): inject reasoning_content placeholder for Zen multi-turn chats (#4805)
+5bdcd5e7674d8f8f1139c07104e72c8ac094f6b4|5bdcd5e7|anojndr|2026-10-15 09:41:33 +0700|fix(opencode): move free tier to /inference/v1 with the v2 client fingerprint (#4842)
+be51142b4aca48d0599ec00b45bd9ccaaed420dd|be51142b|XFairesV1|2026-10-15 14:47:25 +0700|feat(quota): anchored auto-ping schedule at fixed local times (#4848)
+7878f53ba29dd32707083408fcbfcb3b6e3cadd2|7878f53b|decolua|2026-10-15 16:36:11 +0700|fix(codex): drop retired gpt-5.5 from registry, image and auto-ping
+7e0043def28da0aeedffbd566c4970d883fbb553|7e0043de|decolua|2026-10-15 16:42:41 +0700|Merge branch 'chore/codex-drop-gpt-5.5'
+db81a8c9f0dbb8037d00751d06ba31fa82a67250|db81a8c9|IlyaKhalafi|2026-10-15 16:43:40 +0700|fix(headroom): avoid false compression warnings when tools dominate body (#4855)
+28d4015966f2d71a67d665bad803ce7e98b1e9b2|28d40159|decolua|2026-10-15 20:12:55 +0700|feat(quota): unify auto-ping mode selection and default to local timezone
+eb3730170ce4cd5d999566e7b4873c0f523cf0ea|eb373017|decolua|2026-10-15 20:53:52 +0700|fix(gemini): drop sampling params and order functionResponse-last for Gemini 4 (#4802)
+a8f63f4d7167b094e0baadcc2637d1a9eba9a016|a8f63f4d|Mike|2026-10-15 20:54:00 +0700|fix(models): expose no-auth free providers in /v1/models and prune custom models on node deletion
+da1756a823f682aba8a02198fd17535e0401ad65|da1756a8|Mike|2026-10-15 21:00:27 +0700|feat(ui): model picker regex/negation search, batch select, provider filtering
+813a0121b09c4181712a902e47e1ed418a88c473|813a0121|Mike|2026-10-15 21:09:13 +0700|fix(usage): token fallback for input_tokens rows and stable key masking in stats
+d95bb8ea25958f9cb01b3d3110b97c15d1ef5e56|d95bb8ea|decolua|2026-10-15 21:11:04 +0700|fix(dashboard): unclip proxy dropdown and tooltips via body portal
+fb30246ce769c31e2a6097c3c3d70c3b35239f28|fb30246c|decolua|2026-10-15 21:18:24 +0700|fix(tests): isolate zed-native-auth DATA_DIR so it stops writing to the real DB
+2aa9307f5030b563bd2e5aa339847bba9d697533|2aa9307f|Mike|2026-10-15 21:23:54 +0700|feat(keys): per-key token quotas and pattern-based model access
+3c48d275ab2c26dc517e15bb42e3f95baf54ee6c|3c48d275|decolua|2026-10-15 21:42:38 +0700|Features:
+6ed886857da125f4908a8a3c3e64f7f1d8ff8366|6ed88685|decolua|2026-10-15 21:43:37 +0700|Revert "feat(keys): per-key token quotas and pattern-based model access"
+87a74e1bda3677193c6f71a7e2100c90311f0689|87a74e1b|decolua|2026-10-15 21:52:09 +0700|# v0.5.104 (2026-10-15)
+38a0c4490a843b27a0985be32cd23cb5fe2aca79|38a0c449|decolua|2026-10-22 11:15:52 +0700|feat(web-cookie): add web provider executors, browser pool and login capture
+342ecb0dd18454f4f623bed2ca1310ef17d8cf16|342ecb0d|SlasshyOverhere|2026-10-22 11:39:04 +0700|fix(pi-settings): declare existingProvider before use in POST
+d07e5bc3fbfd80ba870e91acb2a93f40f6a58f9f|d07e5bc3|Cristiano|2026-10-22 11:46:28 +0700|fix(thinking): let a transport declare its thinking shape; nest reasoning on OpenCode Go /responses
+3b137aa6d513babcab45650e86554a0ec3176f98|3b137aa6|mj10612|2026-10-22 11:48:57 +0700|fix(codebuddy): back off blocked international connections
+4a76b8de02f7711dfb8d78b6146dab94d21468bb|4a76b8de|钛白|2026-10-23 09:42:43 +0700|fix(commandcode): correct quota display and connection test
+32a064e2080b6e4e6f8db02b1c4bf8c93ddac85e|32a064e2|decolua|2026-10-23 10:09:47 +0700|fix(docker): pin Node 22.23.4 to patch October 2026 security CVEs
+421f226261750e52323e15d2d26fc964113d96a5|421f2262|Hermes Agent|2026-10-23 10:10:33 +0700|feat(stt): add Codex OAuth transcription provider
+00dd3dfcbe76e967ace4f7166a017f3dcea45800|00dd3dfc|decolua|2026-10-23 10:11:10 +0700|fix(media-providers): keep the connection card for non-STT OAuth media pages
+ca7b54011daf4532b3b7ececa90a125bafb99056|ca7b5401|omar-nahhas|2026-10-23 10:13:35 +0700|fix(combo): fall through on empty-content streaming responses
+8a8420430fb19aeb41119b2225d0ee97c5c2a9d2|8a842043|decolua|2026-10-23 10:23:49 +0700|feat(rtk): add a user-authored custom system prompt
+08ef047f8c2ede799294ca4d3ccac4548f63452b|08ef047f|decolua|2026-10-23 10:33:25 +0700|fix(security): bump undici to 7.30.1 and bind headroom to loopback
+bc4a3cc7342104172a150735b991e11982323e75|bc4a3cc7|Nadeem Sajjad|2026-10-23 11:01:11 +0700|feat(ollama): support System One decision models (clef, clef-flash)
+792f4719859b50ac1e7a797ee40ceb4383d491b0|792f4719|mj10612|2026-10-23 11:08:43 +0700|fix(headroom): support native CommandCode requests
+a440ef43b5e670aa041f7cc35081e9989fc997db|a440ef43|mj10612|2026-10-23 11:09:15 +0700|fix(headroom): compress native Gemini and Responses tool outputs
+3ce2b828f33bce0c88374077bc20b6b24382a1fd|3ce2b828|qianze0628|2026-10-23 11:16:23 +0700|fix(kiro): normalize Anthropic model ids onto Kiro upstream aliases
+7c42d8f87bac934184f633f985c8a944c8c6336e|7c42d8f8|Renato Prado|2026-10-23 11:26:22 +0700|fix(openai): rename max_tokens to max_completion_tokens
+5883110b9d9db32b76d113a378c0ec2abf5943d7|5883110b|openhands|2026-10-23 11:27:05 +0700|fix(deps): upgrade Monaco to 0.57.0 and pin the copy the dashboard loads
+b08f12d5fd80d44e23f8266338ea6707d15b2cf7|b08f12d5|dinhkarate|2026-10-23 11:57:26 +0700|fix(codex-image): skip ChatGPT Free accounts and use a Go-compatible main model
+b6a9ca43f1aed8bf903c23b6df62da96a6c389bc|b6a9ca43|openhands|2026-10-23 11:59:56 +0700|test: triage master's failing suite; fix GLM-5.2 effort, gpt-6.1-sol context, dead SSRF tests
+351b04cb528d2270a527aba18a4be78fdeadafaa|351b04cb|钛白|2026-10-23 12:01:37 +0700|feat(provider): add SenseNova provider support
+a3ca2f9b5cb090f1babf11a8781d5c6148f83411|a3ca2f9b|monsterlag|2026-10-23 12:06:16 +0700|fix(dashboard): correct API key visibility guidance
+b0655314b79c7a7bfb7288982cddb98503641429|b0655314|Cristiano|2026-10-23 12:06:49 +0700|fix(capabilities): give Grok 4.7 its 500k context window
+b82f5c4a2e5f53c2723d49fe993062f9e7dba54a|b82f5c4a|Dante4rt|2026-10-23 12:06:53 +0700|fix(combos): try the next model when credits run out
+2720cd2a06e1154804b33ca5f7cdbb47a1792336|2720cd2a|capncodes69|2026-10-23 12:44:44 +0700|fix(qoder): stop failing queued models, route Sonus/Cantus, restore capabilities
+b833128338ab5c1af7a994767167c3ed0daf8ab5|b8331283|anojndr|2026-10-23 12:45:25 +0700|fix(opencode-free): full reasoning support for oc/mimo-v2.6-flash-free
+dbdbb64897234f595fd2ebbdc53cf5f1f2ca26ea|dbdbb648|gamer|2026-10-23 12:46:01 +0700|fix(github): refresh Copilot fallback model catalog
+5853a88a22f68119a8f491f22bfa0df54fcad542|5853a88a|mj10612|2026-10-23 12:56:23 +0700|fix(search): reset regex state between model matches
+5cdcddf55f4b08fbd45c3798c712608544c569d2|5cdcddf5|Shane Hird|2026-10-23 13:08:17 +0700|fix(combo): advance past a request-scoped 4xx instead of ending the combo
+95c9d03ed2fced1e01a1d0c6ba510f9b33c65f85|95c9d03e|BIDZZ RAWR|2026-10-23 13:20:11 +0700|fix(stream): fill missing tool-call ids and restore renamed tool names (#4992, #4986)
+5a4e812e44680b18a2ffe4d21386df2c0f426d8a|5a4e812e|mj10612|2026-10-23 13:57:38 +0700|fix(db): strip NUL bytes from bound strings
+313559f4709368aee020f598747593ef57a462a8|313559f4|anojndr|2026-10-23 14:00:41 +0700|fix(opencode): honor low|high|max reasoning efforts for zen free deepseek-v4.1-flash
+f172c3c4a622dc531b4ce47a24f7a61ed0f530da|f172c3c4|Ulder Carrilho Júnior|2026-10-23 14:28:33 +0700|fix(antigravity): use hub/2.24.0 User-Agent and add Gemini 4 Argon medium/low tiers (#4816)
+32c5f30a0a2074269d7d4cb269d93e7db59d9877|32c5f30a|anojndr|2026-10-23 14:32:20 +0700|fix(capabilities): send reasoning_effort for OpenCode's glm-5.3-flash-free
+9b4ea9eb697a267babd96ae33c814e86c80a9c64|9b4ea9eb|F0Rextasy|2026-10-23 14:34:31 +0700|feat(combos): search box for the combo list
+31b8439bdf51858598aa4fd838e08e396a457cba|31b8439b|AMD-it|2026-10-23 14:35:54 +0700|fix(usage): support /api/balance for ollama cloud quota tracking (#5026)
+82aeb907941baf9806689a46fe2248b2b865a76d|82aeb907|MarcusHO929|2026-10-23 14:38:38 +0700|fix(antigravity): resolve tiered models from client reasoning effort
+161e34939ab878cb79dfdf241a696ec292508af4|161e3493|dangphuc2470|2026-10-23 14:39:36 +0700|feat(image, mitm): support reference image inputs for Gemini and ensure MITM directory (#4981)
+f3f86fdd52f9e9e9538847dddf233293224733d2|f3f86fdd|Михаил Голощанов|2026-10-23 14:46:07 +0700|feat(combos): add Smart Router (System One) with adaptive session stickiness (#4975)
+f39d8f07481ae8518e93175f0ecaaafa61573c6c|f39d8f07|decolua|2026-10-23 15:24:06 +0700|# v0.5.109 (2026-10-23)

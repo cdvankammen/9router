@@ -1,0 +1,14 @@
+commit a34f2844
+author: cdvankammen
+date: 2026-10-22 14:04:00 -0600
+subject: test(failover): automated L2 proxy suite — 6 tests, all green
+
+- Spawns the real cli/failover-proxy.cjs with local+peer echo servers
+- T1 both-up→local, T2 local-dead→peer, T3 failback, T4 loop protection,
+  T5 both-down fail-open + proxy survives, T6 client-abort-mid-stream
+  survives (regression for scrutiny S11/S12)
+- Debug finding: GET-with-body via Node http client sends body without
+  Content-Length (malformed keep-alive) — test helper never sends GET bodies;
+  proxy correctly 400s the malformed request
+- Verified 3x consecutive runs + related suites (40 tests total)
+

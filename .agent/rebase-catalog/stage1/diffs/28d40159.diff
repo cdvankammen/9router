@@ -1,0 +1,63 @@
+commit 28d40159
+author: decolua
+date: 2026-10-15 20:12:55 +0700
+subject: feat(quota): unify auto-ping mode selection and default to local timezone
+
+- Unify auto-ping mode selection into a single 3-way toggle (Off / On reset / Schedule)
+- Fix button alignment, icon sizing, and border visibility in schedule modal
+- Default schedule timezone to machine local timezone instead of hardcoded America/Sao_Paulo
+- Bring auto-ping schedule configuration and state indicators to /dashboard/quota
+
+Co-Authored-By: Claude Code <noreply@anthropic.com>
+
+
+diff --git a/src/app/(dashboard)/dashboard/providers/[id]/page.js b/src/app/(dashboard)/dashboard/providers/[id]/page.js
+index 075f2bc5..5bc2b6cd 100644
+--- a/src/app/(dashboard)/dashboard/providers/[id]/page.js
++++ b/src/app/(dashboard)/dashboard/providers/[id]/page.js
+@@ -462,12 +462,12 @@ export default function ProviderDetailPage() {
+     }
+   };
+ 
+-  const handleAutoPingConnection = (connectionId, on) => {
+-    saveAutoPing({ ...autoPing, connections: { ...autoPing.connections, [connectionId]: on } });
+-  };
+-
+-  const handleAutoPingSchedule = (connectionId, schedule) => {
+-    saveAutoPing({ ...autoPing, schedules: { ...autoPing.schedules, [connectionId]: schedule } });
++  const handleSaveAutoPing = (connectionId, { reactive, schedule }) => {
++    saveAutoPing({
++      ...autoPing,
++      connections: { ...autoPing.connections, [connectionId]: reactive },
++      schedules: { ...autoPing.schedules, [connectionId]: schedule },
++    });
+   };
+ 
+   useEffect(() => {
+@@ -1049,12 +1049,12 @@ export default function ProviderDetailPage() {
+                 onMoveDown={() => handleSwapPriority(index, index + 1)}
+                 onToggleActive={(isActive) => handleUpdateConnectionStatus(conn.id, isActive)}
+                 autoPing={AUTO_PING_SETTINGS_KEYS[providerId] && conn.authType === "oauth" ? {
+-                  on: autoPing.connections[conn.id] === true,
+-                  onToggle: (on) => handleAutoPingConnection(conn.id, on),
++                  isActive: autoPing.connections[conn.id] === true || autoPing.schedules?.[conn.id]?.enabled === true,
++                  reactiveOn: autoPing.connections[conn.id] === true,
+                   provider: providerId,
+                   scheduleOn: autoPing.schedules?.[conn.id]?.enabled === true,
+                   scheduleSummary: getScheduleSlotLabels(autoPing.schedules?.[conn.id]).join(" / "),
+-                  onOpenSchedule: () => setScheduleConnection(conn),
++                  onConfigure: () => setScheduleConnection(conn),
+                 } : null}
+                 onUpdateProxy={async (proxyPoolId) => {
+                   try {
+@@ -1958,8 +1958,9 @@ export default function ProviderDetailPage() {
+           isOpen={!!scheduleConnection}
+           onClose={() => setScheduleConnection(null)}
+           connection={scheduleConnection}
++          reactive={autoPing.connections[scheduleConnection.id] === true}
+           schedule={autoPing.schedules?.[scheduleConnection.id] || null}
+-          onSave={(schedule) => handleAutoPingSchedule(scheduleConnection.id, schedule)}
++          onSave={(result) => handleSaveAutoPing(scheduleConnection.id, result)}
+         />
+       )}
+ 

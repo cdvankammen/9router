@@ -1,0 +1,10 @@
+===COMMIT===
+hash: 625df74db62e3f6725be3ae141f0fd6d1dbc92c1
+short: 625df74d
+author: Badroel07 <muhamadchikal12@gmail.com>
+date: 2026-10-07 19:01:12 +0700
+subject: fix(gemini): rename $ref keys in functionResponse payloads
+body:
+Gemini and Cloud Code treat a $ref key inside functionResponse.response as a pointer to functionResponse.parts and reject the request with 400 INVALID_ARGUMENT. Tool results carrying JSON Schema or OpenAPI documents (webfetch, read, MCP) triggered this. Sanitize the payload centrally in normalizeGeminiContents, which covers openai->gemini, the Claude->Antigravity envelope and the Antigravity executor.
+
+---files---

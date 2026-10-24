@@ -1,0 +1,10 @@
+===COMMIT===
+hash: 7e0043def28da0aeedffbd566c4970d883fbb553
+short: 7e0043de
+author: decolua <decoluadt@gmail.com>
+date: 2026-10-15 16:42:41 +0700
+subject: Merge branch 'chore/codex-drop-gpt-5.5'
+body:
+Co-Authored-By: Claude Haiku 5.5 <noreply@anthropic.com>
+
+---files---

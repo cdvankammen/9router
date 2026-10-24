@@ -1,0 +1,17 @@
+===COMMIT===
+hash: 31b8439bdf51858598aa4fd838e08e396a457cba
+short: 31b8439b
+author: AMD-it <>
+date: 2026-10-23 14:35:54 +0700
+subject: fix(usage): support /api/balance for ollama cloud quota tracking (#5026)
+body:
+Ollama Cloud has migrated active quota limits from /api/usage to /api/balance.
+The /api/usage endpoint now only reports activity history metrics.
+
+- Fall back to /api/balance when /api/usage limits are missing
+- Support session (5h) and weekly (7d) remaining percentages and reset timestamps
+- Support allowance_usd and purchased credits
+- Pass through balance metadata (isCreditBalance, currency, unit, unlimited) to QuotaTable
+- Add comprehensive vitest coverage for /api/balance parsing
+
+---files---

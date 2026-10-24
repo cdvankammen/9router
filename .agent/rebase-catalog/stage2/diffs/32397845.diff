@@ -1,0 +1,13 @@
+commit 32397845
+author: cdvankammen
+date: 2026-10-23 16:46:44 -0600
+subject: fix(kiro): expose systemPrompt on translator payload
+
+The translator computed systemPrompt (thinking tags + agentic prefix)
+but never attached it to the returned payload object. Tests reading
+result.systemPrompt always got undefined, causing 18 of 19 thinking
+budget tests to fail.
+
+Backup branch (v4-vscode-works-pre-rebase-20261003) line 369 confirms
+systemPrompt was part of the payload before the rebase.
+

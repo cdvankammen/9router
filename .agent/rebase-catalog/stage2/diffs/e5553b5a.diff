@@ -1,0 +1,38 @@
+commit e5553b5a
+author: cdvankammen
+date: 2026-10-22 14:05:53 -0600
+subject: docs(plans-and-prompts): reorganize knowledge base into category taxonomy
+
+Reorganize docs/plans-and-prompts/ from a flat structure into 9 categories
+(architecture, connections, security, ui-ux, operations, planning, research,
+tracking, templates), each with its own README.md. All moves use git mv to
+preserve history:
+
+- plans/ -> planning/
+- workflows/ -> operations/ (old workflows/README.md renamed to
+  operations/TESTING.md; a fresh generic operations/README.md was written)
+- prompts/ -> templates/
+- decisions/, learnings/, meetings/ -> tracking/{decisions,learnings,meetings}/
+- CHANGELOG.md, TASK-LOG.md (renamed TASKS.md), SESSION-HISTORY.md,
+  SESSION-NARRATIVE.md -> tracking/
+
+architecture/ and research/ were already correctly scoped and left in place.
+temp/ (gitignored, no history, contains scratch/draft content) is
+intentionally excluded from the migration.
+
+New operating documents authored per category: ARCHITECTURE.md,
+CONNECTIONS.md, SECURITY.md, UI-UX.md, OPERATIONS.md, VERSIONING.md,
+RELEASE-CHECKLIST.md, WORK-ITEM-TEMPLATE.md, RESEARCH-NOTE-TEMPLATE.md,
+tracking/DECISIONS.md, tracking/FINDINGS.md, tracking/CODE-CHANGES.md, and a
+top-level GLOSSARY.md. Top-level README.md and AGENTS.md rewritten for the
+new taxonomy, including the security rule (never commit real secrets/URLs/
+personal data to this folder) and the distinction between this folder's
+internal tracking/CHANGELOG.md and the repo-root user-facing CHANGELOG.md.
+
+Repaired every stale relative-path cross-reference created by the moves
+across research/, planning/, operations/, and tracking/ (including the two
+large historical logs, SESSION-HISTORY.md and SESSION-NARRATIVE.md) so links
+resolve correctly from each file's new location.
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
+

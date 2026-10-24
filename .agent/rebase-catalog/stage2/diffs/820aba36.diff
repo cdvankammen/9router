@@ -1,0 +1,6 @@
+commit 820aba36
+author: cdvankammen
+date: 2026-10-22 17:14:36 -0600
+subject: docs(policy): shared-worktree rule — cards work only in 9router-wt-cards, never main worktree, never change main branch — Chris directive 2026-09-17
+
+

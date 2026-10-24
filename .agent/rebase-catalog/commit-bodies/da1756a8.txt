@@ -1,0 +1,10 @@
+===COMMIT===
+hash: da1756a823f682aba8a02198fd17535e0401ad65
+short: da1756a8
+author: Mike <108046712+miqonee@users.noreply.github.com>
+date: 2026-10-15 21:00:27 +0700
+subject: feat(ui): model picker regex/negation search, batch select, provider filtering
+body:
+ModelSelectModal gains exclusion (!token / -token) and /regex/ search, Select/Deselect All over the filtered set, per-provider wildcard entries (allowProviderWildcard), enabledModels and deleted-compatible-node filtering, and a fresh /api/providers fetch on open. Shared query logic in modelSearchFilter.js; combo pages pass active connections only.
+
+---files---

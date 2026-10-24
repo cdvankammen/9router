@@ -1,0 +1,20 @@
+commit fe613368
+author: cdvankammen
+date: 2026-10-22 15:47:54 -0600
+subject: test(kilo): regression test for free-models fetch timeout guard (GAP-P3-26)
+
+The AbortSignal.timeout(10000) on the Kilo models fetch already exists at
+HEAD (present since the original commit 8640503b, 2026-03-31) — the gap
+scanner flagged a false positive at route.js:19.
+
+This regression test locks the behavior so the guard cannot be silently
+removed:
+
+- route.js contains signal: AbortSignal.timeout() on the Kilo fetch
+- timeout is exactly 10 000 ms
+- signal is on the same fetch() call that uses KILO_MODELS_URL
+
+Anti-false-positive verified: intentionally removing the signal line from
+route.js makes all 3 assertions fail; git-checkout restore returns to 3/3
+pass.
+

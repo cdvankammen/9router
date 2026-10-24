@@ -1,0 +1,12 @@
+commit 79af3a50
+author: cdvankammen
+date: 2026-10-22 12:16:44 -0600
+subject: docs: E2E verification notes for fallback rule builder
+
+Session narrative updated with live browser verification of the visual
+rule builder: modal flow, model picker integration, ordered chain,
+retries, persistence shape, table rendering, markdown overwrite
+explanation. Open items tracked.
+
+Refs: session narrative, plans-and-prompts/SESSION-NARRATIVE.md
+

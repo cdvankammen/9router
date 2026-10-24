@@ -1,0 +1,107 @@
+commit a07ed95b
+author: Nim
+date: 2026-10-07 19:31:54 +0700
+subject: feat(antigravity): add Claude Sonnet 5.5 and Opus 5.5 support
+
+- Add Sonnet/Opus 5.5 variants to Antigravity registry, CLI, MITM aliases, usage allowlist
+- Map variants to upstream IDs with reasoning effort suffixes
+- Add capabilities, pricing, and shared family quota routing
+
+
+diff --git a/open-sse/providers/capabilities.js b/open-sse/providers/capabilities.js
+index ee842cdb..aa8b1331 100644
+--- a/open-sse/providers/capabilities.js
++++ b/open-sse/providers/capabilities.js
+@@ -93,6 +93,12 @@ export const MODEL_CAPABILITIES = {
+   "claude-opus-5.5-thinking":          { vision: true, reasoning: true, search: true, thinkingFormat: "claude-adaptive", contextWindow: 1000000, maxOutput: 128000 },
+   "claude-opus-5.5-agentic":           { vision: true, reasoning: true, search: true, thinkingFormat: "claude-adaptive", contextWindow: 1000000, maxOutput: 128000 },
+   "claude-opus-5.5-thinking-agentic":  { vision: true, reasoning: true, search: true, thinkingFormat: "claude-adaptive", contextWindow: 1000000, maxOutput: 128000 },
++  // Opus 5.5 rejects thinking.type "disabled" and forced tool_choice (any/tool) with 400.
++  "claude-opus-5-5":                   { vision: true, reasoning: true, search: true, thinkingFormat: "claude-adaptive", contextWindow: 1000000, maxOutput: 128000, thinkingCanDisable: false, forcedToolChoice: false },
++  "claude-opus-5-5-thinking":          { vision: true, reasoning: true, search: true, thinkingFormat: "claude-adaptive", contextWindow: 1000000, maxOutput: 128000, thinkingCanDisable: false, forcedToolChoice: false },
++  "claude-opus-5-5-high":              { vision: true, reasoning: true, search: true, thinkingFormat: "claude-adaptive", contextWindow: 1000000, maxOutput: 128000, thinkingCanDisable: false, forcedToolChoice: false },
++  "claude-opus-5-5-medium":            { vision: true, reasoning: true, search: true, thinkingFormat: "claude-adaptive", contextWindow: 1000000, maxOutput: 128000, thinkingCanDisable: false, forcedToolChoice: false },
++  "claude-opus-5-5-low":               { vision: true, reasoning: true, search: true, thinkingFormat: "claude-adaptive", contextWindow: 1000000, maxOutput: 128000, thinkingCanDisable: false, forcedToolChoice: false },
+   "claude-opus-5":     { vision: true, reasoning: true, search: true, thinkingFormat: "claude-adaptive", contextWindow: 1000000, maxOutput: 128000 },
+   "claude-opus-5-thinking": { vision: true, reasoning: true, search: true, thinkingFormat: "claude-adaptive", contextWindow: 1000000, maxOutput: 128000 },
+   "claude-opus-5-agentic": { vision: true, reasoning: true, search: true, thinkingFormat: "claude-adaptive", contextWindow: 1000000, maxOutput: 128000 },
+@@ -109,6 +115,10 @@ export const MODEL_CAPABILITIES = {
+   "claude-sonnet-4-6": { vision: true, reasoning: true, search: true, thinkingFormat: "claude-adaptive", contextWindow: 1000000, maxOutput: 128000 },
+   // Sonnet 5.5 rejects thinking.type "disabled" (use "between_tools") and forced tool_choice (any/tool).
+   "claude-sonnet-5-5": { vision: true, reasoning: true, search: true, thinkingFormat: "claude-adaptive", contextWindow: 1000000, maxOutput: 128000, thinkingOffType: "between_tools", forcedToolChoice: false },
++  "claude-sonnet-5-5-thinking": { vision: true, reasoning: true, search: true, thinkingFormat: "claude-adaptive", contextWindow: 1000000, maxOutput: 128000, thinkingOffType: "between_tools", forcedToolChoice: false },
++  "claude-sonnet-5-5-high": { vision: true, reasoning: true, search: true, thinkingFormat: "claude-adaptive", contextWindow: 1000000, maxOutput: 128000, thinkingOffType: "between_tools", forcedToolChoice: false },
++  "claude-sonnet-5-5-medium": { vision: true, reasoning: true, search: true, thinkingFormat: "claude-adaptive", contextWindow: 1000000, maxOutput: 128000, thinkingOffType: "between_tools", forcedToolChoice: false },
++  "claude-sonnet-5-5-low": { vision: true, reasoning: true, search: true, thinkingFormat: "claude-adaptive", contextWindow: 1000000, maxOutput: 128000, thinkingOffType: "between_tools", forcedToolChoice: false },
+   "claude-sonnet-5": { vision: true, reasoning: true, search: true, thinkingFormat: "claude-adaptive", contextWindow: 1000000, maxOutput: 128000 },
+   "claude-sonnet-5-thinking": { vision: true, reasoning: true, search: true, thinkingFormat: "claude-adaptive", contextWindow: 1000000, maxOutput: 128000 },
+   "claude-sonnet-5-agentic": { vision: true, reasoning: true, search: true, thinkingFormat: "claude-adaptive", contextWindow: 1000000, maxOutput: 128000 },
+diff --git a/open-sse/providers/pricing.js b/open-sse/providers/pricing.js
+index 45df9d22..59b66eaf 100644
+--- a/open-sse/providers/pricing.js
++++ b/open-sse/providers/pricing.js
+@@ -48,8 +48,17 @@ export const MODEL_PRICING = {
+   "claude-sonnet-4.6":            { input: 3.00,  output: 15.00, cached: 0.30,  reasoning: 22.50,  cache_creation: 3.00  },
+   "claude-opus-4-5-thinking":     { input: 5.00,  output: 25.00, cached: 0.50,  reasoning: 37.50,  cache_creation: 5.00  },
+   "claude-opus-4-6-thinking":     { input: 5.00,  output: 25.00, cached: 0.50,  reasoning: 37.50,  cache_creation: 5.00  },
++  "claude-opus-5-5-thinking":     { input: 4.00,  output: 20.00, cached: 0.20,  reasoning: 20.00,  cache_creation: 5.00  },
++  "claude-opus-5-5":              { input: 4.00,  output: 20.00, cached: 0.20,  reasoning: 20.00,  cache_creation: 5.00  },
++  "claude-opus-5-5-high":         { input: 4.00,  output: 20.00, cached: 0.20,  reasoning: 20.00,  cache_creation: 5.00  },
++  "claude-opus-5-5-medium":       { input: 4.00,  output: 20.00, cached: 0.20,  reasoning: 20.00,  cache_creation: 5.00  },
++  "claude-opus-5-5-low":          { input: 4.00,  output: 20.00, cached: 0.20,  reasoning: 20.00,  cache_creation: 5.00  },
+   "claude-fable-5":               { input: 10.00, output: 50.00, cached: 1.00,  reasoning: 50.00,  cache_creation: 12.50 },
+   "claude-sonnet-5-5":            { input: 2.00,  output: 10.00, cached: 0.20,  reasoning: 10.00,  cache_creation: 2.50  },
++  "claude-sonnet-5-5-thinking":   { input: 2.00,  output: 10.00, cached: 0.20,  reasoning: 10.00,  cache_creation: 2.50  },
++  "claude-sonnet-5-5-high":       { input: 2.00,  output: 10.00, cached: 0.20,  reasoning: 10.00,  cache_creation: 2.50  },
++  "claude-sonnet-5-5-medium":     { input: 2.00,  output: 10.00, cached: 0.20,  reasoning: 10.00,  cache_creation: 2.50  },
++  "claude-sonnet-5-5-low":        { input: 2.00,  output: 10.00, cached: 0.20,  reasoning: 10.00,  cache_creation: 2.50  },
+   "claude-sonnet-5":              { input: 2.00,  output: 10.00, cached: 0.20,  reasoning: 10.00,  cache_creation: 2.50  },
+ 
+   // === OpenAI / GPT ===
+diff --git a/open-sse/providers/registry/antigravity.js b/open-sse/providers/registry/antigravity.js
+index eba858e8..a2cd4900 100644
+--- a/open-sse/providers/registry/antigravity.js
++++ b/open-sse/providers/registry/antigravity.js
+@@ -61,6 +61,14 @@ export default {
+     { id: "gemini-3.5-flash-extra-low", name: "Gemini 3.5 Flash (Low)" },
+     { id: "gemini-pro-agent", name: "Gemini 3.1 Pro (High)" },
+     { id: "gemini-3.1-pro-low", name: "Gemini 3.1 Pro (Low)" },
++    { id: "claude-sonnet-5-5-high", name: "Claude Sonnet 5.5 (High)", upstreamModelId: "claude-sonnet-5-5-high(high)" },
++    { id: "claude-sonnet-5-5-medium", name: "Claude Sonnet 5.5 (Medium)", upstreamModelId: "claude-sonnet-5-5-medium(medium)" },
++    { id: "claude-sonnet-5-5-low", name: "Claude Sonnet 5.5 (Low)", upstreamModelId: "claude-sonnet-5-5-low(low)" },
++    { id: "claude-sonnet-5-5", name: "Claude Sonnet 5.5 (Thinking)", upstreamModelId: "claude-sonnet-5-5-high(high)" },
++    { id: "claude-opus-5-5-high", name: "Claude Opus 5.5 (High)", upstreamModelId: "claude-opus-5-5-high(high)" },
++    { id: "claude-opus-5-5-medium", name: "Claude Opus 5.5 (Medium)", upstreamModelId: "claude-opus-5-5-medium(medium)" },
++    { id: "claude-opus-5-5-low", name: "Claude Opus 5.5 (Low)", upstreamModelId: "claude-opus-5-5-low(low)" },
++    { id: "claude-opus-5-5", name: "Claude Opus 5.5 (Thinking)", upstreamModelId: "claude-opus-5-5-high(high)" },
+     { id: "claude-sonnet-4-6", name: "Claude Sonnet 4.6 (Thinking)" },
+     { id: "claude-opus-4-6-thinking", name: "Claude Opus 4.6 (Thinking)" },
+     { id: "gpt-oss-120b-medium", name: "GPT-OSS 120B (Medium)" },
+diff --git a/src/shared/constants/cliTools.js b/src/shared/constants/cliTools.js
+index 3f521231..131f2c6e 100644
+--- a/src/shared/constants/cliTools.js
++++ b/src/shared/constants/cliTools.js
+@@ -8,7 +8,7 @@ export const MITM_TOOLS = {
+     description: "Google Antigravity IDE with MITM",
+     configType: "mitm",
+     mitmDomain: "daily-cloudcode-pa.googleapis.com",
+-    modelAliases: ["gemini-3.8-flash-high", "gemini-3.8-flash-medium", "gemini-3.8-flash-low", "gemini-3.7-flash-high", "gemini-3.7-flash-medium", "gemini-3.7-flash-low", "gemini-3.6-flash-high", "gemini-3.6-flash-medium", "gemini-3.6-flash-low", "gemini-3.5-flash-low", "gemini-3-flash-agent", "gemini-3.5-flash-extra-low", "gemini-3.1-pro-low", "gemini-pro-agent", "claude-sonnet-4-6", "claude-opus-4-6-thinking", "gpt-oss-120b-medium", "gemini-3-flash"],
++    modelAliases: ["gemini-3.8-flash-high", "gemini-3.8-flash-medium", "gemini-3.8-flash-low", "gemini-3.7-flash-high", "gemini-3.7-flash-medium", "gemini-3.7-flash-low", "gemini-3.6-flash-high", "gemini-3.6-flash-medium", "gemini-3.6-flash-low", "gemini-3.5-flash-low", "gemini-3-flash-agent", "gemini-3.5-flash-extra-low", "gemini-3.1-pro-low", "gemini-pro-agent", "claude-sonnet-5-5", "claude-sonnet-5-5-low", "claude-sonnet-5-5-medium", "claude-sonnet-5-5-high", "claude-opus-5-5", "claude-opus-5-5-low", "claude-opus-5-5-medium", "claude-opus-5-5-high", "claude-sonnet-4-6", "claude-opus-4-6-thinking", "gpt-oss-120b-medium", "gemini-3-flash"],
+     defaultModels: [
+       { id: "gemini-3.8-flash-high", name: "Gemini 3.8 Flash (High)", alias: "gemini-3.8-flash-high" },
+       { id: "gemini-3.8-flash-medium", name: "Gemini 3.8 Flash (Medium)", alias: "gemini-3.8-flash-medium" },
+@@ -24,6 +24,14 @@ export const MITM_TOOLS = {
+       { id: "gemini-3.5-flash-extra-low", name: "Gemini 3.5 Flash (Low)", alias: "gemini-3.5-flash-extra-low" },
+       { id: "gemini-3.1-pro-low", name: "Gemini 3.1 Pro (Low)", alias: "gemini-3.1-pro-low" },
+       { id: "gemini-pro-agent", name: "Gemini 3.1 Pro (High)", alias: "gemini-pro-agent" },
++      { id: "claude-sonnet-5-5", name: "Claude Sonnet 5.5 (Thinking)", alias: "claude-sonnet-5-5" },
++      { id: "claude-sonnet-5-5-low", name: "Claude Sonnet 5.5 (Low)", alias: "claude-sonnet-5-5-low" },
++      { id: "claude-sonnet-5-5-medium", name: "Claude Sonnet 5.5 (Medium)", alias: "claude-sonnet-5-5-medium" },
++      { id: "claude-sonnet-5-5-high", name: "Claude Sonnet 5.5 (High)", alias: "claude-sonnet-5-5-high" },
++      { id: "claude-opus-5-5", name: "Claude Opus 5.5 (Thinking)", alias: "claude-opus-5-5" },
++      { id: "claude-opus-5-5-low", name: "Claude Opus 5.5 (Low)", alias: "claude-opus-5-5-low" },
++      { id: "claude-opus-5-5-medium", name: "Claude Opus 5.5 (Medium)", alias: "claude-opus-5-5-medium" },
++      { id: "claude-opus-5-5-high", name: "Claude Opus 5.5 (High)", alias: "claude-opus-5-5-high" },
+       { id: "claude-sonnet-4-6", name: "Claude Sonnet 4.6 (Thinking)", alias: "claude-sonnet-4-6" },
+       { id: "claude-opus-4-6-thinking", name: "Claude Opus 4.6 (Thinking)", alias: "claude-opus-4-6-thinking" },
+       { id: "gpt-oss-120b-medium", name: "GPT-OSS 120B (Medium)", alias: "gpt-oss-120b-medium" },

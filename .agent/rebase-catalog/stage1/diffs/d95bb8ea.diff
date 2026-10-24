@@ -1,0 +1,13 @@
+commit d95bb8ea
+author: decolua
+date: 2026-10-15 21:11:04 +0700
+subject: fix(dashboard): unclip proxy dropdown and tooltips via body portal
+
+The per-connection proxy dropdown and shared Tooltip rendered absolutely
+inside the connections list, which clips at max-h-[500px] overflow-y-auto.
+Render both through createPortal(document.body) with fixed viewport
+positioning (auto flip-up + max-height for the proxy dropdown) so ancestor
+overflow can no longer cut them off.
+
+Co-Authored-By: Claude Code <noreply@anthropic.com>
+

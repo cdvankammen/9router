@@ -1,0 +1,103 @@
+commit 9a5b0443
+author: ErfanBagheri404
+date: 2026-10-22 17:16:28 -0600
+subject: feat: New Models discovery for all providers (incl. custom/free)
+
+Add a "Model Discovery" section on the Providers page that surfaces newly
+added models across every connected provider — OAuth, API-key, free tier,
+and self-added compatible nodes. Backend diffs the live model catalog (via
+the existing buildModelsList pipeline) against a new seenModels SQLite table
+and flags genuinely-new models with NEW/FREE badges. First run seeds the
+baseline so existing models are not reported as new.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
+
+
+diff --git a/src/app/(dashboard)/dashboard/providers/page.js b/src/app/(dashboard)/dashboard/providers/page.js
+index e391385b..3b8c255b 100644
+--- a/src/app/(dashboard)/dashboard/providers/page.js
++++ b/src/app/(dashboard)/dashboard/providers/page.js
+@@ -26,6 +26,7 @@ import { useHeaderSearchStore } from "@/store/headerSearchStore";
+ import ModelAvailabilityBadge from "./components/ModelAvailabilityBadge";
+ import AddCompatibleModal from "./components/AddCompatibleModal";
+ import { STATUS_FILTER_OPTIONS, matchesStatusFilter } from "./utils";
++import NewModelsButton from "./components/NewModelsButton";
+ 
+ function getStatusDisplay(connected, error, errorCode) {
+   const parts = [];
+@@ -426,7 +427,20 @@ export default function ProvidersPage() {
+         </div>
+       )}
+ 
+-      {/* Custom Providers — dynamic */}
++      {/* New Models discovery */}
++      <div className="flex items-center justify-between gap-3">
++        <div className="flex flex-col">
++          <h2 className="text-lg sm:text-xl font-semibold flex items-center gap-2 leading-tight">
++            Model Discovery
++          </h2>
++          <p className="text-xs text-text-muted">
++            Track new models added by any provider, including free ones
++          </p>
++        </div>
++        <NewModelsButton />
++      </div>
++
++      {/* Custom Providers (OpenAI/Anthropic Compatible) — dynamic */}
+       <div className="flex flex-col gap-4">
+         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+           <h2 className="text-lg sm:text-xl font-semibold flex items-center gap-2 leading-tight">
+diff --git a/src/lib/db/index.js b/src/lib/db/index.js
+index e1c68472..216494db 100644
+--- a/src/lib/db/index.js
++++ b/src/lib/db/index.js
+@@ -67,6 +67,12 @@ export {
+   saveRequestDetail, getRequestDetails, getRequestDetailById, getDistinctProviders,
+ } from "./repos/requestDetailsRepo.js";
+ 
++// Seen models (New Models discovery)
++export {
++  getSeenModels, reconcileSeenModels, acknowledgeModels, countUnseenModels,
++  seedSeenModels,
++} from "./repos/seenModelsRepo.js";
++
+ // Export/import full DB
+ export async function exportDb() {
+   const db = await getAdapter();
+diff --git a/src/lib/db/schema.js b/src/lib/db/schema.js
+index 099386c2..ce92e866 100644
+--- a/src/lib/db/schema.js
++++ b/src/lib/db/schema.js
+@@ -3,7 +3,7 @@
+ // pre-change safety backup in migrate.js: when the stored version is lower,
+ // one lightweight DB backup is taken before applying schema changes. Forgetting
+ // to bump only skips that backup — it does NOT break the additive auto-sync.
+-export const SCHEMA_VERSION = 1;
++export const SCHEMA_VERSION = 2;
+ 
+ export const PRAGMA_SQL = `
+ PRAGMA journal_mode = WAL;
+@@ -152,6 +152,23 @@ export const TABLES = {
+       "CREATE INDEX IF NOT EXISTS idx_rd_conn ON requestDetails(connectionId)",
+     ],
+   },
++  // Tracks which provider/models the user has already "seen". Used by the
++  // New Models discovery feature to surface newly-added models (free or paid)
++  // across every connected provider, including self-added compatible nodes.
++  seenModels: {
++    columns: {
++      id: "TEXT PRIMARY KEY", // `${providerAlias}::${modelId}`
++      providerAlias: "TEXT NOT NULL",
++      modelId: "TEXT NOT NULL",
++      isFree: "INTEGER DEFAULT 0",
++      firstSeenAt: "TEXT NOT NULL",
++      acknowledged: "INTEGER DEFAULT 0",
++    },
++    indexes: [
++      "CREATE INDEX IF NOT EXISTS idx_sm_provider ON seenModels(providerAlias)",
++      "CREATE INDEX IF NOT EXISTS idx_sm_unseen ON seenModels(acknowledged)",
++    ],
++  },
+ };
+ 
+ export function buildCreateTableSql(name, def) {

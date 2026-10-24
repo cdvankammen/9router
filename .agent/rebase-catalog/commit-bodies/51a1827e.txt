@@ -1,0 +1,9 @@
+===COMMIT===
+hash: 51a1827e2d1e5170eb5e13e421dcca3409245d78
+short: 51a1827e
+author: tmaarcxs <83613548+tmaarcxs@users.noreply.github.com>
+date: 2026-10-14 15:17:23 +0700
+subject: fix(github): route Copilot embeddings to api.githubcopilot.com (#4793)
+body:
+
+---files---

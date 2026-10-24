@@ -1,0 +1,11 @@
+===COMMIT===
+hash: 82aeb907941baf9806689a46fe2248b2b865a76d
+short: 82aeb907
+author: MarcusHO929 <224567479+MarcusHO929@users.noreply.github.com>
+date: 2026-10-23 14:38:38 +0700
+subject: fix(antigravity): resolve tiered models from client reasoning effort
+body:
+Inspect client request body for reasoning effort parameters and dynamically
+resolve unadorned Antigravity models to their tiered variants.
+
+---files---

@@ -1,0 +1,15 @@
+===COMMIT===
+hash: 24034f69c7cc0a3f106c6ead6e24d9d6c7cf24a6
+short: 24034f69
+author: decolua <decoluadt@gmail.com>
+date: 2026-10-08 17:37:05 +0700
+subject: feat(antigravity): refresh model catalog and update MITM defaults to Gemini 3.8
+body:
+- remove deprecated gemini-3.5 and gemini-3-flash models
+- add gemini-3.1-pro-high mapping to gemini-pro-agent
+- update antigravity MITM default model to gemini-3.8-flash-medium
+- update model synonyms, pattern matching and unit tests
+
+Co-Authored-By: Claude Code <noreply@anthropic.com>
+
+---files---

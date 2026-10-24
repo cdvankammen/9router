@@ -1,0 +1,12 @@
+===COMMIT===
+hash: a3ca2f9b5cb090f1babf11a8781d5c6148f83411
+short: a3ca2f9b
+author: monsterlag <64719697+monsterlag@users.noreply.github.com>
+date: 2026-10-23 12:06:16 +0700
+subject: fix(dashboard): correct API key visibility guidance
+body:
+Update the API Key Created modal copy to state that keys can be viewed or
+copied later from the API Keys list, replacing the inaccurate one-time claim.
+Update translations (fa, id, km, pt-BR, th, zh-CN) and add test.
+
+---files---

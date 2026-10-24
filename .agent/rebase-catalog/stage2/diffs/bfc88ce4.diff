@@ -1,0 +1,24 @@
+commit bfc88ce4
+author: cdvankammen
+date: 2026-10-23 16:53:11 -0600
+subject: fix(kiro): clamp reasoning_effort max to high for models lacking xhigh
+
+extractKiroEffortLevel returned 'max' unconditionally, but Claude 4.6
+and earlier only support low|medium|high|max (no xhigh). The test
+expects max→high clamping for these models, matching the existing
+xhigh→high clamp on the line above.
+
+
+diff --git a/open-sse/config/kiroConstants.js b/open-sse/config/kiroConstants.js
+index 4ce7e563..4b45613f 100644
+--- a/open-sse/config/kiroConstants.js
++++ b/open-sse/config/kiroConstants.js
+@@ -195,7 +195,7 @@ export function extractKiroEffortLevel(body, model) {
+   const normalized = effort.toLowerCase();
+   if (normalized === "none" || normalized === "off" || normalized === "disabled") return null;
+   if (normalized === "xhigh") return kiroModelLacksXhigh(model) ? "high" : "xhigh";
+-  if (normalized === "max") return "max";
++  if (normalized === "max") return kiroModelLacksXhigh(model) ? "high" : "max";
+   if (["low", "medium", "high"].includes(normalized)) return normalized;
+   return null;
+ }

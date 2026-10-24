@@ -1,0 +1,11 @@
+commit fe4fe239
+author: cdvankammen
+date: 2026-10-22 15:41:21 -0600
+subject: test(ux): regression test for ConnectionsCard error toasts (GAP-P2-28)
+
+Verifies all 8 catch blocks in ConnectionsCard.js surface errors via
+useNotificationStore instead of console.log. Includes anti-false-positive
+check: test FAILS when console.log is reintroduced (verified: 2 failures).
+
+Card: t_4a32a749
+

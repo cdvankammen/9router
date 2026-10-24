@@ -1,0 +1,52 @@
+commit 4a76b8de
+author: 钛白
+date: 2026-10-23 09:42:43 +0700
+subject: fix(commandcode): correct quota display and connection test
+
+Recognize the short plan ids the API actually returns ("go",
+"individual-go-v1") so the Go plan resolves its name and 10-credit cap
+instead of falling back to an unbounded "Command Code" row.
+
+Quota rows now carry percentage/colorPercentage/percentageIsUsed plus an
+emptyMessage, and the dashboard honours them: colours follow the
+remaining share and an unused window reads "No usage in this window"
+rather than a bare N/A.
+
+Add a dedicated connection probe for commandcode hitting
+/alpha/whoami?limits=1 — the generic key probes cannot validate a key
+against this upstream.
+
+
+diff --git a/src/app/(dashboard)/dashboard/usage/components/ProviderLimits/utils.js b/src/app/(dashboard)/dashboard/usage/components/ProviderLimits/utils.js
+index a843c9dc..23ca0300 100644
+--- a/src/app/(dashboard)/dashboard/usage/components/ProviderLimits/utils.js
++++ b/src/app/(dashboard)/dashboard/usage/components/ProviderLimits/utils.js
+@@ -300,6 +300,12 @@ export function calculatePercentage(used, total) {
+  * @returns {number} Remaining percentage (0-100)
+  */
+ export function getRemainingPercentage(quota) {
++  if (quota?.percentage !== undefined) {
++    // Providers may report the used share; the UI renders the remaining one.
++    const value = quota.percentageIsUsed === true ? 100 - quota.percentage : quota.percentage;
++    return Math.max(0, Math.round(value));
++  }
++
+   if (quota?.remaining !== undefined) {
+     return Math.max(0, Math.round(quota.remaining));
+   }
+@@ -793,10 +799,14 @@ export function parseQuotaData(provider, data) {
+         if (data.quotas) {
+           Object.entries(data.quotas).forEach(([name, quota]) => {
+             normalizedQuotas.push({
+-              name,
++              name: quota.name || name,
+               used: quota.used || 0,
+               total: quota.total || 0,
++              percentage: quota.percentage,
++              colorPercentage: quota.colorPercentage,
++              percentageIsUsed: quota.percentageIsUsed === true,
+               resetAt: quota.resetAt || null,
++              emptyMessage: quota.emptyMessage || null,
+             });
+           });
+         }

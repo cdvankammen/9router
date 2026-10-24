@@ -1,0 +1,36 @@
+commit db81a8c9
+author: IlyaKhalafi
+date: 2026-10-15 16:43:40 +0700
+subject: fix(headroom): avoid false compression warnings when tools dominate body (#4855)
+
+- Avoid false phantom savings warnings when large tool schemas dominate outbound JSON
+- Require both messageBytes and bodyBytes to shrink <5% before warning
+- Preserve top-level system prompt savings detection for Claude
+- Add tests covering large tool schemas and message compression thresholds
+
+
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+index e306ab28..d0c3a0c5 100644
+--- a/CHANGELOG.md
++++ b/CHANGELOG.md
+@@ -20,6 +20,7 @@
+ - **Dashboard**: open 9Remote sidebar item directly to website
+ 
+ ## Fixes
++- Avoid Headroom compression warnings caused by large unchanged tool schemas (#4809).
+ - **Dashboard**: fix mobile layouts for API Keys card (alignment, code wrap), header breadcrumbs (overflow collision), model chips (full width, break-all), and Claude CLI settings
+ - **Gemini**: do not treat properties map as schema node when tool parameter is named `properties` (#4620); rename `$ref` keys in `functionResponse` payloads
+ - **Translator**: uniquify duplicate `tool_call_ids` for Gemini (#4532)
+diff --git a/open-sse/handlers/chatCore.js b/open-sse/handlers/chatCore.js
+index 14152eb5..e014effa 100644
+--- a/open-sse/handlers/chatCore.js
++++ b/open-sse/handlers/chatCore.js
+@@ -287,7 +287,7 @@ export async function handleChatCore({ body, modelInfo, credentials, log, onCred
+   if (headroomLine) {
+     log?.info?.("HEADROOM", `${headroomLine}${headroomSizeLine ? ` | ${headroomSizeLine}` : ""}`);
+     if (isHeadroomPhantomSavings(headroomStats, headroomDiagnostics)) {
+-      log?.warn?.("HEADROOM", `reported token delta, but outbound JSON shrank <5%; provider may bill near-original payload | ${formatHeadroomSizeLog(headroomDiagnostics)}`);
++      log?.warn?.("HEADROOM", `reported token delta, but messages and outbound JSON shrank <5% | ${formatHeadroomSizeLog(headroomDiagnostics)}`);
+     }
+   } else if (tokenSaverEnabled && headroomEnabled) log?.warn?.("HEADROOM", `skipped: ${headroomDiagnostics.reason || "compression unavailable"}${headroomDiagnostics.endpoint ? ` (${headroomDiagnostics.endpoint})` : ""}`);
+ 

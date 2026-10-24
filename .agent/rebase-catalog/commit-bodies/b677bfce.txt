@@ -1,0 +1,11 @@
+===COMMIT===
+hash: b677bfce34ddc072d797f5997c7baae66d4acdd4
+short: b677bfce
+author: semihisikman <semihisikman@users.noreply.github.com>
+date: 2026-10-07 19:16:11 +0700
+subject: fix(cli): store model IDs in TUI combos
+body:
+- Convert /api/models objects to full provider/model ID strings before saving
+- Reject malformed model entries when creating combos from interactive CLI
+
+---files---

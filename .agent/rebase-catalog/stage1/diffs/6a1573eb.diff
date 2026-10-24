@@ -1,0 +1,6 @@
+commit 6a1573eb
+author: Wnghao
+date: 2026-10-08 15:48:55 +0700
+subject: fix(combo): show compatible node models in picker without a connection (#4659)
+
+

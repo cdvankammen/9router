@@ -1,0 +1,14 @@
+===COMMIT===
+hash: b82f5c4a2e5f53c2723d49fe993062f9e7dba54a
+short: b82f5c4a
+author: Dante4rt <rxmxdhxni@gmail.com>
+date: 2026-10-23 12:06:53 +0700
+subject: fix(combos): try the next model when credits run out
+body:
+Fallback combos now try the next model when a provider returns HTTP 400
+with "insufficient credits" or Anthropic's "credit balance is too low",
+instead of stopping the request.
+
+Fixes #4713.
+
+---files---

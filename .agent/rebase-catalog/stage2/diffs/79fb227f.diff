@@ -1,0 +1,15 @@
+commit 79fb227f
+author: cdvankammen
+date: 2026-10-22 14:04:00 -0600
+subject: docs(failover): production hardening — launchd + Tailscale-peer requirement
+
+Doc 25 §10: two CRITICAL bugs found during production rollout
+- Bug A: failover never engaged under launchd — mDNS link-local fe80:: + macOS
+  Local-Network TCC blocks LAN IPs for launchd jobs → peer probe EHOSTUNREACH
+  → peerUp=false → both-down fallback masked it. Fix: Tailscale IP peers.
+- Bug B: no auto-restart — launchd agents now manage app+proxy on BOTH machines
+  (KeepAlive verified: kill → respawn → 200 in <12s)
+- End-to-end verified: sustained outage failover+failback both directions,
+  auto-restart both machines, final matrix 200/200/200/200
+- Runbook: peer table (Tailscale IPs), launchd ops + verification procedure
+

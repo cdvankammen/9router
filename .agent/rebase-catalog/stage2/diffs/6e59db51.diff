@@ -1,0 +1,120 @@
+commit 6e59db51
+author: cdvankammen
+date: 2026-10-22 12:23:11 -0600
+subject: fix(smart-router): declare smartRouterMeta — P0 crash in chat.js
+
+Review (research/9router/20-review-otherbot-work-vs-research.md) caught:
+smartRouterMeta was used at 5 call sites (123/138/159/169/347) but never
+declared — every chat request would throw ReferenceError and 500. eslint
+missed it (no-undef only fires on parsed scope; the rename happened across
+threaded files).
+
+Fix: renamed the declared local smartRouterScores -> smartRouterMeta to match
+the threaded param name everywhere.
+
+Verified: node --check clean; 8/8 smart-router tests + 33 related tests pass;
+live chat request 200 (was 500); smart-router path no longer crashes (its
+remaining failure is missing blackbox credentials in test env).
+
+
+diff --git a/src/sse/handlers/chat.js b/src/sse/handlers/chat.js
+index 4443edf0..6af224fd 100644
+--- a/src/sse/handlers/chat.js
++++ b/src/sse/handlers/chat.js
+@@ -56,6 +56,7 @@ export async function handleChat(request, clientRawRequest = null) {
+   let { model: modelStr, contextMarker } = stripModelContextMarker(body.model);
+   if (contextMarker) body.model = modelStr;
+   let smartRouterTaskType = null; // set by smart router interception; used for usage analytics
++  let smartRouterMeta = null;     // top-N candidate scores (why did it pick X?) — threaded to usage meta
+ 
+   // Request summary is emitted as the unified "▶" line in chatCore (has fmt/thinking/account)
+ 
+@@ -101,6 +102,8 @@ export async function handleChat(request, clientRawRequest = null) {
+     modelStr = smartRouterResult.comboName;
+     // Thread the classified task type through for usage analytics (meta.taskType)
+     smartRouterTaskType = smartRouterResult.taskType;
++    // Score breakdown (why did it pick X?) for usage analytics (meta.smartRouterScores)
++    smartRouterMeta = smartRouterResult.scores || null;
+   }
+ 
+   // Check if model is a combo (has multiple models with fallback)
+@@ -124,7 +127,7 @@ export async function handleChat(request, clientRawRequest = null) {
+             const { tools, tool_choice, ...cleanBody } = clientRawRequest.body || {};
+             cleanRawReq = { ...clientRawRequest, body: cleanBody };
+           }
+-          return handleSingleModelChat(b, m, cleanRawReq, request, apiKey, smartRouterTaskType);
++          return handleSingleModelChat(b, m, cleanRawReq, request, apiKey, smartRouterTaskType, false, smartRouterMeta);
+         },
+         log,
+         comboName: modelStr,
+@@ -139,7 +142,7 @@ export async function handleChat(request, clientRawRequest = null) {
+       body,
+       models: augmentedModels,
+       handleSingleModel: withCapacityAdapterStripping(
+-        (b, m) => handleSingleModelChat(b, m, clientRawRequest, request, apiKey, smartRouterTaskType),
++        (b, m) => handleSingleModelChat(b, m, clientRawRequest, request, apiKey, smartRouterTaskType, false, smartRouterMeta),
+         adapterAdded
+       ),
+       log,
+@@ -160,7 +163,7 @@ export async function handleChat(request, clientRawRequest = null) {
+       body,
+       models: soloAugmented,
+       handleSingleModel: withCapacityAdapterStripping(
+-        (b, m) => handleSingleModelChat(b, m, clientRawRequest, request, apiKey, smartRouterTaskType),
++        (b, m) => handleSingleModelChat(b, m, clientRawRequest, request, apiKey, smartRouterTaskType, false, smartRouterMeta),
+         adapterAdded
+       ),
+       log,
+@@ -170,7 +173,7 @@ export async function handleChat(request, clientRawRequest = null) {
+     });
+   }
+ 
+-  return handleSingleModelChat(body, modelStr, clientRawRequest, request, apiKey, contextMarker ? `${modelStr.slice(modelStr.indexOf("/") + 1)}[${contextMarker}]` : null, smartRouterTaskType);
++  return handleSingleModelChat(body, modelStr, clientRawRequest, request, apiKey, contextMarker ? `${modelStr.slice(modelStr.indexOf("/") + 1)}[${contextMarker}]` : null, smartRouterTaskType, false, smartRouterMeta);
+ }
+ 
+ /**
+@@ -179,7 +182,7 @@ export async function handleChat(request, clientRawRequest = null) {
+  *   re-apply settings.modelFallbacks (prevents infinite recursion from the
+  *   fallback chain's own handleSingleModel callback).
+  */
+-async function handleSingleModelChat(body, modelStr, clientRawRequest = null, request = null, apiKey = null, requestedModel = null, taskType = null, skipModelFallback = false) {
++async function handleSingleModelChat(body, modelStr, clientRawRequest = null, request = null, apiKey = null, requestedModel = null, taskType = null, skipModelFallback = false, smartRouterMeta = null) {
+   const modelInfo = await getModelInfo(modelStr);
+ 
+   // If provider is null, this might be a combo name - check and handle
+@@ -206,7 +209,7 @@ async function handleSingleModelChat(body, modelStr, clientRawRequest = null, re
+               const { tools, tool_choice, ...cleanBody } = clientRawRequest.body || {};
+               cleanRawReq = { ...clientRawRequest, body: cleanBody };
+             }
+-            return handleSingleModelChat(b, m, cleanRawReq, request, apiKey, taskType);
++            return handleSingleModelChat(b, m, cleanRawReq, request, apiKey, taskType, false, smartRouterMeta);
+           },
+           log,
+           comboName: modelStr,
+@@ -221,7 +224,7 @@ async function handleSingleModelChat(body, modelStr, clientRawRequest = null, re
+         body,
+         models: augmentedModels,
+         handleSingleModel: withCapacityAdapterStripping(
+-          (b, m) => handleSingleModelChat(b, m, clientRawRequest, request, apiKey, taskType),
++          (b, m) => handleSingleModelChat(b, m, clientRawRequest, request, apiKey, taskType, false, smartRouterMeta),
+           adapterAdded
+         ),
+         log,
+@@ -274,7 +277,7 @@ async function handleSingleModelChat(body, modelStr, clientRawRequest = null, re
+         body,
+         models: augmented,
+         handleSingleModel: withCapacityAdapterStripping(
+-          (b, m) => handleSingleModelChat(b, m, clientRawRequest, request, apiKey, taskType, true),
++          (b, m) => handleSingleModelChat(b, m, clientRawRequest, request, apiKey, taskType, true, smartRouterMeta),
+           adapterAdded
+         ),
+         log,
+@@ -349,6 +352,7 @@ async function handleSingleModelChat(body, modelStr, clientRawRequest = null, re
+       credentials: refreshedCredentials,
+       conversationId,
+       taskType,
++      smartRouterMeta,
+       log,
+       clientRawRequest,
+       connectionId: credentials.connectionId,

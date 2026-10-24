@@ -1,0 +1,13 @@
+commit d9e162ca
+author: cdvankammen
+date: 2026-10-22 15:24:30 -0600
+subject: docs(merge): add conflict resolution log + fix .gitignore missing upstream entries
+
+- .gitignore: append 13 upstream v0.5.75 entries dropped by merge resolver
+  (.kiro/, 9router-*, sensitive temp files like .engine-token.txt)
+- planning/merge-conflict-resolutions.md: full per-file resolution strategy,
+  verification results, and critical feature preservation evidence
+
+Merge commit 0ea23708 resolved 17 files but took OURS wholesale on .gitignore,
+missing upstream additions. This commit fixes that gap.
+

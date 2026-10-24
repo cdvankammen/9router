@@ -1,0 +1,2456 @@
+commit a68c4625
+author: biedongbin
+date: 2026-10-22 17:04:05 -0600
+subject: feat: claude-compat layer, model-context & statistics dashboard rework, ops tooling
+
+Rebased onto upstream master (v0.5.75+) — replaces the previous conflicted squash.
+
+- claude-compat layer: standalone dashboard page, settings write API
+  (write-claude-settings), display_name rewrite (provider segment, verbatim
+  rewritten id, [1m] suffix mirroring/stripping), default-model mapping,
+  claudeEnv util + tests
+- model-context dashboard: table view of per-model context facts with
+  search/provider/status/override/connection/window filters, batch ops,
+  per-model contextWindow overrides persisted via settingsRepo, inline
+  editing with confirm/cancel
+- statistics dashboard: usage stats page backed by requestStatsRepo
+  (requestStats source), cascading provider/account/model filters with
+  multi-select, auto granularity (>=30 points), multi-level breakdown table
+  (provider->account->model / model->provider->account, dual tabs, merged
+  cards, auto refresh, depth-tinted rows)
+- gateway: retry same account 3x before fallback; keep modelStr
+  re-assignable for claude-compat rewrite; capabilities applyContextOverrides
+  on every resolution path + boot load in instrumentation
+- providers dashboard: Claude Code minimal mode, grid filter toggles
+  (hide disabled/unconfigured) persisted in localStorage
+- opencode-go: deepseek family must not pass through the claude endpoint
+  (tool declarations 400); free-tier models pinned to openai format
+- tests: kiro external-idp endpoint-ordering aligned with the q-first
+  strategy; golden buildHeaders snapshot committed (omitted upstream)
+- ops tooling: isolated dev-test-server.sh (:20129) + smoke-test.mjs
+
+
+diff --git a/.gitignore b/.gitignore
+index 6f8759b3..e17d69b7 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -86,12 +86,6 @@ graphify-out/*
+ .codegraph/
+ .PR/
+ .next-analyze/*
+-/.ua
+-
+-# Secrets / local-only notes — never commit (contains live API keys)
+-/docs/plans-and-prompts/temp/
+-/docs/plans-and-prompts/temp/**
+-/.feeder
+ 
+ # Kiro local workspace state
+ .kiro/
+@@ -107,11 +101,3 @@ graphify-out/*
+ .start-dev.ps1
+ start-dev-silent.cjs
+ debug.log
+-
+-# Branch-specific ignores
+-/.ua
+-/.feeder
+-
+-# Secrets / local-only notes — never commit (contains live API keys)
+-/docs/plans-and-prompts/temp/
+-/docs/plans-and-prompts/temp/**
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+index 79b70b27..11afb966 100644
+--- a/CHANGELOG.md
++++ b/CHANGELOG.md
+@@ -388,16 +388,6 @@
+ - **Login**: fresh-install remote login with the default password returns 403
+   without issuing a JWT
+ - **Usage**: `/api/usage/request-details` redacts request/response payloads
+-# Unreleased (2026-08-11 — HA node-failover hardening)
+-
+-## Features
+-- **Models**: remote-only model serving — `OLLAMA_LOCAL_DEFAULT_HOST` env override routes ollama models to a remote node; `qwen2.5*`/`llama3*` prefixes infer `ollama-local` (keyless `free` provider, real SSE streaming). Control-plane Mac never runs inference (`fdf82774`)
+-
+-## Fixes
+-- **CLI**: bundle the full `src/lib/db` closure in `cli/app` (whole db tree + `dataDir.js` + `extractText.js`, `@/` aliases rewritten) — a partial copy threw at boot and poisoned the shared `global._dbAdapter`, breaking require-login and `/v1` (`24a50108`)
+-- **Failover**: L1 settings load now retries with backoff (1s→5s, 10 attempts) instead of silently staying off when the DB isn't ready at boot (`d2affcc6`)
+-- **Failover**: remove custom `API_KEY_SECRET`/`MACHINE_ID_SALT` from the mini2 launchd plist so key CRCs match across nodes; API keys are validated per-node (`d2affcc6`)
+-- **Baseline**: fix `verify-no-regression.mjs` judge (layout-agnostic matching — was splitting on `/app/` and reporting everything as a regression); reconcile `known-fails.txt` with reality (`66fdbe82`, `3b705585`)
+ 
+ # v0.5.50 (2026-08-05)
+ 
+diff --git a/open-sse/executors/default.js b/open-sse/executors/default.js
+index bfbae0aa..dbd42cfc 100644
+--- a/open-sse/executors/default.js
++++ b/open-sse/executors/default.js
+@@ -71,7 +71,7 @@ export class DefaultExecutor extends BaseExecutor {
+     super(provider, PROVIDERS[provider] || PROVIDERS.openai);
+   }
+ 
+-  transformRequest(model, body, stream, credentials) {
++  transformRequest(model, body) {
+     const transformed = this.applyJsonSchemaFallback(body);
+ 
+     if (transformed && typeof transformed === "object") {
+@@ -80,29 +80,11 @@ export class DefaultExecutor extends BaseExecutor {
+         delete transformed.client_metadata;
+       }
+       stripUnsupportedParams(this.provider, model, transformed);
+-      // Ask OpenAI-compatible upstreams to emit a final usage chunk on streams so the
+-      // gateway records REAL token counts instead of a chars/4 estimate (which silently
+-      // drops usage entirely for tool-only/empty-text responses). Chat-completions format
+-      // only — claude/openai-responses/gemini/ollama don't accept stream_options. Never
+-      // clobber a caller-supplied value; opt out per provider via quirks.noIncludeUsage.
+-      if (stream && transformed.messages && !transformed.stream_options && this.supportsIncludeUsage(credentials)) {
+-        transformed.stream_options = { include_usage: true };
+-      }
+     }
+ 
+     return injectReasoningContent({ provider: this.provider, model, body: transformed });
+   }
+ 
+-  // Whether this provider accepts OpenAI's stream_options.include_usage (chat-completions only).
+-  supportsIncludeUsage(credentials) {
+-    if (this.config.quirks?.noIncludeUsage) return false;
+-    if (this.config.format !== "openai") return false;
+-    if (this.provider?.startsWith?.("openai-compatible-")) {
+-      return resolveOpenAICompatibleApiType(this.provider, credentials) === "chat";
+-    }
+-    return true;
+-  }
+-
+   // Fallback json_schema → json_object for openai-compatible providers without native Structured Output.
+   applyJsonSchemaFallback(body) {
+     if (!this.provider?.startsWith?.("openai-compatible-")) return body;
+diff --git a/open-sse/handlers/chatCore.js b/open-sse/handlers/chatCore.js
+index 55866025..60d3d815 100644
+--- a/open-sse/handlers/chatCore.js
++++ b/open-sse/handlers/chatCore.js
+@@ -16,13 +16,10 @@ import { trackPendingRequest, appendRequestLog, saveRequestDetail } from "@/lib/
+ import { getExecutor } from "../executors/index.js";
+ import { supportsGrokCliReasoningEffort } from "../config/grokCli.js";
+ import { buildRequestDetail, extractRequestConfig } from "./chatCore/requestDetail.js";
+-import { fingerprintSourceApp } from "@/lib/sourceApps.js";
+ import { handleForcedSSEToJson } from "./chatCore/sseToJsonHandler.js";
+ import { handleNonStreamingResponse } from "./chatCore/nonStreamingHandler.js";
+ import { handleStreamingResponse, buildOnStreamComplete } from "./chatCore/streamingHandler.js";
+-import { categorizeError } from "../utils/errorCategorizer.js";
+-import { validateResponseBody, repairBodyText } from "../utils/responseValidator.js";
+-import { detectClientTool, detectIDE, isNativePassthrough } from "../utils/clientDetector.js";
++import { detectClientTool, isNativePassthrough } from "../utils/clientDetector.js";
+ import { dedupeTools } from "../utils/toolDeduper.js";
+ import { takeRenamedToolNames } from "../utils/opencodeFingerprint.js";
+ import { injectCaveman } from "../rtk/caveman.js";
+@@ -63,12 +60,9 @@ export function stripContinuityFields(body) {
+   return body;
+ }
+ 
+-export async function handleChatCore({ body, modelInfo, credentials, log, onCredentialsRefreshed, onRequestSuccess, onDisconnect, clientRawRequest, connectionId, userAgent, apiKey, ccFilterNaming, rtkEnabled, headroomEnabled, headroomUrl, headroomCompressUserMessages, headroomTimeoutMs, cavemanEnabled, cavemanLevel, ponytailEnabled, ponytailLevel, pxpipeEnabled, pxpipeMinChars, pxpipeTimeoutMs, pxpipeTransform, onPxpipeEvent, sourceFormatOverride, providerThinking, providerOverrides, conversationId, taskType, smartRouterMeta }) {
++export async function handleChatCore({ body, modelInfo, credentials, log, onCredentialsRefreshed, onRequestSuccess, onDisconnect, clientRawRequest, connectionId, userAgent, apiKey, ccFilterNaming, rtkEnabled, headroomEnabled, headroomUrl, headroomCompressUserMessages, headroomTimeoutMs, cavemanEnabled, cavemanLevel, ponytailEnabled, ponytailLevel, pxpipeEnabled, pxpipeMinChars, pxpipeTimeoutMs, pxpipeTransform, onPxpipeEvent, sourceFormatOverride, providerThinking, providerOverrides }) {
+   const { provider, model } = modelInfo;
+   const requestStartTime = Date.now();
+-  // Source-app fingerprint from UA — persisted on requestDetails for filtering.
+-  // Never stores the raw UA; only the fingerprint class (privacy, research D.4).
+-  const sourceApp = fingerprintSourceApp(userAgent);
+   // Stable per-session color so all lines of one CLI conversation share a tag
+   const sessionSeed = (() => {
+     try {
+@@ -138,11 +132,7 @@ export async function handleChatCore({ body, modelInfo, credentials, log, onCred
+ 
+   const clientRequestedStreaming = body.stream === true || sourceFormat === FORMATS.ANTIGRAVITY || sourceFormat === FORMATS.GEMINI || sourceFormat === FORMATS.GEMINI_CLI;
+   const providerRequiresStreaming = PROVIDERS[provider]?.forceStream === true;
+-  // Default: only stream when the client explicitly asked, OR the provider
+-  // requires streaming. A client that omits `stream` gets a JSON response —
+-  // forcing streaming upstream and re-converting risks SSE leakage (e.g.
+-  // [DONE] sentinels in the JSON body).
+-  let stream = providerRequiresStreaming ? true : (body.stream === true);
++  let stream = providerRequiresStreaming ? true : (body.stream !== false);
+ 
+   // Image generation models require non-streaming (Google v1internal:generateContent)
+   const modelType = getModelType(alias, model);
+@@ -174,7 +164,6 @@ export async function handleChatCore({ body, modelInfo, credentials, log, onCred
+   // Native passthrough: CLI tool and provider are the same ecosystem
+   // Skip all translation/normalization — only model and Bearer are swapped
+   const clientTool = detectClientTool(clientRawRequest?.headers || {}, body);
+-  const ide = detectIDE(userAgent);
+   const passthrough = isNativePassthrough(clientTool, provider);
+ 
+   // Expose raw client headers to translators/executors for session-id resolution
+@@ -411,13 +400,6 @@ export async function handleChatCore({ body, modelInfo, credentials, log, onCred
+     appendRequestLog({ model, provider, connectionId, status: `FAILED ${error.name === "AbortError" ? 499 : HTTP_STATUS.BAD_GATEWAY}` }).catch(() => { });
+     saveRequestDetail(buildRequestDetail({
+       provider, model, connectionId,
+-      conversationId,
+-      sourceApp,
+-      userAgent,
+-      clientTool,
+-      ide,
+-      url: providerUrl,
+-      errorCategory: categorizeError(error?.status || error?.statusCode || 502, error.message),
+       latency: { ttft: 0, total: Date.now() - requestStartTime },
+       tokens: { prompt_tokens: 0, completion_tokens: 0 },
+       request: extractRequestConfig(body, stream),
+@@ -493,13 +475,6 @@ export async function handleChatCore({ body, modelInfo, credentials, log, onCred
+     appendRequestLog({ model, provider, connectionId, status: `FAILED ${statusCode}` }).catch(() => { });
+     saveRequestDetail(buildRequestDetail({
+       provider, model, connectionId,
+-      conversationId,
+-      sourceApp,
+-      userAgent,
+-      clientTool,
+-      ide,
+-      url: providerUrl,
+-      errorCategory: categorizeError(statusCode, message),
+       latency: { ttft: 0, total: Date.now() - requestStartTime },
+       tokens: { prompt_tokens: 0, completion_tokens: 0 },
+       request: extractRequestConfig(body, stream),
+@@ -518,14 +493,12 @@ export async function handleChatCore({ body, modelInfo, credentials, log, onCred
+     return createErrorResult(statusCode, errMsg, resetsAtMs, upstreamResponseHeaders(providerResponse.headers));
+   }
+ 
+-  const sharedCtx = { provider, model, body, stream, translatedBody, finalBody, requestStartTime, connectionId, apiKey, clientRawRequest, onRequestSuccess, pxpipe: pxpipeSummary, reqTag, log, conversationId, taskType, smartRouterMeta, sourceApp, userAgent, providerUrl };
++  const sharedCtx = { provider, model, body, stream, translatedBody, finalBody, requestStartTime, connectionId, apiKey, clientRawRequest, onRequestSuccess, pxpipe: pxpipeSummary, reqTag, log };
+   const appendLog = (extra) => appendRequestLog({ model, provider, connectionId, ...extra }).catch(() => { });
+   const trackDone = () => trackPendingRequest(model, provider, connectionId, false);
+ 
+   // Provider forced streaming but client wants JSON
+-  // (or client omitted stream and defaulted to streaming upstream — convert
+-  //  back to JSON so a non-streaming client never receives raw SSE)
+-  if (!clientRequestedStreaming && (providerRequiresStreaming || stream)) {
++  if (!clientRequestedStreaming && providerRequiresStreaming) {
+     const result = await handleForcedSSEToJson({ ...sharedCtx, providerResponse, sourceFormat, targetFormat: providerResponseFormat, customToolNames, toolNameMap, trackDone, appendLog });
+     if (result) { streamController.handleComplete(); return result; }
+   }
+diff --git a/open-sse/handlers/chatCore/requestDetail.js b/open-sse/handlers/chatCore/requestDetail.js
+index df35c2df..1861e995 100644
+--- a/open-sse/handlers/chatCore/requestDetail.js
++++ b/open-sse/handlers/chatCore/requestDetail.js
+@@ -1,8 +1,6 @@
+ import { saveRequestUsage, appendRequestLog, saveRequestDetail } from "@/lib/usageDb.js";
+ import { COLORS } from "../../utils/stream.js";
+ import { canonicalizeUsage } from "../../utils/usageTracking.js";
+-import { getPricingForModel, calculateCostFromTokens, MODEL_PRICING, PROVIDER_PRICING, PATTERN_PRICING } from "../../providers/pricing.js";
+-import { detectClientTool, detectIDE } from "../../utils/clientDetector.js";
+ 
+ const OPTIONAL_PARAMS = [
+   "temperature", "top_p", "top_k",
+@@ -66,64 +64,8 @@ export function extractUsageFromResponse(responseBody) {
+   return null;
+ }
+ 
+-/**
+- * Compute per-request cost (USD) with provenance labels. FAIL-OPEN: never
+- * throws — any error (or missing pricing entry) degrades to cost 0 with
+- * provenance "unavailable", so request capture can never be broken by cost.
+- *
+- * provenance values:
+- *   "exact"       — matched a concrete PROVIDER_PRICING / MODEL_PRICING entry
+- *   "estimated"   — matched a PATTERN_PRICING glob fallback (rates are an
+- *                   approximation for this model)
+- *   "unavailable" — no pricing entry matched, or computation threw
+- *
+- * @param {string} provider provider alias/id (e.g. "gh", "tokenrouter")
+- * @param {string} model model id (e.g. "gpt-4o-mini", "anthropic/claude-opus-4.6")
+- * @param {object} tokens usage counters (OpenAI or Claude field names; cached
+- *   tokens are included at the discounted rate — see calculateCostFromTokens)
+- * @returns {{ cost: number, provenance: "exact"|"estimated"|"unavailable", pricingModel: string|undefined }}
+- *   cost in USD; pricingModel = the pricing key/pattern that was used.
+- */
+-export function computeCost(provider, model, tokens) {
+-  try {
+-    if (!model || !tokens || typeof tokens !== "object") {
+-      return { cost: 0, provenance: "unavailable", pricingModel: undefined };
+-    }
+-    const pricing = getPricingForModel(provider, model);
+-    if (!pricing) {
+-      return { cost: 0, provenance: "unavailable", pricingModel: undefined };
+-    }
+-    const cost = calculateCostFromTokens(tokens, pricing) || 0;
+-
+-    // Provenance: getPricingForModel returns PATTERN_PRICING entries only when
+-    // no concrete entry matched, and always by reference — so reference
+-    // equality distinguishes "exact" (PROVIDER/MODEL tables) from "estimated".
+-    let provenance = "estimated";
+-    let pricingModel = model;
+-    if (provider && PROVIDER_PRICING[provider]?.[model]) {
+-      provenance = "exact";
+-      pricingModel = `${provider}:${model}`;
+-    } else {
+-      const baseModel = model.includes("/") ? model.split("/").pop() : model;
+-      if (MODEL_PRICING[baseModel] === pricing) {
+-        provenance = "exact";
+-        pricingModel = baseModel;
+-      } else if (MODEL_PRICING[model] === pricing) {
+-        provenance = "exact";
+-        pricingModel = model;
+-      } else {
+-        const hit = PATTERN_PRICING.find(({ pricing: p }) => p === pricing);
+-        if (hit) pricingModel = hit.pattern;
+-      }
+-    }
+-    return { cost, provenance, pricingModel };
+-  } catch {
+-    return { cost: 0, provenance: "unavailable", pricingModel: undefined };
+-  }
+-}
+-
+ export function buildRequestDetail(base, overrides = {}) {
+-  const detail = {
++  return {
+     provider: base.provider || "unknown",
+     model: base.model || "unknown",
+     connectionId: base.connectionId || undefined,
+@@ -136,32 +78,8 @@ export function buildRequestDetail(base, overrides = {}) {
+     response: base.response || {},
+     pxpipe: base.pxpipe || undefined,
+     status: base.status || "success",
+-    conversationId: base.conversationId || undefined,
+-    errorCategory: base.errorCategory || undefined,
+-    sourceApp: base.sourceApp || undefined,
+-    userAgent: base.userAgent || undefined,
+-    clientTool: base.clientTool || undefined,
+-    ide: base.ide || undefined,
+-    url: base.url || undefined,
+     ...overrides
+   };
+-
+-  // Per-request cost capture, computed from the FINAL merged tokens (so
+-  // overrides are respected). Fail-open: cost computation can never break
+-  // capture. An explicit overrides.cost is honored as-is (computed costs
+-  // cannot be pre-empted by base).
+-  if (overrides.cost === undefined) {
+-    const { cost, provenance, pricingModel } = computeCost(detail.provider, detail.model, detail.tokens);
+-    detail.cost = cost;
+-    detail.costProvenance = provenance;
+-    detail.pricingModel = pricingModel;
+-  } else {
+-    detail.cost = overrides.cost;
+-    if (overrides.costProvenance !== undefined) detail.costProvenance = overrides.costProvenance;
+-    if (overrides.pricingModel !== undefined) detail.pricingModel = overrides.pricingModel;
+-  }
+-
+-  return detail;
+ }
+ 
+ // Build the "done" summary: duration, ttft, in/out tokens with cache breakdown
+@@ -182,7 +100,7 @@ export function formatDoneLine({ usage, latency }) {
+   return `DONE ${latency?.total ?? 0}ms${ttftStr} · ${inStr} · OUT ${outTok}`;
+ }
+ 
+-export function saveUsageStats({ provider, model, tokens, connectionId, apiKey, endpoint, label = "USAGE", silent = false, conversationId, taskType, smartRouterMeta }) {
++export function saveUsageStats({ provider, model, tokens, connectionId, apiKey, endpoint, label = "USAGE", silent = false }) {
+   if (!tokens || typeof tokens !== "object") return;
+ 
+   const inTokens = tokens.input_tokens ?? tokens.prompt_tokens ?? 0;
+@@ -210,11 +128,6 @@ export function saveUsageStats({ provider, model, tokens, connectionId, apiKey,
+     timestamp: new Date().toISOString(),
+     connectionId: connectionId || undefined,
+     apiKey: apiKey || undefined,
+-    endpoint: endpoint || null,
+-    conversationId: conversationId || undefined,
+-    meta: {
+-      ...(taskType ? { taskType } : {}),
+-      ...(smartRouterMeta || {}),
+-    },
++    endpoint: endpoint || null
+   }).catch(() => {});
+ }
+diff --git a/open-sse/handlers/chatCore/sseToJsonHandler.js b/open-sse/handlers/chatCore/sseToJsonHandler.js
+index f4154aa1..800c92a7 100644
+--- a/open-sse/handlers/chatCore/sseToJsonHandler.js
++++ b/open-sse/handlers/chatCore/sseToJsonHandler.js
+@@ -1,12 +1,10 @@
+ import { convertResponsesStreamToJson } from "../../transformer/streamToJsonConverter.js";
+ import { restoreToolNames } from "../../utils/opencodeFingerprint.js";
+ import { createErrorResult } from "../../utils/error.js";
+-import { validateResponseBody } from "../../utils/responseValidator.js";
+ import { HTTP_STATUS } from "../../config/runtimeConfig.js";
+ import { FORMATS } from "../../translator/formats.js";
+ import { PROVIDERS } from "../../config/providers.js";
+ import { buildRequestDetail, extractRequestConfig, saveUsageStats, formatDoneLine } from "./requestDetail.js";
+-import { detectClientTool, detectIDE } from "../../utils/clientDetector.js";
+ import { ROLE, RESPONSES_ITEM } from "../../translator/schema/index.js";
+ 
+ // Responses-API providers (e.g. codex) may emit SSE without content-type + use Responses output shape
+@@ -108,54 +106,6 @@ function chatCompletionToResponses(responseBody, customToolNames = null) {
+   };
+ }
+ 
+-/**
+- * Convert an OpenAI Chat Completions JSON body into the Anthropic Claude
+- * Message shape. Inlined here (not imported from nonStreamingHandler.js) to
+- * avoid a circular import: nonStreamingHandler already imports
+- * parseSSEToOpenAIResponse from this module.
+- */
+-function openAICompletionToClaudeMessage(responseBody) {
+-  if (!responseBody?.choices?.[0]) return responseBody;
+-  const choice = responseBody.choices[0];
+-  const message = choice.message || {};
+-  const content = [];
+-
+-  const reasoning = message.reasoning_content || message.provider_specific_fields?.reasoning_content || "";
+-  if (reasoning) {
+-    content.push({ type: "thinking", thinking: reasoning });
+-  }
+-  if (typeof message.content === "string" && message.content.length > 0) {
+-    content.push({ type: "text", text: message.content });
+-  }
+-  for (const toolCall of message.tool_calls || []) {
+-    const fn = toolCall.function || {};
+-    let toolName = fn.name || toolCall.name || "";
+-    if (toolName.startsWith("proxy_")) toolName = toolName.slice("proxy_".length);
+-    content.push({
+-      type: "tool_use",
+-      id: toolCall.id || `toolu_${Date.now()}_${content.length}`,
+-      name: toolName,
+-      input: parseToolArguments(fn.arguments || toolCall.arguments),
+-    });
+-  }
+-  if (content.length === 0) content.push({ type: "text", text: "" });
+-
+-  const usage = responseBody.usage || {};
+-  return {
+-    id: String(responseBody.id || `msg_${Date.now()}`).replace(/^chatcmpl-/, ""),
+-    type: "message",
+-    role: "assistant",
+-    model: responseBody.model || "unknown",
+-    content,
+-    stop_reason: fromOpenAIFinish(choice.finish_reason, "claude"),
+-    stop_sequence: null,
+-    usage: {
+-      input_tokens: usage.prompt_tokens || usage.input_tokens || 0,
+-      output_tokens: usage.completion_tokens || usage.output_tokens || 0,
+-    },
+-  };
+-}
+-
+ /**
+  * Parse OpenAI-style SSE text into a single chat completion JSON.
+  * Used when provider forces streaming but client wants non-streaming.
+@@ -163,17 +113,12 @@ function openAICompletionToClaudeMessage(responseBody) {
+ export function parseSSEToOpenAIResponse(rawSSE, fallbackModel) {
+   const chunks = [];
+   let streamError = null;
+-  let sawDone = false;
+ 
+   for (const line of String(rawSSE || "").split("\n")) {
+     const trimmed = line.trim();
+     if (!trimmed.startsWith("data:")) continue;
+     const payload = trimmed.slice(5).trim();
+-    if (!payload) continue;
+-    if (payload === "[DONE]") {
+-      sawDone = true;
+-      continue;
+-    }
++    if (!payload || payload === "[DONE]") continue;
+     try {
+       const chunk = JSON.parse(payload);
+       if (chunk?.error) streamError = chunk.error;
+@@ -182,21 +127,7 @@ export function parseSSEToOpenAIResponse(rawSSE, fallbackModel) {
+   }
+ 
+   if (streamError) return { error: streamError };
+-  // A properly-terminated stream that only contained [DONE] (no data events)
+-  // returns a body with empty choices so the downstream validator rejects it
+-  // with EMPTY_CHOICES (which triggers fallback), rather than returning null
+-  // which the handler treats as "not handled" / silent skip. A completely
+-  // empty stream (no [DONE] either) stays null — nothing to convert.
+-  if (chunks.length === 0) {
+-    if (!sawDone) return null;
+-    return {
+-      id: `chatcmpl-${Date.now()}`,
+-      object: "chat.completion",
+-      created: Math.floor(Date.now() / 1000),
+-      model: fallbackModel || "unknown",
+-      choices: [],
+-    };
+-  }
++  if (chunks.length === 0) return null;
+ 
+   const first = chunks[0];
+   const contentParts = [];
+@@ -249,7 +180,7 @@ export function parseSSEToOpenAIResponse(rawSSE, fallbackModel) {
+  * Handle case: provider forced streaming but client wants JSON.
+  * Supports both Codex/Responses API SSE and standard Chat Completions SSE.
+  */
+-export async function handleForcedSSEToJson({ providerResponse, sourceFormat, targetFormat, provider, model, body, stream, translatedBody, finalBody, requestStartTime, connectionId, apiKey, clientRawRequest, onRequestSuccess, customToolNames, toolNameMap, trackDone, appendLog, reqTag, log, conversationId, taskType, smartRouterMeta, sourceApp, userAgent, upstreamUrl }) {
++export async function handleForcedSSEToJson({ providerResponse, sourceFormat, targetFormat, provider, model, body, stream, translatedBody, finalBody, requestStartTime, connectionId, apiKey, clientRawRequest, onRequestSuccess, customToolNames, toolNameMap, trackDone, appendLog, reqTag, log }) {
+   const contentType = providerResponse.headers.get("content-type") || "";
+   const isSSE = contentType.includes("text/event-stream") || (contentType === "" && isResponsesProvider(provider));
+   if (!isSSE) return null; // not handled here
+@@ -258,13 +189,8 @@ export async function handleForcedSSEToJson({ providerResponse, sourceFormat, ta
+ 
+   const ctx = {
+     provider, model, connectionId,
+-    conversationId,
+     request: extractRequestConfig(body, stream),
+-    providerRequest: finalBody || translatedBody || null,
+-    sourceApp,
+-    userAgent,
+-    clientTool: detectClientTool(clientRawRequest?.headers || {}, body),
+-    ide: detectIDE(userAgent)
++    providerRequest: finalBody || translatedBody || null
+   };
+ 
+   // Codex/Responses API SSE path
+@@ -279,7 +205,7 @@ export async function handleForcedSSEToJson({ providerResponse, sourceFormat, ta
+ 
+       const usage = jsonResponse.usage || {};
+       appendLog({ tokens: usage, status: "200 OK" });
+-      saveUsageStats({ provider, model, tokens: usage, connectionId, apiKey, endpoint: clientRawRequest?.endpoint, silent: true, conversationId, taskType, smartRouterMeta });
++      saveUsageStats({ provider, model, tokens: usage, connectionId, apiKey, endpoint: clientRawRequest?.endpoint, silent: true });
+       if (log?.line) log.line(reqTag, "📊", formatDoneLine({ usage, latency: { total: Date.now() - requestStartTime } }));
+ 
+       // Same cache-inclusive total for the recorded detail, so the DB and the
+@@ -292,7 +218,6 @@ export async function handleForcedSSEToJson({ providerResponse, sourceFormat, ta
+ 
+       saveRequestDetail(buildRequestDetail({
+         ...ctx,
+-        url: providerUrl || providerResponse?.url,
+         latency: { ttft: totalLatency, total: totalLatency },
+         tokens: { prompt_tokens: inTokensForLog, completion_tokens: usage.output_tokens || 0 },
+         response: { content: textContent, thinking: null, finish_reason: jsonResponse.status || "unknown" },
+@@ -384,24 +309,16 @@ export async function handleForcedSSEToJson({ providerResponse, sourceFormat, ta
+       );
+     }
+ 
+-    // GAP-RETRY-01: semantic validation — SSE→JSON parsed body may have empty
+-    // choices array.  Reject so the combo fallback rotates instead of forwarding
+-    // an unusable response to the client.
+-    if (Array.isArray(parsed?.choices) && parsed.choices.length === 0) {
+-      return createErrorResult(HTTP_STATUS.BAD_GATEWAY, "Provider returned empty response: no choices");
+-    }
+-
+     if (onRequestSuccess) await onRequestSuccess();
+ 
+     const usage = parsed.usage || {};
+     appendLog({ tokens: usage, status: "200 OK" });
+-    saveUsageStats({ provider, model, tokens: usage, connectionId, apiKey, endpoint: clientRawRequest?.endpoint, silent: true, conversationId, taskType, smartRouterMeta });
++    saveUsageStats({ provider, model, tokens: usage, connectionId, apiKey, endpoint: clientRawRequest?.endpoint, silent: true });
+     if (log?.line) log.line(reqTag, "📊", formatDoneLine({ usage, latency: { total: Date.now() - requestStartTime } }));
+ 
+     const totalLatency = Date.now() - requestStartTime;
+     saveRequestDetail(buildRequestDetail({
+       ...ctx,
+-      url: providerUrl || providerResponse?.url,
+       latency: { ttft: totalLatency, total: totalLatency },
+       tokens: usage,
+       response: {
+@@ -433,20 +350,15 @@ export async function handleForcedSSEToJson({ providerResponse, sourceFormat, ta
+       }
+     }
+ 
+-    // A Responses-format client (e.g. Codex) or Claude-format client forced this
+-    // provider to stream, but wants JSON back. parseSSEToOpenAIResponse yields a
+-    // Chat Completions body; convert it to the client's expected format so tool_calls
+-    // are not lost on the non-streaming return path. Inlined (not imported from
++    // A Responses-format client (e.g. Codex) forced this provider to stream,
++    // but wants JSON back. parseSSEToOpenAIResponse yields a Chat Completions
++    // body; convert it to the Responses `output` shape so tool_calls are not
++    // lost on the non-streaming return path. Inlined (not imported from
+     // nonStreamingHandler.js) to avoid a circular import: nonStreamingHandler
+     // already imports parseSSEToOpenAIResponse from this module.
+-    let finalBody;
+-    if (sourceFormat === FORMATS.OPENAI_RESPONSES) {
+-      finalBody = chatCompletionToResponses(parsed, customToolNames);
+-    } else if (sourceFormat === FORMATS.CLAUDE) {
+-      finalBody = openAICompletionToClaudeMessage(parsed);
+-    } else {
+-      finalBody = parsed;
+-    }
++    const finalBody = sourceFormat === FORMATS.OPENAI_RESPONSES
++      ? chatCompletionToResponses(parsed, customToolNames)
++      : parsed;
+ 
+     return { success: true, response: new Response(JSON.stringify(restoreToolNames(finalBody, toolNameMap)), { headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } }) };
+   } catch (err) {
+diff --git a/open-sse/providers/capabilities.js b/open-sse/providers/capabilities.js
+index b0c25baa..6d983f90 100644
+--- a/open-sse/providers/capabilities.js
++++ b/open-sse/providers/capabilities.js
+@@ -673,17 +673,3 @@ export function getCapabilitiesForModel(provider, model) {
+   // 4. Floor
+   return refine(null, provider, model);
+ }
+-
+-/**
+- * Merge user-defined per-model capability overrides over resolved static caps.
+- * User overrides always win (a user can both grant and revoke a capability).
+- * Only fields present in the override object are applied.
+- *
+- * @param {object} staticCaps - result of getCapabilitiesForModel(provider, model)
+- * @param {object} [userOverrides] - { vision: true, audioInput: false, ... } or null
+- * @returns {object} merged capabilities
+- */
+-export function mergeUserCapabilityOverrides(staticCaps, userOverrides) {
+-  if (!userOverrides || typeof userOverrides !== "object") return staticCaps;
+-  return { ...staticCaps, ...userOverrides };
+-}
+diff --git a/open-sse/providers/pricing.js b/open-sse/providers/pricing.js
+index cf914ce8..45df9d22 100644
+--- a/open-sse/providers/pricing.js
++++ b/open-sse/providers/pricing.js
+@@ -452,27 +452,10 @@ export function formatCost(cost) {
+ }
+ 
+ /**
+- * Calculate cost from tokens and pricing.
+- *
+- * NOTE argument order: `(tokens, pricing)` — tokens FIRST, pricing SECOND.
+- * (The price object is the "lookup result", tokens are the "input data";
+- * don't be fooled by the names when calling.)
+- *
+- * @param {object} tokens - Usage counters, e.g.
+- *   { prompt_tokens: 1000, completion_tokens: 500, cached_tokens: 0 }
+- *   (accepts OpenAI-style or Claude-style field names; prompt_tokens is
+- *   cache-inclusive, cached/cache_creation are subtracted from it)
+- * @param {object} pricing - Price object from getPricingForModel(provider, model),
+- *   e.g. { input: 5, output: 25, cached: 0.5, cache_creation: 6.25, reasoning: 25 }
+- *   (all values are $ per 1M tokens)
++ * Calculate cost from tokens and pricing
++ * @param {object} tokens
++ * @param {object} pricing
+  * @returns {number} cost in dollars
+- *
+- * @example
+- * const p = getPricingForModel("tokenrouter", "anthropic/claude-opus-4.6");
+- * const cost = calculateCostFromTokens(
+- *   { prompt_tokens: 1000, completion_tokens: 500, cached_tokens: 0 },
+- *   p
+- * ); // 0.0175
+  */
+ export function calculateCostFromTokens(tokens, pricing) {
+   if (!tokens || !pricing) return 0;
+diff --git a/open-sse/services/combo.js b/open-sse/services/combo.js
+index 70398fc7..e3b9a8e6 100644
+--- a/open-sse/services/combo.js
++++ b/open-sse/services/combo.js
+@@ -275,35 +275,9 @@ export function getComboModelsFromData(modelStr, combosData) {
+  * @param {string} [options.comboName] - Name of the combo (for round-robin tracking)
+  * @param {string} [options.comboStrategy] - Strategy: "fallback" or "round-robin"
+  * @param {number|string} [options.comboStickyLimit=1] - Requests per combo model before switching
+- * @param {boolean} [options.autoSwitch=true] - Reorder models by required capabilities
+- * @param {Function} [options.onFallbackEvent] - Per-attempt callback (attempt) => void for observability
+- * @param {number} [options.retriesPerModel=1] - How many times to retry a model on retryable errors before moving to the next. 1 = current behavior (try once).
+- * @param {Object} [options.perModelRetries=null] - Optional per-model override map: { "provider/model": retries }
+  * @returns {Promise<Response>}
+  */
+-export async function handleComboChat({ body, models, handleSingleModel, log, comboName, comboStrategy, comboStickyLimit = 1, autoSwitch = true, onFallbackEvent = null, retriesPerModel = 1, perModelRetries = null }) {
+-  // Per-request circuit breaker: cache failed providers to avoid retrying dead endpoints
+-  const failedProviders = new Set();
+-
+-  // Extract provider from model string (e.g., "dialagram/qwen-3.8-max" -> "dialagram")
+-  const getProvider = (modelStr) => {
+-    const slash = modelStr.indexOf("/");
+-    return slash > 0 ? modelStr.slice(0, slash) : "";
+-  };
+-
+-  // Classify error as provider-level (skip remaining models) vs model-level (continue)
+-  const isProviderLevelError = (status, errorText) => {
+-    const text = (errorText || "").toLowerCase();
+-    // Provider-level: auth failures, gateway errors, network issues
+-    if ([401, 403, 502, 503].includes(status)) return true;
+-    if (text.includes("no credentials") || text.includes("account disabled") || text.includes("service unavailable")) return true;
+-    if (text.includes("econnrefused") || text.includes("etimedout") || text.includes("dns")) return true;
+-    return false;
+-  };
+-
+-  // Fallback chain observability: one entry per attempted model, oldest first.
+-  const fallbackChain = [];
+-
++export async function handleComboChat({ body, models, handleSingleModel, log, comboName, comboStrategy, comboStickyLimit = 1, autoSwitch = true }) {
+   // Apply rotation strategy if enabled
+   let rotatedModels = getRotatedModels(models, comboName, comboStrategy, comboStickyLimit);
+ 
+@@ -325,127 +299,64 @@ export async function handleComboChat({ body, models, handleSingleModel, log, co
+ 
+   for (let i = 0; i < rotatedModels.length; i++) {
+     const modelStr = rotatedModels[i];
++    log.info("COMBO", `Trying model ${i + 1}/${rotatedModels.length}: ${modelStr}`);
+ 
+-    // Circuit breaker: skip models on providers that already failed this request
+-    const provider = getProvider(modelStr);
+-    if (provider && failedProviders.has(provider)) {
+-      const latencyMs = 0;
+-      const attempt = { model: modelStr, ok: false, status: 0, skipped: true, skipReason: "provider-failed", provider, latencyMs, attempt: 1 };
+-      fallbackChain.push(attempt);
+-      if (onFallbackEvent) {
+-        try { onFallbackEvent(attempt); } catch { /* observability must never break routing */ }
++    try {
++      const result = await handleSingleModel(body, modelStr);
++      
++      // Success (2xx) - return response
++      if (result.ok) {
++        log.info("COMBO", `Model ${modelStr} succeeded`);
++        return result;
+       }
+-      log.info("COMBO", `Skipping ${modelStr}: provider ${provider} failed earlier in this request`);
+-      continue;
+-    }
+-
+-    // Retry count for this model: per-model override wins, else universal default
+-    const modelRetries = (perModelRetries && typeof perModelRetries[modelStr] === "number")
+-      ? Math.max(1, perModelRetries[modelStr])
+-      : Math.max(1, retriesPerModel || 1);
+-
+-    for (let attemptNum = 0; attemptNum < modelRetries; attemptNum++) {
+-      const attemptStart = Date.now();
+-      const attemptLabel = modelRetries > 1 ? ` (attempt ${attemptNum + 1}/${modelRetries})` : "";
+-      log.info("COMBO", `Trying model ${i + 1}/${rotatedModels.length}: ${modelStr}${attemptLabel}`);
+ 
++      // Extract error info from response
++      let errorText = result.statusText || "";
++      let retryAfter = null;
+       try {
+-        const result = await handleSingleModel(body, modelStr);
+-        const latencyMs = Date.now() - attemptStart;
+-
+-        // Record attempt for the fallback chain (success or failure)
+-        const attempt = { model: modelStr, ok: !!result.ok, status: result.status, latencyMs, attempt: attemptNum + 1 };
+-        fallbackChain.push(attempt);
+-        if (onFallbackEvent) {
+-          try { onFallbackEvent(attempt); } catch { /* observability must never break routing */ }
+-        }
+-
+-        // Success (2xx) - return response
+-        if (result.ok) {
+-          log.info("COMBO", `Model ${modelStr} succeeded`);
+-          if (fallbackChain.length > 1 && result.headers && typeof result.headers.append === "function") {
+-            try { result.headers.append("x-9r-fallback-chain", JSON.stringify(fallbackChain)); } catch { /* ignore */ }
+-          }
+-          return result;
+-        }
+-
+-        // Extract error info from response
+-        let errorText = result.statusText || "";
+-        let retryAfter = null;
+-        try {
+-          const errorBody = await result.clone().json();
+-          errorText = errorBody?.error?.message || errorBody?.error || errorBody?.message || errorText;
+-          retryAfter = errorBody?.retryAfter || null;
+-        } catch {
+-          // Ignore JSON parse errors
+-        }
+-
+-        // Track earliest retryAfter across all combo models
+-        if (retryAfter && (!earliestRetryAfter || new Date(retryAfter) < new Date(earliestRetryAfter))) {
+-          earliestRetryAfter = retryAfter;
+-        }
+-
+-        // Normalize error text to string (Worker-safe)
+-        if (typeof errorText !== "string") {
+-          try { errorText = JSON.stringify(errorText); } catch { errorText = String(errorText); }
+-        }
+-
+-        // Check if should fallback to next model
+-        const { shouldFallback, cooldownMs } = checkFallbackError(result.status, errorText);
+-
+-        if (!shouldFallback) {
+-          log.warn("COMBO", `Model ${modelStr} failed (no fallback)`, { status: result.status });
+-          return result;
+-        }
+-
+-        // For transient errors (503/502/504), wait for cooldown before retrying
+-        // so a briefly-overloaded provider gets a chance to recover
+-        if (cooldownMs && cooldownMs > 0 && cooldownMs <= 5000 &&
+-            (result.status === 503 || result.status === 502 || result.status === 504)) {
+-          log.info("COMBO", `Model ${modelStr} transient ${result.status}, waiting ${cooldownMs}ms before retry`);
+-          await new Promise(r => setTimeout(r, cooldownMs));
+-        }
++        const errorBody = await result.clone().json();
++        errorText = errorBody?.error?.message || errorBody?.error || errorBody?.message || errorText;
++        retryAfter = errorBody?.retryAfter || null;
++      } catch {
++        // Ignore JSON parse errors
++      }
+ 
+-        // If we have retry attempts left, retry the SAME model
+-        if (attemptNum < modelRetries - 1) {
+-          log.warn("COMBO", `Model ${modelStr} failed (${result.status}), retrying ${attemptNum + 2}/${modelRetries}`);
+-          continue;
+-        }
++      // Track earliest retryAfter across all combo models
++      if (retryAfter && (!earliestRetryAfter || new Date(retryAfter) < new Date(earliestRetryAfter))) {
++        earliestRetryAfter = retryAfter;
++      }
+ 
+-        // Fallback to next model after all retries exhausted
+-        lastError = errorText || String(result.status);
+-        if (!lastStatus) lastStatus = result.status;
++      // Normalize error text to string (Worker-safe)
++      if (typeof errorText !== "string") {
++        try { errorText = JSON.stringify(errorText); } catch { errorText = String(errorText); }
++      }
+ 
+-        // Circuit breaker: cache provider-level failures so subsequent models
+-        // on the same provider are skipped (avoids N retries against a dead endpoint)
+-        if (provider && isProviderLevelError(result.status, errorText)) {
+-          failedProviders.add(provider);
+-          log.warn("COMBO", `Provider ${provider} marked failed for this request (${result.status})`);
+-        }
++      // Check if should fallback to next model
++      const { shouldFallback, cooldownMs } = checkFallbackError(result.status, errorText);
+ 
+-        log.warn("COMBO", `Model ${modelStr} failed after ${modelRetries} attempts, trying next`, { status: result.status });
+-      } catch (error) {
+-        // Catch unexpected exceptions to fallback continues
+-        const latencyMs = Date.now() - attemptStart;
+-        const provider = getProvider(modelStr);
+-        const errorText = error.message || String(error);
+-
+-        // Network-level exceptions (ECONNREFUSED, ETIMEDOUT, DNS) are provider-level
+-        if (provider && isProviderLevelError(500, errorText)) {
+-          failedProviders.add(provider);
+-          log.warn("COMBO", `Provider ${provider} marked failed for this request (exception: ${errorText})`);
+-        }
++      if (!shouldFallback) {
++        log.warn("COMBO", `Model ${modelStr} failed (no fallback)`, { status: result.status });
++        return result;
++      }
+ 
+-        const attempt = { model: modelStr, ok: false, status: 500, error: errorText, latencyMs, attempt: attemptNum + 1 };
+-        fallbackChain.push(attempt);
+-        if (onFallbackEvent) {
+-          try { onFallbackEvent(attempt); } catch { /* observability must never break routing */ }
+-        }
+-        lastError = errorText;
+-        if (!lastStatus) lastStatus = 500;
+-        log.warn("COMBO", `Model ${modelStr} threw error, trying next`, { error: lastError });
+-        break; // Exceptions don't retry — move to next model
++      // For transient errors (503/502/504), wait for cooldown before falling through
++      // so a briefly-overloaded provider gets a chance to recover rather than being
++      // skipped immediately (fixes: combo falls through on transient 503)
++      if (cooldownMs && cooldownMs > 0 && cooldownMs <= 5000 &&
++          (result.status === 503 || result.status === 502 || result.status === 504)) {
++        log.info("COMBO", `Model ${modelStr} transient ${result.status}, waiting ${cooldownMs}ms before next`);
++        await new Promise(r => setTimeout(r, cooldownMs));
+       }
++
++      // Fallback to next model
++      lastError = errorText || String(result.status);
++      if (!lastStatus) lastStatus = result.status;
++      log.warn("COMBO", `Model ${modelStr} failed, trying next`, { status: result.status });
++    } catch (error) {
++      // Catch unexpected exceptions to ensure fallback continues
++      lastError = error.message || String(error);
++      if (!lastStatus) lastStatus = 500;
++      log.warn("COMBO", `Model ${modelStr} threw error, trying next`, { error: lastError });
+     }
+   }
+ 
+@@ -465,7 +376,7 @@ export async function handleComboChat({ body, models, handleSingleModel, log, co
+ 
+   log.warn("COMBO", `All models failed | ${msg}`);
+   return new Response(
+-    JSON.stringify({ error: { message: msg }, fallbackChain }),
++    JSON.stringify({ error: { message: msg } }),
+     { status, headers: { "Content-Type": "application/json" } }
+   );
+ }
+diff --git a/open-sse/services/model.js b/open-sse/services/model.js
+index 8578ab24..7715b586 100644
+--- a/open-sse/services/model.js
++++ b/open-sse/services/model.js
+@@ -28,48 +28,21 @@ export function resolveProviderAlias(aliasOrId) {
+   return ALIAS_TO_PROVIDER_ID[aliasOrId] || aliasOrId;
+ }
+ 
+-/**
+- * Strip known beta/context-window markers appended by clients.
+- * Claude Code 1M-context beta sends e.g. "claude-sonnet-4[1m]"; older betas
+- * used "[200k]". The marker is a client-side hint — we strip it so the model
+- * lookup succeeds, and optionally surface it via the returned `betaMarker`
+- * field so downstream handlers can enable extended-context behaviour.
+- *
+- * Pattern: trailing `[<digits><k|m>]` (case-insensitive), e.g. [1m], [200k].
+- * Only strips when the bracket group sits at the END of the string so we
+- * don't accidentally eat legitimate model-name characters.
+- */
+-const BETA_MARKER_RE = /\[(\d+[km])\]$/i;
+-
+-export function stripBetaMarker(modelStr) {
+-  if (!modelStr || typeof modelStr !== "string") return { cleaned: modelStr, betaMarker: null };
+-  const m = modelStr.match(BETA_MARKER_RE);
+-  if (!m) return { cleaned: modelStr, betaMarker: null };
+-  return {
+-    cleaned: modelStr.slice(0, -m[0].length),
+-    betaMarker: m[1].toLowerCase(), // e.g. "1m", "200k"
+-  };
+-}
+-
+ /**
+  * Parse model string: "alias/model" or "provider/model" or just alias
+  */
+ export function parseModel(modelStr) {
+   if (!modelStr) {
+-    return { provider: null, model: null, isAlias: false, providerAlias: null, betaMarker: null };
++    return { provider: null, model: null, isAlias: false, providerAlias: null };
+   }
+ 
+-  // Strip beta context-window markers before any further parsing (#3690)
+-  const { cleaned, betaMarker } = stripBetaMarker(modelStr);
+-  modelStr = cleaned;
+-
+   // Check if standard format: provider/model or alias/model
+   if (modelStr.includes("/")) {
+     const firstSlash = modelStr.indexOf("/");
+     const providerOrAlias = modelStr.slice(0, firstSlash);
+     const model = modelStr.slice(firstSlash + 1);
+     const provider = resolveProviderAlias(providerOrAlias);
+-    return { provider, model, isAlias: false, providerAlias: providerOrAlias, betaMarker };
++    return { provider, model, isAlias: false, providerAlias: providerOrAlias };
+   }
+ 
+   // Alias format (model alias, not provider alias)
+@@ -78,7 +51,6 @@ export function parseModel(modelStr) {
+     model: modelStr,
+     isAlias: true,
+     providerAlias: null,
+-    betaMarker,
+   };
+ }
+ 
+@@ -126,7 +98,6 @@ export async function getModelInfoCore(modelStr, aliasesOrGetter) {
+     return {
+       provider: parsed.provider,
+       model: parsed.model,
+-      betaMarker: parsed.betaMarker,
+     };
+   }
+ 
+@@ -148,13 +119,10 @@ export async function getModelInfoCore(modelStr, aliasesOrGetter) {
+   return {
+     provider: inferProviderFromModelName(parsed.model),
+     model: parsed.model,
+-    betaMarker: parsed.betaMarker,
+   };
+ }
+ 
+ // Config-driven prefix → provider inference (first match wins, fallback "openai").
+-// Ollama-local models are served REMOTELY (model-serving policy: never on the
+-// control-plane Mac — see OLLAMA_LOCAL_DEFAULT_HOST in config/providers.js).
+ const MODEL_PREFIX_PROVIDERS = [
+   // Codex CLI sends this bare virtual model for auto-review - keep it on OAuth Codex (#1398).
+   [/^codex-auto-review$/, "codex"],
+@@ -174,8 +142,6 @@ const MODEL_PREFIX_PROVIDERS = [
+   [/^gpt-/, "openai"],
+   [/^o[134]/, "openai"],
+   [/^deepseek-/, "openrouter"],
+-  [/^qwen2\.5/, "ollama-local"],
+-  [/^llama3\./, "ollama-local"],
+ ];
+ 
+ /**
+diff --git a/open-sse/services/usage.js b/open-sse/services/usage.js
+index b32e1015..71b53cc9 100644
+--- a/open-sse/services/usage.js
++++ b/open-sse/services/usage.js
+@@ -19,7 +19,6 @@ import { getOpenCodeZenUsage } from "./usage/opencode-zen.js";
+ import { getGroqUsage } from "./usage/groq.js";
+ import { getZedUsage } from "./usage/zed.js";
+ import { getXiaomiMimoUsage } from "./usage/xiaomi-mimo.js";
+-import { getOpenRouterUsage } from "./usage/openrouter.js";
+ import { resolveQoderCredentials } from "./qoderModels.js";
+ import { getGlmUsage } from "./usage/glm.js";
+ import { getCommandCodeUsage } from "./usage/commandcode.js";
+@@ -64,7 +63,6 @@ const USAGE_HANDLERS = {
+   zed: (c) => getZedUsage(c.accessToken, c.providerSpecificData, c.proxyOptions),
+   "xiaomi-mimo": (c) => getXiaomiMimoUsage(c.accessToken, c.providerSpecificData, c.proxyOptions),
+   commandcode: (c) => getCommandCodeUsage(c.apiKey, c.proxyOptions),
+-  openrouter: (c) => getOpenRouterUsage(c.apiKey, c.proxyOptions),
+ };
+ 
+ // Qoder intl/CN share one usage path: PATs must be exchanged to a job token
+diff --git a/src/app/(dashboard)/dashboard/providers/[id]/page.js b/src/app/(dashboard)/dashboard/providers/[id]/page.js
+index 71782cb0..c861e900 100644
+--- a/src/app/(dashboard)/dashboard/providers/[id]/page.js
++++ b/src/app/(dashboard)/dashboard/providers/[id]/page.js
+@@ -21,13 +21,9 @@ import ConnectionRow from "./ConnectionRow";
+ import AddApiKeyModal from "./AddApiKeyModal";
+ import EditCompatibleNodeModal from "./EditCompatibleNodeModal";
+ import AddCustomModelModal from "./AddCustomModelModal";
+-import ComboFormModal from "@/app/(dashboard)/dashboard/combos/page.js";
+ import BulkImportCodexModal from "./BulkImportCodexModal";
+ import BulkImportGrokCliModal from "./BulkImportGrokCliModal";
+ import CustomConfigCard from "./CustomConfigCard";
+-import ProviderUsageCard from "./ProviderUsageCard";
+-import ProviderErrorPanel from "./ProviderErrorPanel";
+-import { useNotificationStore } from "@/store/notificationStore";
+ 
+ const ONE_BY_ONE_DELAY_MS = 1000;
+ 
+@@ -44,9 +40,8 @@ export default function ProviderDetailPage() {
+   const params = useParams();
+   const router = useRouter();
+   const providerId = params.id;
+-  const { getCaps, refresh: refreshModelCaps } = useModelCaps();
++  const { getCaps } = useModelCaps();
+   const [connections, setConnections] = useState([]);
+-  const [fetchError, setFetchError] = useState(null);
+   const [loading, setLoading] = useState(true);
+   const [providerNode, setProviderNode] = useState(null);
+   const [proxyPools, setProxyPools] = useState([]);
+@@ -91,12 +86,6 @@ export default function ProviderDetailPage() {
+   const stopOneByOneRef = useRef(false);
+   const [importingQoderModels, setImportingQoderModels] = useState(false);
+   const [importingClineModels, setImportingClineModels] = useState(false);
+-  const [importingModels, setImportingModels] = useState(false);
+-  const [importModelsProgress, setImportModelsProgress] = useState(null);
+-  const [providerErrors, setProviderErrors] = useState([]);
+-  const [providerErrorsLoading, setProviderErrorsLoading] = useState(false);
+-  const [devMode, setDevMode] = useState(false);
+-  const [showCreateCombo, setShowCreateCombo] = useState(false);
+   const { copied, copy } = useCopyToClipboard();
+ 
+   const AG_RISK_STORAGE_KEY = "ag_risk_confirmed";
+@@ -342,8 +331,6 @@ export default function ProviderDetailPage() {
+       const autoPingSettingsKey = AUTO_PING_SETTINGS_KEYS[providerId];
+       const apCfg = autoPingSettingsKey ? settingsData[autoPingSettingsKey] || {} : {};
+       setAutoPing({ enabled: apCfg.enabled === true, connections: apCfg.connections || {} });
+-      // Dev mode flag from settings
+-      setDevMode(!!settingsData.devMode);
+       if (nodesRes.ok) {
+         let node = (nodesData.nodes || []).find((entry) => entry.id === providerId) || null;
+ 
+@@ -456,55 +443,6 @@ export default function ProviderDetailPage() {
+     saveThinkingConfig(mode);
+   };
+ 
+-  // Persist a per-model vision/audio capability override. Keyed by
+-  // `${providerId}/${modelId}` (the same key /api/models accepts as either the
+-  // full or routed model id) into settings.modelCapOverrides, then refresh the
+-  // shared model-caps cache so ModelRow badges and the combo vision/audio
+-  // pickers reflect it immediately.
+-  const handleToggleCap = async (modelId, key, value) => {
+-    const fullModel = `${providerId}/${modelId}`;
+-    try {
+-      const settingsRes = await fetch("/api/settings", { cache: "no-store" });
+-      const settingsData = settingsRes.ok ? await settingsRes.json() : {};
+-      const current = settingsData.modelCapOverrides || {};
+-      const modelOverride = { ...(current[fullModel] || {}), [key]: value };
+-      const updated = { ...current, [fullModel]: modelOverride };
+-      await fetch("/api/settings", {
+-        method: "PATCH",
+-        headers: { "Content-Type": "application/json" },
+-        body: JSON.stringify({ modelCapOverrides: updated }),
+-      });
+-      await refreshModelCaps();
+-    } catch (error) {
+-      console.log("Error saving capability override:", error);
+-    }
+-  };
+-
+-  // Provider-level error/log fetch — drives both the Errors & Logs panel and the
+-  // per-model error chips (grouped fingerprints from getErrorSummary via
+-  // /api/messages?view=errors). System B (requestDetails), not the lastError chip.
+-  const fetchProviderErrors = useCallback(async () => {
+-    if (!providerId) return;
+-    setProviderErrorsLoading(true);
+-    try {
+-      const res = await fetch(
+-        `/api/messages?view=errors&provider=${encodeURIComponent(providerId)}&pageSize=100`,
+-        { cache: "no-store" },
+-      );
+-      const data = res.ok ? await res.json() : {};
+-      setProviderErrors(Array.isArray(data.errors) ? data.errors : []);
+-    } catch (error) {
+-      console.log("Error fetching provider errors:", error);
+-      setProviderErrors([]);
+-    } finally {
+-      setProviderErrorsLoading(false);
+-    }
+-  }, [providerId]);
+-
+-  useEffect(() => {
+-    fetchProviderErrors();
+-  }, [fetchProviderErrors]);
+-
+   const saveAutoPing = async (next) => {
+     const autoPingSettingsKey = AUTO_PING_SETTINGS_KEYS[providerId];
+     if (!autoPingSettingsKey) return;
+@@ -676,8 +614,7 @@ export default function ProviderDetailPage() {
+       for (const model of models) {
+         const modelId = model.id || model.name;
+         if (!modelId) continue;
+-
+-
++        
+         // Qoder model ID format may be "qoder/auto", "qoder-cn/auto" or "auto",
+         // need to remove the provider prefix before storing.
+         const cleanModelId = modelId.replace(/^(qoder-cn|qoder)\//, "");
+@@ -691,7 +628,7 @@ export default function ProviderDetailPage() {
+         await handleAddCustomModel(cleanModelId, "llm", providerStorageAlias);
+         importedCount += 1;
+       }
+-
++      
+       if (importedCount === 0) {
+         alert(translate("All models already exist, no new models added"));
+       } else {
+@@ -752,115 +689,6 @@ export default function ProviderDetailPage() {
+     }
+   };
+ 
+-  // Generic model auto-fill: fetch this provider's live /models list (via the
+-  // backend model-discovery route, which resolves ~40 providers incl. OAuth
+-  // token-refresh) and add any not-yet-present models as custom models. Mirrors
+-  // handleImportQoderModels but without the qoder-specific prefix stripping, so
+-  // provider-scoped IDs like "openai/gpt-4o" (OpenRouter) stay intact.
+-  // Uses the connection-keyed /api/providers/[id]/models route — no arbitrary
+-  // URL fetch, so it doesn't touch the suggested-models SSRF surface.
+-  const handleImportModels = async () => {
+-    if (importingModels) return;
+-    const activeConnection = connections.find((conn) => conn.isActive !== false);
+-    if (!activeConnection) {
+-      alert(translate("Please add an active connection first"));
+-      return;
+-    }
+-
+-    setImportingModels(true);
+-    try {
+-      // ?refresh=1 busts the smart-router node-models cache so freshly imported
+-      // models are visible to routing immediately.
+-      const controller = new AbortController();
+-      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout
+-      const res = await fetch(`/api/providers/${activeConnection.id}/models?refresh=1`, { signal: controller.signal });
+-      clearTimeout(timeoutId);
+-      const data = await res.json();
+-      if (!res.ok) {
+-        alert(data.error || translate("Failed to fetch models"));
+-        return;
+-      }
+-      const models = data.models || [];
+-      if (models.length === 0) {
+-        alert(translate("No models returned"));
+-        return;
+-      }
+-
+-      // Filter down to the models we actually need to add before doing any
+-      // network I/O. `customModels`/`modelAliases` are a snapshot from when
+-      // the button was clicked — mid-loop refetches wouldn't change this
+-      // closure anyway, so checking once up front loses nothing.
+-      const toAdd = [];
+-      for (const model of models) {
+-        const modelId = model.id || model.name || model.model;
+-        if (!modelId) continue;
+-        // Skip non-llm entries (embedding/tts/image) — they have dedicated pages.
+-        const kind = model.kind || model.type || "llm";
+-        if (kind !== "llm") continue;
+-        const alreadyExists =
+-          customModels.some(
+-            (entry) => entry.providerAlias === providerStorageAlias && entry.id === modelId && (entry.kind || entry.type || "llm") === "llm"
+-          ) ||
+-          Object.values(modelAliases).includes(`${providerStorageAlias}/${modelId}`);
+-        if (alreadyExists) continue;
+-        toAdd.push(modelId);
+-      }
+-
+-      // Providers like OpenRouter return 400+ models. Adding them one at a
+-      // time and awaiting a full customModels refetch after each one (the
+-      // old behavior via handleAddCustomModel) meant 2x sequential round
+-      // trips per model — 800+ serial requests that could take minutes and
+-      // looked identical to a hang. Add directly with bounded concurrency
+-      // and only refetch/broadcast once at the end.
+-      let importedCount = 0;
+-      const CONCURRENCY = 8;
+-      setImportModelsProgress({ done: 0, total: toAdd.length });
+-      let cursor = 0;
+-      const addOne = async (modelId) => {
+-        try {
+-          const res = await fetch("/api/models/custom", {
+-            method: "POST",
+-            headers: { "Content-Type": "application/json" },
+-            body: JSON.stringify({ providerAlias: providerStorageAlias, id: modelId, type: "llm" }),
+-          });
+-          if (res.ok) importedCount += 1;
+-        } catch (error) {
+-          console.log("Error adding custom model:", modelId, error);
+-        } finally {
+-          setImportModelsProgress((prev) => prev && { done: prev.done + 1, total: prev.total });
+-        }
+-      };
+-      const workers = Array.from({ length: Math.min(CONCURRENCY, toAdd.length) }, async () => {
+-        while (cursor < toAdd.length) {
+-          const modelId = toAdd[cursor++];
+-          await addOne(modelId);
+-        }
+-      });
+-      await Promise.all(workers);
+-
+-      if (importedCount > 0) {
+-        await fetchCustomModels();
+-        if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent("customModelChanged"));
+-      }
+-
+-      if (importedCount === 0) {
+-        alert(translate("All models already exist, no new models added"));
+-      } else {
+-        alert(translate("Successfully added") + ` ${importedCount} ` + translate("models"));
+-      }
+-    } catch (error) {
+-      console.log("Error importing models:", error);
+-      if (error.name === 'AbortError') {
+-        alert(translate("Request timed out") + " — " + translate("provider API is slow or unresponsive"));
+-      } else {
+-        alert(translate("Error fetching models") + ": " + error.message);
+-      }
+-    } finally {
+-      setImportingModels(false);
+-      setImportModelsProgress(null);
+-    }
+-  };
+-
+   const handleRunOneByOneTest = async () => {
+     if (oneByOneRunning || connections.length === 0) return;
+ 
+@@ -1356,16 +1184,6 @@ export default function ProviderDetailPage() {
+       type: "llm",
+     });
+ 
+-    // Group provider errors by bare model id (DB stores model.id, not the alias)
+-    // so each ModelRow can surface its own error chip.
+-    const errorsByModel = new Map();
+-    for (const g of providerErrors) {
+-      if (!g || !g.model) continue;
+-      const list = errorsByModel.get(g.model) || [];
+-      list.push(g);
+-      errorsByModel.set(g.model, list);
+-    }
+-
+     return (
+       <div className="flex flex-wrap gap-3">
+         {/* Custom models first */}
+@@ -1391,9 +1209,7 @@ export default function ProviderDetailPage() {
+             isCustom
+             isFree={false}
+             caps={getCaps(`${providerId}/${model.id}`)}
+-            onToggleCap={(key, value) => handleToggleCap(model.id, key, value)}
+             thinkingSuffix={resolveThinkingSuffix(model.id)}
+-            errorGroups={errorsByModel.get(model.id) || []}
+           />
+         ))}
+ 
+@@ -1419,9 +1235,7 @@ export default function ProviderDetailPage() {
+               isFree={model.isFree}
+               onDisable={() => handleDisableModel(model.id)}
+               caps={getCaps(`${providerId}/${model.id}`)}
+-              onToggleCap={(key, value) => handleToggleCap(model.id, key, value)}
+               thinkingSuffix={resolveThinkingSuffix(model.id)}
+-              errorGroups={errorsByModel.get(model.id) || []}
+             />
+           );
+         })}
+@@ -1435,18 +1249,6 @@ export default function ProviderDetailPage() {
+           Add Model
+         </button>
+ 
+-        {/* Create Combo from this provider's models (dev mode only) */}
+-        {devMode && displayModels.length > 0 && (
+-          <button
+-            onClick={() => setShowCreateCombo(true)}
+-            className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-purple-500/40 px-3 py-2 text-xs text-purple-600 dark:text-purple-400 transition-colors hover:border-purple-500 hover:bg-purple-500/5 sm:w-auto"
+-            title="Create a combo with this provider's models pre-selected"
+-          >
+-            <span className="material-symbols-outlined text-[13px]">layers</span>
+-            {translate("Create Combo")}
+-          </button>
+-        )}
+-
+         {/* Import Qoder models button — only show for qoder/qoder-cn provider */}
+         {(providerId === "qoder" || providerId === "qoder-cn") && connections.some((conn) => conn.isActive !== false) && (
+           <button
+@@ -1475,39 +1277,6 @@ export default function ProviderDetailPage() {
+           </button>
+         )}
+ 
+-        {/* Generic auto-fill — fetch this provider's live /models and add any
+-            missing ones. Qoder/Cline have their own buttons above. */}
+-        {providerId !== "qoder" && providerId !== "qoder-cn" && providerId !== "cline" && providerId !== "clinepass" && connections.some((conn) => conn.isActive !== false) && (
+-          <button
+-            onClick={handleImportModels}
+-            disabled={importingModels}
+-            className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-blue-500/40 px-3 py-2 text-xs text-blue-600 dark:text-blue-400 transition-colors hover:border-blue-500 hover:bg-blue-500/5 sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
+-          >
+-            <span className="material-symbols-outlined text-sm" style={importingModels ? { animation: "spin 1s linear infinite" } : undefined}>
+-              {importingModels ? "progress_activity" : "download"}
+-            </span>
+-            {importingModels
+-              ? (importModelsProgress
+-                  ? `${translate("Importing")} ${importModelsProgress.done}/${importModelsProgress.total}...`
+-                  : translate("Fetching..."))
+-              : translate("Refresh Models")}
+-          </button>
+-        )}
+-
+-        {/* Import Cline /models catalog button — only show for cline and clinepass providers */}
+-        {(providerId === "cline" || providerId === "clinepass") && connections.some((conn) => conn.isActive !== false) && (
+-          <button
+-            onClick={handleImportClineModels}
+-            disabled={importingClineModels}
+-            className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-blue-500/40 px-3 py-2 text-xs text-blue-600 dark:text-blue-400 transition-colors hover:border-blue-500 hover:bg-blue-500/5 sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
+-          >
+-            <span className="material-symbols-outlined text-sm" style={importingClineModels ? { animation: "spin 1s linear infinite" } : undefined}>
+-              {importingClineModels ? "progress_activity" : "download"}
+-            </span>
+-            {importingClineModels ? translate("Fetching...") : translate("Import from /models")}
+-          </button>
+-        )}
+-
+         {/* Suggested models from provider API — show only models not yet added */}
+         {suggestedModels.length > 0 && (() => {
+           const addedFullModels = new Set([
+@@ -1564,32 +1333,6 @@ export default function ProviderDetailPage() {
+     );
+   };
+ 
+-  if (fetchError) {
+-    return (
+-      <div className="flex flex-col items-center justify-center gap-4 py-20">
+-        <span className="material-symbols-outlined text-red-500 text-[48px]">cloud_off</span>
+-        <div className="text-center">
+-          <p className="text-sm font-medium text-text-main">Unable to load provider</p>
+-          <p className="mt-1 text-xs text-text-muted max-w-sm">{fetchError}</p>
+-        </div>
+-        <Button
+-          variant="secondary"
+-          size="sm"
+-          onClick={() => {
+-            setFetchError(null);
+-            setLoading(true);
+-            // Re-trigger the fetch effect by forcing a remount-style reload
+-            fetch(`/api/providers/${id}`)
+-              .then(() => window.location.reload())
+-              .catch(() => window.location.reload());
+-          }}
+-        >
+-          Retry
+-        </Button>
+-      </div>
+-    );
+-  }
+-
+   if (loading) {
+     return (
+       <div className="flex flex-col gap-8">
+@@ -1597,7 +1340,7 @@ export default function ProviderDetailPage() {
+         <CardSkeleton />
+       </div>
+     );
+-  }
++}
+ 
+   if (!providerInfo) {
+     return (
+@@ -2081,16 +1824,6 @@ export default function ProviderDetailPage() {
+         {renderModelsSection()}
+       </Card>
+ 
+-      <ProviderUsageCard providerId={providerId} />
+-
+-      <ProviderErrorPanel
+-        providerId={providerId}
+-        errors={providerErrors}
+-        loading={providerErrorsLoading}
+-        onRefresh={fetchProviderErrors}
+-        connections={connections}
+-      />
+-
+       {bulkActionModal}
+ 
+       {/* Modals */}
+@@ -2231,34 +1964,6 @@ export default function ProviderDetailPage() {
+         message={confirmState?.message}
+         variant="danger"
+       />
+-
+-      {/* Create Combo Modal (dev mode) — pre-selects this provider's models */}
+-      {showCreateCombo && (
+-        <ComboFormModal
+-          isOpen={showCreateCombo}
+-          onClose={() => setShowCreateCombo(false)}
+-          onSave={async (data) => {
+-            try {
+-              const res = await fetch("/api/combos", {
+-                method: "POST",
+-                headers: { "Content-Type": "application/json" },
+-                body: JSON.stringify(data),
+-              });
+-              if (res.ok) {
+-                setShowCreateCombo(false);
+-                alert(`Combo "${data.name}" created`);
+-              } else {
+-                const err = await res.json();
+-                alert(err.error || "Failed to create combo");
+-              }
+-            } catch (error) {
+-              console.log("Error creating combo:", error);
+-            }
+-          }}
+-          activeProviders={activeConnections}
+-          kindFilter="llm"
+-        />
+-      )}
+     </div>
+   );
+ }
+diff --git a/src/app/(dashboard)/dashboard/providers/page.js b/src/app/(dashboard)/dashboard/providers/page.js
+index cd44fa63..a0eb586c 100644
+--- a/src/app/(dashboard)/dashboard/providers/page.js
++++ b/src/app/(dashboard)/dashboard/providers/page.js
+@@ -1,6 +1,6 @@
+ "use client";
+ 
+-import { useState, useEffect, useCallback } from "react";
++import { useState, useEffect } from "react";
+ import PropTypes from "prop-types";
+ import {
+   Card,
+@@ -15,6 +15,7 @@ import { OAUTH_PROVIDERS, APIKEY_PROVIDERS } from "@/shared/constants/config";
+ import {
+   FREE_PROVIDERS,
+   FREE_TIER_PROVIDERS,
++  WEB_COOKIE_PROVIDERS,
+   OPENAI_COMPATIBLE_PREFIX,
+   ANTHROPIC_COMPATIBLE_PREFIX,
+ } from "@/shared/constants/providers";
+@@ -99,7 +100,6 @@ export default function ProvidersPage() {
+   const [connections, setConnections] = useState([]);
+   const [providerNodes, setProviderNodes] = useState([]);
+   const [loading, setLoading] = useState(true);
+-  const [fetchError, setFetchError] = useState(null);
+   const [showAllApikey, setShowAllApikey] = useState(false);
+   const [showAddCompatibleModal, setShowAddCompatibleModal] = useState(false);
+   const [showAddAnthropicCompatibleModal, setShowAddAnthropicCompatibleModal] =
+@@ -107,7 +107,6 @@ export default function ProvidersPage() {
+   const [testingMode, setTestingMode] = useState(null);
+   const [testResults, setTestResults] = useState(null);
+   const [statusFilter, setStatusFilter] = useState("all");
+-  const [providerHealth, setProviderHealth] = useState(null);
+   const notify = useNotificationStore();
+   const searchQuery = useHeaderSearchStore((s) => s.query);
+   const registerSearch = useHeaderSearchStore((s) => s.register);
+@@ -162,12 +161,8 @@ export default function ProvidersPage() {
+         if (connectionsRes.ok)
+           setConnections(connectionsData.connections || []);
+         if (nodesRes.ok) setProviderNodes(nodesData.nodes || []);
+-        if (!connectionsRes.ok && !nodesRes.ok) {
+-          setFetchError("Failed to load providers. Check that the server is running.");
+-        }
+       } catch (error) {
+-        setFetchError(`Failed to connect to server: ${error.message || "network error"}`);
+-        notify.error("Failed to load providers");
++        console.log("Error fetching data:", error);
+       } finally {
+         setLoading(false);
+       }
+@@ -175,19 +170,6 @@ export default function ProvidersPage() {
+     fetchData();
+   }, []);
+ 
+-  const refreshProviderHealth = useCallback(async () => {
+-    try {
+-      const res = await fetch("/api/health/providers", { cache: "no-store" });
+-      if (res.ok) setProviderHealth(await res.json());
+-    } catch {
+-      // non-fatal — banner just doesn't show
+-    }
+-  }, []);
+-
+-  useEffect(() => {
+-    refreshProviderHealth();
+-  }, [refreshProviderHealth]);
+-
+   const getProviderStats = (providerId, authType) => {
+     const authTypes = Array.isArray(authType) ? authType : [authType];
+     const providerConnections = connections.filter(
+@@ -274,9 +256,8 @@ export default function ProvidersPage() {
+         else notify.warning(`${passed}/${total} passed, ${failed} failed`);
+       }
+     } catch (error) {
+-      const detail = error.message || "unknown error";
+-      setTestResults({ error: `Test request failed: ${detail}` });
+-      notify.error(`Provider test failed: ${detail}`);
++      setTestResults({ error: "Test request failed" });
++      notify.error("Provider test failed");
+     } finally {
+       setTestingMode(null);
+     }
+@@ -395,32 +376,6 @@ export default function ProvidersPage() {
+     );
+   }
+ 
+-  if (fetchError) {
+-    return (
+-      <div className="flex flex-col items-center justify-center gap-4 py-20">
+-        <span className="material-symbols-outlined text-red-500 text-[48px]">cloud_off</span>
+-        <div className="text-center">
+-          <p className="text-sm font-medium text-text-main">Unable to load providers</p>
+-          <p className="mt-1 text-xs text-text-muted max-w-sm">{fetchError}</p>
+-        </div>
+-        <Button
+-          variant="secondary"
+-          size="sm"
+-          onClick={() => {
+-            setFetchError(null);
+-            setLoading(true);
+-            // Re-trigger the fetch effect by forcing a remount-style reload
+-            fetch("/api/providers")
+-              .then(() => window.location.reload())
+-              .catch(() => window.location.reload());
+-          }}
+-        >
+-          Retry
+-        </Button>
+-      </div>
+-    );
+-  }
+-
+   const hasAnyResult =
+     oauthEntries.length > 0 ||
+     freeEntries.length > 0 ||
+@@ -431,44 +386,6 @@ export default function ProvidersPage() {
+ 
+   return (
+     <div className="flex min-w-0 flex-col gap-6 px-1 sm:px-0">
+-      {/* Provider health — providers needing attention (auth expired, locked, errors) */}
+-      {providerHealth?.needsAttention?.length > 0 && (
+-        <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2">
+-          <div className="flex flex-wrap items-center justify-between gap-2">
+-            <div className="flex items-center gap-2">
+-              <span className="material-symbols-outlined text-[16px] text-amber-600 dark:text-amber-400">warning</span>
+-              <span className="text-xs font-medium text-amber-700 dark:text-amber-300">
+-                {providerHealth.needsAttention.length} provider{providerHealth.needsAttention.length === 1 ? "" : "s"} need attention
+-              </span>
+-            </div>
+-            <button
+-              onClick={refreshProviderHealth}
+-              className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] text-amber-700 hover:bg-amber-500/10 dark:text-amber-300"
+-            >
+-              <span className="material-symbols-outlined text-[13px]">refresh</span>
+-              Refresh
+-            </button>
+-          </div>
+-          <div className="mt-1.5 flex flex-wrap gap-1.5">
+-            {providerHealth.providers
+-              .filter((p) => providerHealth.needsAttention.includes(p.provider))
+-              .map((p) => (
+-                <span
+-                  key={p.provider}
+-                  className="inline-flex items-center gap-1 rounded bg-black/5 dark:bg-white/5 px-1.5 py-0.5 font-mono text-[11px] text-text-main"
+-                  title={p.lastError || ""}
+-                >
+-                  {p.provider}
+-                  {p.auth === "expired" && <span className="rounded bg-red-500/15 px-1 text-[10px] font-medium text-red-500">expired</span>}
+-                  {p.auth === "needs-reauth" && <span className="rounded bg-red-500/15 px-1 text-[10px] font-medium text-red-500">re-auth</span>}
+-                  {p.locked > 0 && <span className="rounded bg-amber-500/15 px-1 text-[10px] font-medium text-amber-600 dark:text-amber-400">locked</span>}
+-                  {p.lastError && <span className="max-w-[200px] truncate text-[10px] text-text-muted">{p.lastError}</span>}
+-                </span>
+-              ))}
+-          </div>
+-        </div>
+-      )}
+-
+       <div className="flex items-center justify-end">
+         <select
+           value={statusFilter}
+@@ -705,6 +622,27 @@ export default function ProvidersPage() {
+       </div>
+       )}
+ 
++      {/* Web Cookie Providers — use browser subscription cookie instead of API key */}
++      {/* <div className="flex flex-col gap-4">
++        <div className="flex items-center justify-between">
++          <h2 className="text-xl font-semibold flex items-center gap-2">
++            Web Cookie Providers{" "}
++          </h2>
++        </div>
++        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
++          {Object.entries(WEB_COOKIE_PROVIDERS).map(([key, info]) => (
++            <ApiKeyProviderCard
++              key={key}
++              providerId={key}
++              provider={info}
++              stats={getProviderStats(key, "apikey")}
++              authType="apikey"
++              onToggle={(active) => handleToggleProvider(key, "apikey", active)}
++            />
++          ))}
++        </div>
++      </div> */}
++
+       <AddCompatibleModal
+         variant="openai"
+         isOpen={showAddCompatibleModal}
+diff --git a/src/app/(dashboard)/dashboard/usage/components/ProviderLimits/utils.js b/src/app/(dashboard)/dashboard/usage/components/ProviderLimits/utils.js
+index c3e71b26..9cb7ad71 100644
+--- a/src/app/(dashboard)/dashboard/usage/components/ProviderLimits/utils.js
++++ b/src/app/(dashboard)/dashboard/usage/components/ProviderLimits/utils.js
+@@ -618,24 +618,6 @@ export function parseQuotaData(provider, data) {
+         }
+         break;
+ 
+-      case "openrouter":
+-        // OpenRouter returns USD credit figures (usage/limit/limit_remaining),
+-        // same shape family as Vercel — forward the explicit remainingPercentage
+-        // and the `unlimited` flag so uncapped keys render without a false cap.
+-        if (data.quotas) {
+-          Object.entries(data.quotas).forEach(([name, quota]) => {
+-            normalizedQuotas.push({
+-              name,
+-              used: quota.used || 0,
+-              total: quota.total || 0,
+-              resetAt: quota.resetAt || null,
+-              remainingPercentage: quota.remainingPercentage,
+-              unlimited: quota.unlimited,
+-            });
+-          });
+-        }
+-        break;
+-
+       case "codebuddy-cn":
+       case "codebuddy-intl":
+         // CodeBuddy CN/Intl mix recurring refill packs ("Monthly"/"Weekly"/...)
+diff --git a/src/app/api/providers/route.js b/src/app/api/providers/route.js
+index 2b5dabd1..49f611aa 100644
+--- a/src/app/api/providers/route.js
++++ b/src/app/api/providers/route.js
+@@ -5,9 +5,6 @@ import {
+   getProviderNodeById,
+   getProviderNodes,
+   getProxyPoolById,
+-  getOrphanConnections,
+-  deleteOrphanConnections,
+-  cleanupProviderConnections,
+ } from "@/models";
+ import { APIKEY_PROVIDERS } from "@/shared/constants/config";
+ import { AI_PROVIDERS, FREE_TIER_PROVIDERS, WEB_COOKIE_PROVIDERS, isOpenAICompatibleProvider, isAnthropicCompatibleProvider, isCustomEmbeddingProvider } from "@/shared/constants/providers";
+@@ -49,34 +46,9 @@ async function normalizeProxyPoolId(proxyPoolId) {
+   return { proxyPoolId: normalizedId };
+ }
+ 
+-// GET /api/providers - List all connections (or ?action=orphans to list orphan connections)
+-export async function GET(request) {
++// GET /api/providers - List all connections
++export async function GET() {
+   try {
+-    const { searchParams } = new URL(request.url);
+-    const action = searchParams.get("action");
+-
+-    if (action === "orphans") {
+-      const orphans = await getOrphanConnections();
+-      return NextResponse.json({
+-        count: orphans.length,
+-        orphans: orphans.map(c => ({
+-          id: c.id,
+-          provider: c.provider,
+-          name: c.name,
+-          authType: c.authType,
+-          isActive: c.isActive,
+-          createdAt: c.createdAt,
+-        })),
+-      });
+-    }
+-
+-    if (action === "cleanup") {
+-      // GET-triggered cleanup (opt-in orphan removal via ?removeOrphans=true)
+-      const removeOrphans = searchParams.get("removeOrphans") === "true";
+-      const result = await cleanupProviderConnections({ removeOrphans });
+-      return NextResponse.json({ success: true, ...result });
+-    }
+-
+     const connections = await getProviderConnections();
+ 
+     // Build nodeNameMap for compatible providers (id → name)
+@@ -86,7 +58,7 @@ export async function GET(request) {
+       for (const node of nodes) {
+         if (node.id && node.name) nodeNameMap[node.id] = node.name;
+       }
+-    } catch (e) { console.error("[providers] GET failed to enrich names:", e.message); }
++    } catch { }
+ 
+     // Hide sensitive fields, enrich name for compatible providers
+     const safeConnections = connections.map(c => {
+diff --git a/src/app/api/v1/models/route.js b/src/app/api/v1/models/route.js
+index a678115e..0b1fe342 100644
+--- a/src/app/api/v1/models/route.js
++++ b/src/app/api/v1/models/route.js
+@@ -8,8 +8,6 @@ import {
+ } from "@/shared/constants/providers";
+ import { getProviderConnections, getCombos, getCustomModels, getModelAliases } from "@/lib/localDb";
+ import { getDisabledModels } from "@/lib/disabledModelsDb";
+-import { getSettings } from "@/lib/db/repos/settingsRepo";
+-import { addCustomModel, persistDiscoveredModels } from "@/lib/db/repos/aliasRepo";
+ import { resolveKiroModels } from "open-sse/services/kiroModels.js";
+ import { resolveKimchiModels } from "open-sse/services/kimchiModels.js";
+ import { resolveQoderModels, routableQoderModels } from "open-sse/services/qoderModels.js";
+@@ -328,35 +326,35 @@ export async function buildModelsList(kindFilter, options = {}) {
+     connections = await getProviderConnections();
+     connections = connections.filter(c => c.isActive !== false);
+   } catch (e) {
+-    console.warn(`[models] getProviderConnections failed:`, e.message);
++    console.log("Could not fetch providers, returning all models");
+   }
+ 
+   let combos = [];
+   try {
+     combos = await getCombos();
+   } catch (e) {
+-    console.warn(`[models] getCombos failed:`, e.message);
++    console.log("Could not fetch combos");
+   }
+ 
+   let customModels = [];
+   try {
+     customModels = await getCustomModels();
+   } catch (e) {
+-    console.warn(`[models] getCustomModels failed:`, e.message);
++    console.log("Could not fetch custom models");
+   }
+ 
+   let modelAliases = {};
+   try {
+     modelAliases = await getModelAliases();
+   } catch (e) {
+-    console.warn(`[models] getModelAliases failed:`, e.message);
++    console.log("Could not fetch model aliases");
+   }
+ 
+   let disabledByAlias = {};
+   try {
+     disabledByAlias = await getDisabledModels();
+   } catch (e) {
+-    console.warn(`[models] getDisabledModels failed:`, e.message);
++    console.log("Could not fetch disabled models");
+   }
+   const isDisabled = (alias, modelId) => Array.isArray(disabledByAlias[alias]) && disabledByAlias[alias].includes(modelId);
+ 
+@@ -468,21 +466,6 @@ export async function buildModelsList(kindFilter, options = {}) {
+ 
+       if (isCompatibleProvider && rawModelIds.length === 0 && !skipDynamicFetch) {
+         rawModelIds = await fetchCompatibleModelIds(conn);
+-
+-        // Auto-persist discovered models to kv customModels (gated by settings).
+-        // Fire-and-forget — don't block the /v1/models response.
+-        if (rawModelIds.length > 0) {
+-          try {
+-            const settings = await getSettings();
+-            const persistCfg = settings.modelAutoPersist;
+-            if (persistCfg?.enabled && rawModelIds.length <= persistCfg.maxModelsPerProvider) {
+-              persistDiscoveredModels(outputAlias, rawModelIds, persistCfg.markSource)
+-                .catch((err) => console.error("[AutoPersist] failed:", err?.message));
+-            }
+-          } catch (err) {
+-            console.error("[AutoPersist] settings read failed:", err?.message);
+-          }
+-        }
+       }
+ 
+       // Config-driven live catalog override (e.g. Kiro returns dynamic
+diff --git a/src/lib/db/index.js b/src/lib/db/index.js
+index 281f1f56..e1c68472 100644
+--- a/src/lib/db/index.js
++++ b/src/lib/db/index.js
+@@ -13,7 +13,6 @@ export {
+   createProviderConnection, updateProviderConnection,
+   deleteProviderConnection, deleteProviderConnectionsByProvider,
+   reorderProviderConnections, cleanupProviderConnections,
+-  getOrphanConnections, deleteOrphanConnections,
+ } from "./repos/connectionsRepo.js";
+ 
+ // Provider nodes
+@@ -66,17 +65,8 @@ export {
+ // Request details
+ export {
+   saveRequestDetail, getRequestDetails, getRequestDetailById, getDistinctProviders,
+-  getRequestFacets, getDroppedRecordsCount,
+-  getConversationSummary, getConversationMessages, getErrorSummary,
+-  parseJsonPathQuery,
+ } from "./repos/requestDetailsRepo.js";
+ 
+-// Message annotations + saved views
+-export {
+-  getAnnotations, addAnnotation, deleteAnnotation, toggleStar,
+-  getSavedViews, saveView, deleteSavedView,
+-} from "./repos/annotationsRepo.js";
+-
+ // Export/import full DB
+ export async function exportDb() {
+   const db = await getAdapter();
+@@ -124,14 +114,6 @@ export async function importDb(payload) {
+       db.run(`INSERT INTO settings(id, data) VALUES(1, ?) ON CONFLICT(id) DO UPDATE SET data = excluded.data`, [stringifyJson(payload.settings)]);
+     }
+ 
+-    // Provider nodes must be imported BEFORE connections (FK constraint).
+-    for (const n of payload.providerNodes || []) {
+-      const { id, type, name, createdAt, updatedAt, ...rest } = n;
+-      db.run(
+-        `INSERT OR REPLACE INTO providerNodes(id, type, name, data, createdAt, updatedAt) VALUES(?, ?, ?, ?, ?, ?)`,
+-        [id, type || null, name || null, stringifyJson(rest), createdAt || new Date().toISOString(), updatedAt || new Date().toISOString()]
+-      );
+-    }
+     for (const c of payload.providerConnections || []) {
+       const { id, provider, authType, name, email, priority, isActive, createdAt, updatedAt, ...rest } = c;
+       db.run(
+@@ -139,6 +121,13 @@ export async function importDb(payload) {
+         [id, provider, authType || "oauth", name || null, email || null, priority || null, isActive === false ? 0 : 1, stringifyJson(rest), createdAt || new Date().toISOString(), updatedAt || new Date().toISOString()]
+       );
+     }
++    for (const n of payload.providerNodes || []) {
++      const { id, type, name, createdAt, updatedAt, ...rest } = n;
++      db.run(
++        `INSERT OR REPLACE INTO providerNodes(id, type, name, data, createdAt, updatedAt) VALUES(?, ?, ?, ?, ?, ?)`,
++        [id, type || null, name || null, stringifyJson(rest), createdAt || new Date().toISOString(), updatedAt || new Date().toISOString()]
++      );
++    }
+     for (const p of payload.proxyPools || []) {
+       const { id, isActive, testStatus, createdAt, updatedAt, ...rest } = p;
+       db.run(
+diff --git a/src/lib/db/repos/settingsRepo.js b/src/lib/db/repos/settingsRepo.js
+index c857a3e7..c63933a7 100644
+--- a/src/lib/db/repos/settingsRepo.js
++++ b/src/lib/db/repos/settingsRepo.js
+@@ -111,6 +111,26 @@ const DEFAULT_SETTINGS = {
+   // CORS allowlist for API endpoints. Empty = wildcard (legacy behavior).
+   // When non-empty, only listed origins receive Access-Control-Allow-Origin.
+   corsAllowedOrigins: [],
++  // Claude compat layer (see src/lib/claudeCompat.js): suffixMode controls
++  // when [1m] is appended to rewritten /v1/models ids.
++  claudeCompat: {
++    enabled: true,
++    suffixMode: "auto",
++    keywords: [],
++  },
++  // Default-model mapping written to ~/.claude/settings.json env by the
++  // endpoint page's one-click button (see /api/claude-compat/write-claude-settings).
++  claudeDefaultModels: {
++    sonnet: { model: "", name: "", oneM: false },
++    opus: { model: "", name: "", oneM: false },
++    fable: { model: "", name: "", oneM: false },
++    haiku: { model: "", name: "", oneM: false },
++    subagent: { model: "", oneM: false },
++  },
++  // User contextWindow overrides, keyed by model id or glob pattern (e.g.
++  // "glm-5.3" or "glm-5*"). Consumed by open-sse/providers/capabilities.js
++  // via setContextWindowOverrides(); managed on /dashboard/model-context.
++  contextWindowOverrides: {},
+ };
+ 
+ async function readRaw() {
+@@ -153,6 +173,7 @@ const CONFIG_MERGE_KEYS = new Set([
+   "capacityAdapter",
+   "srComboCleanup",
+   "modelAutoPersist",
++  "claudeCompat",
+ ]);
+ 
+ // Nested MAP keys: the sender owns the full map (replace semantics — deleting
+diff --git a/src/lib/db/repos/usageRepo.js b/src/lib/db/repos/usageRepo.js
+index d5a06318..4ea3b8bd 100644
+--- a/src/lib/db/repos/usageRepo.js
++++ b/src/lib/db/repos/usageRepo.js
+@@ -114,9 +114,7 @@ async function getConnectionMapCached() {
+     for (const c of all) map[c.id] = c.name || c.email || c.id;
+     connCache.map = map;
+     connCache.ts = Date.now();
+-  } catch (e) {
+-    console.error("[usageRepo] getConnectionMapCached failed to load connections:", e.message);
+-  }
++  } catch {}
+   return connCache.map;
+ }
+ 
+@@ -131,9 +129,7 @@ async function ensureRingInitialized() {
+       apiKey: r.apiKey, endpoint: r.endpoint, cost: r.cost, status: r.status,
+       tokens: parseJson(r.tokens, {}),
+     }));
+-  } catch (e) {
+-    console.error("[usageRepo] ensureRingInitialized failed:", e.message);
+-  }
++  } catch {}
+ }
+ 
+ async function calculateCost(provider, model, tokens) {
+@@ -284,12 +280,12 @@ export async function saveRequestUsage(entry) {
+       }
+ 
+       db.run(
+-        `INSERT INTO usageHistory(timestamp, provider, model, connectionId, apiKey, endpoint, promptTokens, completionTokens, cost, status, tokens, meta, conversationId) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
++        `INSERT INTO usageHistory(timestamp, provider, model, connectionId, apiKey, endpoint, promptTokens, completionTokens, cost, status, tokens, meta) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         [
+           entry.timestamp, entry.provider || null, entry.model || null,
+           entry.connectionId || null, entry.apiKey || null, entry.endpoint || null,
+           promptTokens, completionTokens, entry.cost || 0, entry.status || "ok",
+-          stringifyJson(tokens), stringifyJson(entry.meta || {}), entry.conversationId || null,
++          stringifyJson(tokens), stringifyJson({}),
+         ]
+       );
+ 
+@@ -358,7 +354,7 @@ export async function getUsageStats(period = "all") {
+   ]);
+ 
+   let allConnections = [];
+-  try { allConnections = await getProviderConnections(); } catch (e) { console.error("[usageRepo] getUsageStats: getProviderConnections failed:", e.message); }
++  try { allConnections = await getProviderConnections(); } catch {}
+   const connectionMap = {};
+   for (const c of allConnections) connectionMap[c.id] = c.name || c.email || c.id;
+ 
+@@ -366,10 +362,10 @@ export async function getUsageStats(period = "all") {
+   try {
+     const nodes = await getProviderNodes();
+     for (const n of nodes) if (n.id && n.name) providerNodeNameMap[n.id] = n.name;
+-  } catch (e) { console.error("[usageRepo] getUsageStats: getProviderNodes failed:", e.message); }
++  } catch {}
+ 
+   let allApiKeys = [];
+-  try { allApiKeys = await getApiKeys(); } catch (e) { console.error("[usageRepo] getUsageStats: getApiKeys failed:", e.message); }
++  try { allApiKeys = await getApiKeys(); } catch {}
+   const apiKeyMap = {};
+   for (const k of allApiKeys) apiKeyMap[k.key] = { name: k.name, id: k.id, createdAt: k.createdAt };
+ 
+@@ -796,7 +792,7 @@ export async function getRecentLogs(limit = 200) {
+       const { getProviderConnections } = await import("./connectionsRepo.js");
+       const connections = await getProviderConnections();
+       for (const c of connections) connMap[c.id] = c.name || c.email || "";
+-    } catch (e) { console.error("[usageRepo] getRecentLogs: connections enrichment failed:", e.message); }
++    } catch {}
+ 
+     return rows.map((r) => {
+       const ts = formatLogDate(new Date(r.timestamp));
+diff --git a/src/lib/db/schema.js b/src/lib/db/schema.js
+index fa2118b3..099386c2 100644
+--- a/src/lib/db/schema.js
++++ b/src/lib/db/schema.js
+@@ -3,7 +3,7 @@
+ // pre-change safety backup in migrate.js: when the stored version is lower,
+ // one lightweight DB backup is taken before applying schema changes. Forgetting
+ // to bump only skips that backup — it does NOT break the additive auto-sync.
+-export const SCHEMA_VERSION = 3;
++export const SCHEMA_VERSION = 1;
+ 
+ export const PRAGMA_SQL = `
+ PRAGMA journal_mode = WAL;
+@@ -34,7 +34,7 @@ export const TABLES = {
+   providerConnections: {
+     columns: {
+       id: "TEXT PRIMARY KEY",
+-      provider: "TEXT NOT NULL REFERENCES providerNodes(id) ON DELETE CASCADE",
++      provider: "TEXT NOT NULL",
+       authType: "TEXT NOT NULL",
+       name: "TEXT",
+       email: "TEXT",
+@@ -121,14 +121,12 @@ export const TABLES = {
+       status: "TEXT",
+       tokens: "TEXT",
+       meta: "TEXT",
+-      conversationId: "TEXT",
+     },
+     indexes: [
+       "CREATE INDEX IF NOT EXISTS idx_uh_ts ON usageHistory(timestamp DESC)",
+       "CREATE INDEX IF NOT EXISTS idx_uh_provider ON usageHistory(provider)",
+       "CREATE INDEX IF NOT EXISTS idx_uh_model ON usageHistory(model)",
+       "CREATE INDEX IF NOT EXISTS idx_uh_conn ON usageHistory(connectionId)",
+-      "CREATE INDEX IF NOT EXISTS idx_uh_conversation ON usageHistory(conversationId)",
+     ],
+   },
+   usageDaily: {
+@@ -146,14 +144,12 @@ export const TABLES = {
+       connectionId: "TEXT",
+       status: "TEXT",
+       data: "TEXT NOT NULL",
+-      conversationId: "TEXT",
+     },
+     indexes: [
+       "CREATE INDEX IF NOT EXISTS idx_rd_ts ON requestDetails(timestamp DESC)",
+       "CREATE INDEX IF NOT EXISTS idx_rd_provider ON requestDetails(provider)",
+       "CREATE INDEX IF NOT EXISTS idx_rd_model ON requestDetails(model)",
+       "CREATE INDEX IF NOT EXISTS idx_rd_conn ON requestDetails(connectionId)",
+-      "CREATE INDEX IF NOT EXISTS idx_rd_conversation ON requestDetails(conversationId)",
+     ],
+   },
+ };
+diff --git a/src/shared/components/Sidebar.js b/src/shared/components/Sidebar.js
+index 6d93ac07..edff69e3 100644
+--- a/src/shared/components/Sidebar.js
++++ b/src/shared/components/Sidebar.js
+@@ -24,7 +24,6 @@ const navItems = [
+   // { href: "/dashboard/basic-chat", label: "Basic Chat", icon: "chat" }, // Hidden
+   { href: "/dashboard/combos", label: "Combo & Vision Adapter", icon: "layers" },
+   { href: "/dashboard/usage", label: "Usage", icon: "bar_chart" },
+-  { href: "/dashboard/messages", label: "Messages", icon: "forum" },
+   { href: "/dashboard/quota", label: "Quota Tracker", icon: "data_usage" },
+   { href: "/dashboard/token-saver", label: "Token Saver", icon: "savings" },
+   // { href: "/dashboard/pxpipe", label: "PXPIPE", icon: "image" },
+@@ -113,7 +112,7 @@ export default function Sidebar({ onClose }) {
+ 
+   return (
+     <>
+-      <aside className="flex h-full w-72 flex-col border-r border-border-subtle bg-vibrancy backdrop-blur-xl transition-colors duration-300 min-h-full">
++      <aside className="flex w-72 flex-col border-r border-border-subtle bg-vibrancy backdrop-blur-xl transition-colors duration-300 min-h-full">
+         {/* Traffic lights */}
+         <div className="flex items-center gap-2 px-6 pt-5 pb-2">
+           <div className="w-3 h-3 rounded-full bg-[#FF5F56]" />
+diff --git a/src/shared/components/index.js b/src/shared/components/index.js
+index b3d912e7..b51e27e1 100644
+--- a/src/shared/components/index.js
++++ b/src/shared/components/index.js
+@@ -15,7 +15,6 @@ export { default as Header } from "./Header";
+ export { default as Footer } from "./Footer";
+ export { default as OAuthModal } from "./OAuthModal";
+ export { default as ModelSelectModal } from "./ModelSelectModal";
+-export { default as ProviderSelectModal } from "./ProviderSelectModal";
+ export { default as ManualConfigModal } from "./ManualConfigModal";
+ export { default as ComboFormModal } from "./ComboFormModal";
+ export { default as McpMarketplaceModal } from "./McpMarketplaceModal";
+diff --git a/src/shared/hooks/useModelCaps.js b/src/shared/hooks/useModelCaps.js
+index e553dd93..88c6410f 100644
+--- a/src/shared/hooks/useModelCaps.js
++++ b/src/shared/hooks/useModelCaps.js
+@@ -37,13 +37,6 @@ function loadModelCaps() {
+   return inflight;
+ }
+ 
+-// Drop the shared cache so the next loadModelCaps() re-fetches /api/models.
+-// Called after a capability override is saved so vision/audio pickers reflect it.
+-export function invalidateModelCaps() {
+-  cache = null;
+-  inflight = null;
+-}
+-
+ // Resolve caps from a "provider/model" string or a bare model id.
+ function resolveCaps(byFull, byId, key) {
+   if (!key) return null;
+@@ -58,7 +51,6 @@ function resolveCaps(byFull, byId, key) {
+     reasoning: c.reasoning,
+     contextWindow: c.contextWindow,
+     maxOutput: c.maxOutput,
+-    audioInput: c.audioInput,
+   };
+ }
+ 
+@@ -93,29 +85,5 @@ export function useModelCaps() {
+     [byFull, byId],
+   );
+ 
+-  // Check if a model string matches any known model in the registry.
+-  // Returns true for exact matches (fullModel, routedModel, or bare model id).
+-  // Used for soft validation — unknown models may still be valid (custom providers).
+-  const isKnownModel = useCallback(
+-    (key) => {
+-      if (!key) return false;
+-      if (byFull[key]) return true;
+-      const bare = key.includes("/") ? key.slice(key.indexOf("/") + 1) : key;
+-      if (byId[bare]) return true;
+-      return false;
+-    },
+-    [byFull, byId],
+-  );
+-
+-  // Force a re-fetch of /api/models (after a capability override is saved).
+-  const refresh = useCallback(() => {
+-    invalidateModelCaps();
+-    return loadModelCaps().then((maps) => {
+-      setByFull(maps.byFull);
+-      setById(maps.byId);
+-      return maps;
+-    });
+-  }, []);
+-
+-  return { getCaps, isKnownModel, refresh };
++  return { getCaps };
+ }
+diff --git a/src/sse/handlers/chat.js b/src/sse/handlers/chat.js
+index 26c5fdf0..bbd89242 100644
+--- a/src/sse/handlers/chat.js
++++ b/src/sse/handlers/chat.js
+@@ -25,7 +25,6 @@ import * as log from "../utils/logger.js";
+ import { updateProviderCredentials, checkAndRefreshToken } from "../services/tokenRefresh.js";
+ import { getProjectIdForConnection } from "open-sse/services/projectId.js";
+ import { stripModelContextMarker } from "open-sse/utils/modelMarkers.js";
+-import { resolveSmartRouter, trackRequestStart, trackRequestEnd } from "../services/smartRouter.js";
+ 
+ /**
+  * Handle chat completion request
+@@ -53,10 +52,8 @@ export async function handleChat(request, clientRawRequest = null) {
+   // Claude Code marks a 1M-context request as `<model>[1m]`; the marker matches
+   // no combo, alias or provider/model pair, so it must not reach resolution.
+   // The capability travels in the anthropic-beta header, forwarded as-is.
+-  let { model: modelStr, contextMarker } = stripModelContextMarker(body.model);
++  const { model: modelStr, contextMarker } = stripModelContextMarker(body.model);
+   if (contextMarker) body.model = modelStr;
+-  let smartRouterTaskType = null; // set by smart router interception; used for usage analytics
+-  let smartRouterMeta = null;     // top-N candidate scores (why did it pick X?) — threaded to usage meta
+ 
+   // Request summary is emitted as the unified "▶" line in chatCore (has fmt/thinking/account)
+ 
+@@ -96,16 +93,6 @@ export async function handleChat(request, clientRawRequest = null) {
+ 
+   const requiredCapabilities = detectRequiredCapabilities(body);
+ 
+-  // ── SMART ROUTER: resolve virtual model to dynamic combo BEFORE translation ──
+-  const smartRouterResult = await resolveSmartRouter(modelStr, body, settings);
+-  if (smartRouterResult) {
+-    modelStr = smartRouterResult.comboName;
+-    // Thread the classified task type through for usage analytics (meta.taskType)
+-    smartRouterTaskType = smartRouterResult.taskType;
+-    // Score breakdown (why did it pick X?) for usage analytics (meta.smartRouterScores)
+-    smartRouterMeta = smartRouterResult.scores || null;
+-  }
+-
+   // Check if model is a combo (has multiple models with fallback)
+   const comboModels = await getComboModels(modelStr);
+   if (comboModels) {
+@@ -127,7 +114,7 @@ export async function handleChat(request, clientRawRequest = null) {
+             const { tools, tool_choice, ...cleanBody } = clientRawRequest.body || {};
+             cleanRawReq = { ...clientRawRequest, body: cleanBody };
+           }
+-          return handleSingleModelChat(b, m, cleanRawReq, request, apiKey, smartRouterTaskType, false, smartRouterMeta);
++          return handleSingleModelChat(b, m, cleanRawReq, request, apiKey);
+         },
+         log,
+         comboName: modelStr,
+@@ -142,14 +129,13 @@ export async function handleChat(request, clientRawRequest = null) {
+       body,
+       models: augmentedModels,
+       handleSingleModel: withCapacityAdapterStripping(
+-        (b, m) => handleSingleModelChat(b, m, clientRawRequest, request, apiKey, smartRouterTaskType, false, smartRouterMeta),
++        (b, m) => handleSingleModelChat(b, m, clientRawRequest, request, apiKey),
+         adapterAdded
+       ),
+       log,
+       comboName: modelStr,
+       comboStrategy,
+-      comboStickyLimit,
+-      onFallbackEvent: (a) => log.debug("FALLBACK", `${modelStr} → ${a.model} ${a.ok ? "ok" : `failed ${a.status}`} (${a.latencyMs}ms)`),
++      comboStickyLimit
+     });
+   }
+ 
+@@ -163,26 +149,22 @@ export async function handleChat(request, clientRawRequest = null) {
+       body,
+       models: soloAugmented,
+       handleSingleModel: withCapacityAdapterStripping(
+-        (b, m) => handleSingleModelChat(b, m, clientRawRequest, request, apiKey, smartRouterTaskType, false, smartRouterMeta),
++        (b, m) => handleSingleModelChat(b, m, clientRawRequest, request, apiKey),
+         adapterAdded
+       ),
+       log,
+       comboName: modelStr,
+-      comboStrategy: getActiveAdapterStrategy(requiredCapabilities, settings),
+-      onFallbackEvent: (a) => log.debug("FALLBACK", `${modelStr} → ${a.model} ${a.ok ? "ok" : `failed ${a.status}`} (${a.latencyMs}ms)`),
++      comboStrategy: getActiveAdapterStrategy(requiredCapabilities, settings)
+     });
+   }
+ 
+-  return handleSingleModelChat(body, modelStr, clientRawRequest, request, apiKey, contextMarker ? `${modelStr.slice(modelStr.indexOf("/") + 1)}[${contextMarker}]` : null, smartRouterTaskType, false, smartRouterMeta);
++  return handleSingleModelChat(body, modelStr, clientRawRequest, request, apiKey, contextMarker ? `${modelStr.slice(modelStr.indexOf("/") + 1)}[${contextMarker}]` : null);
+ }
+ 
+ /**
+  * Handle single model chat request
+- * @param {boolean} [skipModelFallback] - Internal guard: when true, don't
+- *   re-apply settings.modelFallbacks (prevents infinite recursion from the
+- *   fallback chain's own handleSingleModel callback).
+  */
+-async function handleSingleModelChat(body, modelStr, clientRawRequest = null, request = null, apiKey = null, requestedModel = null, taskType = null, skipModelFallback = false, smartRouterMeta = null) {
++async function handleSingleModelChat(body, modelStr, clientRawRequest = null, request = null, apiKey = null, requestedModel = null) {
+   const modelInfo = await getModelInfo(modelStr);
+ 
+   // If provider is null, this might be a combo name - check and handle
+@@ -209,7 +191,7 @@ async function handleSingleModelChat(body, modelStr, clientRawRequest = null, re
+               const { tools, tool_choice, ...cleanBody } = clientRawRequest.body || {};
+               cleanRawReq = { ...clientRawRequest, body: cleanBody };
+             }
+-            return handleSingleModelChat(b, m, cleanRawReq, request, apiKey, taskType, false, smartRouterMeta);
++            return handleSingleModelChat(b, m, cleanRawReq, request, apiKey);
+           },
+           log,
+           comboName: modelStr,
+@@ -224,14 +206,13 @@ async function handleSingleModelChat(body, modelStr, clientRawRequest = null, re
+         body,
+         models: augmentedModels,
+         handleSingleModel: withCapacityAdapterStripping(
+-          (b, m) => handleSingleModelChat(b, m, clientRawRequest, request, apiKey, taskType, false, smartRouterMeta),
++          (b, m) => handleSingleModelChat(b, m, clientRawRequest, request, apiKey),
+           adapterAdded
+         ),
+         log,
+         comboName: modelStr,
+         comboStrategy,
+-        comboStickyLimit,
+-        onFallbackEvent: (a) => log.debug("FALLBACK", `${modelStr} → ${a.model} ${a.ok ? "ok" : `failed ${a.status}`} (${a.latencyMs}ms)`),
++        comboStickyLimit
+       });
+     }
+     log.warn("CHAT", "Invalid model format", { model: modelStr });
+@@ -240,56 +221,6 @@ async function handleSingleModelChat(body, modelStr, clientRawRequest = null, re
+ 
+   const { provider, model } = modelInfo;
+ 
+-  // ── PER-MODEL / PER-PROVIDER FALLBACK CHAINS ─────────────────────────────
+-  // settings.modelFallbacks lets users attach an ordered fallback list to an
+-  // exact model ("openai/gpt-4o") or an entire provider ("openai"). When
+-  // configured, the single-model request becomes a fallback chain through the
+-  // combo engine — automatic retry on failure, same semantics as combos, but
+-  // configured directly on the model/provider the client actually requested.
+-  //
+-  // Two storage shapes (backward compatible):
+-  //   Simple:  { target: ["fallback1", "fallback2"] }
+-  //   Advanced:{ target: { models: [...], retries: N, perModelRetries: {...} } }
+-  if (!skipModelFallback) {
+-    const fbSettings = await getSettings();
+-    const fbMap = fbSettings.modelFallbacks || {};
+-    const raw = fbMap[modelStr] || fbMap[provider];
+-
+-    // Normalize either shape into { models: string[], retries, perModelRetries }
+-    let fbConfig = null;
+-    if (Array.isArray(raw)) {
+-      fbConfig = { models: raw, retries: null, perModelRetries: null };
+-    } else if (raw && typeof raw === "object" && Array.isArray(raw.models)) {
+-      fbConfig = {
+-        models: raw.models,
+-        retries: Number.isFinite(Number(raw.retries)) ? Math.max(1, Number(raw.retries)) : null,
+-        perModelRetries: raw.perModelRetries && typeof raw.perModelRetries === "object" ? raw.perModelRetries : null,
+-      };
+-    }
+-
+-    if (fbConfig && fbConfig.models.length > 0) {
+-      const chain = [modelStr, ...fbConfig.models.filter((f) => typeof f === "string" && f && f !== modelStr)];
+-      const requiredCapabilities = detectRequiredCapabilities(body);
+-      const augmented = augmentModelsWithCapacityAdapter(chain, requiredCapabilities, fbSettings);
+-      const adapterAdded = augmented.filter((m) => !chain.includes(m));
+-      log.info("CHAT", `Model fallback "${modelStr}" → [${chain.join(" → ")}]${fbConfig.retries ? ` (retries: ${fbConfig.retries})` : ""}`);
+-      return handleComboChat({
+-        body,
+-        models: augmented,
+-        handleSingleModel: withCapacityAdapterStripping(
+-          (b, m) => handleSingleModelChat(b, m, clientRawRequest, request, apiKey, taskType, true, smartRouterMeta),
+-          adapterAdded
+-        ),
+-        log,
+-        comboName: `${modelStr}-fallback`,
+-        comboStrategy: "fallback",
+-        retriesPerModel: fbConfig.retries || 1,
+-        perModelRetries: fbConfig.perModelRetries || null,
+-        onFallbackEvent: (a) => log.debug("FALLBACK", `${modelStr} → ${a.model} ${a.ok ? "ok" : `failed ${a.status}`} (${a.latencyMs}ms)`),
+-      });
+-    }
+-  }
+-
+   // Routing shown in the unified "▶" line (client model → provider/model)
+ 
+   // Extract userAgent from request
+@@ -329,30 +260,17 @@ async function handleSingleModelChat(body, modelStr, clientRawRequest = null, re
+       if (pid) {
+         refreshedCredentials.projectId = pid;
+         // Persist to DB in background so subsequent requests have it immediately
+-        updateProviderCredentials(credentials.connectionId, { projectId: pid }).catch((e) => log.warn('CHAT', `projectId persist failed for ${credentials.connectionId}: ${e.message}`));
++        updateProviderCredentials(credentials.connectionId, { projectId: pid }).catch(() => { });
+       }
+     }
+ 
+     // Use shared chatCore
+     const chatSettings = await getSettings();
+     const providerThinking = (chatSettings.providerThinking || {})[provider] || null;
+-
+-    // Resolve conversationId for per-chat observability grouping:
+-    // 1. explicit header (OpenRouter-style x-conversation-id)
+-    // 2. extra_body.conversation_id (client can't set headers)
+-    // 3. null → caller falls back to message-hash fingerprint
+-    const conversationId =
+-      request?.headers?.get("x-conversation-id") ||
+-      body?.extra_body?.conversation_id ||
+-      null;
+-
+     const result = await handleChatCore({
+       body: { ...body, model: `${provider}/${model}` },
+       modelInfo: { provider, model },
+       credentials: refreshedCredentials,
+-      conversationId,
+-      taskType,
+-      smartRouterMeta,
+       log,
+       clientRawRequest,
+       connectionId: credentials.connectionId,
+diff --git a/tests/unit/codex-image-models.test.js b/tests/unit/codex-image-models.test.js
+index 3f531638..9a4e9c44 100644
+--- a/tests/unit/codex-image-models.test.js
++++ b/tests/unit/codex-image-models.test.js
+@@ -34,7 +34,7 @@ describe("Codex GPT-5.6 image models", () => {
+     vi.stubGlobal("fetch", fetchMock);
+     const onRequestSuccess = vi.fn();
+     const modelInfo = await getModelInfoCore(`cx/${model}-image`);
+-    expect(modelInfo).toEqual({ provider: "codex", model: `${model}-image`, betaMarker: null });
++    expect(modelInfo).toEqual({ provider: "codex", model: `${model}-image` });
+     expect(await getModelInfoCore(`codex/${model}-image`)).toEqual(modelInfo);
+ 
+     const result = await handleImageGenerationCore({
+diff --git a/tests/unit/db-concurrent.test.js b/tests/unit/db-concurrent.test.js
+index 5abdc453..0b2ebac4 100644
+--- a/tests/unit/db-concurrent.test.js
++++ b/tests/unit/db-concurrent.test.js
+@@ -28,15 +28,10 @@ describe("DB Concurrency — atomic safety", () => {
+     const N = 100;
+     const promises = [];
+     for (let i = 0; i < N; i++) {
+-      // Unique timestamp per entry: saveRequestUsage dedupes identical
+-      // (timestamp+provider+model+fields) rows — production requests never
+-      // collide on the same millisecond, so the concurrency test must not
+-      // either (otherwise 99 of 100 look like duplicates).
+       promises.push(db.saveRequestUsage({
+         provider: "openai", model: "gpt-4", connectionId: "c1",
+         tokens: { prompt_tokens: 10, completion_tokens: 5 },
+         endpoint: "/v1/chat", status: "ok",
+-        timestamp: new Date(Date.now() + i).toISOString(),
+       }));
+     }
+     await Promise.all(promises);
+@@ -77,7 +72,6 @@ describe("DB Concurrency — atomic safety", () => {
+       ops.push(db.saveRequestUsage({
+         provider: "anthropic", model: `m-${i % 3}`, connectionId: "c2",
+         tokens: { prompt_tokens: 20 }, status: "ok",
+-        timestamp: new Date(Date.now() + i).toISOString(),
+       }));
+       ops.push(db.setModelAlias(`a-${i}`, `target-${i}`));
+       ops.push(db.disableModels("openai", [`d-${i}`]));
+@@ -109,8 +103,6 @@ describe("DB Concurrency — atomic safety", () => {
+   });
+ 
+   it("OAuth refresh race: parallel updateProviderConnection on same id", async () => {
+-    // providerConnections.provider has a FK → providerNodes(id) (migration 002)
+-    await db.createProviderNode({ id: "oauth-test", type: "openai", name: "oauth-test" });
+     const conn = await db.createProviderConnection({
+       provider: "oauth-test", authType: "oauth", email: "x@y.com",
+       accessToken: "initial", refreshToken: "rt-initial",
+@@ -165,7 +157,6 @@ describe("DB Concurrency — atomic safety", () => {
+         provider: "google", model: "gemini-pro", connectionId: "cG",
+         tokens: { prompt_tokens: 100, completion_tokens: 50 },
+         status: "ok",
+-        timestamp: new Date(Date.now() + i).toISOString(),
+       }));
+     }
+     await Promise.all(promises);
+diff --git a/tests/unit/kiro-external-idp.test.js b/tests/unit/kiro-external-idp.test.js
+index 28348218..c531d02c 100644
+--- a/tests/unit/kiro-external-idp.test.js
++++ b/tests/unit/kiro-external-idp.test.js
+@@ -24,7 +24,7 @@ describe("Kiro external_idp (CLIProxyAPI) import and refresh", () => {
+     global.fetch = originalFetch;
+   });
+ 
+-  it("refreshes Microsoft external_idp tokens with form-encoded OAuth body", { timeout: 15000 }, async () => {
++  it("refreshes Microsoft external_idp tokens with form-encoded OAuth body", async () => {
+     const fetchMock = vi.fn().mockResolvedValue({
+       ok: true,
+       json: () => Promise.resolve({
+@@ -76,7 +76,7 @@ describe("Kiro external_idp (CLIProxyAPI) import and refresh", () => {
+     });
+   });
+ 
+-  it("rejects external_idp refresh endpoints outside Microsoft login", { timeout: 15000 }, async () => {
++  it("rejects external_idp refresh endpoints outside Microsoft login", async () => {
+     const { refreshKiroToken } = await import("../../open-sse/services/tokenRefresh.js");
+     const fetchMock = vi.fn();
+     global.fetch = fetchMock;
+@@ -92,7 +92,7 @@ describe("Kiro external_idp (CLIProxyAPI) import and refresh", () => {
+     expect(fetchMock).not.toHaveBeenCalled();
+   });
+ 
+-  it("adds CodeWhisperer external IdP headers and endpoint ordering", { timeout: 15000 }, async () => {
++  it("adds CodeWhisperer external IdP headers and endpoint ordering", async () => {
+     const { KiroExecutor } = await import("../../open-sse/executors/kiro.js");
+     const executor = new KiroExecutor();
+     const credentials = {
+@@ -105,16 +105,12 @@ describe("Kiro external_idp (CLIProxyAPI) import and refresh", () => {
+     expect(headers.TokenType).toBe("EXTERNAL_IDP");
+     expect(headers.tokentype).toBeUndefined();
+ 
+-    // Since 7e5f5a88: kiro.dev must never be first for any auth method (deprecated
+-    // path gateway returns 400 REQUEST_BODY_INVALID). q.* is always first for all
+-    // auth methods — Amazon surfaces reject foreign tokens with 401/403 which DO
+-    // fall through safely.
+     expect(executor.buildUrl("claude-sonnet-4.5", true, 0, credentials)).toBe(
+-      "https://q.us-east-1.amazonaws.com/generateAssistantResponse"
++      "https://codewhisperer.us-east-1.amazonaws.com/generateAssistantResponse"
+     );
+   });
+ 
+-  it("sends TokenType for external_idp Kiro usage probes", { timeout: 15000 }, async () => {
++  it("sends TokenType for external_idp Kiro usage probes", async () => {
+     const calls = [];
+     vi.doMock("../../open-sse/utils/proxyFetch.js", () => ({
+       proxyAwareFetch: vi.fn(async (url, init) => {
+diff --git a/tests/unit/request-details-tab.test.js b/tests/unit/request-details-tab.test.js
+index 418be840..6b056503 100644
+--- a/tests/unit/request-details-tab.test.js
++++ b/tests/unit/request-details-tab.test.js
+@@ -22,7 +22,7 @@ beforeAll(async () => {
+   vi.resetModules();
+   db = await import("@/lib/db/index.js");
+   await db.initDb();
+-  await db.updateSettings({ enableObservability: true, observabilityBatchSize: 1 });
++  await db.updateSettings({ enableObservability2: true, observabilityBatchSize: 1 });
+ 
+   const { getAdapter } = await import("@/lib/db/driver.js");
+   adapter = await getAdapter();
+@@ -109,13 +109,19 @@ describe("request details — tab crash-risk cases", () => {
+   });
+ });
+ 
+-// Token helpers imported from the real shared module — the test can never
+-// drift from the code (previously a local copy could).
+-import {
+-  getCachedTokens,
+-  getCacheCreationTokens,
+-  getInputTokens,
+-} from "@/shared/tokenHelpers";
++// Mirror of RequestDetailsTab token helpers (component is "use client",
++// helpers are not exported). Keep in sync with the component.
++function getCachedTokens(tokens) {
++  return tokens?.cached_tokens || tokens?.cache_read_input_tokens || 0;
++}
++function getCacheCreationTokens(tokens) {
++  return tokens?.cache_creation_input_tokens || 0;
++}
++function getInputTokens(tokens) {
++  const prompt = tokens?.prompt_tokens || tokens?.input_tokens || 0;
++  const cache = getCachedTokens(tokens);
++  return prompt < cache ? cache : prompt;
++}
+ 
+ describe("backupDbLite — excludes requestDetails, keeps critical data", () => {
+   it("backup file omits requestDetails rows but keeps other tables", async () => {
+diff --git a/tests/unit/translator-helpers-edge.test.js b/tests/unit/translator-helpers-edge.test.js
+index 3133c886..06dcecfd 100644
+--- a/tests/unit/translator-helpers-edge.test.js
++++ b/tests/unit/translator-helpers-edge.test.js
+@@ -14,27 +14,14 @@ describe("normalizeClaudePassthrough — haiku adaptive thinking (docs 11 §1)",
+     expect(out.thinking).toEqual({ type: "adaptive" });
+   });
+ 
+-  it("folds mid-conversation system messages into the neighbouring user turn", () => {
+-    // Deliberate behavior since 7e5f5a88: hoisting into body.system would insert
+-    // volatile content (token counters, reminders) ahead of the whole conversation
+-    // and invalidate the prefix cache on every request. Folding in place keeps
+-    // the cached prefix stable.
++  it("hoists mid-conversation system messages into top-level system", () => {
+     const out = normalizeClaudePassthrough({
+       messages: [
+         { role: "user", content: "hi" },
+         { role: "system", content: "be brief" },
+       ],
+     });
+-    expect(out.system).toBeUndefined();
+-    expect(out.messages).toEqual([
+-      {
+-        role: "user",
+-        content: [
+-          { type: "text", text: "hi" },
+-          { type: "text", text: "be brief" },
+-        ],
+-      },
+-    ]);
++    expect(out.system).toEqual([{ type: "text", text: "be brief" }]);
+     expect(out.messages.every((m) => m.role !== "system")).toBe(true);
+   });
+ });

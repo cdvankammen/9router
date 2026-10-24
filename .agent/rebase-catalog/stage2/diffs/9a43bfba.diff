@@ -1,0 +1,10 @@
+commit 9a43bfba
+author: cdvankammen
+date: 2026-10-22 14:51:35 -0600
+subject: fix(db): WAL checkpoint TRUNCATE -> PASSIVE to stop event-loop hang
+
+TRUNCATE blocks the event loop waiting for all readers and truncates the
+WAL file, freezing 9router after ~2 days of traffic. PASSIVE flushes what
+it can without blocking and never truncates. Applied to the periodic 60s
+timer, gracefulClose, and the public checkpoint() method.
+

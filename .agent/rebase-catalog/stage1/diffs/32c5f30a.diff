@@ -1,0 +1,45 @@
+commit 32c5f30a
+author: anojndr
+date: 2026-10-23 14:32:20 +0700
+subject: fix(capabilities): send reasoning_effort for OpenCode's glm-5.3-flash-free
+
+Configure glm-5.3-flash-free to use openai thinking format with reasoning_effort instead of zai thinking object which is rejected by OpenCode inference upstream.
+
+
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+index 678c96de..abd877b3 100644
+--- a/CHANGELOG.md
++++ b/CHANGELOG.md
+@@ -1,6 +1,7 @@
+ # Unreleased
+ 
+ ## Fixes
++- **OpenCode**: send `reasoning_effort` instead of the zai `thinking` object for `glm-5.3-flash-free` — OpenCode's inference service validates bodies strictly and answers `400 json: unknown field "thinking"` on both the free lane (`/inference/v1`) and Zen (`/zen/v1`)
+ - **OpenCode Free**: honor the `low|high|max` reasoning efforts of `oc/deepseek-v4.1-flash-free` — the generic DeepSeek level set no longer advertises medium/xhigh, and `low` now reaches the upstream verbatim instead of collapsing to `high`
+ - **OpenCode Free**: fully support reasoning on `oc/mimo-v2.6-flash-free` — the lane takes the plain OpenAI `reasoning_effort` enum, so `none` now disables thinking instead of being clamped to `low`, `minimal`/`max` are selectable instead of collapsing to `low`/`high`, and adaptive (`auto`) effort is dropped rather than sent (upstream answers `400 Invalid option`); its MiMo route streams thinking as `reasoning`/`reasoning_details`, which the OpenAI passthrough now also exposes as `reasoning_content`, and the vendor-alias shapes are read by the SSE→JSON aggregation and the Antigravity/Claude/Responses translators alike
+ - **DB**: strip NUL bytes from bound strings so a value carrying raw binary no longer aborts the write on better-sqlite3 ("String contains null byte") or gets silently truncated at the first NUL on node:sqlite (#4917)
+diff --git a/open-sse/providers/capabilities.js b/open-sse/providers/capabilities.js
+index 77f90c0f..cd78ec70 100644
+--- a/open-sse/providers/capabilities.js
++++ b/open-sse/providers/capabilities.js
+@@ -150,6 +150,20 @@ export const MODEL_CAPABILITIES = {
+   // pattern completely, so it must repeat that pattern's thinkingEffortSupported or
+   // reasoning_effort is dropped for GLM-5.2 (supported from 5.2 onward).
+   "glm-5.2":           { reasoning: true, thinkingFormat: "zai", thinkingEffortSupported: true, thinkingCanDisable: false, contextWindow: 1000000, maxOutput: 131072 },
++  // OpenCode serves the same weights under this free id from its OWN inference
++  // service, which validates the body strictly: the zai `thinking` object the
++  // *glm-5.3* pattern emits is answered
++  //   400 [unknown_parameter] invalid request body: json: unknown field "thinking"
++  // while reasoning_effort is accepted (none/minimal/low/medium/high/xhigh/max → 200).
++  // Probed live 2026-10-18 on both lanes exposing the id: /inference/v1 (provider
++  // "opencode") and /zen/v1 (provider "opencode-zen"). Mirrors the
++  // PROVIDER_CAPABILITIES["opencode-go"] override for the paid glm-5.3-flash id;
++  // the zai shape stays correct for z.ai's own lines (glm / glm-cn). codebuddy-cn
++  // is unaffected — it already resolves glm-5.3-flash to the openai shape.
++  // Known gap, shared with the paid sibling: an intent that carries no level
++  // (Claude adaptive thinking, reasoning_effort "auto") still emits literal
++  // "auto" from the generic openai branch, which this service rejects.
++  "glm-5.3-flash-free": { vision: true, videoInput: true, pdf: true, reasoning: true, thinkingFormat: "openai", thinkingCanDisable: false, contextWindow: 1000000, maxOutput: 128000 },
+ 
+   // DeepSeek's first V4 model with image input; text limits match V4-Flash.
+   "deepseek-v4-flash-vision-exp": { vision: true, reasoning: true, thinkingFormat: "deepseek", contextWindow: 1000000, maxOutput: 384000 },

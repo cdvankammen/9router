@@ -1,0 +1,44 @@
+commit 66d35d18
+author: cdvankammen
+date: 2026-10-22 12:19:30 -0600
+subject: fix(smart-router): pass credentials when fetching custom node /models
+
+BUG: The smart router could not discover models from auth-gated custom
+provider nodes (e.g. Dialagram). getNodeModels() called /models without
+any auth header, got 401, returned empty candidate list, and the router
+fell through to built-in providers (openai) which had no credentials.
+The request failed with "No active credentials for provider: openai"
+even though the user had a valid custom provider configured.
+
+Direct curl to Dialagram confirmed:
+  - Without auth: HTTP 401
+  - With Bearer token: HTTP 200, returns 15 models
+
+ROOT CAUSE: The dashboard /api/providers/[id]/models/route.js already
+passes Authorization: Bearer ${connection.apiKey} for custom nodes, but
+the smart router getNodeModels() never replicated that pattern. This
+was an oversight from the original custom-node support commit (8990a3b4).
+
+FIX (src/sse/services/smartRouter.js):
+1. Added getProviderConnections import from @/lib/localDb
+2. New getNodeApiKey(nodeId) helper finds the first active connection
+   for a node and returns its apiKey (highest priority)
+3. getNodeModels() now builds auth headers based on node type:
+   - openai-compatible: Authorization: Bearer <apiKey>
+   - anthropic-compatible: x-api-key + Authorization Bearer
+4. Fail-open preserved: if no connection exists or fetch fails, returns
+   [] and the router silently skips that node
+
+VERIFICATION (production build, port 20130, Dialagram live provider):
+- Before: modelRouter -> "No active credentials for provider: openai"
+- After: modelRouter -> Dialagram/nexum-router -> real code response
+- Direct dialagram/qwen-3.5-plus: works
+- dialagram/nexum-router: works (Dialagram own internal router)
+
+This makes smart router custom-node support ACTUALLY work for auth-gated
+third-party routers (Dialagram, OpenRouter self-hosted, any OpenAI-
+compatible gateway behind an API key).
+
+Related: 8990a3b4 (initial custom node), 429ddc56, 6449b58b
+Part of: Smart Router & Fallback UX plan (M1 custom-node completion)
+

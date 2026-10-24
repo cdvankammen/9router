@@ -1,0 +1,124 @@
+commit a38259d0
+author: cdvankammen
+date: 2026-10-22 11:56:24 -0600
+subject: feat(observability): track combo fallback chain per request
+
+handleComboChat now accumulates a fallbackChain array — one entry per
+attempted model { model, ok, status, error?, latencyMs }, oldest first:
+- Success after failures: chain attached as x-9r-fallback-chain response
+  header (only when fallback actually happened)
+- All failed: chain embedded in the 503 error body for client visibility
+- New optional onFallbackEvent callback (fire-and-forget, never breaks
+  routing) wired from chat.js to log compact FALLBACK lines
+
+Tests: tests/unit/combo-fallback-chain.test.js — 3 tests with real
+assertions (chain order/content, header presence rules, error-body chain).
+All pass. Caught missing declaration during development.
+
+Part of: Observability & Conversation Analytics plan (Phase P2)
+
+
+diff --git a/open-sse/services/combo.js b/open-sse/services/combo.js
+index e3b9a8e6..13b0fd8d 100644
+--- a/open-sse/services/combo.js
++++ b/open-sse/services/combo.js
+@@ -275,9 +275,14 @@ export function getComboModelsFromData(modelStr, combosData) {
+  * @param {string} [options.comboName] - Name of the combo (for round-robin tracking)
+  * @param {string} [options.comboStrategy] - Strategy: "fallback" or "round-robin"
+  * @param {number|string} [options.comboStickyLimit=1] - Requests per combo model before switching
++ * @param {boolean} [options.autoSwitch=true] - Reorder models by required capabilities
++ * @param {Function} [options.onFallbackEvent] - Per-attempt callback (attempt) => void for observability
+  * @returns {Promise<Response>}
+  */
+-export async function handleComboChat({ body, models, handleSingleModel, log, comboName, comboStrategy, comboStickyLimit = 1, autoSwitch = true }) {
++export async function handleComboChat({ body, models, handleSingleModel, log, comboName, comboStrategy, comboStickyLimit = 1, autoSwitch = true, onFallbackEvent = null }) {
++  // Fallback chain observability: one entry per attempted model, oldest first.
++  const fallbackChain = [];
++
+   // Apply rotation strategy if enabled
+   let rotatedModels = getRotatedModels(models, comboName, comboStrategy, comboStickyLimit);
+ 
+@@ -299,14 +304,26 @@ export async function handleComboChat({ body, models, handleSingleModel, log, co
+ 
+   for (let i = 0; i < rotatedModels.length; i++) {
+     const modelStr = rotatedModels[i];
++    const attemptStart = Date.now();
+     log.info("COMBO", `Trying model ${i + 1}/${rotatedModels.length}: ${modelStr}`);
+ 
+     try {
+       const result = await handleSingleModel(body, modelStr);
+-      
++      const latencyMs = Date.now() - attemptStart;
++
++      // Record attempt for the fallback chain (success or failure)
++      const attempt = { model: modelStr, ok: !!result.ok, status: result.status, latencyMs };
++      fallbackChain.push(attempt);
++      if (onFallbackEvent) {
++        try { onFallbackEvent(attempt); } catch { /* observability must never break routing */ }
++      }
++
+       // Success (2xx) - return response
+       if (result.ok) {
+         log.info("COMBO", `Model ${modelStr} succeeded`);
++        if (fallbackChain.length > 1 && result.headers && typeof result.headers.append === "function") {
++          try { result.headers.append("x-9r-fallback-chain", JSON.stringify(fallbackChain)); } catch { /* ignore */ }
++        }
+         return result;
+       }
+ 
+@@ -354,6 +371,12 @@ export async function handleComboChat({ body, models, handleSingleModel, log, co
+       log.warn("COMBO", `Model ${modelStr} failed, trying next`, { status: result.status });
+     } catch (error) {
+       // Catch unexpected exceptions to ensure fallback continues
++      const latencyMs = Date.now() - attemptStart;
++      const attempt = { model: modelStr, ok: false, status: 500, error: error.message || String(error), latencyMs };
++      fallbackChain.push(attempt);
++      if (onFallbackEvent) {
++        try { onFallbackEvent(attempt); } catch { /* observability must never break routing */ }
++      }
+       lastError = error.message || String(error);
+       if (!lastStatus) lastStatus = 500;
+       log.warn("COMBO", `Model ${modelStr} threw error, trying next`, { error: lastError });
+@@ -376,7 +399,7 @@ export async function handleComboChat({ body, models, handleSingleModel, log, co
+ 
+   log.warn("COMBO", `All models failed | ${msg}`);
+   return new Response(
+-    JSON.stringify({ error: { message: msg } }),
++    JSON.stringify({ error: { message: msg }, fallbackChain }),
+     { status, headers: { "Content-Type": "application/json" } }
+   );
+ }
+diff --git a/src/sse/handlers/chat.js b/src/sse/handlers/chat.js
+index 1a714683..58cdecba 100644
+--- a/src/sse/handlers/chat.js
++++ b/src/sse/handlers/chat.js
+@@ -145,7 +145,8 @@ export async function handleChat(request, clientRawRequest = null) {
+       log,
+       comboName: modelStr,
+       comboStrategy,
+-      comboStickyLimit
++      comboStickyLimit,
++      onFallbackEvent: (a) => log.debug("FALLBACK", `${modelStr} → ${a.model} ${a.ok ? "ok" : `failed ${a.status}`} (${a.latencyMs}ms)`),
+     });
+   }
+ 
+@@ -164,7 +165,8 @@ export async function handleChat(request, clientRawRequest = null) {
+       ),
+       log,
+       comboName: modelStr,
+-      comboStrategy: getActiveAdapterStrategy(requiredCapabilities, settings)
++      comboStrategy: getActiveAdapterStrategy(requiredCapabilities, settings),
++      onFallbackEvent: (a) => log.debug("FALLBACK", `${modelStr} → ${a.model} ${a.ok ? "ok" : `failed ${a.status}`} (${a.latencyMs}ms)`),
+     });
+   }
+ 
+@@ -222,7 +224,8 @@ async function handleSingleModelChat(body, modelStr, clientRawRequest = null, re
+         log,
+         comboName: modelStr,
+         comboStrategy,
+-        comboStickyLimit
++        comboStickyLimit,
++        onFallbackEvent: (a) => log.debug("FALLBACK", `${modelStr} → ${a.model} ${a.ok ? "ok" : `failed ${a.status}`} (${a.latencyMs}ms)`),
+       });
+     }
+     log.warn("CHAT", "Invalid model format", { model: modelStr });

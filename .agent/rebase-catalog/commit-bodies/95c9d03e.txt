@@ -1,0 +1,12 @@
+===COMMIT===
+hash: 95c9d03ed2fced1e01a1d0c6ba510f9b33c65f85
+short: 95c9d03e
+author: BIDZZ RAWR <182365518+BIDZZ-RAWR@users.noreply.github.com>
+date: 2026-10-23 13:20:11 +0700
+subject: fix(stream): fill missing tool-call ids and restore renamed tool names (#4992, #4986)
+body:
+- Fill missing id on streamed tool-call fragments so strict OpenAI clients don't abort
+- Restore caller tool names on openai->openai passthrough path when renamed by OpenCode fingerprint
+- Add unit tests for stream tool-call id synthesis and passthrough tool name restoration
+
+---files---

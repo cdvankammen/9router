@@ -1,0 +1,23 @@
+commit 5fc778e8
+author: cdvankammen
+date: 2026-10-22 17:14:26 -0600
+subject: test(usage): lock DefaultExecutor stream_options injection — BUG-OR-01
+
+Regression coverage for the OpenRouter usage-tracking bug: the generic
+DefaultExecutor never injected stream_options:{include_usage:true}, so
+streaming OpenRouter responses carried no usage object and the gateway
+fell back to a characters/4 estimate (dropping usage entirely for
+tool-only / empty-text responses).
+
+The fix itself landed in 6754d9c0 (transformRequest now takes  +
+ and injects behind supportsIncludeUsage()). This test locks
+the gate matrix so it cannot regress:
+- injects for streaming chat-completions (openrouter, format=openai)
+- no injection non-streaming, no-messages, or non-openai formats
+- never clobbers a caller-supplied stream_options
+- openai-compatible-<chat> yes / <responses> no
+- quirks.noIncludeUsage opt-out honored
+
+Evidence: 8/8 pass; full v3 suite 2683 passed / 75 failed vs policy
+baseline 2657/76 (no new failures).
+

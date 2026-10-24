@@ -1,0 +1,31 @@
+commit 3c3cb02a
+author: cdvankammen
+date: 2026-10-24 07:24:24 -0600
+subject: feat(security): OIDC save-time validation gate on /api/settings PATCH
+
+Prevents persisting an unreachable/malformed OIDC issuer when authMode would
+
+disable password login (the evil.example.com scenario from Finding #13).
+
+- New validateOidcConfigForSave() in src/lib/auth/oidc.js: 5s-timeout discovery
+
+  fetch; rejects unreachable hosts, non-HTTPS (except localhost), malformed URLs,
+
+  non-JSON responses, and discovery docs missing authorization_endpoint /
+
+  token_endpoint.
+
+- fetchOidcDiscovery() now accepts {signal} for AbortController wiring.
+
+- settings/route.js: hard gate when effective authMode disables password login
+
+  ('oidc' or 'sso'+oidc); soft probe (URL+HTTPS only, no network) otherwise.
+
+- Escape hatch: skipOidcValidation:true in body (never persisted).
+
+- 'both' mode never hard-gated (password login stays enabled).
+
+- 'saml' mode excluded (own config surface, no OIDC discovery).
+
+- 13 unit tests in tests/unit/oidc-save-validation.test.js, all passing.
+

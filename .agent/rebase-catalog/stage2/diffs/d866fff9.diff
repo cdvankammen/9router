@@ -1,0 +1,12 @@
+commit d866fff9
+author: cdvankammen
+date: 2026-10-22 11:56:24 -0600
+subject: feat(ui): add conversation filter + conversation column to usage details tab
+
+RequestDetailsTab gains a Conversation ID text filter (API/repo/schema
+already supported it — UI was the only missing piece) and a Conversation
+column showing each request's conversationId (truncated, full value on
+hover). Loading/empty colSpans updated 7→8.
+
+Part of: Observability & Conversation Analytics plan (Phase P1 UI)
+

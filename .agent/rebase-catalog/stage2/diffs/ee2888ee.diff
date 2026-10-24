@@ -1,0 +1,15 @@
+commit ee2888ee
+author: cdvankammen
+date: 2026-10-22 14:05:53 -0600
+subject: docs: mini2 full app (tray icon) on latest build — Rosetta fix
+
+- rebuilt cli/app from HEAD, deployed identical bundle to mini2 (v0.5.50,
+  custom-server.js MD5 8204b864...)
+- mini2 launchd com.9router.app now runs the FULL app: cli.js --tray
+  --port 20128 --skip-update
+- root cause of missing tray icon: systray binary is x86_64, mini2 arm64
+  without Rosetta → spawn error -86; installed Rosetta via softwareupdate
+  (no sudo), icon now registers
+- verified: cli.js --tray + next-server (:20128 200) + tray_darwin_release
+  running + proxy :20142 200 + ollama :11434 — same topology as this Mac
+

@@ -1,0 +1,14 @@
+commit d02e6099
+author: cdvankammen
+date: 2026-10-22 15:41:21 -0600
+subject: fix(ux): surface connection errors via toast notifications (GAP-P2-28)
+
+Replaced 7 console.log catch blocks and 1 silent catch in
+ConnectionsCard.js with useNotificationStore.error() calls.
+Users now see toast notifications when save/delete/toggle/proxy
+operations fail instead of silent failures.
+
+- Added useNotificationStore import from @/store/notificationStore
+- Wired notify hook in ConnectionsCard component
+- All 8 catch blocks now call notify(e.message || fallback)
+

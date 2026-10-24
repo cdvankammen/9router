@@ -1,0 +1,21 @@
+commit 71ca8b33
+author: cdvankammen
+date: 2026-10-22 15:37:58 -0600
+subject: fix(security): add path validation to Cursor auto-import route (GAP-P1-12)
+
+- Import realpath and lstat from fs/promises
+- Add validateCursorDbPath() function that:
+  * Rejects paths containing '..' or null bytes
+  * Resolves symlinks via realpath()
+  * Validates resolved path is under allowed Cursor directories
+  * Builds allowed prefixes from homedir() for each platform
+- Wire validation into GET handler after dbPath is found
+- Update tests to mock realpath/lstat (partial - some tests need refinement)
+
+This closes the symlink/traversal attack vector where an attacker
+could place a symlink at a Cursor config location to redirect
+sqlite3/better-sqlite3 to open arbitrary files.
+
+Security impact: HIGH - prevents arbitrary file read via symlink
+Performance impact: MINIMAL - one realpath() call per request
+

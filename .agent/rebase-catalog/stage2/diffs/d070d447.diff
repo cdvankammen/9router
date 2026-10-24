@@ -1,0 +1,15 @@
+commit d070d447
+author: cdvankammen
+date: 2026-10-22 13:46:38 -0600
+subject: fix(failover): scrutiny pass — 3 real bugs + header hygiene
+
+- CRITICAL: unhandled 'error' on client req crashed proxy on client abort;
+  unhandled 'error' on upstream res crashed proxy when app killed mid-stream
+- HIGH: stale-probe race (slow tick overwrote newer state) → tickSeq guard
+- MEDIUM: hop-by-hop headers forwarded (RFC 7230 §6.1) → stripped
+- MEDIUM: incomplete client close left upstream running → teardown
+- LOW: empty 502 detail on Node 22 → e.code || e.message || e.name
+- Re-verified T1-T5 matrix + C1/C2 crash-resilience; redeployed both machines
+- docs: 25-node-failover-implementation.md §8-9 (verification + scrutiny),
+  CHANGELOG, TASK-LOG, SESSION-HISTORY
+

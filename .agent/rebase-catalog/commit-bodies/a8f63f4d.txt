@@ -1,0 +1,10 @@
+===COMMIT===
+hash: a8f63f4d7167b094e0baadcc2637d1a9eba9a016
+short: a8f63f4d
+author: Mike <108046712+miqonee@users.noreply.github.com>
+date: 2026-10-15 20:54:00 +0700
+subject: fix(models): expose no-auth free providers in /v1/models and prune custom models on node deletion
+body:
+Register virtual connections for noAuth free providers in buildModelsList so their models (oc/*, edge-tts, ...) stay listed once other providers are connected (#3115), and check isDisabled by providerId alongside aliases. Also delete a compatible node customModels kv rows inside deleteProviderNode so deleted nodes stop surfacing models.
+
+---files---

@@ -1,0 +1,12 @@
+===COMMIT===
+hash: 4fa46034abcdcb22981137c09a7f9d15e8a5bc48
+short: 4fa46034
+author: anojndr <anojndr@gmail.com>
+date: 2026-10-07 19:50:27 +0700
+subject: feat(proxy-pools): add Netlify relay proxy pool
+body:
+- Deploy serverless relay function via Netlify digest-deploy API
+- Wire netlify type through proxy pool validation, testing, and connection proxy config
+- Add dashboard deployment modal and badge
+
+---files---

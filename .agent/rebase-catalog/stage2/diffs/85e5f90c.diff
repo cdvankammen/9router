@@ -1,0 +1,30 @@
+commit 85e5f90c
+author: cdvankammen
+date: 2026-10-22 12:16:44 -0600
+subject: feat(ui): visual fallback rule builder + markdown log explanation
+
+User requested (2026-08-06): an easier way to create fallback rules than
+the textarea, with auto-populating model pickers, ordered chains, and
+retry counts (universal + per-model override). Also asked for the markdown
+flush behavior to be explained clearly.
+
+- ModelFallbacksSection now shows a rules TABLE (Target | Fallback Chain |
+  Retries | Actions) with delete per row. Rules render with → chain arrows
+  and per-model retry hints.
+- New FallbackRuleModal: target picker (specific model via ModelSelectModal
+  "Pick…" OR whole-provider id input), ordered fallback chain (add from
+  the FULL model catalog picker, up/down reorder, remove), universal retries
+  (1-10), and per-model retry overrides (1-10 or blank=inherit). Saves the
+  advanced shape {target: {models, retries, perModelRetries}} which the
+  backend (commit 8990a3b4) already consumes.
+- Textarea power-user mode kept (toDraftText/parseDraftText) for advanced
+  users.
+- Markdown Log card now explicitly states the flush OVERWRITES the daily
+  file with the latest 24h snapshot (not append), in both the card bullets
+  and the interval field hint.
+
+Refs: user request (session narrative, plans-and-prompts/SESSION-NARRATIVE.md);
+backend retry support: commit 8990a3b4.
+
+Part of: Smart Router & Fallback UX plan M3 (visual rule builder)
+

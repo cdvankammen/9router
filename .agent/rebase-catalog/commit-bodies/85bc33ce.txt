@@ -1,0 +1,9 @@
+===COMMIT===
+hash: 85bc33ceafefda393bc039f0a6b0c8fc4657ac14
+short: 85bc33ce
+author: kelongyan <zhaxideler@gmail.com>
+date: 2026-10-07 19:05:43 +0700
+subject: feat(providers): add MiniMax Code (mcode) credits provider
+body:
+
+---files---

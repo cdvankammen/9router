@@ -1,0 +1,15 @@
+commit 2b611e3f
+author: cdvankammen
+date: 2026-10-22 15:51:43 -0600
+subject: security(mitm): replace execSync shell string with execFileSync
+
+GAP-P2-16: Replaced vulnerable require('child_process').execSync('net session >nul 2>&1')
+with execFileSync('net', ['session'], { windowsHide: true, stdio: 'ignore' }).
+
+- Added module-level import: import { execFileSync } from 'child_process'
+- Eliminates command injection surface (no shell interpretation)
+- Removes inline require() that bypassed module-level import analysis
+- Zero behavioral change: still detects Windows admin by net session exit code
+
+Build verified. antigravity-mitm tests pass (5/5).
+

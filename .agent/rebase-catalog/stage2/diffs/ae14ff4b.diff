@@ -1,0 +1,19 @@
+commit ae14ff4b
+author: cdvankammen
+date: 2026-10-22 15:36:33 -0600
+subject: fix(security): shutdown endpoint auth bypass (GAP-P0-02)
+
+Primary gate: dashboardGuard auth (JWT session or CLI machine-id token).
+Secondary gate: SHUTDOWN_SECRET env var (defence-in-depth when set).
+
+Previously, if SHUTDOWN_SECRET was unset (common), any network-reachable
+client could POST /api/shutdown and kill the server. The middleware layer
+marks this path as ALWAYS_PROTECTED, but the route handler lacked its own
+defence-in-depth check.
+
+Adds vitest.config.mjs for @/ alias resolution in unit tests.
+10 unit tests covering: no-auth reject, CLI-token accept, JWT accept,
+wrong-token reject, SHUTDOWN_SECRET secondary gate, production block.
+
+Refs: docs/plans-and-prompts/research/9router/32-gap-analysis-comprehensive.md
+

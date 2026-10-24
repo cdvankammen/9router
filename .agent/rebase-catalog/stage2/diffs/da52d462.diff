@@ -1,0 +1,63 @@
+commit da52d462
+author: cdvankammen
+date: 2026-10-22 11:44:10 -0600
+subject: feat(smart-router): add pre-combo interception smart router with dynamic combo fallback
+
+- Create src/sse/services/smartRouter.js: app-layer task classifier, model scorer,
+  dynamic combo creation, concurrency tracking, session stickiness (5-min TTL)
+- Modify src/sse/handlers/chat.js: add resolveSmartRouter() pre-combo interception
+  after detectRequiredCapabilities(), before getComboModels()
+- Modify src/lib/db/repos/settingsRepo.js: add smartRouter defaults (enabled, names,
+  allowedProviders, costQualityTradeoff, maxCandidates)
+- Modify open-sse/handlers/chatCore.js: pass originalBody to executor for re-dispatch
+
+Architecture: pre-combo interception avoids double-translation flaw of executor approach.
+Smart router classifies task, scores models, creates dynamic combo, existing combo
+fallback engine handles retries automatically.
+
+Part of: Smart Router and Fallback UX Enhancement plan (Phase 1)
+
+
+diff --git a/src/lib/db/repos/settingsRepo.js b/src/lib/db/repos/settingsRepo.js
+index 60afee27..dd6eb8d9 100644
+--- a/src/lib/db/repos/settingsRepo.js
++++ b/src/lib/db/repos/settingsRepo.js
+@@ -17,6 +17,13 @@ const DEFAULT_SETTINGS = {
+   comboStrategy: "fallback",
+   comboStickyRoundRobinLimit: 1,
+   comboStrategies: {},
++  smartRouter: {
++    enabled: false,
++    names: ["modelRouter"],
++    allowedProviders: [],
++    costQualityTradeoff: 5,
++    maxCandidates: 3,
++  },
+   capacityAdapter: {
+     vision: { enabled: true, roundRobin: false, models: [] },
+     pdf: { enabled: false, roundRobin: false, models: [] },
+diff --git a/src/sse/handlers/chat.js b/src/sse/handlers/chat.js
+index bbd89242..a145b1b0 100644
+--- a/src/sse/handlers/chat.js
++++ b/src/sse/handlers/chat.js
+@@ -25,6 +25,7 @@ import * as log from "../utils/logger.js";
+ import { updateProviderCredentials, checkAndRefreshToken } from "../services/tokenRefresh.js";
+ import { getProjectIdForConnection } from "open-sse/services/projectId.js";
+ import { stripModelContextMarker } from "open-sse/utils/modelMarkers.js";
++import { resolveSmartRouter, trackRequestStart, trackRequestEnd } from "../services/smartRouter.js";
+ 
+ /**
+  * Handle chat completion request
+@@ -93,6 +94,12 @@ export async function handleChat(request, clientRawRequest = null) {
+ 
+   const requiredCapabilities = detectRequiredCapabilities(body);
+ 
++  // ── SMART ROUTER: resolve virtual model to dynamic combo BEFORE translation ──
++  const smartRouterResult = await resolveSmartRouter(modelStr, body, settings);
++  if (smartRouterResult) {
++    modelStr = smartRouterResult;
++  }
++
+   // Check if model is a combo (has multiple models with fallback)
+   const comboModels = await getComboModels(modelStr);
+   if (comboModels) {

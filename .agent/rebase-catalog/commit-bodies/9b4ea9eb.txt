@@ -1,0 +1,13 @@
+===COMMIT===
+hash: 9b4ea9eb697a267babd96ae33c814e86c80a9c64
+short: 9b4ea9eb
+author: F0Rextasy <99847357+F0Rextasy@users.noreply.github.com>
+date: 2026-10-23 14:34:31 +0700
+subject: feat(combos): search box for the combo list
+body:
+- Case-insensitive search by combo name and member model ids
+- Show filtered count and inline clear action
+- Empty state when no combos match
+- Select-all only checks visible filtered combos
+
+---files---

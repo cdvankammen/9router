@@ -1,0 +1,35 @@
+commit 455dbe47
+author: cdvankammen
+date: 2026-10-22 13:46:38 -0600
+subject: fix(messages): audit-found bugs — BoardView reconciliation, fetch race, curl export, TimelineView
+
+Fixes from the code-audit subagent (verified in main session):
+
+1. BoardView (B1/B2/B3): replaced setState-during-render seeding with a
+   moves-map + derived-columns pattern. User drags are the only state;
+   everything else derives from the current filtered `grouped` data — new
+   fingerprints appear, stale ones disappear, no render-time setState, and
+   `move` uses a functional update (no stale closure). Also added
+   onDragOver/onDrop to the column container so drops onto empty columns
+   work (U3).
+
+2. conversation.tokens null-safety (D1): ConversationView + TraceTreeView
+   now use `tokens?.prompt ?? 0` — no crash if tokens missing.
+
+3. Fetch race (R1): page load() now aborts the previous in-flight request
+   via AbortController, so a slow response for an old filter can't
+   overwrite newer results; aborts are swallowed, loading only clears when
+   the latest request settles.
+
+4. curl export (A3): buildCurl (page + export route) now emits a usable
+   placeholder endpoint instead of empty URL, and detects `_truncated`
+   payloads with a note + preview instead of dumping the marker.
+
+5. TimelineView (U1/U2): body segment renders only when real body latency
+   exists (total > ttft); ttft fallback no longer mislabels ttft as total.
+
+VERIFICATION: build passes, deployed to 20131, Board view browser-verified
+(5 fingerprint cards in New, drop placeholders in empty columns).
+
+Part of: Messages Page + Error Inbox plan (P1 hardening)
+

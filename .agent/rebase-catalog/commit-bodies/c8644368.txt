@@ -1,0 +1,15 @@
+===COMMIT===
+hash: c86443689135c624fe4afd1d990b503a27eed10c
+short: c8644368
+author: Spoon94 <szj94@qq.com>
+date: 2026-10-13 17:54:58 +0700
+subject: fix(opencode-go): route claude-haiku-5-5 to /messages with adaptive thinking (#4727)
+body:
+- Route claude-haiku-5-5 on OpenCode Go to /messages endpoint with targetFormat: "claude"
+- Emit claude-adaptive thinking format (adaptive type + output_config.effort)
+- Set contextWindow to 1M and maxOutput to 128k
+- Drop empty thinking blocks from Claude requests
+- Strip context_management field for non-Anthropic providers
+- Resolve combo seat aliases to provider id in dashboard and models API
+
+---files---

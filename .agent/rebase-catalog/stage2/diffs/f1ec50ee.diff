@@ -1,0 +1,23 @@
+commit f1ec50ee
+author: cdvankammen
+date: 2026-10-22 15:41:21 -0600
+subject: fix(security): replace shell-based brew detection with filesystem checks (GAP-P2-15)
+
+- Create shared brewPath.js module with findBrewBin()/hasBrew() using
+  fs.existsSync against hardcoded absolute paths (/opt/homebrew/bin/brew,
+  /usr/local/bin/brew) — no shell invocation, no PATH dependency
+- Patch tailscale-install/route.js: remove execSync("which brew") +
+  EXTENDED_PATH, import hasBrew from brewPath.js
+- Patch tailscale-check/route.js: remove execAsync("which brew") +
+  local hasBrew(), import from brewPath.js
+- Patch tailscale.js: remove local hasBrew() + EXTENDED_PATH for brew
+  detection, use findBrewBin() for spawn("brew") call with absolute path;
+  retain EXTENDED_PATH for non-brew daemon probes (separate concern)
+- Add 8 unit tests covering: correct path selection, fallback order,
+  null when missing, no shell calls, PATH injection immunity, error
+  handling, candidate validation, anti-false-positive assertion
+
+Security impact: eliminates arbitrary command execution via .env PATH
+injection at all 3 brew detection sites in the tailscale install flow.
+Performance impact: positive — fs.existsSync is faster than execSync.
+

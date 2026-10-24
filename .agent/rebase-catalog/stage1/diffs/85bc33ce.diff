@@ -1,0 +1,137 @@
+commit 85bc33ce
+author: kelongyan
+date: 2026-10-07 19:05:43 +0700
+subject: feat(providers): add MiniMax Code (mcode) credits provider
+
+
+
+diff --git a/open-sse/executors/default.js b/open-sse/executors/default.js
+index dbd42cfc..6a05db8c 100644
+--- a/open-sse/executors/default.js
++++ b/open-sse/executors/default.js
+@@ -1,4 +1,5 @@
+ import { BaseExecutor } from "./base.js";
++import { randomUUID } from "node:crypto";
+ import { PROVIDERS, PROVIDER_OAUTH } from "../config/providers.js";
+ import { ANTHROPIC_API_VERSION, OPENAI_COMPAT_BASE, ANTHROPIC_COMPAT_BASE, selectAnthropicBeta, mergeAnthropicBeta } from "../providers/shared.js";
+ import { resolveOpenAICompatibleApiType } from "../services/provider.js";
+@@ -41,6 +42,14 @@ function applyAuth(headers, desc, credentials) {
+ const HEADER_HOOKS = {
+   // Stable device_id from OAuth connection (CLIProxyAPI KimiTokenStorage.DeviceID)
+   kimiHeaders: (h, c) => Object.assign(h, buildKimiHeaders(c?.providerSpecificData?.deviceId)),
++  // MiniMax Code (mcode): the placeholder x-api-key rides every request next
++  // to the Bearer token, plus per-request session/timezone headers. Static
++  // teammates (User-Agent, X-Mavis-Agent-Id) live in the registry transport.
++  minimaxHeaders: (h) => {
++    h["x-api-key"] = "sk-xxx";
++    h["X-Mavis-Timezone-Offset"] = String(new Date().getTimezoneOffset() * -60);
++    if (!h["X-Mavis-Session-Id"]) h["X-Mavis-Session-Id"] = randomUUID();
++  },
+   // Muse: x-api-version only on subscription (minted key) requests — plain
+   // Model API keys already work without it
+   museHeaders: (h, c) => { if (c?.accessToken && !c?.apiKey) h["x-api-version"] = "1.0.0"; },
+diff --git a/open-sse/providers/capabilities.js b/open-sse/providers/capabilities.js
+index 833635dc..081a1d86 100644
+--- a/open-sse/providers/capabilities.js
++++ b/open-sse/providers/capabilities.js
+@@ -289,6 +289,16 @@ export const PROVIDER_CAPABILITIES = {
+   "ollama": {
+     "deepseek-v4.1-flash:cloud": { vision: true, reasoning: true, thinkingFormat: "deepseek", contextWindow: 1000000, maxOutput: 384000 },
+   },
++  // MiniMax Code (mcode) credits lane — Anthropic messages on mavis; thinking
++  // is adaptive effort via output_config (claude-adaptive). Limits from
++  // magpie's minimax plugin static catalog (live probes pending). M2.7 pair
++  // always thinks and takes no effort knob in MiniMax Code itself.
++  "minimax-code": {
++    "MiniMax-M3.1-Flash-Preview": { vision: true, reasoning: true, thinkingFormat: "claude-adaptive", thinkingCanDisable: false, contextWindow: 512000, maxOutput: 128000 },
++    "MiniMax-M3":                 { vision: true, reasoning: true, thinkingFormat: "claude-adaptive", contextWindow: 512000, maxOutput: 128000 },
++    "MiniMax-M2.7":               { reasoning: true, thinkingFormat: "claude-adaptive", thinkingCanDisable: false, contextWindow: 200000, maxOutput: 128000 },
++    "MiniMax-M2.7-highspeed":     { reasoning: true, thinkingFormat: "claude-adaptive", thinkingCanDisable: false, contextWindow: 200000, maxOutput: 128000 },
++  },
+ };
+ 
+ // Qoder CN serves the identical model catalog from the CN gateway, so it shares
+@@ -297,6 +307,8 @@ PROVIDER_CAPABILITIES["qoder-cn"] = PROVIDER_CAPABILITIES["qoder"];
+ PROVIDER_CAPABILITIES.cx = PROVIDER_CAPABILITIES.codex;
+ PROVIDER_CAPABILITIES.dv = PROVIDER_CAPABILITIES["devin-cli"];
+ PROVIDER_CAPABILITIES.devin = PROVIDER_CAPABILITIES["devin-cli"];
++// The global mcode site serves the same catalog — share the capability table.
++PROVIDER_CAPABILITIES["minimax-code-global"] = PROVIDER_CAPABILITIES["minimax-code"];
+ 
+ /**
+  * Pattern fallback — glob (* = wildcard), matched case-insensitively and
+diff --git a/open-sse/providers/registry/index.js b/open-sse/providers/registry/index.js
+index 6c317ee8..f9904282 100644
+--- a/open-sse/providers/registry/index.js
++++ b/open-sse/providers/registry/index.js
+@@ -133,6 +133,8 @@ import p130 from "./bai.js";
+ import p131 from "./tinyfish.js";
+ import p132 from "./v1m.js";
+ import p133 from "./muse.js";
++import p134 from "./minimax-code.js";
++import p135 from "./minimax-code-global.js";
+ export default [
+   p0,
+   p1,
+@@ -266,4 +268,6 @@ export default [
+   p131,
+   p132,
+   p133,
++  p134,
++  p135,
+ ];
+diff --git a/open-sse/services/usage.js b/open-sse/services/usage.js
+index 71b53cc9..8d812ac9 100644
+--- a/open-sse/services/usage.js
++++ b/open-sse/services/usage.js
+@@ -10,6 +10,7 @@ import { getCodexUsage, consumeCodexRateLimitResetCredit, getCodexRateLimitReset
+ export { consumeCodexRateLimitResetCredit, getCodexRateLimitResetCredits, consumeClaudeResetGrant };
+ import { getKiroUsage } from "./usage/kiro.js";
+ import { getMiniMaxUsage } from "./usage/minimax.js";
++import { getMiniMaxCodeUsage } from "./minimaxCodeUsage.js";
+ import { getCodeBuddyCnUsage, getCodeBuddyIntlUsage } from "./usage/codebuddy-cn.js";
+ import { getGrokCliUsage } from "./usage/grok-cli.js";
+ import { getKimiUsage } from "./usage/kimi.js";
+@@ -51,6 +52,9 @@ const USAGE_HANDLERS = {
+   "glm-cn": (c) => getGlmUsage(c.apiKey || c.accessToken, c.provider, c.proxyOptions),
+   minimax: (c) => getMiniMaxUsage(c.apiKey, c.provider, c.proxyOptions),
+   "minimax-cn": (c) => getMiniMaxUsage(c.apiKey, c.provider, c.proxyOptions),
++  // MiniMax Code (mcode) credits lane — signed account API + plan windows
++  "minimax-code": (c) => getMiniMaxCodeUsage(c),
++  "minimax-code-global": (c) => getMiniMaxCodeUsage(c),
+   "vercel-ai-gateway": (c) => getVercelAiGatewayUsage(c.apiKey, c.proxyOptions),
+   "codebuddy-cn": (c) => getCodeBuddyCnUsage(c.accessToken, c.apiKey, c.providerSpecificData, c.proxyOptions),
+   "codebuddy-intl": (c) => getCodeBuddyIntlUsage(c.accessToken, c.apiKey, c.providerSpecificData, c.proxyOptions),
+diff --git a/src/app/(dashboard)/dashboard/usage/components/ProviderLimits/utils.js b/src/app/(dashboard)/dashboard/usage/components/ProviderLimits/utils.js
+index 9cb7ad71..05683284 100644
+--- a/src/app/(dashboard)/dashboard/usage/components/ProviderLimits/utils.js
++++ b/src/app/(dashboard)/dashboard/usage/components/ProviderLimits/utils.js
+@@ -733,6 +733,28 @@ export function parseQuotaData(provider, data) {
+         }
+         break;
+ 
++      case "minimax-code":
++      case "minimax-code-global":
++        // Service already returns dashboard-shaped rows: a credits balance
++        // (isCreditBalance → 💰 with the amount as total) plus M Plan rate
++        // windows as 0-100 percent rows. Pass through, preserving extras.
++        if (data.quotas) {
++          Object.entries(data.quotas).forEach(([name, quota]) => {
++            normalizedQuotas.push({
++              name,
++              used: quota.used || 0,
++              total: quota.total || 0,
++              remaining: quota.remaining,
++              remainingPercentage: quota.remainingPercentage,
++              resetAt: quota.resetAt || null,
++              message: quota.message,
++              isCreditBalance: quota.isCreditBalance,
++              currency: quota.currency,
++            });
++          });
++        }
++        break;
++
+       default:
+         // Generic fallback for unknown providers
+         if (data.quotas) {

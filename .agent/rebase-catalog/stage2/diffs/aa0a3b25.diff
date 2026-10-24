@@ -1,0 +1,21 @@
+commit aa0a3b25
+author: cdvankammen
+date: 2026-10-22 15:36:33 -0600
+subject: perf(providers): parallelize batch validation with bounded concurrency (GAP-P1-11)
+
+Replace sequential for-loop fetch patterns with Promise.allSettled-style
+bounded concurrency (limit 5) in two hot paths:
+
+1. test-batch/route.js: for-loop over connectionsToTest replaced by
+   runWithConcurrency + testConnectionSafe. All provider connections now
+   test in parallel, reporting all failures instead of stopping at first.
+
+2. AddApiKeyModal bulk submit: sequential validate+save per key replaced
+   by concurrent worker pool. 10 keys now take ~2s instead of ~20s.
+
+Added runWithConcurrency (bounded semaphore), testConnectionSafe (never
+throws), makeErrorResult (consistent error shape). 11 new unit tests
+verify parallelism, ordering, bounded concurrency, and error semantics.
+
+All 117 unit tests pass. Next.js build succeeds.
+

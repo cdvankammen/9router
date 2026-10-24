@@ -1,0 +1,9 @@
+commit ebd4bb4b
+author: cdvankammen
+date: 2026-10-22 14:04:00 -0600
+subject: docs(runbook): proxy ships in bundle — launchd points at bundle path
+
+Fixes orphaned proxy: rsync --delete of cli/app/ removed the manually-scp'd
+proxy on mini2 (mini2 proxy down after redeploy). Now cli/app/failover-proxy.cjs
+is part of the bundle; both launchd agents point at bundle paths.
+

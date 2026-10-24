@@ -1,0 +1,9 @@
+===COMMIT===
+hash: 90f89471c0415daf294863f5d8f8f6fb2dc8880a
+short: 90f89471
+author: IlyaKhalafi <ilyakhalafi@yahoo.com>
+date: 2026-10-13 17:31:00 +0700
+subject: fix(nous): add API-key attribution tags (#4770)
+body:
+
+---files---

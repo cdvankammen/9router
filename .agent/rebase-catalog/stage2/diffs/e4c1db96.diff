@@ -1,0 +1,330 @@
+commit e4c1db96
+author: chisewaguri
+date: 2026-10-22 17:15:32 -0600
+subject: feat(providers): add multi-protocol custom providers
+
+Route Chat Completions, Anthropic Messages, and optional Responses requests to matching custom provider endpoints. Fall back to Chat Completions translation when no native endpoint is configured.
+
+
+diff --git a/open-sse/handlers/chatCore.js b/open-sse/handlers/chatCore.js
+index 60d3d815..32953d24 100644
+--- a/open-sse/handlers/chatCore.js
++++ b/open-sse/handlers/chatCore.js
+@@ -87,7 +87,7 @@ export async function handleChatCore({ body, modelInfo, credentials, log, onCred
+   // /chat/completions), so without this guard a claude-format request would wrongly
+   // route kimi to /messages.
+   const modelSupportedFormats = getModelSupportedFormats(alias, model);
+-  const runtimeTransport = resolveTransport(provider, sourceFormat);
++  const runtimeTransport = resolveTransport(provider, sourceFormat, credentials);
+   // Per-model guard: when a model declares supportedFormats, only use the
+   // sourceFormat-matched transport if that format is declared (opencode-go models
+   // differ — kimi/glm only do /chat/completions). Undeclared models keep the
+diff --git a/src/app/(dashboard)/dashboard/providers/[id]/page.js b/src/app/(dashboard)/dashboard/providers/[id]/page.js
+index c861e900..4004402e 100644
+--- a/src/app/(dashboard)/dashboard/providers/[id]/page.js
++++ b/src/app/(dashboard)/dashboard/providers/[id]/page.js
+@@ -143,9 +143,25 @@ export default function ProviderDetailPage() {
+   const providerInfo = providerNode
+     ? {
+         id: providerNode.id,
+-        name: providerNode.name || (providerNode.type === "anthropic-compatible" ? "Anthropic Compatible" : "OpenAI Compatible"),
+-        color: providerNode.type === "anthropic-compatible" ? "#D97757" : "#10A37F",
+-        textIcon: providerNode.type === "anthropic-compatible" ? "AC" : "OC",
++        name:
++          providerNode.name ||
++          (providerNode.type === "multi-compatible"
++            ? "Multi-protocol Compatible"
++            : providerNode.type === "anthropic-compatible"
++              ? "Anthropic Compatible"
++              : "OpenAI Compatible"),
++        color:
++          providerNode.type === "multi-compatible"
++            ? "#7C3AED"
++            : providerNode.type === "anthropic-compatible"
++              ? "#D97757"
++              : "#10A37F",
++        textIcon:
++          providerNode.type === "multi-compatible"
++            ? "MP"
++            : providerNode.type === "anthropic-compatible"
++              ? "AC"
++              : "OC",
+         apiType: providerNode.apiType,
+         baseUrl: providerNode.baseUrl,
+         type: providerNode.type,
+@@ -163,6 +179,7 @@ export default function ProviderDetailPage() {
+   
+   const isOpenAICompatible = isOpenAICompatibleProvider(providerId);
+   const isAnthropicCompatible = isAnthropicCompatibleProvider(providerId);
++  const isMultiCompatible = providerNode?.type === "multi-compatible";
+   const isCompatible = isOpenAICompatible || isAnthropicCompatible;
+   const hasDualAuthModes = !isCompatible && isOAuth && supportsApiKeyAuth;
+   const oauthConnectionLabel =
+@@ -1355,6 +1372,7 @@ export default function ProviderDetailPage() {
+ 
+   // Determine icon path: OpenAI Compatible providers use specialized icons
+   const getHeaderIconPath = () => {
++    if (isMultiCompatible) return null;
+     if (isOpenAICompatible && providerInfo.apiType) {
+       return providerInfo.apiType === "responses" ? "/providers/oai-r.png" : "/providers/oai-cc.png";
+     }
+@@ -1451,11 +1469,33 @@ export default function ProviderDetailPage() {
+         <Card>
+           <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+             <div className="min-w-0">
+-              <h2 className="text-lg font-semibold">{isAnthropicCompatible ? "Anthropic Compatible Details" : "OpenAI Compatible Details"}</h2>
+-              <p className="break-all text-sm text-text-muted">
+-                {isAnthropicCompatible ? "Messages API" : (providerNode.apiType === "responses" ? "Responses API" : "Chat Completions")} · {(providerNode.baseUrl || "").replace(/\/$/, "")}/
+-                {isAnthropicCompatible ? "messages" : (providerNode.apiType === "responses" ? "responses" : "chat/completions")}
+-              </p>
++              <h2 className="text-lg font-semibold">
++                {isMultiCompatible
++                  ? "Multi-protocol Compatible Details"
++                  : isAnthropicCompatible
++                    ? "Anthropic Compatible Details"
++                    : "OpenAI Compatible Details"}
++              </h2>
++              {isMultiCompatible ? (
++                <div className="flex flex-col gap-1 text-sm text-text-muted">
++                  {providerNode.transports?.map((transport) => (
++                    <p key={transport.format} className="break-all">
++                      {transport.format === "openai"
++                        ? "Chat Completions"
++                        : transport.format === "claude"
++                          ? "Anthropic Messages"
++                          : "OpenAI Responses"}
++                      {" · "}
++                      {transport.baseUrl}
++                    </p>
++                  ))}
++                </div>
++              ) : (
++                <p className="break-all text-sm text-text-muted">
++                  {isAnthropicCompatible ? "Messages API" : (providerNode.apiType === "responses" ? "Responses API" : "Chat Completions")} · {(providerNode.baseUrl || "").replace(/\/$/, "")}/
++                  {isAnthropicCompatible ? "messages" : (providerNode.apiType === "responses" ? "responses" : "chat/completions")}
++                </p>
++              )}
+             </div>
+             <div className="grid grid-cols-1 gap-2 sm:flex sm:items-center">
+               <Button
+@@ -1485,7 +1525,7 @@ export default function ProviderDetailPage() {
+                 onClick={async () => {
+                   setConfirmState({
+                     title: "Delete Compatible Node",
+-                    message: `Delete this ${isAnthropicCompatible ? "Anthropic" : "OpenAI"} Compatible node?`,
++                    message: `Delete this ${isMultiCompatible ? "Multi-protocol" : isAnthropicCompatible ? "Anthropic" : "OpenAI"} Compatible node?`,
+                     onConfirm: async () => {
+                       setConfirmState(null);
+                       try {
+diff --git a/src/app/(dashboard)/dashboard/providers/page.js b/src/app/(dashboard)/dashboard/providers/page.js
+index a0eb586c..e391385b 100644
+--- a/src/app/(dashboard)/dashboard/providers/page.js
++++ b/src/app/(dashboard)/dashboard/providers/page.js
+@@ -104,6 +104,8 @@ export default function ProvidersPage() {
+   const [showAddCompatibleModal, setShowAddCompatibleModal] = useState(false);
+   const [showAddAnthropicCompatibleModal, setShowAddAnthropicCompatibleModal] =
+     useState(false);
++  const [showAddMultiCompatibleModal, setShowAddMultiCompatibleModal] =
++    useState(false);
+   const [testingMode, setTestingMode] = useState(null);
+   const [testResults, setTestResults] = useState(null);
+   const [statusFilter, setStatusFilter] = useState("all");
+@@ -288,6 +290,17 @@ export default function ProvidersPage() {
+       (p) => matchSearch(p.name) && matchStatus(getProviderStats(p.id, "apikey")),
+     );
+ 
++  const multiCompatibleProviders = providerNodes
++    .filter((node) => node.type === "multi-compatible")
++    .map((node) => ({
++      id: node.id,
++      name: node.name || "Multi-protocol Compatible",
++      color: "#7C3AED",
++      textIcon: "MP",
++      apiType: "multi",
++    }))
++    .filter((p) => matchSearch(p.name));
++
+   // Dual-auth providers (oauth + apikey) store API keys as authType "apikey"
+   // (and sometimes "api_key"). Card stats must count both so totals match detail.
+   // kiro has no authModes in registry but accepts both (headless uses "api_key").
+@@ -382,7 +395,8 @@ export default function ProvidersPage() {
+     freeTierEntries.length > 0 ||
+     apikeyEntries.length > 0 ||
+     compatibleProviders.length > 0 ||
+-    anthropicCompatibleProviders.length > 0;
++    anthropicCompatibleProviders.length > 0 ||
++    multiCompatibleProviders.length > 0;
+ 
+   return (
+     <div className="flex min-w-0 flex-col gap-6 px-1 sm:px-0">
+@@ -412,16 +426,25 @@ export default function ProvidersPage() {
+         </div>
+       )}
+ 
+-      {/* Custom Providers (OpenAI/Anthropic Compatible) — dynamic */}
++      {/* Custom Providers — dynamic */}
+       <div className="flex flex-col gap-4">
+         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+           <h2 className="text-lg sm:text-xl font-semibold flex items-center gap-2 leading-tight">
+-            Custom Providers (OpenAI/Anthropic Compatible){" "}
++            Custom Providers
+           </h2>
+           <div className="grid grid-cols-1 gap-2 sm:flex sm:w-auto">
+             <Button
+               size="sm"
+               icon="add"
++              onClick={() => setShowAddMultiCompatibleModal(true)}
++              className="w-full sm:w-auto"
++            >
++              Add Multi-protocol
++            </Button>
++            <Button
++              size="sm"
++              variant="secondary"
++              icon="add"
+               onClick={() => setShowAddAnthropicCompatibleModal(true)}
+               className="w-full sm:w-auto"
+             >
+@@ -439,27 +462,30 @@ export default function ProvidersPage() {
+           </div>
+         </div>
+         {compatibleProviders.length === 0 &&
+-        anthropicCompatibleProviders.length === 0 ? (
++        anthropicCompatibleProviders.length === 0 &&
++        multiCompatibleProviders.length === 0 ? (
+           <div className="flex items-center justify-center gap-2 py-2 border border-dashed border-border rounded-xl text-text-muted text-sm">
+             <span className="material-symbols-outlined text-[18px]">extension</span>
+-            <span>No custom providers — use buttons above to add OpenAI/Anthropic compatible endpoints</span>
++            <span>No custom providers. Use the buttons above to add one.</span>
+           </div>
+         ) : (
+           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4">
+-            {[...compatibleProviders, ...anthropicCompatibleProviders].map(
+-              (info) => (
+-                <ApiKeyProviderCard
+-                  key={info.id}
+-                  providerId={info.id}
+-                  provider={info}
+-                  stats={getProviderStats(info.id, "apikey")}
+-                  authType="compatible"
+-                  onToggle={(active) =>
+-                    handleToggleProvider(info.id, "apikey", active)
+-                  }
+-                />
+-              ),
+-            )}
++            {[
++              ...multiCompatibleProviders,
++              ...compatibleProviders,
++              ...anthropicCompatibleProviders,
++            ].map((info) => (
++              <ApiKeyProviderCard
++                key={info.id}
++                providerId={info.id}
++                provider={info}
++                stats={getProviderStats(info.id, "apikey")}
++                authType="compatible"
++                onToggle={(active) =>
++                  handleToggleProvider(info.id, "apikey", active)
++                }
++              />
++            ))}
+           </div>
+         )}
+       </div>
+@@ -661,6 +687,15 @@ export default function ProvidersPage() {
+           setShowAddAnthropicCompatibleModal(false);
+         }}
+       />
++      <AddCompatibleModal
++        variant="multi"
++        isOpen={showAddMultiCompatibleModal}
++        onClose={() => setShowAddMultiCompatibleModal(false)}
++        onCreated={(node) => {
++          setProviderNodes((prev) => [...prev, node]);
++          setShowAddMultiCompatibleModal(false);
++        }}
++      />
+ 
+       {/* Test Results Modal */}
+       {testResults && (
+@@ -830,6 +865,7 @@ function ApiKeyProviderCard({
+   };
+ 
+   const getIconPath = () => {
++    if (provider.apiType === "multi") return null;
+     if (isCompatible && provider.apiType)
+       return provider.apiType === "responses"
+         ? "/providers/oai-r.png"
+@@ -880,9 +916,11 @@ function ApiKeyProviderCard({
+                     {getStatusDisplay(connected, error, errorCode)}
+                     {isCompatible && (
+                       <Badge variant="default" size="sm">
+-                        {provider.apiType === "responses"
+-                          ? "Responses"
+-                          : "Chat"}
++                        {provider.apiType === "multi"
++                          ? "Chat + Messages"
++                          : provider.apiType === "responses"
++                            ? "Responses"
++                            : "Chat"}
+                       </Badge>
+                     )}
+                     {isAnthropicCompatible && (
+diff --git a/src/app/api/providers/route.js b/src/app/api/providers/route.js
+index 49f611aa..a3a221a2 100644
+--- a/src/app/api/providers/route.js
++++ b/src/app/api/providers/route.js
+@@ -138,6 +138,7 @@ export async function POST(request) {
+         apiType: node.apiType,
+         baseUrl: node.baseUrl,
+         nodeName: node.name,
++        ...(Array.isArray(node.transports) ? { transports: node.transports } : {}),
+       };
+     } else if (isAnthropicCompatibleProvider(provider)) {
+       const node = await getProviderNodeById(provider);
+diff --git a/src/lib/db/repos/nodesRepo.js b/src/lib/db/repos/nodesRepo.js
+index cd63b5b8..18a5c2f1 100644
+--- a/src/lib/db/repos/nodesRepo.js
++++ b/src/lib/db/repos/nodesRepo.js
+@@ -62,6 +62,7 @@ export async function createProviderNode(data) {
+     prefix: data.prefix,
+     apiType: data.apiType,
+     baseUrl: data.baseUrl,
++    transports: data.transports,
+     createdAt: now,
+     updatedAt: now,
+   };
+diff --git a/tests/unit/opencode-go-models.test.js b/tests/unit/opencode-go-models.test.js
+index 08dd8bd2..36b64a9a 100644
+--- a/tests/unit/opencode-go-models.test.js
++++ b/tests/unit/opencode-go-models.test.js
+@@ -113,6 +113,28 @@ describe("OpenCode Go multi-endpoint transports", () => {
+   });
+ });
+ 
++describe("Custom multi-protocol transports", () => {
++  const credentials = {
++    providerSpecificData: {
++      transports: [
++        { format: "openai", baseUrl: "https://multi.test/v1/chat/completions" },
++        { format: "claude", baseUrl: "https://multi.test/v1/messages" },
++      ],
++    },
++  };
++
++  it("resolves a custom transport matching the incoming format", () => {
++    expect(resolveTransport("openai-compatible-multi-test", "claude", credentials)).toEqual({
++      format: "claude",
++      baseUrl: "https://multi.test/v1/messages",
++    });
++  });
++
++  it("returns null when the custom provider has no matching endpoint", () => {
++    expect(resolveTransport("openai-compatible-multi-test", "openai-responses", credentials)).toBeNull();
++  });
++});
++
+ describe("OpenCode Go per-model transport guard (chatCore logic)", () => {
+   it("routes MiniMax/Qwen + claude-format client to /messages", () => {
+     for (const m of CLAUDE_CAPABLE) {

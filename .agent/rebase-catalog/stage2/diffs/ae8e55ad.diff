@@ -1,0 +1,21 @@
+commit ae8e55ad
+author: cdvankammen
+date: 2026-10-22 15:48:20 -0600
+subject: fix(cowork-settings): return structured error on config read failure (GAP-P3-33)
+
+writeSkipApprovals previously returned { error: e.code } for non-ENOENT
+read failures, leaking raw error codes (EACCES, EBUSY, etc.) to callers
+with no context. Callers could not distinguish permission denied from I/O
+errors.
+
+Now returns { error: 'config_read_failed', detail: e.message, code: e.code }
+so the UI and downstream consumers can render meaningful diagnostics.
+
+Also exports writeSkipApprovals and getWriteRoot for testability.
+
+Regression test covers EACCES, EBUSY, ENOENT (normal first-run), and an
+anti-false-positive assertion that would break if the code regressed to
+returning raw e.code as the error field.
+
+Ref: GAP-P3-33
+

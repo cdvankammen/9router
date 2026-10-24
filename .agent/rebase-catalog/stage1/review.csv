@@ -1,0 +1,107 @@
+sha,date,subject,overlap_files,classification,our_branch_interaction,decision,scrutiny,notes
+e10da160,2026-10-07,fix(usage): track exact Codex image token usage,codex-image-models.test.js;image-generation.test.js,ADDITIVE,branch modified same tests but different assertions,TAKE-UPSTREAM,none,upstream adds onUsage tests we don't have
+85bc33ce,2026-10-07,feat(providers): add MiniMax Code (mcode) credits provider,default.js;capabilities.js;registry/index.js;usage.js;ProviderLimits/utils.js,ADDITIVE,branch touched same files but no mcode code,TAKE-UPSTREAM,none,new provider we don't have
+63de82b8,2026-10-07,feat(codebuddy-cn): sync catalog,capabilities.js,ADDITIVE,branch has 5 caps commits but different models,TAKE-UPSTREAM,none,
+b00ba1aa,2026-10-07,fix(muse): route Responses-only models,chatCore.js,DIVERGENT,branch has many chatCore commits but different areas,TAKE-UPSTREAM,none,muse routing vs our observability/conversationId
+46627249,2026-10-07,fix(ollama): cached_tokens in usage,requestDetail.js,DIVERGENT,branch has observability commits on same file,TAKE-UPSTREAM,none,ollama mapping vs our conversationId/cost
+a07ed95b,2026-10-07,feat(antigravity): Claude Sonnet/Opus 5.5,capabilities.js;pricing.js;antigravity.js;cliTools.js,ADDITIVE,branch only has 429-retry fix on antigravity,TAKE-UPSTREAM,none,
+4fa46034,2026-10-07,feat(proxy-pools): Netlify relay,proxy-pools/page.js,DIVERGENT,branch has L2 proxy status on same page,TAKE-UPSTREAM,none,different sections of same page
+d8c585fb,2026-10-07,feat(keys): per-API-key access control,v1/models/route.js;db/index.js;db/schema.js;chat.js;NEW keyAccess.js,ADDITIVE,branch has NO keyAccess.js; chat.js has smartRouter instead,TAKE-UPSTREAM,none,⚠️ chat.js interaction: keyAccess before smartRouter in request flow
+8a90d3c9,2026-10-07,fix(cli): connect models from server + show/save,package.json,DIVERGENT,branch touched package.json; independent versioning,TAKE-UPSTREAM,none,preserve our version fields
+0f7f6e72,2026-10-07,fix(capabilities): GLM-5.2/5.3 1M context (#4544),capabilities.js,MISSING-ON-BRANCH,VERIFIED: our pattern lines 414-415 still contextWindow:200000; no branch commit introduced it,TAKE-UPSTREAM,none,apply in Stage 2
+c61ee37d,2026-10-08,fix(capabilities): GLM-5.3 cannot disable thinking (#4656 fixes #4409),capabilities.js,MISSING-ON-BRANCH,VERIFIED: our glm-5.3-flash line 122 lacks thinkingCanDisable; -S 'thinkingCanDisable' returns no branch commits,TAKE-UPSTREAM,none,prevents z.ai 400 code 1210
+a9d0ad26,2026-10-08,feat(bedrock): AWS Bedrock + SSO (#4157),kiro.js;registry/index.js;model.js;package.json;providers/route.js;providers constants;NEW bedrock.js,ADDITIVE+REFACTOR-HAZARD,branch has NO bedrock.js; our kiro.js changes (96fc4e06 tool-schema flatten + 2b63e0dd) must replay onto POST-EXTRACTION structure (crc32/parseEventFrame moved to utils/awsEventStream.js),TAKE-UPSTREAM,⚠️ Stage-2 replay hazard,PR: kiro -102 lines; 60+ tests; bedrock-xai; apiKeyOptionalWith + credentialForm:aws
+a9c9f683,2026-10-08,feat(hermes): per-profile config (#4660),CHANGELOG.md;cliTools.js,DIVERGENT,branch has 37514ede kiro CLI mappings on same file,TAKE-UPSTREAM,none,different tool sections
+2d94d3ab,2026-10-08,feat(dashboard): 9Remote sidebar direct-open,Sidebar.js,DIVERGENT,branch has 81be35de/a68c4625/23fb0dbf on Sidebar.js,TAKE-UPSTREAM,none,
+eea08215,2026-10-08,fix(dashboard): mobile layouts,Header.js,DIVERGENT,branch has 0ca07bf6 i18n zh literals on Header.js,TAKE-UPSTREAM,none,layout vs text disjoint
+24034f69,2026-10-08,feat(antigravity): catalog refresh + Gemini 3.8 MITM defaults,antigravity.js;cliTools.js,DIVERGENT,branch has 7b9fada2 (429 attempts 3→6) on antigravity.js,TAKE-UPSTREAM,⚠️ verify errorPolicy region,re-assert 429 attempts=6 after application
+4c58e7f3,2026-10-13,fix(capabilities): OpenCode Free reasoning entries,capabilities.js,MISSING-ON-BRANCH,VERIFIED grep: only unrelated meituan/longcat-2.0:free matched; none of the 11 entries present,TAKE-UPSTREAM,none,prevents applyThinking stripping reasoning_effort (#2690)
+8f4e3800,2026-10-13,fix(combo): zero-content fallback (#4750),combo.js,MISSING-ON-BRANCH,VERIFIED grep: 0 matches for isZeroContentResponse/peek*/peeked; earlier SAME-FIX claim disproven,TAKE-UPSTREAM,none,Stage-2 merge with a38259d0 fallback-chain in if(result.ok) block
+c8644368,2026-10-13,fix(opencode-go): claude-haiku-5-5 adaptive thinking (#4727),capabilities.js;useModelCaps.js;opencode-go-models.test.js,DIVERGENT,branch modifies useModelCaps.js + opencode-go-models.test.js (c58df01b caps overrides + others),TAKE-UPSTREAM,⚠️ Stage-2 reconcile useModelCaps resolveCaps/ALIAS_TO_ID + test,maps to opencode-go-models supportedFormats regression
+ce4460ef,2026-10-08,# v0.5.99 release CHANGELOG,CHANGELOG.md;package.json,DIVERGENT,release marker enumerating already-reviewed features,TAKE-UPSTREAM,none,preserve our package.json version
+3ef4d8e3,2026-10-11,feat(usage): Cursor IDE quota (#4689),usage.js;ProviderLimits/utils.js,DIVERGENT,branch has 3 quota-handler commits (45d77a21/ff7ce121/bc2912cb) in same USAGE_HANDLERS region,TAKE-UPSTREAM,none,merge into expanded USAGE_HANDLERS block
+cfd8c618,2026-10-11,fix(cursor): strictProxy on AgentService h2 (#4696),chatCore.js,MISSING-ON-BRANCH,VERIFIED grep strictProxy = 0 matches in our chatCore.js,TAKE-UPSTREAM,none,prevents strict-pool silent fallback
+f5f88039,2026-10-13,fix(capabilities): Claude PDF input (#4761),capabilities.js,MOSTLY-MISSING-ON-BRANCH,our caps have only 2 pdf:true entries; claude-fable-5-1/opus-5.5 lack it,TAKE-UPSTREAM,none,apply pdf:true across ~15 Claude entries
+90f89471,2026-10-13,fix(nous): API-key attribution tags (#4770),CHANGELOG.md;default.js,ADDITIVE,no Nous-specific code in our default.js,TAKE-UPSTREAM,none,
+b2aaf83b,2026-10-13,fix(qoder): add-on quota (#4758),ProviderLimits/utils.js,DIVERGENT,branch has 45d77a21/ff7ce121 on same file but different case blocks,TAKE-UPSTREAM,none,no conflict expected
+d6431f8b,2026-10-13,feat(cli-tools): Hermes audio STT (#4763),CHANGELOG.md,ADDITIVE,CHANGELOG-only in overlap,TAKE-UPSTREAM,none,feature files outside overlap set
+1d4335d4,2026-10-13,fix(translator): forced SSE Claude JSON (#4789),sseToJsonHandler.js,DIVERGENT,branch has 8ad9e3da (tasktype/empty-choices) on same file,TAKE-UPSTREAM,⚠️ verify no conflict with 8ad9e3da,Claude branch in handleForcedSSEToJson
+29fc880e,2026-10-14,feat(gemini): Gemini 4 Argon,capabilities.js;registry/antigravity.js,MISSING-ON-BRANCH,VERIFIED grep argon|gemini-4 = 0 matches in our caps,TAKE-UPSTREAM,none,adds *gemini-4* pattern + getModelMeta()
+165f9b90,2026-10-15,feat(providers): Nous Research OAuth,capabilities.js;registry/index.js,ADDITIVE,VERIFIED grep nous registry = 0 matches,TAKE-UPSTREAM,none,new provider
+5bdcd5e7,2026-10-15,fix(opencode): free tier /inference/v1 fingerprint (#4842),opencode-free-tool-choice.test.js,DIVERGENT,branch already has OPENCODE_FINGERPRINT_TOOLS mock (lines 14/16),TAKE-UPSTREAM,⚠️ verify mock alignment,upstream adds real assertions on our mock scaffolding
+be51142b,2026-10-15,feat(quota): anchored auto-ping (#4848),providers/[id]/page.js,DIVERGENT,branch touches provider detail page,TAKE-UPSTREAM,none,
+7878f53b,2026-10-15,fix(codex): drop retired gpt-5.5,registry/codex.js;cliTools.js;image-generation.test.js,DIVERGENT,branch has codex registry changes,TAKE-UPSTREAM,⚠️ verify refreshLeadMs survives,
+db81a8c9,2026-10-15,fix(headroom): false compression warnings (#4855),CHANGELOG.md;chatCore.js,DIVERGENT,branch has many chatCore commits,TAKE-UPSTREAM,none,
+28d40159,2026-10-15,feat(quota): unify auto-ping mode,providers/[id]/page.js,DIVERGENT,follow-on to be51142b,TAKE-UPSTREAM,none,
+eb373017,2026-10-15,fix(gemini): Gemini 4 functionResponse-last (#4802),capabilities.js,MISSING-ON-BRANCH,no gemini-4 entries on branch,TAKE-UPSTREAM,none,
+a8f63f4d,2026-10-15,fix(models): no-auth free providers + prune custom,v1/models/route.js;nodesRepo.js,DIVERGENT,branch modified v1/models/route.js,TAKE-UPSTREAM,⚠️ verify keyAccess filtering,
+813a0121,2026-10-15,fix(usage): token fallback + key masking,usageRepo.js,DIVERGENT,branch has usageRepo conversationId changes,TAKE-UPSTREAM,none,
+2aa9307f,2026-10-15,feat(keys): per-key token quotas,db/index.js;usageRepo.js;schema.js;chat.js,NET-ZERO,reverted by 6ed88685,SKIP-BOTH,none,cancelled by revert
+6ed88685,2026-10-15,Revert per-key token quotas,21 files,NET-ZERO,reverts 2aa9307f completely,SKIP-BOTH,none,97+/972-
+3c48d275,2026-10-15,Features: (v0.5.100-103 CHANGELOG),CHANGELOG.md;package.json,DIVERGENT,release marker,TAKE-UPSTREAM,none,preserve our version
+87a74e1b,2026-10-15,# v0.5.104,CHANGELOG.md,DIVERGENT,release marker,TAKE-UPSTREAM,none,
+38a0c449,2026-10-22,feat(web-cookie): web provider executors + browser pool,89 files,ADDITIVE,branch has NO web-cookie executors (verified ls+grep),TAKE-UPSTREAM,none,large new provider family; .gitignore+package.json merge care
+3b137aa6,2026-10-22,fix(codebuddy): back off blocked international connections,combo.js,MISSING-ON-BRANCH,no codebuddy backoff in our combo.js,TAKE-UPSTREAM,⚠️ combo.js merge (3rd edit),
+4a76b8de,2026-10-23,fix(commandcode): quota display + connection test,ProviderLimits/utils.js,DIVERGENT,branch has quota-handler commits,TAKE-UPSTREAM,none,
+421f2262,2026-10-23,feat(stt): Codex OAuth transcription,registry/codex.js,DIVERGENT,branch has codex.js changes,TAKE-UPSTREAM,⚠️ verify refreshLeadMs,
+ca7b5401,2026-10-23,fix(combo): empty-content streaming fall-through,combo.js,MISSING-ON-BRANCH,VERIFIED: adds emptyFailover.js + peekComboResponse; our combo.js has zero peek logic,TAKE-UPSTREAM,⚠️ combo.js merge (2nd edit) + emptyFailover.js NEW file,streaming complement to 8f4e3800
+8a842043,2026-10-23,feat(rtk): custom system prompt,chatCore.js;settingsRepo.js;chat.js,MISSING-ON-BRANCH,VERIFIED grep customPrompt chatCore.js = 0,TAKE-UPSTREAM,⚠️ handleChatCore signature: must include BOTH customPrompt AND conversationId,
+08ef047f,2026-10-23,fix(security): undici 7.30.1 + headroom loopback,package.json,MISSING-ON-BRANCH,security fix,TAKE-UPSTREAM,none,priority
+5883110b,2026-10-23,fix(deps): Monaco 0.57.0,package.json,MISSING-ON-BRANCH,TAKE-UPSTREAM,none,
+b08f12d5,2026-10-23,fix(codex-image): skip ChatGPT Free accounts,image-generation.test.js,DIVERGENT,branch touched image-generation.test.js,TAKE-UPSTREAM,none,
+b6a9ca43,2026-10-23,test: triage master's failing suite (GLM-5.2 effort + gpt-6.1-sol + SSRF mocks),capabilities.js + 32 test files,⚠️ CRITICAL SAME-FIX OVERLAP,VERIFIED: makes EXACT same fixes as our post-rebase commits (DNS array mocks 74c5a43b/7b9fada2 + glm-5.2 thinkingEffortSupported ad06b3bc + gpt-6.1-sol ad06b3bc + it.fails flips + kiro systemPrompt→user-turn + cursor-models http2 rework + kiro-terminal-integrity + zed-native-auth + known-fails refresh + golden snapshot),TAKE-UPSTREAM,⚠️ Stage-2 DEDUP: skip our duplicate test-fix commits; likely resolves 8 remaining regressions,33 files 2442+/107-
+351b04cb,2026-10-23,feat(provider): SenseNova,capabilities.js;registry/index.js,ADDITIVE,TAKE-UPSTREAM,none,
+a3ca2f9b,2026-10-23,fix(dashboard): API key visibility guidance,public/i18n/literals/zh-CN.json,DIVERGENT,branch has 0ca07bf6 i18n zh rewrite,TAKE-UPSTREAM,⚠️ verify i18n no-conflict,
+b0655314,2026-10-23,fix(capabilities): Grok 4.7 500k context,capabilities.js,MISSING-ON-BRANCH,TAKE-UPSTREAM,none,
+2720cd2a,2026-10-23,fix(qoder): queued models + Sonus/Cantus,capabilities.js,MISSING-ON-BRANCH,TAKE-UPSTREAM,none,
+b8331283,2026-10-23,fix(opencode-free): mimo-v2.6-flash-free reasoning,CHANGELOG.md;sseToJsonHandler.js;capabilities.js,DIVERGENT,branch has 8ad9e3da on sseToJsonHandler.js,TAKE-UPSTREAM,⚠️ verify 8ad9e3da no-conflict,
+5cdcddf5,2026-10-23,fix(combo): request-scoped 4xx advance,combo.js,MISSING-ON-BRANCH,VERIFIED: adds requestScopedResult + requestScoped destructure,TAKE-UPSTREAM,⚠️ combo.js merge (4th edit),
+95c9d03e,2026-10-23,fix(stream): tool-call ids + renamed tool names (#4992 #4986),CHANGELOG.md,ADDITIVE,CHANGELOG only in overlap,TAKE-UPSTREAM,none,
+5a4e812e,2026-10-23,fix(db): strip NUL bytes,CHANGELOG.md,ADDITIVE,CHANGELOG only in overlap,TAKE-UPSTREAM,none,
+313559f4,2026-10-23,fix(opencode): deepseek-v4.1-flash reasoning efforts,CHANGELOG.md,ADDITIVE,CHANGELOG only in overlap,TAKE-UPSTREAM,none,
+f172c3c4,2026-10-23,fix(antigravity): hub/2.24.0 UA + Argon tiers (#4816),registry/antigravity.js,DIVERGENT,branch has 7b9fada2 (429 attempts 3→6),TAKE-UPSTREAM,⚠️ re-assert 429 attempts=6,
+32c5f30a,2026-10-23,fix(capabilities): glm-5.3-flash-free reasoning_effort,CHANGELOG.md;capabilities.js,MISSING-ON-BRANCH,TAKE-UPSTREAM,none,
+31b8439b,2026-10-23,fix(usage): ollama /api/balance (#5026),ProviderLimits/utils.js,DIVERGENT,branch has quota-handler commits,TAKE-UPSTREAM,none,
+82aeb907,2026-10-23,fix(antigravity): tiered models from reasoning effort,chatCore.js,DIVERGENT,branch has chatCore changes,TAKE-UPSTREAM,none,
+f3f86fdd,2026-10-23,feat(combos): Smart Router System One (#4975),combo.js;shared/components/index.js;chat.js +7,SAME-FEATURE,VERDICT LOCKED 3/3 PREFER_UPSTREAM; DROP our da52d462,TAKE-UPSTREAM,⚠️ port items: activeRequests + 30-min TTL + costQualityTradeoff,see verdicts/da52d462-vs-4975.md
+f39d8f07,2026-10-23,# v0.5.109 release,CHANGELOG.md;package.json,DIVERGENT,release marker,TAKE-UPSTREAM,none,preserve our version
+3ce2b828,2026-10-23,fix(kiro): normalize Anthropic model ids,kiroConstants.js,MISSING-ON-BRANCH,VERIFIED grep normalizeAnthropicModelId = 0,TAKE-UPSTREAM,none,prevents 400 INVALID_MODEL_ID
+d2f90177,2026-10-07,feat(systemone): Cloudflare AI clef-flash,NO_OVERLAP,CLEAN,no branch interaction,TAKE-UPSTREAM,none,
+625df74d,2026-10-07,fix(gemini): rename $ref keys in functionResponse,NO_OVERLAP,CLEAN,no branch interaction,TAKE-UPSTREAM,none,
+cbd594ac,2026-10-07,fix(cursor): reject empty AgentService turns,NO_OVERLAP,CLEAN,no branch interaction,TAKE-UPSTREAM,none,
+18ad1a89,2026-10-07,fix(cursor): forward reasoning effort to AgentService Run,NO_OVERLAP,CLEAN,no branch interaction,TAKE-UPSTREAM,none,
+b677bfce,2026-10-07,fix(cli): store model IDs in TUI combos,NO_OVERLAP,CLEAN,no branch interaction,TAKE-UPSTREAM,none,
+0dd4d6be,2026-10-07,fix(codex): preserve explicit tool strict flags,NO_OVERLAP,CLEAN,no branch interaction,TAKE-UPSTREAM,none,
+6e4f82db,2026-10-07,fix(translator): uniquify duplicate tool_call_ids (#4532),NO_OVERLAP,CLEAN,no branch interaction,TAKE-UPSTREAM,none,
+ee323400,2026-10-07,fix(tts): accept server model and voice in self-hosted,NO_OVERLAP,CLEAN,no branch interaction,TAKE-UPSTREAM,none,
+3125ac2b,2026-10-07,fix(kimi): route Responses clients to Kimi Code /responses,NO_OVERLAP,CLEAN,no branch interaction,TAKE-UPSTREAM,none,
+2f827bcf,2026-10-07,feat(elevenlabs): Scribe STT (#4537),NO_OVERLAP,CLEAN,no branch interaction,TAKE-UPSTREAM,none,
+6a1573eb,2026-10-08,fix(combo): show compatible node models in picker (#4659),NO_OVERLAP,CLEAN,no branch interaction,TAKE-UPSTREAM,none,
+09f6d395,2026-10-08,fix(gemini): properties map not schema node (#4620),NO_OVERLAP,CLEAN,no branch interaction,TAKE-UPSTREAM,none,
+cff2b1d9,2026-10-11,feat(antigravity): bump IDE to 2.22.0,NO_OVERLAP,CLEAN,no branch interaction,TAKE-UPSTREAM,none,
+e7f41c13,2026-10-11,fix(cursor): recover long sessions from empty turns (#4690),NO_OVERLAP,CLEAN,no branch interaction,TAKE-UPSTREAM,none,
+f6c26d8e,2026-10-11,feat(cursor): resolve Auto to default agent model (#4692),NO_OVERLAP,CLEAN,no branch interaction,TAKE-UPSTREAM,none,
+f7708c9d,2026-10-11,test(cursor): KV ack metadata round-trip (#4694),NO_OVERLAP,CLEAN,no branch interaction,TAKE-UPSTREAM,none,
+ef4679df,2026-10-13,fix(opencode): inverted timestamp in session IDs (#4780),NO_OVERLAP,CLEAN,no branch interaction,TAKE-UPSTREAM,none,
+468aa7d9,2026-10-13,fix(param-support): drop response_format for opencode-go deepseek,NO_OVERLAP,CLEAN,no branch interaction,TAKE-UPSTREAM,none,
+59e9b526,2026-10-13,fix(opencode-zen): attested free-tier identity (#4784),NO_OVERLAP,CLEAN,no branch interaction,TAKE-UPSTREAM,none,
+9c141910,2026-10-14,fix(vertex): API-key project/location for Argon (#4821),NO_OVERLAP,CLEAN,no branch interaction,TAKE-UPSTREAM,none,
+51a1827e,2026-10-14,fix(github): Copilot embeddings to api.githubcopilot.com (#4793),NO_OVERLAP,CLEAN,no branch interaction,TAKE-UPSTREAM,none,
+e964e482,2026-10-15,fix(opencode): reasoning_content placeholder for Zen (#4805),NO_OVERLAP,CLEAN,no branch interaction,TAKE-UPSTREAM,none,
+7e0043de,2026-10-15,Merge branch 'chore/codex-drop-gpt-5.5',NO_OVERLAP,CLEAN,merge commit no files,TAKE-UPSTREAM,none,
+da1756a8,2026-10-15,feat(ui): model picker regex/batch/filter,NO_OVERLAP,CLEAN,no branch interaction,TAKE-UPSTREAM,none,
+d95bb8ea,2026-10-15,fix(dashboard): unclip proxy dropdown via body portal,NO_OVERLAP,CLEAN,no branch interaction,TAKE-UPSTREAM,none,
+fb30246c,2026-10-15,fix(tests): isolate zed-native-auth DATA_DIR,NO_OVERLAP,CLEAN,no branch interaction,TAKE-UPSTREAM,none,
+342ecb0d,2026-10-22,fix(pi-settings): declare existingProvider before use,NO_OVERLAP,CLEAN,no branch interaction,TAKE-UPSTREAM,none,
+d07e5bc3,2026-10-22,fix(thinking): transport declares thinking shape; OpenCode Go /responses nesting,NO_OVERLAP,CLEAN,no branch interaction,TAKE-UPSTREAM,none,
+32a064e2,2026-10-23,fix(docker): pin Node 22.23.4 (security CVEs),NO_OVERLAP,CLEAN,no branch interaction,TAKE-UPSTREAM,none,security patch
+00dd3dfc,2026-10-23,fix(media-providers): keep connection card for non-STT OAuth,NO_OVERLAP,CLEAN,no branch interaction,TAKE-UPSTREAM,none,
+bc4a3cc7,2026-10-23,feat(ollama): System One decision models,NO_OVERLAP,CLEAN,no branch interaction,TAKE-UPSTREAM,none,
+792f4719,2026-10-23,fix(headroom): support native CommandCode requests,NO_OVERLAP,CLEAN,no branch interaction,TAKE-UPSTREAM,none,
+a440ef43,2026-10-23,fix(headroom): compress native Gemini and Responses tool outputs,NO_OVERLAP,CLEAN,no branch interaction,TAKE-UPSTREAM,none,
+7c42d8f8,2026-10-23,fix(openai): rename max_tokens to max_completion_tokens,NO_OVERLAP,CLEAN,no branch interaction,TAKE-UPSTREAM,none,
+b82f5c4a,2026-10-23,fix(combos): try next model when credits run out,NO_OVERLAP,CLEAN,no branch interaction,TAKE-UPSTREAM,none,
+dbdbb648,2026-10-23,fix(github): refresh Copilot fallback model catalog,NO_OVERLAP,CLEAN,no branch interaction,TAKE-UPSTREAM,none,
+5853a88a,2026-10-23,fix(search): reset regex state between model matches,NO_OVERLAP,CLEAN,no branch interaction,TAKE-UPSTREAM,none,
+9b4ea9eb,2026-10-23,feat(combos): search box for combo list,NO_OVERLAP,CLEAN,no branch interaction,TAKE-UPSTREAM,none,
+161e3493,2026-10-23,feat(image mitm): reference image inputs for Gemini (#4981),NO_OVERLAP,CLEAN,no branch interaction,TAKE-UPSTREAM,none,

@@ -1,0 +1,12 @@
+commit 3f7264ca
+author: cdvankammen
+date: 2026-10-22 14:05:53 -0600
+subject: test(failover): IP-environment suite (v4/v6/hostname) + single-URL verification
+
+- tests/unit/failover-proxy-ip.test.js: 7 tests — IPv4-only default rejects
+  IPv6 peer + IPv4-only bind; --ipv6 allows IPv6 peer + dual-stack bind + v6
+  failover; hostname peer; malformed URL; real ::1/127.0.0.1 servers, v6 cases
+  skip if unavailable. 7/7 pass.
+- verified: single URL mini-3.local:20142 auto-routes local→mini2 on local
+  death (200), streams SSE, fails back — no client-side endpoint logic needed
+

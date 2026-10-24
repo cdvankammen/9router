@@ -1,0 +1,10 @@
+===COMMIT===
+hash: 32c5f30a0a2074269d7d4cb269d93e7db59d9877
+short: 32c5f30a
+author: anojndr <anojndr@gmail.com>
+date: 2026-10-23 14:32:20 +0700
+subject: fix(capabilities): send reasoning_effort for OpenCode's glm-5.3-flash-free
+body:
+Configure glm-5.3-flash-free to use openai thinking format with reasoning_effort instead of zai thinking object which is rejected by OpenCode inference upstream.
+
+---files---

@@ -1,0 +1,38 @@
+commit 9ce2241b
+author: cdvankammen
+date: 2026-10-24 10:29:03 -0600
+subject: docs(changelog): log this session's 8 commits under Unreleased
+
+Adds an Unreleased section covering the dashboard-audit remediation work:
+OIDC save-time validation gate, multi-bucket rate limiter with route
+classifier, RSC-prefetch exemption, dashboard error boundaries,
+provider-add pre-validation guard, migration runner registry-integrity
+gate + dry-run endpoint, i18n literal rewrites, and the i18n ESLint
+guard-rail.
+
+Version bump deferred to release time (repo HEAD is 0.5.95 while the
+published line is 0.5.109 — see Finding #17 version inversion).
+
+
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+index 11afb966..7b671bf6 100644
+--- a/CHANGELOG.md
++++ b/CHANGELOG.md
+@@ -1,3 +1,17 @@
++# Unreleased
++
++## Features
++- **Security**: OIDC save-time validation gate on the `/api/settings` PATCH — hard gate (full discovery fetch, 5s timeout) when the effective auth mode would disable password login (`oidc`, or `sso` with `ssoType: oidc`), soft probe (URL format + HTTPS only) otherwise, and a `skipOidcValidation` escape hatch for air-gapped IdPs
++- **Rate Limiter**: multi-bucket per-(IP, category) limits with a shared route classifier — `auth` 10/min (POST login/setup/reset-password), `chat` 20/min (POST completions), `api` 120/min, `general` 120/min, with `static`/RSC framework traffic bypassing entirely; applied in both the TCP-layer and middleware-layer limiters
++- **Dashboard**: error boundaries for the dashboard route group plus a root `global-error.js`, with targeted retry UI for transient 429/5xx errors
++- **Providers**: client-side guard in the add-provider form blocks OAuth-only and free providers before POST, with a targeted reason and deep link to the provider page instead of the opaque "Invalid provider"
++- **DB**: migration runner registry-integrity gate — refuses to apply migrations when the registry is malformed, diverges from the fingerprint stamped on the database, or the database schema is newer than the build (downgrade); persists refusal reasons to `_meta.migrationWarnings`; new read-only dry-run at `GET /api/settings/database/migrations`
++- **DX**: `local-i18n/no-chinese-literals` ESLint rule scoped to dashboard pages catches hardcoded Chinese literals at author time
++
++## Fixes
++- **Rate Limiter**: exempt Next.js RSC prefetches (`?_rsc=`) and `/_next/` assets from the middleware-layer limiter so busy dashboards cannot 429 their own framework traffic
++- **i18n**: rewrite hardcoded Chinese strings in the Model Context and Statistics pages to English source text with matching `zh-CN`/`zh-TW` literal keys; fix the lowercase "web" heading on `/media-providers/web`
++
+ # v0.5.95 (2026-10-01)
+ 
+ ## Features

@@ -1,0 +1,21 @@
+===COMMIT===
+hash: 3b137aa6d513babcab45650e86554a0ec3176f98
+short: 3b137aa6
+author: mj10612 <5383892+mj10612@users.noreply.github.com>
+date: 2026-10-22 11:48:57 +0700
+subject: fix(codebuddy): back off blocked international connections
+body:
+CodeBuddy Intl refuses a request with HTTP 400 "request illegal" or
+"conversation id missing". Those messages matched no rule, so they fell
+through to the request-scoped 4xx rule: the connection got zero cooldown
+and its backoff level never moved.
+
+Add provider-scoped rules for codebuddy-intl that use the existing
+exponential backoff and ceiling, and pass the combo member's canonical
+provider id into error classification so `cbai` aliases resolve too. The
+account path now persists the cooldown and an incremented backoff level,
+while the combo advances to the next member.
+
+Refs #5024
+
+---files---

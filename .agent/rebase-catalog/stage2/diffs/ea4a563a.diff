@@ -1,0 +1,13 @@
+commit ea4a563a
+author: cdvankammen
+date: 2026-10-22 13:49:48 -0600
+subject: fix(messages): B4 — capture upstream URL, use it in cURL export
+
+- buildRequestDetail carries url (base passthrough, overrides win)
+- All 8 capture call sites now persist the upstream URL: chatCore error
+  paths (providerUrl), streaming/non-streaming/sseToJson handlers
+  (providerResponse.url)
+- requestDetailsRepo flush record carries url in data (additive JSON, no DDL)
+- buildCurl uses detail.url with placeholder fallback for legacy rows
+- +5 vitest tests (url forward/omit/override, curl uses url, placeholder fallback)
+

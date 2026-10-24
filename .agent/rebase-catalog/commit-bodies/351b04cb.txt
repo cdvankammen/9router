@@ -1,0 +1,16 @@
+===COMMIT===
+hash: 351b04cb528d2270a527aba18a4be78fdeadafaa
+short: 351b04cb
+author: 钛白 <86600901+77taibai@users.noreply.github.com>
+date: 2026-10-23 12:01:37 +0700
+subject: feat(provider): add SenseNova provider support
+body:
+Introduce support for the SenseNova provider, including image options
+and configuration settings.
+
+- Register SenseNova provider and models (sensenova-6.8-flash-lite, U1.5 image models, etc.)
+- Extend OpenAI image adapter for watermark, prompt_extend, and output_format
+- Add boolean option support in GenericExampleCard
+- Add test connection validation for SenseNova (#5079)
+
+---files---

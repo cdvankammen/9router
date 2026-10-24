@@ -1,0 +1,33 @@
+commit f050d4b7
+author: cdvankammen
+date: 2026-10-22 12:07:11 -0600
+subject: fix(observability): forward errorCategory through request-detail pipeline
+
+CAUGHT BY E2E BROWSER TEST: the categorizer was called at the chatCore
+error paths but errorCategory was dropped before storage — buildRequestDetail
+never included it in its output object, and the repo flush record omitted it.
+The detail drawer + markdown report therefore never saw categories.
+
+- requestDetail.js: buildRequestDetail forwards base.errorCategory
+- requestDetailsRepo.js: flush record persists item.errorCategory
+
+Tests: tests/unit/error-category-detail.test.js — 3 integration tests
+verifying buildRequestDetail forwarding, backward-compat absence, and the
+full saveRequestDetail -> getRequestDetails round trip (the exact path that
+was broken). All pass alongside the existing categorizer unit tests.
+
+Part of: Observability & Conversation Analytics plan (Phase P3 fix)
+
+
+diff --git a/open-sse/handlers/chatCore/requestDetail.js b/open-sse/handlers/chatCore/requestDetail.js
+index 94a6f4fa..54f26771 100644
+--- a/open-sse/handlers/chatCore/requestDetail.js
++++ b/open-sse/handlers/chatCore/requestDetail.js
+@@ -79,6 +79,7 @@ export function buildRequestDetail(base, overrides = {}) {
+     pxpipe: base.pxpipe || undefined,
+     status: base.status || "success",
+     conversationId: base.conversationId || undefined,
++    errorCategory: base.errorCategory || undefined,
+     ...overrides
+   };
+ }

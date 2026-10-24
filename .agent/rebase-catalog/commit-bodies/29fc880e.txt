@@ -1,0 +1,22 @@
+===COMMIT===
+hash: 29fc880ec090464e4181befff1f65477274d4db7
+short: 29fc880e
+author: decolua <decoluadt@gmail.com>
+date: 2026-10-14 16:32:31 +0700
+subject: feat(gemini): add Gemini 4 Argon (gemini/vertex/antigravity)
+body:
+- Register gemini-4-argon on gemini + vertex and the gemini-4-argon-high
+  tier on antigravity (wire id per upstream catalog)
+- Capabilities pattern *gemini-4*: gemini-level thinking that cannot be
+  disabled, audio/video input, 1M context, 64K output
+- Thinking levels low/medium/high only — Argon rejects thinkingLevel
+  "minimal" and thinkingBudget with HTTP 400, so the gemini-level path now
+  clamps to the lowest supported level (Gemini 3 behavior unchanged)
+- Vertex OAuth/SA/ADC connections read defaultLocation from the registry
+  entry, defaulting Argon to "global" instead of the regional us-central1
+  (Argon serves only from global/us/eu)
+- Add getModelMeta() helper (suffix-aware registry entry lookup)
+
+Co-Authored-By: Claude Code <noreply@anthropic.com>
+
+---files---

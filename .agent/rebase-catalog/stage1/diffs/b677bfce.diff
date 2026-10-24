@@ -1,0 +1,8 @@
+commit b677bfce
+author: semihisikman
+date: 2026-10-07 19:16:11 +0700
+subject: fix(cli): store model IDs in TUI combos
+
+- Convert /api/models objects to full provider/model ID strings before saving
+- Reject malformed model entries when creating combos from interactive CLI
+

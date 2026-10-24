@@ -1,0 +1,13 @@
+commit 33af73ac
+author: cdvankammen
+date: 2026-10-22 12:07:11 -0600
+subject: test(observability): fix error-category integration test isolation
+
+In full-suite runs the DB driver is module-cached and shared across test
+files in the same process, so row-count assertions against a fixed
+conversationId are unreliable. Assert on the exact record written (unique
+per-run id) instead of total row count. Full suite: 1680 passed / 88
+failed (all pre-existing baseline failures).
+
+Part of: Observability & Conversation Analytics plan (test hardening)
+

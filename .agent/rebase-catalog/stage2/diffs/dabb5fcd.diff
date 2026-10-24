@@ -1,0 +1,19 @@
+commit dabb5fcd
+author: cdvankammen
+date: 2026-10-22 15:36:33 -0600
+subject: fix(security): timing-safe comparison for shutdown endpoint auth (GAP-P0-10)
+
+Replace timing-vulnerable !== comparison with crypto.timingSafeEqual
+for both the CLI token check and SHUTDOWN_SECRET secondary gate.
+
+Uses SHA-256 hash-then-compare pattern so neither content nor length
+differences leak through timing side-channels.
+
+Extends test suite with 3 additional timing-safe specific tests
+(13 total, all passing).
+
+Builds on GAP-P0-02 dashboard auth fix (b07ba0fc).
+
+Refs: /tmp/9router-gaps.json item 10
+Refs: docs/plans-and-prompts/research/9router/33-master-coding-rule.md
+

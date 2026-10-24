@@ -1,0 +1,9 @@
+===COMMIT===
+hash: 8a90d3c9d644f82484e2b4fd9b7edbe641e2ac89
+short: 8a90d3c9
+author: B1nh M1nh <43268322+b1nhm1nh@users.noreply.github.com>
+date: 2026-10-07 20:02:28 +0700
+subject: fix(cli): take `connect` models from the server; add `show`, `--save`, Pi and Oh My Pi
+body:
+
+---files---

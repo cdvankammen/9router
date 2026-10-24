@@ -1,0 +1,16 @@
+commit 9860c93a
+author: cdvankammen
+date: 2026-10-22 15:41:21 -0600
+subject: fix(custom-server): always log warn when L1 settings load gives up (GAP-P2-34)
+
+The L1 peer-forwarding settings loader retries 10 times with exponential
+backoff but previously only logged the give-up message when DEBUG_L1_PEER_FORWARD
+was set. Production deployments with misconfigured peer nodes got no L1
+forwarding with no indication.
+
+Now: console.warn fires unconditionally after 10 failed attempts so operators
+always know peer forwarding is disabled. The detailed error message stays
+DEBUG-gated to avoid log spam.
+
+Adds behavioral test documenting the expected retry/warn boundary.
+

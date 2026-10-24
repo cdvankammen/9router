@@ -1,0 +1,122 @@
+commit c8644368
+author: Spoon94
+date: 2026-10-13 17:54:58 +0700
+subject: fix(opencode-go): route claude-haiku-5-5 to /messages with adaptive thinking (#4727)
+
+- Route claude-haiku-5-5 on OpenCode Go to /messages endpoint with targetFormat: "claude"
+- Emit claude-adaptive thinking format (adaptive type + output_config.effort)
+- Set contextWindow to 1M and maxOutput to 128k
+- Drop empty thinking blocks from Claude requests
+- Strip context_management field for non-Anthropic providers
+- Resolve combo seat aliases to provider id in dashboard and models API
+
+
+diff --git a/open-sse/providers/capabilities.js b/open-sse/providers/capabilities.js
+index d4aab7ca..5663813e 100644
+--- a/open-sse/providers/capabilities.js
++++ b/open-sse/providers/capabilities.js
+@@ -224,6 +224,23 @@ export const PROVIDER_CAPABILITIES = {
+   // Overrides the global entry, whose z.ai shape is correct for z.ai itself.
+   "opencode-go": {
+     "glm-5.3-flash": { vision: true, videoInput: true, pdf: true, reasoning: true, thinkingFormat: "openai", thinkingCanDisable: false, contextWindow: 1000000, maxOutput: 131072 },
++    // OpenCode Go's claude-haiku-5-5 rejects `thinking.type.enabled` — the shape the
++    // global *claude*haiku* → claude-budget pattern sends — with 400: `"thinking.type.enabled"
++    // is not supported for this model. Use "thinking.type.adaptive" and "output_config.effort"`.
++    // claude-adaptive emits exactly that (adaptive switch + output_config.effort), so override
++    // the global haiku pattern for this provider only. Limits follow the model, not the
++    // pattern: the upstream catalog reports context_length 1000000 and the synced catalog
++    // maxOutput 128000 for this id (the provider override short-circuits before the
++    // catalog overlay, so maxOutput must be stated here too).
++    "claude-haiku-5-5": { vision: true, reasoning: true, search: true, thinkingFormat: "claude-adaptive", contextWindow: 1000000, maxOutput: 128000 },
++  },
++  "commandcode": {
++    // The generic commandcode fallback (1M/384k for every unlisted model) happened
++    // to give haiku-5-5 the right context by accident. Pin it to the catalog values:
++    // GET https://api.commandcode.ai/provider/v1/models reports context_length 1000000
++    // for this id (claude-haiku-4-5-20251001 is 200000, so the 1M is per-model, not
++    // gateway-wide) — and the synced catalog carries maxOutput 128000.
++    "claude-haiku-5-5": { vision: true, reasoning: true, search: true, thinkingFormat: "commandcode", thinkingEffortSupported: true, contextWindow: 1000000, maxOutput: 128000 },
+   },
+   "codex": {
+     "gpt-6-astra":               { vision: true, reasoning: true, search: true, thinkingFormat: "openai", contextWindow: 272000, maxOutput: 128000 },
+diff --git a/src/shared/hooks/useModelCaps.js b/src/shared/hooks/useModelCaps.js
+index 88c6410f..317e9580 100644
+--- a/src/shared/hooks/useModelCaps.js
++++ b/src/shared/hooks/useModelCaps.js
+@@ -2,6 +2,7 @@
+ 
+ import { useState, useEffect, useCallback } from "react";
+ import { getCapabilitiesForModel } from "open-sse/providers/capabilities.js";
++import { ALIAS_TO_ID } from "@/shared/constants/providers";
+ 
+ // Module cache: one /api/models fetch shared by every useModelCaps instance.
+ let cache = null; // { byFull, byId } | null
+@@ -38,12 +39,17 @@ function loadModelCaps() {
+ }
+ 
+ // Resolve caps from a "provider/model" string or a bare model id.
+-function resolveCaps(byFull, byId, key) {
++// The seat prefix is a UI alias (ocg, cmc, …); the capability tables are keyed
++// by provider id (opencode-go, commandcode, …), so map it before the lookup —
++// an unmapped alias falls through to the generic patterns and under-reports
++// (e.g. any *claude*haiku* id reads as 200k regardless of the provider entry).
++export function resolveCaps(byFull, byId, key) {
+   if (!key) return null;
+   if (byFull[key]) return byFull[key];
+   const bare = key.includes("/") ? key.slice(key.indexOf("/") + 1) : key;
+   if (byId[bare]) return byId[bare];
+-  const provider = key.includes("/") ? key.slice(0, key.indexOf("/")) : null;
++  const alias = key.includes("/") ? key.slice(0, key.indexOf("/")) : null;
++  const provider = alias ? (ALIAS_TO_ID[alias] || alias) : null;
+   const c = getCapabilitiesForModel(provider, bare);
+   return {
+     vision: c.vision,
+diff --git a/tests/unit/opencode-go-models.test.js b/tests/unit/opencode-go-models.test.js
+index fcdf3888..1e5c63b0 100644
+--- a/tests/unit/opencode-go-models.test.js
++++ b/tests/unit/opencode-go-models.test.js
+@@ -12,6 +12,9 @@ const CLAUDE_CAPABLE = ["minimax-m3", "minimax-m2.7", "minimax-m2.5", "space-bun
+   "qwen3.8-max", "qwen3.8-flash", "qwen3.7-max", "qwen3.7-plus", "qwen3.6-plus", "qwen3.5-plus"];
+ // Models that also expose the OpenAI /responses endpoint
+ const RESPONSES_CAPABLE = ["deepseek-v4-pro", "deepseek-v4-flash", "deepseek-v4.1-flash"];
++// Served from /messages only — /chat/completions answers ModelProtocolUnsupported,
++// so every other client wire has to translate through the declared claude target.
++const CLAUDE_ONLY = ["claude-haiku-5-5"];
+ 
+ // Mirror of chatCore's per-model transport guard: use the sourceFormat-matched
+ // transport only when the model declares support for that sourceFormat.
+@@ -34,6 +37,7 @@ describe("OpenCode Go model catalog", () => {
+       "hy4-preview", "hy3", "hy3-preview", "omen-alpha",
+       "grok-4.7", "grok-4.6", "grok-4.5", "gpt-5.6-luna", "gpt-6-luna",
+       "muse-spark-1.2-contributor", "muse-spark-1.3-contributor",
++      "claude-haiku-5-5",
+     ]);
+   });
+ });
+@@ -92,6 +96,13 @@ describe("OpenCode Go per-model supportedFormats", () => {
+       expect(getModelSupportedFormats("opencode-go", m)).toEqual(["openai"]);
+     }
+   });
++
++  it("declares [claude] only for /messages-only models (claude-haiku-5-5)", () => {
++    for (const m of CLAUDE_ONLY) {
++      expect(getModelSupportedFormats("opencode-go", m)).toEqual(["claude"]);
++      expect(getModelTargetFormat("opencode-go", m)).toBe("claude");
++    }
++  });
+ });
+ 
+ describe("OpenCode Go multi-endpoint transports", () => {
+@@ -126,6 +137,12 @@ describe("OpenCode Go per-model transport guard (chatCore logic)", () => {
+     }
+   });
+ 
++  it("pins /messages-only models to /messages for the claude wire", () => {
++    for (const m of CLAUDE_ONLY) {
++      expect(pickTransport("opencode-go", "claude", "opencode-go", m)?.baseUrl).toBe("https://opencode.ai/zen/go/v1/messages");
++    }
++  });
++
+   it("routes DeepSeek + responses-format client to /responses", () => {
+     for (const m of RESPONSES_CAPABLE) {
+       expect(pickTransport("opencode-go", "openai-responses", "opencode-go", m)?.baseUrl).toBe("https://opencode.ai/zen/go/v1/responses");

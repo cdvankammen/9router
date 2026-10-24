@@ -1,0 +1,11 @@
+commit 1e51e647
+author: cdvankammen
+date: 2026-10-22 12:19:30 -0600
+subject: chore(vscode): enable default Python language server
+
+Toggles python.languageServer back to Default (was None — disables Pylance).
+Leaves all Copilot Chat settings (sessionController, promptCacheKey,
+contextManagement, collapsedTools:off) intact.
+
+No functional code impact.
+

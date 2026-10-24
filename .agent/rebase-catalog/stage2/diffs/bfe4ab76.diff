@@ -1,0 +1,17 @@
+commit bfe4ab76
+author: cdvankammen
+date: 2026-10-24 04:21:28 -0600
+subject: fix(rebase): restore commandcode error-as-content + deno-deploy cleanup logging
+
+- open-sse/translator/response/commandcode-to-openai.js: restore
+  pre-rebase behavior where error events emit as content chunks with
+  finish_reason:stop instead of throwing (master changed to throw,
+  breaking the test contract from the branch)
+- src/app/api/proxy-pools/deno-deploy/route.js: restore .catch() error
+  logging on both cleanup DELETE calls (deploy-error and status-check
+  paths) — pre-rebase had console.error, rebase lost it to silent catch
+
+Both confirmed as rebase-conflict losses via git show comparison with
+v4-vscode-works-pre-rebase-20261003. EXEMPT from MiMo scrutiny.
+commandcode-to-openai: 3/3 pass, deno-deploy-cleanup-logging: 8/8 pass.
+

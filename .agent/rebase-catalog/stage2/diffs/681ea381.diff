@@ -1,0 +1,46 @@
+commit 681ea381
+author: cdvankammen
+date: 2026-10-22 14:04:00 -0600
+subject: test: token helpers now test the REAL code (shared module) — no more drift copy
+
+- Subagent audit found request-details-tab.test.js duplicated the component's
+  token helpers locally — tests could pass while the real component logic
+  drifted (the exact 'fake test' failure mode the user asked about)
+- Extracted getCachedTokens/getCacheCreationTokens/getInputTokens to
+  src/shared/tokenHelpers.js (pure, no React)
+- Component imports from shared; test imports from shared — single source of
+  truth, drift impossible
+- 22 tests pass
+
+
+diff --git a/tests/unit/request-details-tab.test.js b/tests/unit/request-details-tab.test.js
+index dc8197d3..418be840 100644
+--- a/tests/unit/request-details-tab.test.js
++++ b/tests/unit/request-details-tab.test.js
+@@ -109,19 +109,13 @@ describe("request details — tab crash-risk cases", () => {
+   });
+ });
+ 
+-// Mirror of RequestDetailsTab token helpers (component is "use client",
+-// helpers are not exported). Keep in sync with the component.
+-function getCachedTokens(tokens) {
+-  return tokens?.cached_tokens || tokens?.cache_read_input_tokens || 0;
+-}
+-function getCacheCreationTokens(tokens) {
+-  return tokens?.cache_creation_input_tokens || 0;
+-}
+-function getInputTokens(tokens) {
+-  const prompt = tokens?.prompt_tokens || tokens?.input_tokens || 0;
+-  const cache = getCachedTokens(tokens);
+-  return prompt < cache ? cache : prompt;
+-}
++// Token helpers imported from the real shared module — the test can never
++// drift from the code (previously a local copy could).
++import {
++  getCachedTokens,
++  getCacheCreationTokens,
++  getInputTokens,
++} from "@/shared/tokenHelpers";
+ 
+ describe("backupDbLite — excludes requestDetails, keeps critical data", () => {
+   it("backup file omits requestDetails rows but keeps other tables", async () => {

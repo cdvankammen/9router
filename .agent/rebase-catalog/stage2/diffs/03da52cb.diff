@@ -1,0 +1,9 @@
+commit 03da52cb
+author: cdvankammen
+date: 2026-10-22 12:19:30 -0600
+subject: docs: feature-gap review + upstream provider risks
+
+- 18-feature-gap-review.md: per-feature lacks for all v1 features, shallow-merge confirmed (UI safe, API partial-PATCH shadows), 10-item action table
+- 19-upstream-provider-risks.md: 12 risks grounded in observed logs (xAI invalid_grant, OpenRouter guardrail 404), resilience recommendations, 3 open questions
+- Subagent spawns rate-limited/network-failed; reviews completed in main session
+

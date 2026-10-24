@@ -1,0 +1,29 @@
+===COMMIT===
+hash: ca7b54011daf4532b3b7ececa90a125bafb99056
+short: ca7b5401
+author: omar-nahhas <omar@innovativerealities.com>
+date: 2026-10-23 10:13:35 +0700
+subject: fix(combo): fall through on empty-content streaming responses
+body:
+A streaming combo member that returns HTTP 200 but never produces content
+(Gemini aborts such as MALFORMED_FUNCTION_CALL, or a stream that simply
+dies) used to be logged as "succeeded" and returned as an empty answer,
+even when the combo had other members left.
+
+handleComboChat now peeks the client-format SSE stream until the first
+content-bearing frame:
+
+- content seen  -> commit: replay the buffered head, stream the rest untouched
+- stream ends with no content -> fall through to the next member
+- content_filter finish, or last member -> return the response as-is
+- EMPTY_PEEK_DEADLINE_MS elapsed -> commit (fail-open, never hold a slow stream)
+
+The signal is structural ("the stream ended and no content frame was seen"),
+not an enum, so it covers future abort reasons without a vocabulary to keep
+in sync. Delta role, reasoning/thinking and finish_reason are not content.
+The peek reads the stream as the client receives it, so OpenAI chat,
+Anthropic Messages and OpenAI Responses are all understood.
+
+Non-SSE 2xx responses keep the existing isZeroContentResponse JSON check.
+
+---files---

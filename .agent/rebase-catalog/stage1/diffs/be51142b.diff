@@ -1,0 +1,81 @@
+commit be51142b
+author: XFairesV1
+date: 2026-10-15 14:47:25 +0700
+subject: feat(quota): anchored auto-ping schedule at fixed local times (#4848)
+
+- Add anchored ping schedule per connection at fixed local wall-clock slots
+- Calculate and preview daily slots with timezone and DST support
+- Fire scheduled slots independently or alongside reactive auto-ping
+- Add schedule modal to provider connection dashboard
+
+
+diff --git a/src/app/(dashboard)/dashboard/providers/[id]/page.js b/src/app/(dashboard)/dashboard/providers/[id]/page.js
+index c861e900..075f2bc5 100644
+--- a/src/app/(dashboard)/dashboard/providers/[id]/page.js
++++ b/src/app/(dashboard)/dashboard/providers/[id]/page.js
+@@ -24,6 +24,8 @@ import AddCustomModelModal from "./AddCustomModelModal";
+ import BulkImportCodexModal from "./BulkImportCodexModal";
+ import BulkImportGrokCliModal from "./BulkImportGrokCliModal";
+ import CustomConfigCard from "./CustomConfigCard";
++import AutoPingScheduleModal from "./AutoPingScheduleModal";
++import { getScheduleSlotLabels } from "@/shared/services/quotaPingSchedule";
+ 
+ const ONE_BY_ONE_DELAY_MS = 1000;
+ 
+@@ -69,7 +71,8 @@ export default function ProviderDetailPage() {
+   const [providerStrategy, setProviderStrategy] = useState(null);
+   const [providerStickyLimit, setProviderStickyLimit] = useState("");
+   const [thinkingMode, setThinkingMode] = useState("auto");
+-  const [autoPing, setAutoPing] = useState({ enabled: false, connections: {} });
++  const [autoPing, setAutoPing] = useState({ enabled: false, connections: {}, schedules: {} });
++  const [scheduleConnection, setScheduleConnection] = useState(null);
+   const [suggestedModels, setSuggestedModels] = useState([]);
+   const [liveModels, setLiveModels] = useState([]);
+   // Live-catalog fetch warning/error (surfaced for zed only; cursor behavior unchanged).
+@@ -330,7 +333,7 @@ export default function ProviderDetailPage() {
+       setThinkingMode(thinkingCfg.mode || "auto");
+       const autoPingSettingsKey = AUTO_PING_SETTINGS_KEYS[providerId];
+       const apCfg = autoPingSettingsKey ? settingsData[autoPingSettingsKey] || {} : {};
+-      setAutoPing({ enabled: apCfg.enabled === true, connections: apCfg.connections || {} });
++      setAutoPing({ enabled: apCfg.enabled === true, connections: apCfg.connections || {}, schedules: apCfg.schedules || {} });
+       if (nodesRes.ok) {
+         let node = (nodesData.nodes || []).find((entry) => entry.id === providerId) || null;
+ 
+@@ -463,6 +466,10 @@ export default function ProviderDetailPage() {
+     saveAutoPing({ ...autoPing, connections: { ...autoPing.connections, [connectionId]: on } });
+   };
+ 
++  const handleAutoPingSchedule = (connectionId, schedule) => {
++    saveAutoPing({ ...autoPing, schedules: { ...autoPing.schedules, [connectionId]: schedule } });
++  };
++
+   useEffect(() => {
+     fetchConnections();
+     fetchAliases();
+@@ -1045,6 +1052,9 @@ export default function ProviderDetailPage() {
+                   on: autoPing.connections[conn.id] === true,
+                   onToggle: (on) => handleAutoPingConnection(conn.id, on),
+                   provider: providerId,
++                  scheduleOn: autoPing.schedules?.[conn.id]?.enabled === true,
++                  scheduleSummary: getScheduleSlotLabels(autoPing.schedules?.[conn.id]).join(" / "),
++                  onOpenSchedule: () => setScheduleConnection(conn),
+                 } : null}
+                 onUpdateProxy={async (proxyPoolId) => {
+                   try {
+@@ -1943,6 +1953,16 @@ export default function ProviderDetailPage() {
+         />
+       )}
+ 
++      {scheduleConnection && (
++        <AutoPingScheduleModal
++          isOpen={!!scheduleConnection}
++          onClose={() => setScheduleConnection(null)}
++          connection={scheduleConnection}
++          schedule={autoPing.schedules?.[scheduleConnection.id] || null}
++          onSave={(schedule) => handleAutoPingSchedule(scheduleConnection.id, schedule)}
++        />
++      )}
++
+       {/* AG Risk Confirmation Modal */}
+       <ConfirmModal
+         isOpen={showAgRiskModal}

@@ -1,0 +1,76 @@
+commit 7b9fada2
+author: cdvankammen
+date: 2026-10-24 03:55:00 -0600
+subject: fix(tests): flush-race mutex + image-fetch-hardening mock + antigravity 429→6
+
+- src/lib/db/repos/requestDetailsRepo.js: async-mutex pattern for
+  flushToDatabase — waiters loop-await flushInFlight so they observe
+  the committed drain, eliminating the stranded-items race where a
+  caller resolved while the producer's fire-and-forget flush was
+  still mid-commit
+- tests/unit/image-fetch-hardening.test.js: lookupMock now returns
+  [{address, family}] arrays to match node:dns/promises lookup({all:true})
+  contract (same root cause as codex-image-fetch)
+- open-sse/providers/registry/antigravity.js: raise 429 retry attempts
+  from 3 to 6 (branch-introduced test contract in executor-const-guard
+  said 'intentional change: 429=6' but registry was never updated)
+
+MiMo A APPROVE (flush-race async mutex)
+MiMo B APPROVE (image-fetch-hardening mock arrays)
+MiMo D APPROVE (antigravity 429→6)
+
+
+diff --git a/open-sse/providers/registry/antigravity.js b/open-sse/providers/registry/antigravity.js
+index eba858e8..636b8307 100644
+--- a/open-sse/providers/registry/antigravity.js
++++ b/open-sse/providers/registry/antigravity.js
+@@ -26,7 +26,10 @@ export default {
+     },
+     retry: {
+       "429": {
+-        attempts: 3,
++        // Intentional increase: 429 (rate-limit) retries raised to 6 to absorb
++        // bursty quota exhaustion on the Antigravity IDE endpoint (test contract
++        // in tests/unit/executor-const-guard.test.js).
++        attempts: 6,
+       },
+       "500": {
+         attempts: 3,
+diff --git a/tests/unit/image-fetch-hardening.test.js b/tests/unit/image-fetch-hardening.test.js
+index 860982da..be3a670c 100644
+--- a/tests/unit/image-fetch-hardening.test.js
++++ b/tests/unit/image-fetch-hardening.test.js
+@@ -23,7 +23,8 @@ function mockFetchOnce(bytes, ok = true) {
+ 
+ beforeEach(() => {
+   lookupMock.mockReset();
+-  lookupMock.mockResolvedValue({ address: "93.184.216.34" }); // public by default
++  // node:dns/promises lookup({all:true}) returns an array of {address, family}
++  lookupMock.mockResolvedValue([{ address: "93.184.216.34", family: 4 }]); // public by default
+ });
+ afterEach(() => { vi.restoreAllMocks(); });
+ 
+@@ -34,12 +35,12 @@ describe("fetchImageAsBase64 hardening", () => {
+   });
+ 
+   it("SSRF: rejects private IP (10.x)", async () => {
+-    lookupMock.mockResolvedValue({ address: "10.0.0.5" });
++    lookupMock.mockResolvedValue([{ address: "10.0.0.5", family: 4 }]);
+     expect(await fetchImageAsBase64("http://internal.example/x.png")).toBeNull();
+   });
+ 
+   it("SSRF: rejects cloud metadata 169.254.169.254", async () => {
+-    lookupMock.mockResolvedValue({ address: "169.254.169.254" });
++    lookupMock.mockResolvedValue([{ address: "169.254.169.254", family: 4 }]);
+     expect(await fetchImageAsBase64("http://metadata/x.png")).toBeNull();
+   });
+ 
+@@ -48,7 +49,7 @@ describe("fetchImageAsBase64 hardening", () => {
+   });
+ 
+   it("SSRF: rejects IPv6 loopback", async () => {
+-    lookupMock.mockResolvedValue({ address: "::1" });
++    lookupMock.mockResolvedValue([{ address: "::1", family: 6 }]);
+     expect(await fetchImageAsBase64("http://x/y.png")).toBeNull();
+   });
+ 

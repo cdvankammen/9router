@@ -1,0 +1,12 @@
+===COMMIT===
+hash: a07ed95beae8ce295907082220c386e8e7db138b
+short: a07ed95b
+author: Nim <50592567+mrnim94@users.noreply.github.com>
+date: 2026-10-07 19:31:54 +0700
+subject: feat(antigravity): add Claude Sonnet 5.5 and Opus 5.5 support
+body:
+- Add Sonnet/Opus 5.5 variants to Antigravity registry, CLI, MITM aliases, usage allowlist
+- Map variants to upstream IDs with reasoning effort suffixes
+- Add capabilities, pricing, and shared family quota routing
+
+---files---

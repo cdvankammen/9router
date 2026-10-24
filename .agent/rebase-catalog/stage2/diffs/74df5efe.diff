@@ -1,0 +1,23 @@
+commit 74df5efe
+author: cdvankammen
+date: 2026-10-22 17:16:28 -0600
+subject: fix(usage): correct OpenRouter handler to real /api/v1/key credit mapping (BUG-QUOTA-03-b)
+
+Sibling commit a2d53af4 landed the handler but mapped a non-existent
+`credits` object and labeled credit figures as token quotas. Per official
+OpenRouter docs the /api/v1/key response carries USD credit figures:
+usage (all-time), limit (key credit cap, null=unlimited),
+limit_remaining (remaining, null=unlimited).
+
+- Single `credits` quota row with used/total/remaining + remainingPercentage,
+  `unlimited` flag and resetAt:null — matches UI normalizer case "openrouter"
+- Uses documented https://openrouter.ai/api/v1/key (registry usage.url still
+  carries the legacy /auth/key alias; both routes exist, docs one preferred)
+- buildOpenRouterQuota exported for direct unit coverage
+- Tests: paid tier (limit_remaining), free tier (no data), unlimited key,
+  missing key / 401 / 429, UI normalizer row — 11/11 pass on mini3
+
+Verified on mini3: unit/openrouter-usage.test.js 11/11 pass; full unit suite
+82f/16 files vs recorded 87f/30 baseline — no new failures (error-inbox
+10 fails proven pre-existing via stash test).
+

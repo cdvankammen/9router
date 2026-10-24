@@ -1,0 +1,45 @@
+commit 29fc880e
+author: decolua
+date: 2026-10-14 16:32:31 +0700
+subject: feat(gemini): add Gemini 4 Argon (gemini/vertex/antigravity)
+
+- Register gemini-4-argon on gemini + vertex and the gemini-4-argon-high
+  tier on antigravity (wire id per upstream catalog)
+- Capabilities pattern *gemini-4*: gemini-level thinking that cannot be
+  disabled, audio/video input, 1M context, 64K output
+- Thinking levels low/medium/high only — Argon rejects thinkingLevel
+  "minimal" and thinkingBudget with HTTP 400, so the gemini-level path now
+  clamps to the lowest supported level (Gemini 3 behavior unchanged)
+- Vertex OAuth/SA/ADC connections read defaultLocation from the registry
+  entry, defaulting Argon to "global" instead of the regional us-central1
+  (Argon serves only from global/us/eu)
+- Add getModelMeta() helper (suffix-aware registry entry lookup)
+
+Co-Authored-By: Claude Code <noreply@anthropic.com>
+
+
+diff --git a/open-sse/providers/capabilities.js b/open-sse/providers/capabilities.js
+index 5663813e..affd446a 100644
+--- a/open-sse/providers/capabilities.js
++++ b/open-sse/providers/capabilities.js
+@@ -395,6 +395,8 @@ export const PATTERN_CAPABILITIES = [
+ 
+   // ── Gemini (all 2.0+ multimodal + google_search grounding, 1M ctx) ─
+   { pattern: "*gemini*image*",  caps: { vision: true, imageOutput: true, contextWindow: 1048576 } },
++  // Gemini 4 (Argon): no "minimal" tier (400) and no thinkingBudget — LOW/MEDIUM/HIGH only, cannot disable.
++  { pattern: "*gemini-4*",      caps: { vision: true, audioInput: true, videoInput: true, reasoning: true, search: true, thinkingFormat: "gemini-level", thinkingCanDisable: false, contextWindow: 1048576, maxOutput: 65536 } },
+   { pattern: "*gemini-3.8*",    caps: { vision: true, audioInput: true, videoInput: true, reasoning: true, search: true, thinkingFormat: "gemini-level", thinkingCanDisable: false, contextWindow: 1048576, maxOutput: 65536 } },
+   { pattern: "*gemini-3.7*",    caps: { vision: true, audioInput: true, videoInput: true, reasoning: true, search: true, thinkingFormat: "gemini-level", thinkingCanDisable: false, contextWindow: 1048576, maxOutput: 65536 } },
+   { pattern: "*gemini-3*pro*",  caps: { vision: true, audioInput: true, videoInput: true, reasoning: true, search: true, thinkingFormat: "gemini-level", thinkingCanDisable: false, contextWindow: 1048576, maxOutput: 65535 } },
+diff --git a/open-sse/providers/registry/antigravity.js b/open-sse/providers/registry/antigravity.js
+index 50b1057d..2203fd9c 100644
+--- a/open-sse/providers/registry/antigravity.js
++++ b/open-sse/providers/registry/antigravity.js
+@@ -45,6 +45,7 @@ export default {
+     clientSecret: "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",
+   },
+   models: [
++    { id: "gemini-4-argon-high", name: "Gemini 4 Argon (High)", upstreamModelId: "gemini-4-argon-high(high)" },
+     { id: "gemini-3.8-flash-high", name: "Gemini 3.8 Flash (High)", upstreamModelId: "gemini-3.8-flash-high(high)" },
+     { id: "gemini-3.8-flash-medium", name: "Gemini 3.8 Flash (Medium)", upstreamModelId: "gemini-3.8-flash-medium(medium)" },
+     { id: "gemini-3.8-flash-low", name: "Gemini 3.8 Flash (Low)", upstreamModelId: "gemini-3.8-flash-low(low)" },

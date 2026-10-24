@@ -1,0 +1,113 @@
+commit 2aa9307f
+author: Mike
+date: 2026-10-15 21:23:54 +0700
+subject: feat(keys): per-key token quotas and pattern-based model access
+
+API keys gain tokenLimit/usedTokens (additive schema columns), enforced with 429 once exhausted and incremented from saveRequestUsage; the dashboard shows usage progress and can reset the counter. Model restrictions stay in keyAccess.js on resolved identities, now supporting wildcard entries (oc/*, *claude*), alias/id provider spellings, and deny entries (!opus / -haiku) with deny-only lists open-except-denied; an empty allow list still denies everything. The auth gate (checkApiKeyQuota) applies pause/quota to known keys regardless of requireApiKey while unknown keys keep passing in local mode.
+
+
+diff --git a/src/lib/db/index.js b/src/lib/db/index.js
+index ad483a7e..0e602245 100644
+--- a/src/lib/db/index.js
++++ b/src/lib/db/index.js
+@@ -31,7 +31,7 @@ export {
+ 
+ // API keys
+ export {
+-  getApiKeys, getApiKeyById, getApiKeyByKey, createApiKey, updateApiKey, deleteApiKey, validateApiKey,
++  getApiKeys, getApiKeyById, getApiKeyByKey, createApiKey, updateApiKey, deleteApiKey, validateApiKey, incrementKeyTokens,
+ } from "./repos/apiKeysRepo.js";
+ 
+ // Combos
+@@ -79,7 +79,7 @@ export async function exportDb() {
+     providerConnections: db.all(`SELECT * FROM providerConnections`).map((r) => ({ ...parseJson(r.data, {}), id: r.id, provider: r.provider, authType: r.authType, name: r.name, email: r.email, priority: r.priority, isActive: r.isActive === 1, createdAt: r.createdAt, updatedAt: r.updatedAt })),
+     providerNodes: db.all(`SELECT * FROM providerNodes`).map((r) => ({ ...parseJson(r.data, {}), id: r.id, type: r.type, name: r.name, createdAt: r.createdAt, updatedAt: r.updatedAt })),
+     proxyPools: db.all(`SELECT * FROM proxyPools`).map((r) => ({ ...parseJson(r.data, {}), id: r.id, isActive: r.isActive === 1, testStatus: r.testStatus, createdAt: r.createdAt, updatedAt: r.updatedAt })),
+-    apiKeys: db.all(`SELECT * FROM apiKeys`).map((r) => ({ id: r.id, key: r.key, name: r.name, machineId: r.machineId, isActive: r.isActive === 1, createdAt: r.createdAt, access: keyAccessFromColumns(r.accessRestricted, r.accessAllow) })),
++    apiKeys: db.all(`SELECT * FROM apiKeys`).map((r) => ({ id: r.id, key: r.key, name: r.name, machineId: r.machineId, isActive: r.isActive === 1, tokenLimit: r.tokenLimit || 0, usedTokens: r.usedTokens || 0, createdAt: r.createdAt, updatedAt: r.updatedAt, access: keyAccessFromColumns(r.accessRestricted, r.accessAllow) })),
+     combos: db.all(`SELECT * FROM combos`).map((r) => ({ id: r.id, name: r.name, kind: r.kind, models: parseJson(r.models, []), createdAt: r.createdAt, updatedAt: r.updatedAt })),
+     modelAliases: {},
+     customModels: [],
+@@ -148,8 +148,8 @@ export async function importDb(payload) {
+       }
+       const cols = keyAccessToColumns(access);
+       db.run(
+-        `INSERT OR REPLACE INTO apiKeys(id, key, name, machineId, isActive, createdAt, accessRestricted, accessAllow) VALUES(?, ?, ?, ?, ?, ?, ?, ?)`,
+-        [k.id, k.key, k.name || null, k.machineId || null, k.isActive === false ? 0 : 1, k.createdAt || new Date().toISOString(), cols.accessRestricted, cols.accessAllow]
++        `INSERT OR REPLACE INTO apiKeys(id, key, name, machineId, isActive, tokenLimit, usedTokens, createdAt, updatedAt, accessRestricted, accessAllow) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
++        [k.id, k.key, k.name || null, k.machineId || null, k.isActive === false ? 0 : 1, k.tokenLimit || 0, k.usedTokens || 0, k.createdAt || new Date().toISOString(), k.updatedAt || new Date().toISOString(), cols.accessRestricted, cols.accessAllow]
+       );
+     }
+     for (const c of payload.combos || []) {
+diff --git a/src/lib/db/repos/usageRepo.js b/src/lib/db/repos/usageRepo.js
+index f18120a5..8e18f162 100644
+--- a/src/lib/db/repos/usageRepo.js
++++ b/src/lib/db/repos/usageRepo.js
+@@ -309,6 +309,14 @@ export async function saveRequestUsage(entry) {
+     if (inserted) {
+       pushToRing(entry);
+       scheduleStatsEvent("update", 250);
++      // Per-key token quota accounting (single atomic UPDATE)
++      if (entry.apiKey && typeof entry.apiKey === "string") {
++        const totalTokens = promptTokens + completionTokens;
++        if (totalTokens > 0) {
++          const { incrementKeyTokens } = await import("./apiKeysRepo.js");
++          await incrementKeyTokens(entry.apiKey.trim(), totalTokens);
++        }
++      }
+     }
+   } catch (e) {
+     console.error("Failed to save usage stats:", e);
+diff --git a/src/lib/db/schema.js b/src/lib/db/schema.js
+index 91238327..f106e5a9 100644
+--- a/src/lib/db/schema.js
++++ b/src/lib/db/schema.js
+@@ -82,7 +82,10 @@ export const TABLES = {
+       name: "TEXT",
+       machineId: "TEXT",
+       isActive: "INTEGER DEFAULT 1",
++      tokenLimit: "INTEGER DEFAULT 0",
++      usedTokens: "INTEGER DEFAULT 0",
+       createdAt: "TEXT NOT NULL",
++      updatedAt: "TEXT",
+       // Per-key access control. Additive columns, picked up by
+       // syncSchemaFromTables() on boot; existing rows read as unrestricted (0).
+       accessRestricted: "INTEGER DEFAULT 0",
+diff --git a/src/sse/handlers/chat.js b/src/sse/handlers/chat.js
+index 93b20e6f..2810e476 100644
+--- a/src/sse/handlers/chat.js
++++ b/src/sse/handlers/chat.js
+@@ -5,7 +5,7 @@ import {
+   markAccountUnavailable,
+   clearAccountError,
+   extractApiKey,
+-  isValidApiKey,
++  checkApiKeyQuota,
+ } from "../services/auth.js";
+ import { handleAntigravityQuotaError, clearAntigravityStrikes } from "../services/antigravityQuota.js";
+ import { getSettings } from "@/lib/localDb";
+@@ -68,18 +68,13 @@ export async function handleChat(request, clientRawRequest = null) {
+     log.debug("AUTH", "No API key provided (local mode)");
+   }
+ 
+-  // Enforce API key if enabled in settings
++  // API key gate: a known key is subject to its own pause/quota limits even
++  // when keys are not required; an unknown key passes only in local mode.
+   const settings = await getSettings();
+-  if (settings.requireApiKey) {
+-    if (!apiKey) {
+-      log.warn("AUTH", "Missing API key (requireApiKey=true)");
+-      return errorResponse(HTTP_STATUS.UNAUTHORIZED, "Missing API key");
+-    }
+-    const valid = await isValidApiKey(apiKey);
+-    if (!valid) {
+-      log.warn("AUTH", "Invalid API key (requireApiKey=true)");
+-      return errorResponse(HTTP_STATUS.UNAUTHORIZED, "Invalid API key");
+-    }
++  const keyGate = await checkApiKeyQuota(apiKey, settings.requireApiKey);
++  if (keyGate) {
++    log.warn("AUTH", `${keyGate.error} (key=${log.maskKey(apiKey)})`);
++    return errorResponse(keyGate.status, keyGate.error);
+   }
+ 
+   if (!modelStr) {

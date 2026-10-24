@@ -1,0 +1,9 @@
+===COMMIT===
+hash: 5853a88a22f68119a8f491f22bfa0df54fcad542
+short: 5853a88a
+author: mj10612 <5388892+mj10612@users.noreply.github.com>
+date: 2026-10-23 12:56:23 +0700
+subject: fix(search): reset regex state between model matches
+body:
+
+---files---

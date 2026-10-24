@@ -1,0 +1,39 @@
+commit bbdc77b4
+author: cdvankammen
+date: 2026-10-22 12:19:30 -0600
+subject: fix(smart-router): start sr-* combo cleanup scheduler from instrumentation.js
+
+BUG: The optional stale smart-router combo sweep (settings.srComboCleanup.
+enabled) never ran in the standalone build. sr-* combos accumulated
+indefinitely even with the toggle enabled.
+
+ROOT CAUSE: The scheduler was started from initializeApp(), which is
+imported as a side-effect by src/app/layout.js via bootstrap.js. In the
+Next.js 16 standalone build, that bootstrap chunk is tree-shaken — nothing
+references it, so initializeApp() never runs. The markdown log flusher
+avoids this by starting from src/instrumentation.js, which IS loaded in
+standalone builds.
+
+FIX (src/instrumentation.js): Start the sr-combo cleanup scheduler from
+the instrumentation register() hook, gated on settings.srComboCleanup.
+enabled (same condition as before). Fail-open: any error is logged and
+swallowed.
+
+VERIFICATION (production standalone via tray app, port 20130):
+- Before: no [SR_CLEANUP] logs, sr-* combos never swept
+- After: console buffer shows:
+    [SR_CLEANUP] Scheduler started {"ttlHours":1,"intervalMs":3600000}
+    [SR_CLEANUP] Deleted stale smart combo "sr-modelRouter-code-generation"
+    [SR_CLEANUP] Deleted stale smart combo "sr-modelRouter-qa_knowledge"
+    [SR_CLEANUP] Deleted stale smart combo "sr-modelRouter-summarization"
+- All 3 stale combos (older than 1h TTL) deleted on the initial tick;
+  fresh combos preserved.
+
+FOUND BY: E2E verification of the sr-* cleanup toggle (item 4 of the
+final testing pass). Documented in
+learnings/2026-08-07-sr-cleanup-scheduler-standalone.md.
+
+Related: 9f4c1631 (smart router), 8990a3b4 (custom nodes), 429ddc56
+([DONE] fix), 245845cf (node auth).
+Part of: Smart Router & Fallback UX plan (M4 polish)
+

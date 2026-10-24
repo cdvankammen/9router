@@ -1,0 +1,9 @@
+===COMMIT===
+hash: 5bdcd5e7674d8f8f1139c07104e72c8ac094f6b4
+short: 5bdcd5e7
+author: anojndr <anojndr@gmail.com>
+date: 2026-10-15 09:41:33 +0700
+subject: fix(opencode): move free tier to /inference/v1 with the v2 client fingerprint (#4842)
+body:
+
+---files---

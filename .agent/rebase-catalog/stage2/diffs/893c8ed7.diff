@@ -1,0 +1,23 @@
+commit 893c8ed7
+author: cdvankammen
+date: 2026-10-22 15:41:21 -0600
+subject: fix(ux): replace silent console.log catches with user-visible toasts in ModelsCard (GAP-P2-29)
+
+5 catch blocks in ModelsCard.js (fetch, setAlias, deleteAlias,
+addCustomModel, deleteCustomModel) used console.log only, making
+failures invisible to users.
+
+Fix:
+- Import useNotificationStore from @/store/notificationStore
+- Replace console.log with notify.error() in all 5 catch blocks
+- Add notify.success() on successful operations for positive feedback
+- Handle non-ok HTTP responses with error messages from API
+- Use console.error (not console.log) for dev console logging
+
+Regression test: 5 vitest assertions verify import, hook usage,
+notify.error presence (>=5), no silent console.log catches, and
+user-friendly error messages. Anti-false-positive mutation verified
+(reverting one catch to console.log breaks the test).
+
+Commit on branch gap-p2-29/t_264fbea3.
+

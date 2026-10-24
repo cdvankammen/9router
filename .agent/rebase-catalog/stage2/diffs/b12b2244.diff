@@ -1,0 +1,60 @@
+commit b12b2244
+author: cdvankammen
+date: 2026-10-22 12:18:51 -0600
+subject: fix(streaming): prevent duplicate [DONE] sentinel in passthrough mode
+
+BUG: All passthrough streaming (single-model AND combo) sent `data: [DONE]`
+twice to the client, violating the OpenAI SSE protocol.
+
+ROOT CAUSE: In open-sse/utils/stream.js, the passthrough transform() path
+forwards the upstream [DONE] line via the generic forwarder but never sets
+`streamDoneSent = true`. The flush() handler then adds a second [DONE]
+because its guard `!streamDoneSent` passes.
+
+The streamDoneSent tracking was implemented for translate mode (where
+[DONE] is detected via parsed.done) but was never extended to passthrough
+mode when it was added. This is an internal implementation gap — no
+external PR or contribution introduced it.
+
+FIX (2 files):
+1. open-sse/utils/stream.js: Added `if (trimmed === "data: [DONE]")
+   streamDoneSent = true;` after the passthrough forwarder enqueues output.
+   This marks the sentinel as sent so flush() skips the duplicate.
+
+2. open-sse/handlers/chatCore.js: Extended the forced-SSE-to-JSON guard
+   to also trigger when `stream` is true (upstream defaulted to streaming)
+   even if providerRequiresStreaming is false. This ensures non-streaming
+   clients never receive raw SSE when the upstream forces streaming.
+   Comment updated to explain the dual condition.
+
+VERIFICATION (production standalone build, port 20130, mock upstream 24000):
+- Single-model streaming: 2x [DONE] → 1x [DONE] ✓
+- Combo streaming: 2x [DONE] → 1x [DONE] ✓
+- Non-streaming combo: clean JSON ✓
+- Direct mock upstream: 1x [DONE] (unchanged) ✓
+
+FOUND BY: GitHub Copilot agent during E2E testing with mock upstream.
+NOT from any external PR or user-reported issue.
+
+LEARNING: learnings/2026-08-06-sse-done-duplicate-leak.md (local only,
+docs/plans-and-prompts is gitignored)
+ADR: decisions/ADR-005-sse-done-tracking-passthrough.md (local only)
+
+Part of: Smart Router & Fallback UX plan (M4 polish)
+
+
+diff --git a/open-sse/handlers/chatCore.js b/open-sse/handlers/chatCore.js
+index 010a7476..c9a6e14e 100644
+--- a/open-sse/handlers/chatCore.js
++++ b/open-sse/handlers/chatCore.js
+@@ -503,7 +503,9 @@ export async function handleChatCore({ body, modelInfo, credentials, log, onCred
+   const trackDone = () => trackPendingRequest(model, provider, connectionId, false);
+ 
+   // Provider forced streaming but client wants JSON
+-  if (!clientRequestedStreaming && providerRequiresStreaming) {
++  // (or client omitted stream and defaulted to streaming upstream — convert
++  //  back to JSON so a non-streaming client never receives raw SSE)
++  if (!clientRequestedStreaming && (providerRequiresStreaming || stream)) {
+     const result = await handleForcedSSEToJson({ ...sharedCtx, providerResponse, sourceFormat, targetFormat: providerResponseFormat, customToolNames, toolNameMap, trackDone, appendLog });
+     if (result) { streamController.handleComplete(); return result; }
+   }

@@ -1,0 +1,33 @@
+commit 34e24ea2
+author: cdvankammen
+date: 2026-10-22 12:07:11 -0600
+subject: feat(observability): add markdown request log auto-flush to ~/.9router/logs
+
+- New src/lib/markdownLog.js: opt-in timer (settings.markdownLogEnabled,
+  markdownLogFlushIntervalMin default 5) that rewrites the daily
+  YYYY-MM-DD.md report with the last 24h of request details, grouped by
+  conversation. Fail-open, re-reads settings each tick, started from
+  instrumentation.js (unref'd timer).
+- New src/lib/markdownReport.js: shared renderer extracted from the export
+  route (now used by both manual export and auto-flush — no duplication).
+- Combos page: 'Markdown Request Log' card with enable toggle + interval.
+
+Tests: tests/unit/markdown-log.test.js — 2 tests verifying real file write
+with per-conversation content when enabled, skip when disabled. All pass.
+
+Part of: Observability & Conversation Analytics plan (Phase P3)
+
+
+diff --git a/src/lib/db/repos/settingsRepo.js b/src/lib/db/repos/settingsRepo.js
+index 710fbec1..23e864e3 100644
+--- a/src/lib/db/repos/settingsRepo.js
++++ b/src/lib/db/repos/settingsRepo.js
+@@ -25,6 +25,8 @@ const DEFAULT_SETTINGS = {
+     maxCandidates: 3,
+   },
+   analyzeErrorModel: "oc/mimo-v2.5-free",
++  markdownLogEnabled: false,
++  markdownLogFlushIntervalMin: 5,
+   capacityAdapter: {
+     vision: { enabled: true, roundRobin: false, models: [] },
+     pdf: { enabled: false, roundRobin: false, models: [] },

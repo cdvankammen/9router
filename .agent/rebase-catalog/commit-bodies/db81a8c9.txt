@@ -1,0 +1,13 @@
+===COMMIT===
+hash: db81a8c9f0dbb8037d00751d06ba31fa82a67250
+short: db81a8c9
+author: IlyaKhalafi <ilyakhalafi@yahoo.com>
+date: 2026-10-15 16:43:40 +0700
+subject: fix(headroom): avoid false compression warnings when tools dominate body (#4855)
+body:
+- Avoid false phantom savings warnings when large tool schemas dominate outbound JSON
+- Require both messageBytes and bodyBytes to shrink <5% before warning
+- Preserve top-level system prompt savings detection for Claude
+- Add tests covering large tool schemas and message compression thresholds
+
+---files---

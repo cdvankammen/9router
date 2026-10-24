@@ -1,0 +1,29 @@
+commit b6fd4264
+author: cdvankammen
+date: 2026-10-24 07:24:26 -0600
+subject: fix(rate-limiter): exempt RSC prefetches from middleware-layer limiter
+
+The middleware rate limiter (checkRateLimit in dashboardGuard.js, wired via
+
+src/proxy.js) was counting Next-internal ?_rsc= navigations and /_next/* asset
+
+requests against the same per-IP bucket as ordinary navigation, so a burst of
+
+RSC prefetches from a heavy dashboard page could 429 the very navigation that
+
+triggered them — the middleware-layer twin of the TCP-layer Finding #8/#14 bug.
+
+- Added isNextInternalRequest() exempting /_next/* paths and any request carrying
+
+  a _rsc query param, mirroring isNextInternal in custom-server.rate-limiter.js.
+
+- Defensive ?. on searchParams to tolerate test fakes.
+
+- fakeRequest test helper gained a search parameter for query strings.
+
+- 3 regression tests (RSC exempt, /_next/ exempt, ordinary still limited).
+
+- 24/24 middleware tests pass.
+
+Resolves Finding #16.
+

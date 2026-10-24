@@ -1,0 +1,11 @@
+commit d0bc22e0
+author: cdvankammen
+date: 2026-10-22 12:18:51 -0600
+subject: docs: final [DONE] leak resolution + full commit history in narrative
+
+Session narrative now documents the stream-default root cause (debug
+trace), the fix (stream = body.stream === true), E2E verification, and
+the complete 19-commit history with rationale.
+
+Refs: commit ccde7bff; learnings/2026-08-06-sse-done-duplicate-leak.md
+

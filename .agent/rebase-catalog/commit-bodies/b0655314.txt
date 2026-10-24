@@ -1,0 +1,21 @@
+===COMMIT===
+hash: b0655314b79c7a7bfb7288982cddb98503641429
+short: b0655314
+author: Cristiano <cristiano@cristianocosta.me>
+date: 2026-10-23 12:06:49 +0700
+subject: fix(capabilities): give Grok 4.7 its 500k context window
+body:
+grok-4.7 had no pattern row, so it fell through to the `*grok-4*`
+catch-all and advertised a 256k window. A combo reports its smallest
+member, so any combo containing grok-4.7 showed 256k, and
+stripHistoryForContext() trims history at 80% of that.
+
+The upstream limit is 500k: the Grok CLI proxy accepts a 476k-token
+prompt and rejects a 614k one with "613738 tokens > 500000 tokens".
+
+- add a `*grok-4.7*` row mirroring grok-4.6 (vision, reasoning, search,
+  openai thinking format, 500k context and output)
+- list grok-4.7 in the static xai and grok-cli model lists
+- add tests for the window, the feature set, variant ids and the lists
+
+---files---

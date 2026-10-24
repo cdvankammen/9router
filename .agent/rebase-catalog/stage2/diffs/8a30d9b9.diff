@@ -1,0 +1,18 @@
+commit 8a30d9b9
+author: cdvankammen
+date: 2026-10-22 15:36:33 -0600
+subject: test(chatCore): regression test for onRequestSuccess guard (GAP-P1-05)
+
+The .catch() on the onRequestSuccess promise chain already exists at HEAD
+(upstream 0d216689, 2026-06-26) — the gap scan that spawned this card hit a
+stale pre-merge snapshot. This adds a regression test so the guard cannot be
+silently removed:
+
+- onRequestSuccess is invoked on valid provider response (fire-and-forget)
+- sync throw inside onRequestSuccess is contained: logged, handler resolves
+- async rejection is contained by the chain .catch: logged, handler resolves
+- success body returns intact even when onRequestSuccess fails
+
+Anti-false-positive verified: intentionally breaking the logged-assertion
+makes 2/4 tests fail; restoring returns to 4/4 pass.
+

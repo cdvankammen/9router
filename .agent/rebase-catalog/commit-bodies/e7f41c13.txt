@@ -1,0 +1,9 @@
+===COMMIT===
+hash: e7f41c1332fdeca313af664be01a2f1169ae494f
+short: e7f41c13
+author: mannnrachman <mannnrachman@users.noreply.github.com>
+date: 2026-10-11 09:15:15 +0700
+subject: fix(cursor): recover long sessions from empty AgentService turns (#4690)
+body:
+
+---files---

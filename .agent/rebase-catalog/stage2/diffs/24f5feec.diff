@@ -1,0 +1,17 @@
+commit 24f5feec
+author: cdvankammen
+date: 2026-10-22 14:04:00 -0600
+subject: fix(failover): L1 settings-load retry + API key parity between nodes
+
+- custom-server.js: l1LoadSettings retries with backoff (1s→5s, 10 attempts)
+  instead of silently staying off when the DB adapter isn't ready at boot
+  (root cause: L1 never activated in production)
+- mini2 plist: removed custom API_KEY_SECRET/MACHINE_ID_SALT so both nodes
+  use the default secret — the shared API key's CRC now validates on mini2
+  (failover to mini2 no longer 401s the harness)
+- local peerNodes set to [http://100.96.109.61:20128] → mutual L1
+- cleanup: removed stale hermes 9router install (v0.4.71) + disabled
+  com.9router.autostart; single app instance in cli/app
+- verified: kill local → proxy serves mini2; kill mini2 → proxy serves
+  local; respawn <12s; matrix 200/200/200/200; failover tests 6/6
+

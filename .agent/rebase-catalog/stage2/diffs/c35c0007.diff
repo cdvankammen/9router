@@ -1,0 +1,132 @@
+commit c35c0007
+author: cdvankammen
+date: 2026-10-22 12:21:59 -0600
+subject: feat(hardening): Phase 1 — deep-merge settings + conflict warnings + fallback validation
+
+1.1 Deep-merge nested settings in updateSettings (against DEFAULTS so partial
+    PATCH keeps siblings; maps keep REPLACE semantics so rule deletion works)
+    + 6 unit tests (settings-deep-merge.test.js)
+1.2 JSDoc for calculateCostFromTokens (arg order + example)
+1.3 Provider+model fallback rule conflict warning (both directions) in table
+1.4 Fallback string validation on save: warn (not block) on strings not in the
+    catalog; custom-node prefixes excluded from false positives
+E2E verified live: partial PATCH keeps siblings, conflict chips render both
+ways, custom-node model no false warning. Suite 1724 pass / 88 baseline.
+
+
+diff --git a/open-sse/providers/pricing.js b/open-sse/providers/pricing.js
+index 45df9d22..cf914ce8 100644
+--- a/open-sse/providers/pricing.js
++++ b/open-sse/providers/pricing.js
+@@ -452,10 +452,27 @@ export function formatCost(cost) {
+ }
+ 
+ /**
+- * Calculate cost from tokens and pricing
+- * @param {object} tokens
+- * @param {object} pricing
++ * Calculate cost from tokens and pricing.
++ *
++ * NOTE argument order: `(tokens, pricing)` — tokens FIRST, pricing SECOND.
++ * (The price object is the "lookup result", tokens are the "input data";
++ * don't be fooled by the names when calling.)
++ *
++ * @param {object} tokens - Usage counters, e.g.
++ *   { prompt_tokens: 1000, completion_tokens: 500, cached_tokens: 0 }
++ *   (accepts OpenAI-style or Claude-style field names; prompt_tokens is
++ *   cache-inclusive, cached/cache_creation are subtracted from it)
++ * @param {object} pricing - Price object from getPricingForModel(provider, model),
++ *   e.g. { input: 5, output: 25, cached: 0.5, cache_creation: 6.25, reasoning: 25 }
++ *   (all values are $ per 1M tokens)
+  * @returns {number} cost in dollars
++ *
++ * @example
++ * const p = getPricingForModel("tokenrouter", "anthropic/claude-opus-4.6");
++ * const cost = calculateCostFromTokens(
++ *   { prompt_tokens: 1000, completion_tokens: 500, cached_tokens: 0 },
++ *   p
++ * ); // 0.0175
+  */
+ export function calculateCostFromTokens(tokens, pricing) {
+   if (!tokens || !pricing) return 0;
+diff --git a/src/lib/db/repos/settingsRepo.js b/src/lib/db/repos/settingsRepo.js
+index 0feb4d5a..b198a2b1 100644
+--- a/src/lib/db/repos/settingsRepo.js
++++ b/src/lib/db/repos/settingsRepo.js
+@@ -93,8 +93,58 @@ async function readRaw() {
+ }
+ 
+ // Merge raw settings with defaults; backward-compat for missing keys
++// Deep-merges nested objects so a PARTIAL update (e.g. {smartRouter:{enabled:true}})
++// never shadows the sibling defaults (names, allowedModels, ...).
++const NESTED_KEYS = new Set([
++  "providerStrategies",
++  "quotaVisibility",
++  "comboStrategies",
++  "smartRouter",
++  "srComboCleanup",
++  "modelFallbacks",
++  "capacityAdapter",
++  "dnsToolEnabled",
++]);
++
++// Recursive plain-object merge (arrays and scalars replace; objects merge
++// key-by-key). Used for the nested settings so partial updates at ANY depth
++// (e.g. capacityAdapter.vision.enabled) keep the sibling defaults.
++function deepMergeObject(base, override) {
++  if (
++    !override ||
++    typeof override !== "object" ||
++    Array.isArray(override) ||
++    !base ||
++    typeof base !== "object" ||
++    Array.isArray(base)
++  ) {
++    return override === undefined ? base : override;
++  }
++  const out = { ...base };
++  for (const [k, v] of Object.entries(override)) {
++    out[k] = deepMergeObject(base[k], v);
++  }
++  return out;
++}
++
++function deepMergeNested(merged, key) {
++  const defVal = DEFAULT_SETTINGS[key];
++  const curVal = merged[key];
++  if (
++    curVal &&
++    typeof curVal === "object" &&
++    !Array.isArray(curVal) &&
++    defVal &&
++    typeof defVal === "object" &&
++    !Array.isArray(defVal)
++  ) {
++    merged[key] = deepMergeObject(defVal, curVal);
++  }
++}
++
+ export function mergeWithDefaults(raw) {
+   const merged = { ...DEFAULT_SETTINGS, ...(raw || {}) };
++  for (const key of NESTED_KEYS) deepMergeNested(merged, key);
+   for (const [key, defVal] of Object.entries(DEFAULT_SETTINGS)) {
+     if (merged[key] === undefined) {
+       if (
+@@ -133,7 +183,17 @@ export async function updateSettings(updates) {
+   db.transaction(function () {
+     const row = db.get(`SELECT data FROM settings WHERE id = 1`);
+     const current = row ? parseJson(row.data, {}) : {};
++    // Deep-merge nested objects against their DEFAULTS (not against the stored
++    // value): a partial nested update (e.g. {smartRouter:{enabled:true}}) keeps
++    // the sibling defaults, while full-map keys (modelFallbacks, strategies)
++    // keep REPLACE semantics — merging against the stored map would resurrect
++    // deleted entries (the UI deletes by sending the map without the key).
+     next = { ...current, ...updates };
++    for (const key of NESTED_KEYS) {
++      if (next[key] && typeof next[key] === "object" && !Array.isArray(next[key])) {
++        next[key] = deepMergeObject(DEFAULT_SETTINGS[key] ?? {}, next[key]);
++      }
++    }
+     db.run(
+       `INSERT INTO settings(id, data) VALUES(1, ?) ON CONFLICT(id) DO UPDATE SET data = excluded.data`,
+       [stringifyJson(next)],

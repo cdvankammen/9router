@@ -1,0 +1,173 @@
+commit e3faf053
+author: cdvankammen
+date: 2026-10-22 17:10:51 -0600
+subject: feat(failover): L2 proxy status endpoint + dashboard card
+
+- cli/failover-proxy.cjs: answer GET /api/failover-status locally (control
+  plane, never forwarded upstream): local up state, active target, peer list,
+  loop protection flag, uptime.
+- dashboard proxy-pools page: FailoverStatusCard polls /api/system/failover-status
+  every 5s, shows Local Node UP/DOWN, Active Target, Peer Nodes, port, uptime,
+  offline state when proxy unreachable.
+- api/system/failover-status route: server-side fetch to the L2 proxy process
+  (FAILOVER_PROXY_PORT env, default 20140), CORS mirroring /api/health.
+- tests: T9 covers the control-plane endpoint shape + loop-protection pass-through.
+
+Notes: proxy-pools repo/API/UI were already integrated (stale open issue);
+card open issues resolved: schema repo exists, UI exists, dashboard panel added.
+
+
+diff --git a/src/app/(dashboard)/dashboard/proxy-pools/page.js b/src/app/(dashboard)/dashboard/proxy-pools/page.js
+index 8edf791f..6142942e 100644
+--- a/src/app/(dashboard)/dashboard/proxy-pools/page.js
++++ b/src/app/(dashboard)/dashboard/proxy-pools/page.js
+@@ -27,6 +27,141 @@ function normalizeFormData(data = {}) {
+   };
+ }
+ 
++function formatUptime(ms) {
++  if (!ms || ms < 0) return "0s";
++  const s = Math.floor(ms / 1000);
++  if (s < 60) return `${s}s`;
++  const m = Math.floor(s / 60);
++  if (m < 60) return `${m}m ${s % 60}s`;
++  const h = Math.floor(m / 60);
++  return `${h}h ${m % 60}m`;
++}
++
++function FailoverStatusCard() {
++  const [status, setStatus] = useState(null);
++  const [loading, setLoading] = useState(true);
++  const [error, setError] = useState(null);
++
++  const fetchStatus = useCallback(async () => {
++    try {
++      const res = await fetch("/api/system/failover-status", { cache: "no-store" });
++      const data = await res.json();
++      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
++      setStatus(data);
++      setError(null);
++    } catch (err) {
++      setError(err.message);
++    } finally {
++      setLoading(false);
++    }
++  }, []);
++
++  useEffect(() => {
++    fetchStatus();
++    const interval = setInterval(fetchStatus, 5000);
++    return () => clearInterval(interval);
++  }, [fetchStatus]);
++
++  if (loading && !status) {
++    return (
++      <Card className="animate-pulse">
++        <div className="p-4 flex items-center gap-3">
++          <div className="w-8 h-8 rounded-full bg-black/5 dark:bg-white/5"></div>
++          <div className="flex-1 space-y-2">
++            <div className="h-4 w-1/4 rounded bg-black/5 dark:bg-white/5"></div>
++            <div className="h-3 w-1/2 rounded bg-black/5 dark:bg-white/5"></div>
++          </div>
++        </div>
++      </Card>
++    );
++  }
++
++  if (error) {
++    return (
++      <Card className="border-red-500/30 bg-red-500/5">
++        <div className="p-4 flex items-center gap-3">
++          <span className="material-symbols-outlined text-red-500 text-[24px]">error</span>
++          <div className="flex-1">
++            <p className="font-medium text-red-500">Failover Proxy Unreachable</p>
++            <p className="text-xs text-text-muted mt-0.5">{error}</p>
++          </div>
++          <Badge variant="error">offline</Badge>
++        </div>
++      </Card>
++    );
++  }
++
++  const localUp = status?.local?.up;
++  const activeTarget = status?.activeTarget;
++  const peers = status?.peers || [];
++  const activePeer = peers.find((p) => p.url === activeTarget) || peers.find((p) => p.up);
++  const uptime = formatUptime(status?.uptimeMs);
++
++  return (
++    <Card>
++      <div className="p-4">
++        <div className="flex items-start justify-between gap-3 mb-3">
++          <div className="flex items-center gap-2">
++            <span className="material-symbols-outlined text-primary text-[24px]">sync</span>
++            <h3 className="font-semibold text-sm">L2 Failover Proxy</h3>
++          </div>
++          <Badge variant={status?.ok ? "success" : "error"} size="sm">
++            {status?.ok ? "running" : "error"}
++          </Badge>
++        </div>
++
++        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
++          <div className="rounded-lg border border-black/10 dark:border-white/10 p-3">
++            <p className="text-xs text-text-muted mb-0.5">Local Node</p>
++            <div className="flex items-center gap-2">
++              <span
++                className={`size-2 rounded-full ${localUp ? "bg-green-500" : "bg-red-500"}`}
++              />
++              <span className="font-medium text-sm">{localUp ? "UP" : "DOWN"}</span>
++              <span className="text-xs text-text-muted ml-auto">{status?.local?.url}</span>
++            </div>
++          </div>
++
++          <div className="rounded-lg border border-black/10 dark:border-white/10 p-3">
++            <p className="text-xs text-text-muted mb-0.5">Active Target</p>
++            <div className="flex items-center gap-2">
++              <span
++                className={`size-2 rounded-full ${activePeer?.up ? "bg-green-500" : "bg-red-500"}`}
++              />
++              <span className="font-medium text-sm truncate">{activeTarget || "none"}</span>
++            </div>
++          </div>
++        </div>
++
++        {peers.length > 0 && (
++          <div className="mb-3">
++            <p className="text-xs text-text-muted mb-1.5">Peer Nodes</p>
++            <div className="flex flex-wrap gap-1.5">
++              {peers.map((peer, i) => (
++                <Badge
++                  key={i}
++                  variant={peer.up ? "success" : "error"}
++                  size="sm"
++                  className="gap-1"
++                >
++                  <span className={`size-1.5 rounded-full ${peer.up ? "bg-green-500" : "bg-red-500"}`} />
++                  {peer.url}
++                </Badge>
++              ))}
++            </div>
++          </div>
++        )}
++
++        <div className="flex items-center justify-between text-xs text-text-muted">
++          <span>Port: {status?.port}</span>
++          <span>Uptime: {uptime}</span>
++          <span>Loop protected: {status?.loopProtected ? "yes" : "no"}</span>
++        </div>
++      </div>
++    </Card>
++  );
++}
++
+ export default function ProxyPoolsPage() {
+   const [proxyPools, setProxyPools] = useState([]);
+   const [loading, setLoading] = useState(true);
+@@ -574,6 +709,7 @@ export default function ProxyPoolsPage() {
+ 
+   return (
+     <div className="mx-auto flex w-full max-w-5xl flex-col gap-4 px-1 sm:gap-6 sm:px-0">
++      <FailoverStatusCard />
+       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+         <div className="min-w-0">
+           <h1 className="text-xl font-semibold sm:text-2xl">Proxy Pools</h1>

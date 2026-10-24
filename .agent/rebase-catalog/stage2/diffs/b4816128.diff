@@ -1,0 +1,27 @@
+commit b4816128
+author: cdvankammen
+date: 2026-10-22 15:49:37 -0600
+subject: fix(security): add SSRF guard to suggested-models + smartRouter (#3714)
+
+CRITICAL: GET /api/providers/suggested-models accepts ?url= from query
+params and fetches it server-side without validation — classic SSRF.
+
+- Import and apply assertPublicUrlResolved in suggested-models/route.js
+  before the fetch() call; return 400 if URL targets an internal host.
+- Import and apply assertPublicUrlResolved in smartRouter.js getNodeModels
+  before constructing the /models URL; skip node if baseUrl is internal.
+  (MEDIUM: node.baseUrl is admin-configured but worth protecting against
+  DB tampering / renamed node entries.)
+- Add 6 tests in suggested-models-ssrf-guard.test.js covering loopback,
+  cloud metadata (169.254.169.254), IPv6 loopback, private-network range,
+  missing params, and public URL pass-through.
+- Existing 15 tests in ssrf-guard-hardening.test.js continue to pass.
+- Build syntax check: all 3 modified/added files pass --check.
+
+False positives confirmed NOT fixed (by design):
+- Deploy routes (cloudflare/vercel/deno): fetch(targetUrl) is inside
+  string templates deployed as relay workers, not server-side.
+- headroom/proxy: intentionally proxies to localhost, gated by dashboardGuard.
+- cowork-mcp-registry: hardcoded REGISTRY_URL, not user-controlled.
+- cowork-mcp-tools: already has assertPublicUrl.
+

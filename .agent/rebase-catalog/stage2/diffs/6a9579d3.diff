@@ -1,0 +1,6 @@
+commit 6a9579d3
+author: cdvankammen
+date: 2026-10-22 17:13:22 -0600
+subject: docs(policy): add mandatory QA gate (tests + functional check + evidence) to branch policy — Chris directive 2026-09-16
+
+

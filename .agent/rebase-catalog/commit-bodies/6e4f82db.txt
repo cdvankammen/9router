@@ -1,0 +1,9 @@
+===COMMIT===
+hash: 6e4f82db33cf944d544fb2c2c4d698a21c180616
+short: 6e4f82db
+author: Nikan Wystaf <nikan.wystaf@gmail.com>
+date: 2026-10-07 19:42:12 +0700
+subject: fix(translator): uniquify duplicate tool_call_ids for Gemini (#4532)
+body:
+
+---files---

@@ -1,0 +1,13 @@
+commit 80cba330
+author: cdvankammen
+date: 2026-10-22 14:04:00 -0600
+subject: fix(messages): Trace view crash — conversation summaries have no messages array
+
+- Clicking a conversation in Trace crashed: conv.messages.map on undefined
+  (the API conversation summary carries aggregates only, no thread)
+- TraceTreeView now: guards conv.messages (messages = conv.messages || []),
+  shows 'Loading thread…' / 'No messages' states, and accepts onExpand
+  (wired to loadThread) so selecting a conversation lazy-loads its thread
+  like the Conversations view
+- Browser-verified: Trace renders, click loads chain, no crash
+

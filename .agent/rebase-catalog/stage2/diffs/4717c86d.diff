@@ -1,0 +1,6 @@
+commit 4717c86d
+author: cdvankammen
+date: 2026-10-22 17:16:28 -0600
+subject: docs(tracking): v3 full-suite QA run on mini3 with corrected reporter — ERR_LOAD_URL reporter crash documented (vitest 4.1.11)
+
+

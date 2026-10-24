@@ -1,0 +1,23 @@
+commit f172c3c4
+author: Ulder Carrilho Júnior
+date: 2026-10-23 14:28:33 +0700
+subject: fix(antigravity): use hub/2.24.0 User-Agent and add Gemini 4 Argon medium/low tiers (#4816)
+
+Update Antigravity User-Agent to hub/2.24.0 to resolve HTTP 404 on Gemini 4 Argon
+models, register gemini-4-argon-medium and gemini-4-argon-low tiers, and include
+gemini-4-argon-* in quota monitoring.
+
+
+diff --git a/open-sse/providers/registry/antigravity.js b/open-sse/providers/registry/antigravity.js
+index 2203fd9c..616ad7b4 100644
+--- a/open-sse/providers/registry/antigravity.js
++++ b/open-sse/providers/registry/antigravity.js
+@@ -46,6 +46,8 @@ export default {
+   },
+   models: [
+     { id: "gemini-4-argon-high", name: "Gemini 4 Argon (High)", upstreamModelId: "gemini-4-argon-high(high)" },
++    { id: "gemini-4-argon-medium", name: "Gemini 4 Argon (Medium)", upstreamModelId: "gemini-4-argon-medium(medium)" },
++    { id: "gemini-4-argon-low", name: "Gemini 4 Argon (Low)", upstreamModelId: "gemini-4-argon-low(low)" },
+     { id: "gemini-3.8-flash-high", name: "Gemini 3.8 Flash (High)", upstreamModelId: "gemini-3.8-flash-high(high)" },
+     { id: "gemini-3.8-flash-medium", name: "Gemini 3.8 Flash (Medium)", upstreamModelId: "gemini-3.8-flash-medium(medium)" },
+     { id: "gemini-3.8-flash-low", name: "Gemini 3.8 Flash (Low)", upstreamModelId: "gemini-3.8-flash-low(low)" },

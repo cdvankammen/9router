@@ -1,0 +1,10 @@
+commit 94f5b7af
+author: cdvankammen
+date: 2026-10-22 17:10:51 -0600
+subject: docs: record v2 merge completion, test reconciliation, and mini2 deploy
+
+- v2-merge-plan.md: Phase 6 marked DONE with deploy details; new Final
+  Reconciliation Record section (backup verification, 3 branch merges,
+  86 NEW test failures resolved, 3 post-merge regressions, deploy fixes)
+- CHANGELOG: standalone rate-limiter packaging fix + models route dedupe
+

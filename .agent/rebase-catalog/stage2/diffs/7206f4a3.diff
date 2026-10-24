@@ -1,0 +1,31 @@
+commit 7206f4a3
+author: cdvankammen
+date: 2026-10-22 15:47:54 -0600
+subject: fix(cli): conditional log for tray runtime self-heal failure (GAP-P3-01)
+
+Move ensureTrayRuntime self-heal from top-of-file (before arg parsing) to
+after --tray/-t flag and the auto-relaunch tray fallback are resolved.
+
+The previous location had a temporal-dead-zone hazard: referencing
+`trayMode` at line 89 (its declaration is line 124) would throw a
+ReferenceError, which is strictly worse than the empty catch it aimed to
+replace. Moving the call to after the auto-relaunch fallback also means
+the fallback path (skipUpdate + no TTY → trayMode=true) is correctly
+covered.
+
+Behavior:
+- Install remains unconditional so systray2 is pre-cached for future
+  --tray invocations (preserving original pre-install intent).
+- On failure AND tray was requested: log '[tray-runtime] install failed:
+  <msg>' plus a two-line diagnostic explaining the headless fallback.
+- On failure AND tray was NOT requested: silent (no noise on every
+  non-tray startup).
+- Server continues in headless mode on failure — no crash.
+
+Verified:
+- node --check cli/cli.js → SYNTAX OK
+- TEST 1: --tray + stub throwing ensureTrayRuntime → emits full diagnostic
+- TEST 2: no --tray + same stub → completely silent (correct)
+
+Fixes GAP-P3-01 from comprehensive gap analysis.
+

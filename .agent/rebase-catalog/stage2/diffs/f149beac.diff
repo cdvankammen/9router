@@ -1,0 +1,10 @@
+commit f149beac
+author: cdvankammen
+date: 2026-10-22 17:13:22 -0600
+subject: ci: add GitHub Actions workflow for memory unit tests
+
+Runs node --test on tests/unit/memory-enhancements.test.js for PRs
+touching open-sse/services/memory/** or the test file itself.
+
+Addresses TIER3-MEMORY-CI card t_1a7d8179.
+

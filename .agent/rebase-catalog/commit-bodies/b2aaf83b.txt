@@ -1,0 +1,9 @@
+===COMMIT===
+hash: b2aaf83bbc4cd6c566cf5262f0af9527c6242ef6
+short: b2aaf83b
+author: Wnghao <292746174@qq.com>
+date: 2026-10-13 17:35:52 +0700
+subject: fix(qoder): surface add-on (free-credit promo) quota in the quota tracker (#4758)
+body:
+
+---files---

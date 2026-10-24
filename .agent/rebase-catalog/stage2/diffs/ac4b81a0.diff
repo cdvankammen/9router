@@ -1,0 +1,14 @@
+commit ac4b81a0
+author: cdvankammen
+date: 2026-10-22 14:04:00 -0600
+subject: fix(cli): bundle full L1 settings closure — L1 peer forwarding works in production
+
+- Step 3a2 now copies the WHOLE src/lib/db tree + dataDir.js + extractText.js
+  (was: 5 files only → incomplete closure poisoned global._dbAdapter at boot:
+  require-login fell back to true, /api/settings 401, /v1 chat empty)
+- rewrites the only @/ aliases in the copied tree to relative imports
+  (paths.js → ../dataDir.js; requestDetailsRepo.js → ../../extractText.js)
+- verified local recovery: require-login false, matrix 200x4, chat OK
+- mini2 real app updated via npm pack + install -g (its launchd app runs the
+  npm-global 9router, not /tmp/9r-deploy-new) — L1 modules present, health 200
+

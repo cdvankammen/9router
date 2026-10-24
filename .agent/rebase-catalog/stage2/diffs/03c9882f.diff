@@ -1,0 +1,10 @@
+commit 03c9882f
+author: cdvankammen
+date: 2026-10-22 13:46:38 -0600
+subject: docs: exhaustive audit (7 bugs), error sweep, refactor decisions + tracking update
+
+- 21-audit-no-more-bugs.md: BUG-A..G all fixed with tests (commits cited)
+- 22-error-sweep.md: E1-E6 with evidence + required actions
+- 23-refactor-decisions.md: D1-D8 grounded in Fowler/Azure/faceted-search
+- CHANGELOG/SESSION-HISTORY/TASK-LOG 93-102/hardening-roadmap updated
+

@@ -1,0 +1,23 @@
+commit 23fb0dbf
+author: cdvankammen
+date: 2026-10-22 13:46:38 -0600
+subject: feat(messages): full-text search over captured payloads (FTS5 + LIKE fallback)
+
+Other-agent work verified + committed: search across request/response text,
+searchMode fts/like reporting, literal escaping for FTS/LIKE operators,
+retention janitor keeps FTS index in sync. 9 tests; suite 1758/88 baseline.
+
+
+diff --git a/src/shared/components/Sidebar.js b/src/shared/components/Sidebar.js
+index 18e0db97..6d93ac07 100644
+--- a/src/shared/components/Sidebar.js
++++ b/src/shared/components/Sidebar.js
+@@ -113,7 +113,7 @@ export default function Sidebar({ onClose }) {
+ 
+   return (
+     <>
+-      <aside className="flex w-72 flex-col border-r border-border-subtle bg-vibrancy backdrop-blur-xl transition-colors duration-300 min-h-full">
++      <aside className="flex h-full w-72 flex-col border-r border-border-subtle bg-vibrancy backdrop-blur-xl transition-colors duration-300 min-h-full">
+         {/* Traffic lights */}
+         <div className="flex items-center gap-2 px-6 pt-5 pb-2">
+           <div className="w-3 h-3 rounded-full bg-[#FF5F56]" />

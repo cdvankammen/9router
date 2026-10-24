@@ -1,0 +1,11 @@
+commit d4948505
+author: cdvankammen
+date: 2026-10-22 17:14:26 -0600
+subject: fix(memory): correct test syntax + remove handoff UI card
+
+- Fixed leftover test lines causing syntax error
+- Removed Phase 4 handoff Card from MemoryClient.js JSX
+- index.js already had correct 'not wired' stub
+
+All 32 tests pass.
+

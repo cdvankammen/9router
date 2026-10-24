@@ -1,0 +1,13 @@
+commit 342ecb0d
+author: SlasshyOverhere
+date: 2026-10-22 11:39:04 +0700
+subject: fix(pi-settings): declare existingProvider before use in POST
+
+The POST handler spread, defaulted and merged existingProvider but never
+declared it, so every Pi "Apply Settings" request threw
+`ReferenceError: existingProvider is not defined` and returned a generic 500.
+
+Declare it from the existing provider block before the merge, which also
+restores the intended merge of previously saved fields (e.g. api) instead of
+silently dropping them.
+

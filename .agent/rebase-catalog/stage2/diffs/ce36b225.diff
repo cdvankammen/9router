@@ -1,0 +1,9 @@
+commit ce36b225
+author: cdvankammen
+date: 2026-10-22 13:46:38 -0600
+subject: fix(db): exclude FTS5 shadow tables from safety backups
+
+requestDetails_fts + its shadow tables (_data/_idx/_content/_docsize/_config)
+can't be re-prefixed to the bak schema and are name-reserved — excluding them
+prevents backup failures after the FTS search index was added.
+

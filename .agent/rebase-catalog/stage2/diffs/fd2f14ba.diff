@@ -1,0 +1,26 @@
+commit fd2f14ba
+author: cdvankammen
+date: 2026-10-22 13:46:38 -0600
+subject: refactor(messages): extract shared messageFormats module + dedupe formatters
+
+Research recommendation (refactor subagent): the page.js and export route
+each defined their own prettyJson/buildCurl/extractText/buildMarkdown,
+which could drift. Extracted a shared src/shared/messageFormats.js:
+
+- prettyJson, buildCurl (with _truncated detection), extractText (with
+  depth guard), buildMarkdown — used by both the page (client) and the
+  export API route (server)
+- Page keeps its RICHER local buildMarkdown (role-styled request + provider
+  payload sections) but imports prettyJson/buildCurl/extractText from the
+  shared module
+- Export route now imports buildCurl/buildMarkdown from the shared module,
+  deleting its local duplicates (net -90 lines)
+
+Also fixes extractText infinite-recursion risk (depth cap at 10) flagged in
+the audit (B6).
+
+VERIFICATION: build passes; export route + page both compile against the
+shared module.
+
+Part of: Messages Page + Error Inbox plan (P1 refactor)
+

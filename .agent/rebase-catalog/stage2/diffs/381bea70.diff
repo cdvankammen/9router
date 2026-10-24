@@ -1,0 +1,12 @@
+commit 381bea70
+author: ErfanBagheri404
+date: 2026-10-22 17:16:28 -0600
+subject: fix: add missing getUnseenModels, fix unseen detection for new models modal
+
+- Add getUnseenModels to repo + barrels (was referenced but never exported)
+- Merge DB-unseen rows with reconcile results so manually-seen models
+  and stale rows appear in the modal
+- Remove debug console.log from GET handler
+
+Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
+

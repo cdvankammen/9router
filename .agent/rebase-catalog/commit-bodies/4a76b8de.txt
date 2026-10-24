@@ -1,0 +1,21 @@
+===COMMIT===
+hash: 4a76b8de02f7711dfb8d78b6146dab94d21468bb
+short: 4a76b8de
+author: 钛白 <86600901+77taibai@users.noreply.github.com>
+date: 2026-10-23 09:42:43 +0700
+subject: fix(commandcode): correct quota display and connection test
+body:
+Recognize the short plan ids the API actually returns ("go",
+"individual-go-v1") so the Go plan resolves its name and 10-credit cap
+instead of falling back to an unbounded "Command Code" row.
+
+Quota rows now carry percentage/colorPercentage/percentageIsUsed plus an
+emptyMessage, and the dashboard honours them: colours follow the
+remaining share and an unused window reads "No usage in this window"
+rather than a bare N/A.
+
+Add a dedicated connection probe for commandcode hitting
+/alpha/whoami?limits=1 — the generic key probes cannot validate a key
+against this upstream.
+
+---files---

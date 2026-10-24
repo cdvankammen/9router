@@ -1,0 +1,30 @@
+commit 82aeb907
+author: MarcusHO929
+date: 2026-10-23 14:38:38 +0700
+subject: fix(antigravity): resolve tiered models from client reasoning effort
+
+Inspect client request body for reasoning effort parameters and dynamically
+resolve unadorned Antigravity models to their tiered variants.
+
+
+diff --git a/open-sse/handlers/chatCore.js b/open-sse/handlers/chatCore.js
+index 06db22d1..68a1350c 100644
+--- a/open-sse/handlers/chatCore.js
++++ b/open-sse/handlers/chatCore.js
+@@ -111,7 +111,6 @@ export async function handleChatCore({ body, modelInfo, credentials, log, onCred
+   const targetFormat = useTransport?.format || modelTargetFormat || getTargetFormat(provider, credentials);
+   if (useTransport && credentials) credentials.runtimeTransport = useTransport;
+   const stripList = getModelStrip(alias, model);
+-  const upstreamModel = getModelUpstreamId(alias, model);
+ 
+   // Inject provider-level thinking config override (only if client hasn't set)
+   // on/off → extended type (body.thinking), none/low/medium/high → effort type (body.reasoning_effort)
+@@ -127,6 +126,8 @@ export async function handleChatCore({ body, modelInfo, credentials, log, onCred
+     }
+   }
+ 
++  const upstreamModel = getModelUpstreamId(alias, model, body);
++
+   // Per-request opt-out: client can bypass all token savers via header
+   const tokenSaverEnabled = clientRawRequest?.headers?.[TOKEN_SAVER_HEADER]?.toLowerCase() !== "off";
+ 

@@ -1,0 +1,9 @@
+===COMMIT===
+hash: cbd594acaea2a3cc30ac09f5177b7a97ec880458
+short: cbd594ac
+author: mannnrachman <mannnrachman@users.noreply.github.com>
+date: 2026-10-07 19:11:45 +0700
+subject: fix(cursor): reject empty AgentService turns without successful stop
+body:
+
+---files---

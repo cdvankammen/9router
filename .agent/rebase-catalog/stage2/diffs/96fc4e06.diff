@@ -1,0 +1,86 @@
+commit 96fc4e06
+author: ViceEye
+date: 2026-10-22 17:15:32 -0600
+subject: feat(kiro): flatten top-level tool schema combinators + degrade oversized payloads
+
+Port two request-side hardening behaviors from cpa-kiro-provider (ViceEye,
+AGPL, self-authored) that upstream Kiro requires:
+
+- normalizeRootSchema: consume top-level allOf/anyOf/oneOf, merge branch
+  properties (first writer wins), and drop required entries that reference
+  properties absent after the merge. Nested combinators are preserved.
+  Also strip $schema/$id/examples/default/title at every level.
+- shrinkKiroPayload (wired via KiroExecutor.transformRequest): when the
+  serialized payload exceeds 900 KiB, degrade instead of failing — resize
+  PNG/JPEG images to a 2000px longest edge (nearest-neighbor, jpeg-js +
+  pngjs), drop history pairs from the front, drop the largest images,
+  truncate the largest tool results, truncate current content, then hard
+  fail. Pure function: never mutates the caller's body, safe across
+  endpoint-fallback and integrity-recovery re-sends.
+
+Tests: tests/unit/kiro-schema-normalization.test.js,
+tests/unit/kiro-payload-degradation.test.js (20 cases, all green).
+No-regression list identical to clean master (88 pre-existing
+environmental failures, unchanged).
+
+
+diff --git a/open-sse/config/kiroConstants.js b/open-sse/config/kiroConstants.js
+index f24cce04..4ce7e563 100644
+--- a/open-sse/config/kiroConstants.js
++++ b/open-sse/config/kiroConstants.js
+@@ -409,3 +409,12 @@ function containsTagInText(text) {
+   return text.includes("<thinking_mode>enabled</thinking_mode>")
+     || text.includes("<thinking_mode>interleaved</thinking_mode>");
+ }
++
++// Upstream payload budget (ported from cpa-kiro-provider maxKiroPayloadBytes).
++// Kiro rejects requests above ~900 KiB, so oversized payloads are degraded
++// before sending instead of failing the whole turn.
++export const KIRO_MAX_PAYLOAD_BYTES = 900 * 1024;
++export const KIRO_TRUNCATION_NOTICE =
++  "\n\n[truncated: content exceeded the upstream request size limit]";
++export const KIRO_IMAGE_DROP_NOTICE =
++  "\n\n[an attached image was dropped: the request exceeded the upstream size limit]";
+diff --git a/open-sse/executors/kiro.js b/open-sse/executors/kiro.js
+index 9d5d754f..fd2807d5 100644
+--- a/open-sse/executors/kiro.js
++++ b/open-sse/executors/kiro.js
+@@ -7,6 +7,7 @@ import {
+ } from "../config/kiroConstants.js";
+ import { v4 as uuidv4 } from "uuid";
+ import { refreshKiroToken } from "../services/tokenRefresh.js";
++import { shrinkKiroPayload } from "../utils/kiroPayloadShrink.js";
+ import { SSE_DONE, SSE_HEADERS } from "../utils/sseConstants.js";
+ import { getCapabilitiesForModel } from "../providers/capabilities.js";
+ import { STREAM_FIRST_CHUNK_TIMEOUT_MS } from "../config/runtimeConfig.js";
+@@ -342,7 +343,9 @@ export class KiroExecutor extends BaseExecutor {
+   }
+ 
+   transformRequest(model, body, stream, credentials) {
+-    return body;
++    // Kiro rejects payloads above ~900 KiB; degrade oversized ones instead of
++    // failing the turn. Returns the input untouched when within budget.
++    return shrinkKiroPayload(body);
+   }
+ 
+   /**
+diff --git a/package.json b/package.json
+index a4240c30..9cd5c90c 100644
+--- a/package.json
++++ b/package.json
+@@ -31,6 +31,7 @@
+     "express": "^5.2.1",
+     "http-proxy-middleware": "^3.0.5",
+     "jose": "^6.1.3",
++    "jpeg-js": "^0.4.4",
+     "marked": "^18.0.1",
+     "material-symbols": "^0.44.6",
+     "monaco-editor": "^0.55.1",
+@@ -39,6 +40,7 @@
+     "node-machine-id": "^1.1.12",
+     "open": "^11.0.0",
+     "ora": "^9.1.0",
++    "pngjs": "^7.0.0",
+     "prop-types": "^15.8.1",
+     "react": "19.2.4",
+     "react-dom": "19.2.4",

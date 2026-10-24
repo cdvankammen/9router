@@ -1,0 +1,14 @@
+commit 315d1677
+author: cdvankammen
+date: 2026-10-22 12:19:30 -0600
+subject: feat(fallbacks): drag-and-drop reorder in FallbackRuleModal chain
+
+- Chain rows in the Add Fallback Rule modal are now sortable (dnd-kit):
+  click-and-hold any row and move it up/down to reorder; arrow buttons
+  remain as an exact alternative
+- Fix: number badges stayed stale after a drag (React text-node reuse while
+  dnd-kit committed the move) — key the badge span by idx to force a fresh
+  text node
+- E2E verified: drag flipped order, badges updated, Save persisted the
+  dragged order; env restored
+

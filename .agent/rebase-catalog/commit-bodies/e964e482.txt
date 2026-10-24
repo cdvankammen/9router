@@ -1,0 +1,9 @@
+===COMMIT===
+hash: e964e4826715f3f9590d55314e968bcdfca194b6
+short: e964e482
+author: ErfanBagheri404 <mrenmityerf@gmail.com>
+date: 2026-10-15 09:36:45 +0700
+subject: fix(opencode): inject reasoning_content placeholder for Zen multi-turn chats (#4805)
+body:
+
+---files---

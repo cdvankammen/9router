@@ -1,0 +1,8 @@
+commit e788d107
+author: cdvankammen
+date: 2026-10-22 12:19:30 -0600
+subject: docs: messages drawer UI issues logged (compact overflow + scroll) — deferred fixes
+
+- spec 12.1/12.2/12.3: compact-mode 800px drawer off-screen evidence + fix approach; pre wrap policy + min-h-0 + nested scroll; optional vision QA later
+- TASK-LOG 87-89 deferred
+

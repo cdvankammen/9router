@@ -1,0 +1,10 @@
+===COMMIT===
+hash: 5cdcddf55f4b08fbd45c3798c712608544c569d2
+short: 5cdcddf5
+author: Shane Hird <shanehird@gmail.com>
+date: 2026-10-23 13:08:17 +0700
+subject: fix(combo): advance past a request-scoped 4xx instead of ending the combo
+body:
+Advance to the next combo member when a member rejects with a request-scoped 4xx (validation, unsupported parameter, context overflow) instead of terminating the combo early. If all members reject, return the first rejecting member's actual response. (#5057)
+
+---files---

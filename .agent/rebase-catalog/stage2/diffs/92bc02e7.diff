@@ -1,0 +1,12 @@
+commit 92bc02e7
+author: cdvankammen
+date: 2026-10-22 14:05:53 -0600
+subject: feat(failover): --ipv6 security toggle + hostname/IPv4/IPv6 peer handling
+
+- --ipv6 default OFF (security): IPv4-only bind 0.0.0.0, IPv6 peers rejected
+- ON: dual-stack :: bind + IPv6 peer literals allowed
+- peer URLs validated (hostname/IPv4/IPv6 bracket form); malformed filtered
+- research: Node handles IPv6 URLs + mDNS A+AAAA already; IPv6 opt-in only
+- verified: 6/6 unit tests, live IPv6 dual-stack proxy, hostname peer works,
+  final failover suite 7/7
+

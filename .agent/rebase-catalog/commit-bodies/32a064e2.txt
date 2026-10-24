@@ -1,0 +1,13 @@
+===COMMIT===
+hash: 32a064e2080b6e4e6f8db02b1c4bf8c93ddac85e
+short: 32a064e2
+author: decolua <decoluadt@gmail.com>
+date: 2026-10-23 10:09:47 +0700
+subject: fix(docker): pin Node 22.23.4 to patch October 2026 security CVEs
+body:
+Pin base image to node:22.23.4-alpine and add .nvmrc to address
+CVE-2026-111497 (Brotli RCE) and related October 2026 Node.js CVEs.
+
+Co-Authored-By: Claude Code <noreply@anthropic.com>
+
+---files---

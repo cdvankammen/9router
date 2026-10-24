@@ -1,0 +1,566 @@
+commit c58df01b
+author: cdvankammen
+date: 2026-10-22 14:51:35 -0600
+subject: feat(combos+models): combo duplicate, dev flag, model chooser sorting, capability overrides, model import for all providers
+
+- feat(combos): Duplicate button on combo cards (copy all models + kind)
+- feat(settings): devMode flag in settings defaults + profile page toggle
+- feat(combos): Create Combo from provider detail page (dev-mode gated)
+- feat(models): Connected providers sorted first in ModelSelectModal
+- feat(models): Provider-name search in model chooser (searching 'openrouter' shows all openrouter models)
+- feat(models): Per-model capability overrides (vision/audio) via settings.modelCapOverrides
+- feat(models): mergeUserCapabilityOverrides in capabilities.js
+- feat(api): /api/models merges user capability overrides from settings
+- feat(hooks): useModelCaps resolves audioInput capability
+- modelRow: Vision/Audio toggle buttons for capability editing
+- Plan doc: 2026-08-18-dev-flag-combo-from-providers-model-sorting.md
+
+
+diff --git a/open-sse/executors/default.js b/open-sse/executors/default.js
+index dbd42cfc..bfbae0aa 100644
+--- a/open-sse/executors/default.js
++++ b/open-sse/executors/default.js
+@@ -71,7 +71,7 @@ export class DefaultExecutor extends BaseExecutor {
+     super(provider, PROVIDERS[provider] || PROVIDERS.openai);
+   }
+ 
+-  transformRequest(model, body) {
++  transformRequest(model, body, stream, credentials) {
+     const transformed = this.applyJsonSchemaFallback(body);
+ 
+     if (transformed && typeof transformed === "object") {
+@@ -80,11 +80,29 @@ export class DefaultExecutor extends BaseExecutor {
+         delete transformed.client_metadata;
+       }
+       stripUnsupportedParams(this.provider, model, transformed);
++      // Ask OpenAI-compatible upstreams to emit a final usage chunk on streams so the
++      // gateway records REAL token counts instead of a chars/4 estimate (which silently
++      // drops usage entirely for tool-only/empty-text responses). Chat-completions format
++      // only — claude/openai-responses/gemini/ollama don't accept stream_options. Never
++      // clobber a caller-supplied value; opt out per provider via quirks.noIncludeUsage.
++      if (stream && transformed.messages && !transformed.stream_options && this.supportsIncludeUsage(credentials)) {
++        transformed.stream_options = { include_usage: true };
++      }
+     }
+ 
+     return injectReasoningContent({ provider: this.provider, model, body: transformed });
+   }
+ 
++  // Whether this provider accepts OpenAI's stream_options.include_usage (chat-completions only).
++  supportsIncludeUsage(credentials) {
++    if (this.config.quirks?.noIncludeUsage) return false;
++    if (this.config.format !== "openai") return false;
++    if (this.provider?.startsWith?.("openai-compatible-")) {
++      return resolveOpenAICompatibleApiType(this.provider, credentials) === "chat";
++    }
++    return true;
++  }
++
+   // Fallback json_schema → json_object for openai-compatible providers without native Structured Output.
+   applyJsonSchemaFallback(body) {
+     if (!this.provider?.startsWith?.("openai-compatible-")) return body;
+diff --git a/open-sse/providers/capabilities.js b/open-sse/providers/capabilities.js
+index 6d983f90..b0c25baa 100644
+--- a/open-sse/providers/capabilities.js
++++ b/open-sse/providers/capabilities.js
+@@ -673,3 +673,17 @@ export function getCapabilitiesForModel(provider, model) {
+   // 4. Floor
+   return refine(null, provider, model);
+ }
++
++/**
++ * Merge user-defined per-model capability overrides over resolved static caps.
++ * User overrides always win (a user can both grant and revoke a capability).
++ * Only fields present in the override object are applied.
++ *
++ * @param {object} staticCaps - result of getCapabilitiesForModel(provider, model)
++ * @param {object} [userOverrides] - { vision: true, audioInput: false, ... } or null
++ * @returns {object} merged capabilities
++ */
++export function mergeUserCapabilityOverrides(staticCaps, userOverrides) {
++  if (!userOverrides || typeof userOverrides !== "object") return staticCaps;
++  return { ...staticCaps, ...userOverrides };
++}
+diff --git a/open-sse/services/usage.js b/open-sse/services/usage.js
+index 71b53cc9..b32e1015 100644
+--- a/open-sse/services/usage.js
++++ b/open-sse/services/usage.js
+@@ -19,6 +19,7 @@ import { getOpenCodeZenUsage } from "./usage/opencode-zen.js";
+ import { getGroqUsage } from "./usage/groq.js";
+ import { getZedUsage } from "./usage/zed.js";
+ import { getXiaomiMimoUsage } from "./usage/xiaomi-mimo.js";
++import { getOpenRouterUsage } from "./usage/openrouter.js";
+ import { resolveQoderCredentials } from "./qoderModels.js";
+ import { getGlmUsage } from "./usage/glm.js";
+ import { getCommandCodeUsage } from "./usage/commandcode.js";
+@@ -63,6 +64,7 @@ const USAGE_HANDLERS = {
+   zed: (c) => getZedUsage(c.accessToken, c.providerSpecificData, c.proxyOptions),
+   "xiaomi-mimo": (c) => getXiaomiMimoUsage(c.accessToken, c.providerSpecificData, c.proxyOptions),
+   commandcode: (c) => getCommandCodeUsage(c.apiKey, c.proxyOptions),
++  openrouter: (c) => getOpenRouterUsage(c.apiKey, c.proxyOptions),
+ };
+ 
+ // Qoder intl/CN share one usage path: PATs must be exchanged to a job token
+diff --git a/src/app/(dashboard)/dashboard/providers/[id]/page.js b/src/app/(dashboard)/dashboard/providers/[id]/page.js
+index c861e900..3c2f9ced 100644
+--- a/src/app/(dashboard)/dashboard/providers/[id]/page.js
++++ b/src/app/(dashboard)/dashboard/providers/[id]/page.js
+@@ -21,9 +21,12 @@ import ConnectionRow from "./ConnectionRow";
+ import AddApiKeyModal from "./AddApiKeyModal";
+ import EditCompatibleNodeModal from "./EditCompatibleNodeModal";
+ import AddCustomModelModal from "./AddCustomModelModal";
++import ComboFormModal from "@/app/(dashboard)/dashboard/combos/page.js";
+ import BulkImportCodexModal from "./BulkImportCodexModal";
+ import BulkImportGrokCliModal from "./BulkImportGrokCliModal";
+ import CustomConfigCard from "./CustomConfigCard";
++import ProviderUsageCard from "./ProviderUsageCard";
++import ProviderErrorPanel from "./ProviderErrorPanel";
+ 
+ const ONE_BY_ONE_DELAY_MS = 1000;
+ 
+@@ -40,7 +43,7 @@ export default function ProviderDetailPage() {
+   const params = useParams();
+   const router = useRouter();
+   const providerId = params.id;
+-  const { getCaps } = useModelCaps();
++  const { getCaps, refresh: refreshModelCaps } = useModelCaps();
+   const [connections, setConnections] = useState([]);
+   const [loading, setLoading] = useState(true);
+   const [providerNode, setProviderNode] = useState(null);
+@@ -86,6 +89,12 @@ export default function ProviderDetailPage() {
+   const stopOneByOneRef = useRef(false);
+   const [importingQoderModels, setImportingQoderModels] = useState(false);
+   const [importingClineModels, setImportingClineModels] = useState(false);
++  const [importingModels, setImportingModels] = useState(false);
++  const [importModelsProgress, setImportModelsProgress] = useState(null);
++  const [providerErrors, setProviderErrors] = useState([]);
++  const [providerErrorsLoading, setProviderErrorsLoading] = useState(false);
++  const [devMode, setDevMode] = useState(false);
++  const [showCreateCombo, setShowCreateCombo] = useState(false);
+   const { copied, copy } = useCopyToClipboard();
+ 
+   const AG_RISK_STORAGE_KEY = "ag_risk_confirmed";
+@@ -443,6 +452,55 @@ export default function ProviderDetailPage() {
+     saveThinkingConfig(mode);
+   };
+ 
++  // Persist a per-model vision/audio capability override. Keyed by
++  // `${providerId}/${modelId}` (the same key /api/models accepts as either the
++  // full or routed model id) into settings.modelCapOverrides, then refresh the
++  // shared model-caps cache so ModelRow badges and the combo vision/audio
++  // pickers reflect it immediately.
++  const handleToggleCap = async (modelId, key, value) => {
++    const fullModel = `${providerId}/${modelId}`;
++    try {
++      const settingsRes = await fetch("/api/settings", { cache: "no-store" });
++      const settingsData = settingsRes.ok ? await settingsRes.json() : {};
++      const current = settingsData.modelCapOverrides || {};
++      const modelOverride = { ...(current[fullModel] || {}), [key]: value };
++      const updated = { ...current, [fullModel]: modelOverride };
++      await fetch("/api/settings", {
++        method: "PATCH",
++        headers: { "Content-Type": "application/json" },
++        body: JSON.stringify({ modelCapOverrides: updated }),
++      });
++      await refreshModelCaps();
++    } catch (error) {
++      console.log("Error saving capability override:", error);
++    }
++  };
++
++  // Provider-level error/log fetch — drives both the Errors & Logs panel and the
++  // per-model error chips (grouped fingerprints from getErrorSummary via
++  // /api/messages?view=errors). System B (requestDetails), not the lastError chip.
++  const fetchProviderErrors = useCallback(async () => {
++    if (!providerId) return;
++    setProviderErrorsLoading(true);
++    try {
++      const res = await fetch(
++        `/api/messages?view=errors&provider=${encodeURIComponent(providerId)}&pageSize=100`,
++        { cache: "no-store" },
++      );
++      const data = res.ok ? await res.json() : {};
++      setProviderErrors(Array.isArray(data.errors) ? data.errors : []);
++    } catch (error) {
++      console.log("Error fetching provider errors:", error);
++      setProviderErrors([]);
++    } finally {
++      setProviderErrorsLoading(false);
++    }
++  }, [providerId]);
++
++  useEffect(() => {
++    fetchProviderErrors();
++  }, [fetchProviderErrors]);
++
+   const saveAutoPing = async (next) => {
+     const autoPingSettingsKey = AUTO_PING_SETTINGS_KEYS[providerId];
+     if (!autoPingSettingsKey) return;
+@@ -521,6 +579,11 @@ export default function ProviderDetailPage() {
+     fetchSuggestedModels(fetcher).then(setSuggestedModels);
+   }, [providerId]);
+ 
++  // Fetch settings for devMode flag
++  useEffect(() => {
++    fetch("/api/settings").then(r => r.json()).then(d => setDevMode(!!d.devMode)).catch(() => {});
++  }, []);
++
+   const handleSetAlias = async (modelId, alias, providerAliasOverride = providerAlias) => {
+     const fullModel = `${providerAliasOverride}/${modelId}`;
+     try {
+@@ -614,7 +677,8 @@ export default function ProviderDetailPage() {
+       for (const model of models) {
+         const modelId = model.id || model.name;
+         if (!modelId) continue;
+-        
++
++
+         // Qoder model ID format may be "qoder/auto", "qoder-cn/auto" or "auto",
+         // need to remove the provider prefix before storing.
+         const cleanModelId = modelId.replace(/^(qoder-cn|qoder)\//, "");
+@@ -628,7 +692,7 @@ export default function ProviderDetailPage() {
+         await handleAddCustomModel(cleanModelId, "llm", providerStorageAlias);
+         importedCount += 1;
+       }
+-      
++
+       if (importedCount === 0) {
+         alert(translate("All models already exist, no new models added"));
+       } else {
+@@ -689,6 +753,115 @@ export default function ProviderDetailPage() {
+     }
+   };
+ 
++  // Generic model auto-fill: fetch this provider's live /models list (via the
++  // backend model-discovery route, which resolves ~40 providers incl. OAuth
++  // token-refresh) and add any not-yet-present models as custom models. Mirrors
++  // handleImportQoderModels but without the qoder-specific prefix stripping, so
++  // provider-scoped IDs like "openai/gpt-4o" (OpenRouter) stay intact.
++  // Uses the connection-keyed /api/providers/[id]/models route — no arbitrary
++  // URL fetch, so it doesn't touch the suggested-models SSRF surface.
++  const handleImportModels = async () => {
++    if (importingModels) return;
++    const activeConnection = connections.find((conn) => conn.isActive !== false);
++    if (!activeConnection) {
++      alert(translate("Please add an active connection first"));
++      return;
++    }
++
++    setImportingModels(true);
++    try {
++      // ?refresh=1 busts the smart-router node-models cache so freshly imported
++      // models are visible to routing immediately.
++      const controller = new AbortController();
++      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout
++      const res = await fetch(`/api/providers/${activeConnection.id}/models?refresh=1`, { signal: controller.signal });
++      clearTimeout(timeoutId);
++      const data = await res.json();
++      if (!res.ok) {
++        alert(data.error || translate("Failed to fetch models"));
++        return;
++      }
++      const models = data.models || [];
++      if (models.length === 0) {
++        alert(translate("No models returned"));
++        return;
++      }
++
++      // Filter down to the models we actually need to add before doing any
++      // network I/O. `customModels`/`modelAliases` are a snapshot from when
++      // the button was clicked — mid-loop refetches wouldn't change this
++      // closure anyway, so checking once up front loses nothing.
++      const toAdd = [];
++      for (const model of models) {
++        const modelId = model.id || model.name || model.model;
++        if (!modelId) continue;
++        // Skip non-llm entries (embedding/tts/image) — they have dedicated pages.
++        const kind = model.kind || model.type || "llm";
++        if (kind !== "llm") continue;
++        const alreadyExists =
++          customModels.some(
++            (entry) => entry.providerAlias === providerStorageAlias && entry.id === modelId && (entry.kind || entry.type || "llm") === "llm"
++          ) ||
++          Object.values(modelAliases).includes(`${providerStorageAlias}/${modelId}`);
++        if (alreadyExists) continue;
++        toAdd.push(modelId);
++      }
++
++      // Providers like OpenRouter return 400+ models. Adding them one at a
++      // time and awaiting a full customModels refetch after each one (the
++      // old behavior via handleAddCustomModel) meant 2x sequential round
++      // trips per model — 800+ serial requests that could take minutes and
++      // looked identical to a hang. Add directly with bounded concurrency
++      // and only refetch/broadcast once at the end.
++      let importedCount = 0;
++      const CONCURRENCY = 8;
++      setImportModelsProgress({ done: 0, total: toAdd.length });
++      let cursor = 0;
++      const addOne = async (modelId) => {
++        try {
++          const res = await fetch("/api/models/custom", {
++            method: "POST",
++            headers: { "Content-Type": "application/json" },
++            body: JSON.stringify({ providerAlias: providerStorageAlias, id: modelId, type: "llm" }),
++          });
++          if (res.ok) importedCount += 1;
++        } catch (error) {
++          console.log("Error adding custom model:", modelId, error);
++        } finally {
++          setImportModelsProgress((prev) => prev && { done: prev.done + 1, total: prev.total });
++        }
++      };
++      const workers = Array.from({ length: Math.min(CONCURRENCY, toAdd.length) }, async () => {
++        while (cursor < toAdd.length) {
++          const modelId = toAdd[cursor++];
++          await addOne(modelId);
++        }
++      });
++      await Promise.all(workers);
++
++      if (importedCount > 0) {
++        await fetchCustomModels();
++        if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent("customModelChanged"));
++      }
++
++      if (importedCount === 0) {
++        alert(translate("All models already exist, no new models added"));
++      } else {
++        alert(translate("Successfully added") + ` ${importedCount} ` + translate("models"));
++      }
++    } catch (error) {
++      console.log("Error importing models:", error);
++      if (error.name === 'AbortError') {
++        alert(translate("Request timed out") + " — " + translate("provider API is slow or unresponsive"));
++      } else {
++        alert(translate("Error fetching models") + ": " + error.message);
++      }
++    } finally {
++      setImportingModels(false);
++      setImportModelsProgress(null);
++    }
++  };
++
+   const handleRunOneByOneTest = async () => {
+     if (oneByOneRunning || connections.length === 0) return;
+ 
+@@ -1184,6 +1357,16 @@ export default function ProviderDetailPage() {
+       type: "llm",
+     });
+ 
++    // Group provider errors by bare model id (DB stores model.id, not the alias)
++    // so each ModelRow can surface its own error chip.
++    const errorsByModel = new Map();
++    for (const g of providerErrors) {
++      if (!g || !g.model) continue;
++      const list = errorsByModel.get(g.model) || [];
++      list.push(g);
++      errorsByModel.set(g.model, list);
++    }
++
+     return (
+       <div className="flex flex-wrap gap-3">
+         {/* Custom models first */}
+@@ -1209,7 +1392,9 @@ export default function ProviderDetailPage() {
+             isCustom
+             isFree={false}
+             caps={getCaps(`${providerId}/${model.id}`)}
++            onToggleCap={(key, value) => handleToggleCap(model.id, key, value)}
+             thinkingSuffix={resolveThinkingSuffix(model.id)}
++            errorGroups={errorsByModel.get(model.id) || []}
+           />
+         ))}
+ 
+@@ -1235,7 +1420,9 @@ export default function ProviderDetailPage() {
+               isFree={model.isFree}
+               onDisable={() => handleDisableModel(model.id)}
+               caps={getCaps(`${providerId}/${model.id}`)}
++              onToggleCap={(key, value) => handleToggleCap(model.id, key, value)}
+               thinkingSuffix={resolveThinkingSuffix(model.id)}
++              errorGroups={errorsByModel.get(model.id) || []}
+             />
+           );
+         })}
+@@ -1249,6 +1436,18 @@ export default function ProviderDetailPage() {
+           Add Model
+         </button>
+ 
++        {/* Create Combo from this provider's models (dev mode only) */}
++        {devMode && displayModels.length > 0 && (
++          <button
++            onClick={() => setShowCreateCombo(true)}
++            className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-purple-500/40 px-3 py-2 text-xs text-purple-600 dark:text-purple-400 transition-colors hover:border-purple-500 hover:bg-purple-500/5 sm:w-auto"
++            title="Create a combo with this provider's models pre-selected"
++          >
++            <span className="material-symbols-outlined text-[13px]">layers</span>
++            {translate("Create Combo")}
++          </button>
++        )}
++
+         {/* Import Qoder models button — only show for qoder/qoder-cn provider */}
+         {(providerId === "qoder" || providerId === "qoder-cn") && connections.some((conn) => conn.isActive !== false) && (
+           <button
+@@ -1277,6 +1476,25 @@ export default function ProviderDetailPage() {
+           </button>
+         )}
+ 
++        {/* Generic auto-fill — fetch this provider's live /models and add any
++            missing ones. Qoder/Cline have their own buttons above. */}
++        {providerId !== "qoder" && providerId !== "qoder-cn" && providerId !== "cline" && providerId !== "clinepass" && connections.some((conn) => conn.isActive !== false) && (
++          <button
++            onClick={handleImportModels}
++            disabled={importingModels}
++            className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-blue-500/40 px-3 py-2 text-xs text-blue-600 dark:text-blue-400 transition-colors hover:border-blue-500 hover:bg-blue-500/5 sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
++          >
++            <span className="material-symbols-outlined text-sm" style={importingModels ? { animation: "spin 1s linear infinite" } : undefined}>
++              {importingModels ? "progress_activity" : "download"}
++            </span>
++            {importingModels
++              ? (importModelsProgress
++                  ? `${translate("Importing")} ${importModelsProgress.done}/${importModelsProgress.total}...`
++                  : translate("Fetching..."))
++              : translate("Refresh Models")}
++          </button>
++        )}
++
+         {/* Suggested models from provider API — show only models not yet added */}
+         {suggestedModels.length > 0 && (() => {
+           const addedFullModels = new Set([
+@@ -1824,6 +2042,15 @@ export default function ProviderDetailPage() {
+         {renderModelsSection()}
+       </Card>
+ 
++      <ProviderUsageCard providerId={providerId} />
++
++      <ProviderErrorPanel
++        providerId={providerId}
++        errors={providerErrors}
++        loading={providerErrorsLoading}
++        onRefresh={fetchProviderErrors}
++      />
++
+       {bulkActionModal}
+ 
+       {/* Modals */}
+@@ -1964,6 +2191,34 @@ export default function ProviderDetailPage() {
+         message={confirmState?.message}
+         variant="danger"
+       />
++
++      {/* Create Combo Modal (dev mode) — pre-selects this provider's models */}
++      {showCreateCombo && (
++        <ComboFormModal
++          isOpen={showCreateCombo}
++          onClose={() => setShowCreateCombo(false)}
++          onSave={async (data) => {
++            try {
++              const res = await fetch("/api/combos", {
++                method: "POST",
++                headers: { "Content-Type": "application/json" },
++                body: JSON.stringify(data),
++              });
++              if (res.ok) {
++                setShowCreateCombo(false);
++                alert(`Combo "${data.name}" created`);
++              } else {
++                const err = await res.json();
++                alert(err.error || "Failed to create combo");
++              }
++            } catch (error) {
++              console.log("Error creating combo:", error);
++            }
++          }}
++          activeProviders={activeConnections}
++          kindFilter="llm"
++        />
++      )}
+     </div>
+   );
+ }
+diff --git a/src/app/(dashboard)/dashboard/usage/components/ProviderLimits/utils.js b/src/app/(dashboard)/dashboard/usage/components/ProviderLimits/utils.js
+index 9cb7ad71..c3e71b26 100644
+--- a/src/app/(dashboard)/dashboard/usage/components/ProviderLimits/utils.js
++++ b/src/app/(dashboard)/dashboard/usage/components/ProviderLimits/utils.js
+@@ -618,6 +618,24 @@ export function parseQuotaData(provider, data) {
+         }
+         break;
+ 
++      case "openrouter":
++        // OpenRouter returns USD credit figures (usage/limit/limit_remaining),
++        // same shape family as Vercel — forward the explicit remainingPercentage
++        // and the `unlimited` flag so uncapped keys render without a false cap.
++        if (data.quotas) {
++          Object.entries(data.quotas).forEach(([name, quota]) => {
++            normalizedQuotas.push({
++              name,
++              used: quota.used || 0,
++              total: quota.total || 0,
++              resetAt: quota.resetAt || null,
++              remainingPercentage: quota.remainingPercentage,
++              unlimited: quota.unlimited,
++            });
++          });
++        }
++        break;
++
+       case "codebuddy-cn":
+       case "codebuddy-intl":
+         // CodeBuddy CN/Intl mix recurring refill packs ("Monthly"/"Weekly"/...)
+diff --git a/src/lib/db/repos/settingsRepo.js b/src/lib/db/repos/settingsRepo.js
+index 035e86b7..0486e5d8 100644
+--- a/src/lib/db/repos/settingsRepo.js
++++ b/src/lib/db/repos/settingsRepo.js
+@@ -48,6 +48,11 @@ const DEFAULT_SETTINGS = {
+   markdownLogEnabled: false,
+   markdownLogFlushIntervalMin: 5,
+   modelFallbacks: {},
++  // User-set per-model capability overrides: { [fullModelId]: { vision: true, audioInput: false, ... } }.
++  // Merged over static capabilities so users can mark custom/unknown models as
++  // vision/audio-capable (or correct a wrong static flag). Only the fields the
++  // user explicitly set are stored; resolution merges over DEFAULT_CAPABILITIES.
++  modelCapOverrides: {},
+   capacityAdapter: {
+     vision: { enabled: true, roundRobin: false, models: [] },
+     pdf: { enabled: false, roundRobin: false, models: [] },
+diff --git a/src/shared/hooks/useModelCaps.js b/src/shared/hooks/useModelCaps.js
+index 88c6410f..bb1316c5 100644
+--- a/src/shared/hooks/useModelCaps.js
++++ b/src/shared/hooks/useModelCaps.js
+@@ -37,6 +37,13 @@ function loadModelCaps() {
+   return inflight;
+ }
+ 
++// Drop the shared cache so the next loadModelCaps() re-fetches /api/models.
++// Called after a capability override is saved so vision/audio pickers reflect it.
++export function invalidateModelCaps() {
++  cache = null;
++  inflight = null;
++}
++
+ // Resolve caps from a "provider/model" string or a bare model id.
+ function resolveCaps(byFull, byId, key) {
+   if (!key) return null;
+@@ -51,6 +58,7 @@ function resolveCaps(byFull, byId, key) {
+     reasoning: c.reasoning,
+     contextWindow: c.contextWindow,
+     maxOutput: c.maxOutput,
++    audioInput: c.audioInput,
+   };
+ }
+ 
+@@ -85,5 +93,15 @@ export function useModelCaps() {
+     [byFull, byId],
+   );
+ 
+-  return { getCaps };
++  // Force a re-fetch of /api/models (after a capability override is saved).
++  const refresh = useCallback(() => {
++    invalidateModelCaps();
++    return loadModelCaps().then((maps) => {
++      setByFull(maps.byFull);
++      setById(maps.byId);
++      return maps;
++    });
++  }, []);
++
++  return { getCaps, refresh };
+ }

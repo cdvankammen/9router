@@ -1,0 +1,13 @@
+commit d2e4cc49
+author: cdvankammen
+date: 2026-10-22 14:05:53 -0600
+subject: feat(failover): dynamic peer auto-discovery — no hardcoded IPs
+
+- --peer takes a bare hostname; resolves ALL its addresses + local interfaces,
+  re-discovers every 15s (adapts to network changes at runtime)
+- --peer-port for different local/peer ports (20130 vs 20128)
+- explicit URLs still supported (legacy)
+- launchd: hostname-only peers both nodes (mini2-9.local / mini-3.local)
+- tests: +2 auto-discovery cases; 15/15 pass
+- verified: kill local → proxy auto-routes to mini2 via discovered peer (200)
+

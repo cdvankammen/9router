@@ -1,0 +1,12 @@
+===COMMIT===
+hash: a9c9f68364fa929f9217c58fccabf2ed854a061f
+short: a9c9f683
+author: vergiLgood1 <diyoanggara149@gmail.com>
+date: 2026-10-08 16:32:06 +0700
+subject: feat(hermes): per-profile configuration across API, Dashboard and CLI (#4660)
+body:
+Support Hermes Agent configuration per profile across settings API,
+Dashboard card, and CLI menu. Includes discovery, bulk apply, scoped reset,
+model sentinel fix, and synced auxiliary roles.
+
+---files---

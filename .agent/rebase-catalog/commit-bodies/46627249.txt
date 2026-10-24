@@ -1,0 +1,9 @@
+===COMMIT===
+hash: 466272490beec96bef0cde1f454c344b559cedc7
+short: 46627249
+author: dnridwn <denridwan123@gmail.com>
+date: 2026-10-07 19:30:11 +0700
+subject: fix(ollama): report prompt_eval_cached_count as cached_tokens in usage tracking
+body:
+
+---files---

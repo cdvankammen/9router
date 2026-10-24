@@ -1,0 +1,14 @@
+commit 79d904e8
+author: cdvankammen
+date: 2026-10-22 17:18:37 -0600
+subject: fix(db): GROUP_CONCAT(DISTINCT x, sep) invalid in SQLite — dedupe via subquery
+
+v3 merge (a236b6b3 connection IDs drill-down) used two-arg DISTINCT
+aggregate which node:sqlite rejects with 'DISTINCT aggregates must
+have exactly one argument'. Fix: SELECT DISTINCT in a subquery then
+GROUP_CONCAT with separator. Also install jpeg-js (declared in
+package.json, needed by open-sse/utils/kiroImage.js from v3 kiro work).
+
+Resolves 13 NEW failures from regression gate (error-inbox x10,
+kiro-external-idp x1, xai-oauth x2).
+

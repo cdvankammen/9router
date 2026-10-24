@@ -1,0 +1,11 @@
+commit 345a4571
+author: cdvankammen
+date: 2026-10-22 13:46:38 -0600
+subject: feat(failover): node-DOWN proxy prototype (L2) + HA implementation doc
+
+- cli/failover-proxy.cjs: zero-dep HTTP proxy, health-probes local+peer every 2s,
+  local-preferred/peer-backup routing, x-9r-failover loop protection, SSE-safe
+  piping, 120s upstream timeout, both-down fail-open to local
+- docs: 25-node-failover-implementation.md (L0/L1/L2 design, scrutiny, test plan)
+- locally verified: failover, failback, loop protection, both-down
+

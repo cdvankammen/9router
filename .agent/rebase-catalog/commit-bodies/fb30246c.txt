@@ -1,0 +1,15 @@
+===COMMIT===
+hash: fb30246ce769c31e2a6097c3c3d70c3b35239f28
+short: fb30246c
+author: decolua <decoluadt@gmail.com>
+date: 2026-10-15 21:18:24 +0700
+subject: fix(tests): isolate zed-native-auth DATA_DIR so it stops writing to the real DB
+body:
+The criterion-3 callback test saved a real "Account N" zed connection into
+~/.9router on every full-suite run. Set DATA_DIR to a temp dir before the DB
+layer loads (dynamic imports + vi.resetModules, same pattern as
+zed-live-models.test.js) and clean it up in afterAll.
+
+Co-Authored-By: Claude Code <noreply@anthropic.com>
+
+---files---

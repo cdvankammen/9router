@@ -1,0 +1,16 @@
+commit 8edfd9e0
+author: cdvankammen
+date: 2026-10-22 14:04:00 -0600
+subject: docs(failover): networking options matrix — real-world grounded (VRRP/HAProxy/DNS)
+
+- Answers user's questions with fetched sources: HAProxy 2.9 manual (backup
+  server directive), VRRP RFC 5798/9568 + Wikipedia, keepalived.org
+  (Linux-only), Tailscale MagicDNS (no VIP abstraction)
+- Confirms: no new app endpoint needed; nodes DO use each other (mutual
+  backup deployed + verified); the 'floating IP / backup grabs the network'
+  idea = VRRP/CARP — not practical on macOS (keepalived is Linux-first)
+- Honest gap: whole-machine death not covered for a client pinned to one
+  endpoint; realistic fixes ranked (client fallback, MagicDNS names,
+  HAProxy backup, third-box keepalived VIP)
+- Evidence recap of what was tested before 'completed' was claimed
+

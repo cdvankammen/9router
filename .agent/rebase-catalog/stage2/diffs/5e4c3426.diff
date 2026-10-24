@@ -1,0 +1,15 @@
+commit 5e4c3426
+author: cdvankammen
+date: 2026-10-22 15:41:21 -0600
+subject: fix(translator): replace raw alert() with toast notification system
+
+Replace all 9 alert() calls in translator/page.js with the app's
+Zustand notification store (useNotificationStore):
+
+- 8 error paths: notify.error() for network/parse/API failures
+- 1 validation path: notify.warning() for missing provider/model
+
+Non-blocking toasts instead of modal alerts that freeze the UI thread.
+
+Gap: GAP-P3-30
+

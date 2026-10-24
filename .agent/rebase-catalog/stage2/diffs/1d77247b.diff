@@ -1,0 +1,24 @@
+commit 1d77247b
+author: cdvankammen
+date: 2026-10-22 15:49:37 -0600
+subject: fix(reliability): exponential backoff + jitter for onboardUser retry loop (GAP-P3-37)
+
+Replaced two fixed 2000ms setTimeout sleeps in projectId.js onboardUser
+with exponential backoff (base 1s, cap 10s) plus random jitter (0-500ms).
+
+- Added onboardBackoffDelay(attempt) with injectable random for testing
+- Added abortableSleep(ms, signal) that resolves early on abort
+- Both retry sites (not-done and error paths) now use backoff
+- Constants exported: ONBOARD_BACKOFF_BASE_MS, CAP_MS, JITTER_MS
+
+Tests (12 new, all passing):
+- Unit: exponential growth, cap, jitter range, edge cases
+- Behavioral: fake-timer driven retry loop proving growing delays
+- Anti-false-positive: regex guard against raw setTimeout(resolve,2000)
+- Abort handling: sleep resolves early when connection removed
+
+Verified: npm run build succeeds, eslint clean, existing
+ gemini-usage-projectid.test.js (3 tests) still passes.
+
+Card: t_bb982abb
+

@@ -1,0 +1,40 @@
+commit f85d0d5c
+author: cdvankammen
+date: 2026-10-22 17:14:24 -0600
+subject: refactor(memory): remove handoff toggle from shipped pipeline — no capture path
+
+handoffStore.js module exists but is dead code: in-memory Map dies with
+process (defeats cross-session), zero recordHandoff call sites, no
+projectKey plumbed into applyMemoryEnhancements.
+
+Removed:
+- memoryHandoffEnabled from settingsRepo defaults
+- injectPendingHandoff call from applyMemoryEnhancements (index.js)
+- Handoff toggle UI from dashboard MemoryClient.js
+- Handoff menu item from CLI memory.js menu
+- Updated test to reflect 'not wired' status
+
+Kept:
+- handoffStore.js module (sound design, needs persistent capture path)
+
+Before re-wiring, needs: persistent storage, capture trigger (session
+end/proxy completion), projectKey plumbing from request metadata.
+
+See TIER3-MEMORY-HANDOFF kanban card for design notes.
+
+Refs: PR #3599 review §5
+
+
+diff --git a/src/lib/db/repos/settingsRepo.js b/src/lib/db/repos/settingsRepo.js
+index 187b4126..2d0ffe09 100644
+--- a/src/lib/db/repos/settingsRepo.js
++++ b/src/lib/db/repos/settingsRepo.js
+@@ -140,7 +140,7 @@ const DEFAULT_SETTINGS = {
+   memoryCompactionThresholdTokens: 128000,
+   memoryRecentTurnsToKeep: 8,
+   memoryCacheAnchorEnabled: false,
+-  memoryHandoffEnabled: false,
++  
+ };
+ 
+ async function readRaw() {

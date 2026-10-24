@@ -1,0 +1,31 @@
+commit fd973280
+author: cdvankammen
+date: 2026-10-22 12:19:30 -0600
+subject: feat(cleanup): optional sr-* combo sweeper, off by default
+
+- srComboCleanup scheduler (selectStaleSmartCombos pure fn + DI'd fail-open tick)
+- settings.srComboCleanup default {enabled:false, ttlHours:24, intervalHours:12}
+- UI toggle + TTL/interval inputs in Smart Router card
+- 13 tests incl. integration-style real-SQLite tick; suite 1705 pass/88 baseline
+- E2E: stale sr-* deleted on tick, fresh sr-* + user combos untouched
+
+
+diff --git a/src/lib/db/repos/settingsRepo.js b/src/lib/db/repos/settingsRepo.js
+index 3035d21f..0feb4d5a 100644
+--- a/src/lib/db/repos/settingsRepo.js
++++ b/src/lib/db/repos/settingsRepo.js
+@@ -25,6 +25,14 @@ const DEFAULT_SETTINGS = {
+     costQualityTradeoff: 5,
+     maxCandidates: 3,
+   },
++  // Optional sweep of stale smart-router (sr-*) combos. OFF by default —
++  // users opt in. ttlHours = age after which an unused sr- combo is deleted;
++  // intervalHours = how often the sweeper runs.
++  srComboCleanup: {
++    enabled: false,
++    ttlHours: 24,
++    intervalHours: 12,
++  },
+   analyzeErrorModel: "oc/mimo-v2.5-free",
+   markdownLogEnabled: false,
+   markdownLogFlushIntervalMin: 5,

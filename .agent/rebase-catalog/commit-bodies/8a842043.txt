@@ -1,0 +1,21 @@
+===COMMIT===
+hash: 8a8420430fb19aeb41119b2225d0ee97c5c2a9d2
+short: 8a842043
+author: decolua <decoluadt@gmail.com>
+date: 2026-10-23 10:23:49 +0700
+subject: feat(rtk): add a user-authored custom system prompt
+body:
+The built-in savers (caveman, ponytail) ship a fixed doctrine each, so an
+install that wants a different instruction — house style, language, a
+coding convention — has to edit the source or skip the feature entirely.
+
+Add customPromptEnabled/customPrompt settings and inject the text onto the
+final request body through the shared injectSystemPrompt, which already
+dispatches across OpenAI chat, Responses, Claude, Gemini and Kiro shapes.
+The toggle stands on its own: it does not depend on the Ponytail level
+picker, and with both on the two prompts append rather than replace.
+
+An empty or blank prompt injects nothing, and the request log records only
+the prompt length so the text never reaches the traces.
+
+---files---

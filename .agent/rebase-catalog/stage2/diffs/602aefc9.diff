@@ -1,0 +1,9 @@
+commit 602aefc9
+author: cdvankammen
+date: 2026-10-24 11:06:20 -0600
+subject: docs(research): capture Day 3 live verification and draft PR
+
+- 51-mini2-dashboard-dom-error-audit.md: append Day 3 live-verification addendum (RSC 429 storm reproduced, Finding #13 evil.example.com state confirmed live, version drift banner still present on v0.5.75).
+
+- 51-v4-vscode-works-pr-draft.md: new draft PR description with 9-commit list, 204/204 test evidence, security-review callouts, push-blocker remediation recipes (filter-repo / LFS / patch bundle), and live-evidence capture from mini2 probe. Left untracked until this commit so reviewer could edit before deciding whether to commit.
+

@@ -1,0 +1,11 @@
+commit b82ec531
+author: cdvankammen
+date: 2026-10-22 14:05:53 -0600
+subject: test(failover): upstream-dies-mid-stream coverage + probe hardening
+
+- T7: upstream killed mid-stream → proxy survives, client clean disconnect
+- T8: upstream killed mid-stream → next request fails over to peer (200)
+- ephemeral ports (freePort) so parallel files never collide; 17/17 pass
+- fix: probe() handles res.on('error') — upstream socket destroyed mid-probe
+  previously crashed the proxy (unhandled error on response stream)
+

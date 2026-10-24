@@ -1,0 +1,9 @@
+===COMMIT===
+hash: 0dd4d6be24a1f996be73b9bc470cb0861ac2df75
+short: 0dd4d6be
+author: semihisikman <semihisikman@users.noreply.github.com>
+date: 2026-10-07 19:20:57 +0700
+subject: fix(codex): preserve explicit tool strict flags
+body:
+
+---files---

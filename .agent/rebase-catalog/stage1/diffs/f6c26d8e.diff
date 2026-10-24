@@ -1,0 +1,6 @@
+commit f6c26d8e
+author: mannnrachman
+date: 2026-10-11 09:19:57 +0700
+subject: feat(cursor): resolve Auto (Server Picks) to the account's default agent model (#4692)
+
+

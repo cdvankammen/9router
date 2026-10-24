@@ -1,0 +1,59 @@
+commit 8dbf11c1
+author: cdvankammen
+date: 2026-10-22 13:49:48 -0600
+subject: feat(messages): Error Inbox P2 — server-side error aggregation + triage
+
+- requestDetailsRepo.getErrorSummary: SQL window-function GROUP BY over the
+  FULL filtered set with coarse Sentry-style fingerprint provider|model|
+  errorCategory (status='error' forced via indexed column), counts/cost/
+  first+last seen/sample error + latest detailId for drill-in; exported
+  errorFingerprint() helper
+- /api/messages?view=errors: mirrors view=conversations shape, facets scoped
+  to status=error, skips unused flat-list fetch
+- InboxView: 4 triage columns (Open/Acknowledged/Resolved/Dismissed), category
+  pills mirroring errorCategorizer taxonomy, sample error display-only,
+  Analyze reuses /api/analyze-error flow, View opens shared detail drawer
+- Triage persisted via settings KV boardColumns (MAP_REPLACE_KEYS, client owns
+  full map, survives reload) — inboxIssues table deferred per design doc
+- +17 vitest tests (grouping/cost/order/filters/empty/paging/settings
+  round-trip); regressions green (53 in 5 related suites)
+- design: research/9router/25-error-inbox-p2-design.md; BoardView untouched
+
+
+diff --git a/src/lib/db/index.js b/src/lib/db/index.js
+index 9a44737b..72f8a118 100644
+--- a/src/lib/db/index.js
++++ b/src/lib/db/index.js
+@@ -66,7 +66,7 @@ export {
+ export {
+   saveRequestDetail, getRequestDetails, getRequestDetailById, getDistinctProviders,
+   getRequestFacets, getDroppedRecordsCount,
+-  getConversationSummary, getConversationMessages,
++  getConversationSummary, getConversationMessages, getErrorSummary,
+ } from "./repos/requestDetailsRepo.js";
+ 
+ // Export/import full DB
+diff --git a/src/lib/db/repos/settingsRepo.js b/src/lib/db/repos/settingsRepo.js
+index 65c7ac6d..c17bd090 100644
+--- a/src/lib/db/repos/settingsRepo.js
++++ b/src/lib/db/repos/settingsRepo.js
+@@ -35,6 +35,11 @@ const DEFAULT_SETTINGS = {
+     intervalHours: 12,
+   },
+   analyzeErrorModel: "oc/mimo-v2.5-free",
++  // Error Inbox (P2) triage assignments: { [errorFingerprint]: columnKey }.
++  // Coarse fingerprint key = provider|model|errorCategory (Sentry-style) —
++  // see requestDetailsRepo.getErrorSummary. Stored with MAP_REPLACE semantics
++  // (sender owns the full map).
++  boardColumns: {},
+   markdownLogEnabled: false,
+   markdownLogFlushIntervalMin: 5,
+   modelFallbacks: {},
+@@ -138,6 +143,7 @@ const MAP_REPLACE_KEYS = new Set([
+   "providerStrategies",
+   "quotaVisibility",
+   "dnsToolEnabled",
++  "boardColumns",
+ ]);
+ 
+ const NESTED_KEYS = new Set([...CONFIG_MERGE_KEYS, ...MAP_REPLACE_KEYS]);

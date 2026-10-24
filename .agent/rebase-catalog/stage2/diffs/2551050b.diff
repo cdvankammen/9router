@@ -1,0 +1,15 @@
+commit 2551050b
+author: cdvankammen
+date: 2026-10-22 15:47:54 -0600
+subject: fix(deno-deploy): log cleanup DELETE failures instead of silent swallow (GAP-P3-09)
+
+Two .catch(() => {}) blocks silently swallowed Deno app cleanup failures:
+- Line 119: cleanup after deploy error
+- Line 150: cleanup after failed status check
+
+Both now log via console.error with contextual tag so ops can see when
+orphaned Deno apps fail to delete. Mirrors GAP-P2-02 pattern in chat.js.
+
+Adds vitest unit tests covering both paths (mock fetch chain rejects on
+cleanup DELETE, asserts console.error fires with the right tag).
+

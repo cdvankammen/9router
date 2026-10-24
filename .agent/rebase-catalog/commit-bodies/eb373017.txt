@@ -1,0 +1,9 @@
+===COMMIT===
+hash: eb3730170ce4cd5d999566e7b4873c0f523cf0ea
+short: eb373017
+author: decolua <decoluadt@gmail.com>
+date: 2026-10-15 20:53:52 +0700
+subject: fix(gemini): drop sampling params and order functionResponse-last for Gemini 4 (#4802)
+body:
+
+---files---

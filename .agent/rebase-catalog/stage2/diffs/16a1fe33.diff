@@ -1,0 +1,35 @@
+commit 16a1fe33
+author: cdvankammen
+date: 2026-10-24 07:24:27 -0600
+subject: docs(research): Finding #17 — published 9router@0.5.109 package audit
+
+Read-only tarball inspection of the published 0.5.109 package (backlog #5).
+
+Findings:
+
+- The runtime is the compiled .next-cli-build/ standalone bundle; the package/app/src/
+
+  tree is vestigial (imports files that do not ship).
+
+- Only migration 001 ships. 002/003/004/005 are absent (bundle was cut from a
+
+  different checkout — outputFileTracingRoot=/Users/Working/router4 — despite
+
+  those migrations being committed 11+ hours before the publish timestamp).
+
+- No rate limiter of any kind ships (neither TCP-layer nor middleware-layer).
+
+- CHANGELOG.md ends at v0.5.95; versions 0.5.99/0.5.104/0.5.109 have no entries.
+
+Recommendation: do NOT upgrade mini2 via npm i -g 9router@0.5.109 (it trades
+
+the RSC-429 bug for a security regression — no rate limiting at all). Build
+
+from repo HEAD instead. FK risk from Findings #2/#14 is cleared: 002 neither
+
+ships in 0.5.109 nor is registered in repo HEAD.
+
+Also documents resolutions for Findings #12/#13/#15/#16 and marks backlog
+
+items #5-#12 resolved.
+

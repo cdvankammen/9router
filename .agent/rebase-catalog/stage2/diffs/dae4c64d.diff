@@ -1,0 +1,12 @@
+commit dae4c64d
+author: cdvankammen
+date: 2026-10-22 15:41:21 -0600
+subject: fix(cloudflare-deploy): add 30s fetch timeouts to all Cloudflare API calls
+
+Add AbortSignal.timeout(CLOUDFLARE_API_TIMEOUT_MS) to all three Cloudflare
+API fetch calls in the deploy route: worker script upload (PUT), subdomain
+enable (POST), and subdomain check (GET). Without timeouts, Cloudflare API
+slowness blocked the deploy UI indefinitely with no user feedback.
+
+Fixes GAP-P2-22 from comprehensive scan.
+

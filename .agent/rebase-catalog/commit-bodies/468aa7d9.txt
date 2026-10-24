@@ -1,0 +1,22 @@
+===COMMIT===
+hash: 468aa7d9ed8f34c4a94255def591e99634bfecb9
+short: 468aa7d9
+author: smhc <6404304+smhc@users.noreply.github.com>
+date: 2026-10-13 17:30:09 +0700
+subject: fix(param-support): drop response_format for opencode-go deepseek models
+body:
+OpenCode Go's relay rejects response_format for its deepseek family upstream
+(HTTP 400) while serving it for every other model on the same relay, and the
+rejection body is a bare model echo ({"model":"deepseek-v4.1-flash"}) that
+names neither the field nor the reason, so callers cannot classify it.
+
+Measured 2026-10-13 with one Go key: 8/8 json_schema -> 400, 4/4 json_object
+-> 400, 4/4 without the field -> 200; glm/kimi/mimo/minimax/qwen/grok/gpt on
+the same relay -> 200 with json_schema. json_object is rejected as well, so the
+field has to be dropped rather than downgraded.
+
+Adds a model-scoped STRIP_RULES entry (the config-driven hook for params a
+provider/model rejects upstream) plus unit coverage for the deepseek family,
+non-deepseek OpenCode Go models, and other providers fronting deepseek ids.
+
+---files---

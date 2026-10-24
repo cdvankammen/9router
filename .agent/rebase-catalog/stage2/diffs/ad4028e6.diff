@@ -1,0 +1,6 @@
+commit ad4028e6
+author: cdvankammen
+date: 2026-10-22 13:46:38 -0600
+subject: fix(observability): thread sourceApp/userAgent through streaming handler
+
+

@@ -1,0 +1,41 @@
+commit d29f8080
+author: cdvankammen
+date: 2026-10-22 15:36:33 -0600
+subject: fix(merge): remove /open-sse ignore + apply tray watchdog + registry p124 fix
+
+- .gitignore: removed 4 erroneous /open-sse entries that ignored entire
+  open-sse/ source directory (386 tracked files). These were stale local
+  entries from pre-merge that should never have been in .gitignore.
+- cli/cli.js: tray watchdog interval (restart if frozen every 60s)
+- cli/src/cli/tray/tray.js: macOS ActivationPolicy shim before init
+- open-sse/providers/registry/index.js: xquik p123→p124 (p123=ollama-search)
+
+Recovered from crashed run 224 resolver scripts + fixed .gitignore defect.
+
+
+diff --git a/.gitignore b/.gitignore
+index 31f2ada4..6f8759b3 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -86,6 +86,12 @@ graphify-out/*
+ .codegraph/
+ .PR/
+ .next-analyze/*
++/.ua
++
++# Secrets / local-only notes — never commit (contains live API keys)
++/docs/plans-and-prompts/temp/
++/docs/plans-and-prompts/temp/**
++/.feeder
+ 
+ # Kiro local workspace state
+ .kiro/
+@@ -104,8 +110,6 @@ debug.log
+ 
+ # Branch-specific ignores
+ /.ua
+-/open-sse
+-/open-sse/providers
+ /.feeder
+ 
+ # Secrets / local-only notes — never commit (contains live API keys)

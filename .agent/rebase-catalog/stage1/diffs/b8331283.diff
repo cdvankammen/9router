@@ -1,0 +1,72 @@
+commit b8331283
+author: anojndr
+date: 2026-10-23 12:45:25 +0700
+subject: fix(opencode-free): full reasoning support for oc/mimo-v2.6-flash-free
+
+
+
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+index cb5f13db..13a25ea6 100644
+--- a/CHANGELOG.md
++++ b/CHANGELOG.md
+@@ -1,3 +1,8 @@
++# Unreleased
++
++## Fixes
++- **OpenCode Free**: fully support reasoning on `oc/mimo-v2.6-flash-free` — the lane takes the plain OpenAI `reasoning_effort` enum, so `none` now disables thinking instead of being clamped to `low`, `minimal`/`max` are selectable instead of collapsing to `low`/`high`, and adaptive (`auto`) effort is dropped rather than sent (upstream answers `400 Invalid option`); its MiMo route streams thinking as `reasoning`/`reasoning_details`, which the OpenAI passthrough now also exposes as `reasoning_content`, and the vendor-alias shapes are read by the SSE→JSON aggregation and the Antigravity/Claude/Responses translators alike
++
+ # v0.5.104 (2026-10-15)
+ 
+ ## Features
+diff --git a/open-sse/handlers/chatCore/sseToJsonHandler.js b/open-sse/handlers/chatCore/sseToJsonHandler.js
+index fa37c24b..5a723981 100644
+--- a/open-sse/handlers/chatCore/sseToJsonHandler.js
++++ b/open-sse/handlers/chatCore/sseToJsonHandler.js
+@@ -7,6 +7,7 @@ import { openAICompletionToClaudeMessage } from "../../translator/concerns/claud
+ import { PROVIDERS } from "../../config/providers.js";
+ import { buildRequestDetail, extractRequestConfig, saveUsageStats, formatDoneLine } from "./requestDetail.js";
+ import { ROLE, RESPONSES_ITEM } from "../../translator/schema/index.js";
++import { extractReasoningText } from "../../translator/concerns/reasoning.js";
+ 
+ // Responses-API providers (e.g. codex) may emit SSE without content-type + use Responses output shape
+ const isResponsesProvider = (p) => PROVIDERS[p]?.format === FORMATS.OPENAI_RESPONSES;
+@@ -141,7 +142,11 @@ export function parseSSEToOpenAIResponse(rawSSE, fallbackModel) {
+     const choice = chunk?.choices?.[0];
+     const delta = choice?.delta || {};
+     if (typeof delta.content === "string" && delta.content.length > 0) contentParts.push(delta.content);
+-    if (typeof delta.reasoning_content === "string" && delta.reasoning_content.length > 0) reasoningParts.push(delta.reasoning_content);
++    // Vendor aliases (`reasoning`, `reasoning_details[]`) count as reasoning too:
++    // without this an alias lane's thinking is silently dropped before the
++    // empty-content rescue below could keep it.
++    const reasoningText = extractReasoningText(delta);
++    if (reasoningText.length > 0) reasoningParts.push(reasoningText);
+     if (choice?.finish_reason) finishReason = choice.finish_reason;
+     if (chunk?.usage && typeof chunk.usage === "object") usage = chunk.usage;
+ 
+diff --git a/open-sse/providers/capabilities.js b/open-sse/providers/capabilities.js
+index 69d3144e..77f90c0f 100644
+--- a/open-sse/providers/capabilities.js
++++ b/open-sse/providers/capabilities.js
+@@ -243,6 +243,22 @@ export const PROVIDER_CAPABILITIES = {
+     // catalog overlay, so maxOutput must be stated here too).
+     "claude-haiku-5-5": { vision: true, reasoning: true, search: true, thinkingFormat: "claude-adaptive", contextWindow: 1000000, maxOutput: 128000 },
+   },
++  // OpenCode Free (oc) — the free lane's MiMo route is OpenRouter-backed and takes
++  // the plain OpenAI reasoning_effort enum verbatim (live probe on
++  // oc/mimo-v2.6-flash-free: none|minimal|low|medium|high|xhigh|max all 200, any
++  // other value 400 "Invalid option"; "none" really drops thinking — empty
++  // reasoning_content and reasoning_tokens 0). The global *mimo*v2.6* pattern
++  // describes Xiaomi's own API (DeepSeek-shaped `thinking` object, always on),
++  // which this lane ignores: `thinking.type:disabled` still streamed reasoning.
++  // Limits repeat the family pattern deliberately: the synced catalog carries no
++  // `opencode` limit delta for this id, so 1M/131k is what the lane already
++  // published before this override — but the override short-circuits the catalog
++  // overlay, so models.dev's free-lane listing (200000/32000) has to be applied
++  // here if a probe ever pins the lane's real window (a 200k `max_tokens` is
++  // accepted, so the 32k figure is not enforced at request validation).
++  "opencode": {
++    "mimo-v2.6-flash-free": { vision: true, audioInput: true, videoInput: true, reasoning: true, thinkingFormat: "openai", thinkingCanDisable: true, contextWindow: 1048576, maxOutput: 131072 },
++  },
+   "commandcode": {
+     // The generic commandcode fallback (1M/384k for every unlisted model) happened
+     // to give haiku-5-5 the right context by accident. Pin it to the catalog values:

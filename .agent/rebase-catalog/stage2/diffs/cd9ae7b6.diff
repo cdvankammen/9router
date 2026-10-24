@@ -1,0 +1,19 @@
+commit cd9ae7b6
+author: cdvankammen
+date: 2026-10-22 15:41:21 -0600
+subject: fix(cloudflare-deploy): wrap subdomain-enable in try/catch + add regression tests
+
+The subdomain-enable step already documented itself as non-fatal
+("We don't fail completely here, just continue") but threw uncaught
+errors on timeout/network failure. Wrapped in try/catch so a timed-out
+or failed enable step does not abort the entire deploy.
+
+Added 5-test vitest suite covering:
+- All 3 Cloudflare fetch calls carry AbortSignal.timeout(30000)
+- Upload timeout surfaces as 500 with timeout-flavored error
+- Subdomain-enable timeout is non-fatal (deploy still succeeds)
+- Subdomain-retrieval timeout yields a non-2xx response
+- Missing credentials short-circuit before any fetch
+
+Fixes GAP-P2-22.
+

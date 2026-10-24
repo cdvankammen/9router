@@ -1,0 +1,9 @@
+===COMMIT===
+hash: d6431f8b7518eab30084940b48b5632b2748c266
+short: d6431f8b
+author: vergiLgood1 <diyoanggara149@gmail.com>
+date: 2026-10-13 17:49:37 +0700
+subject: feat(cli-tools): Hermes audio transcription via 9router (#4763)
+body:
+
+---files---

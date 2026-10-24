@@ -1,0 +1,14 @@
+===COMMIT===
+hash: a9d0ad269f1c904b0e420d95f669b0fff1305912
+short: a9d0ad26
+author: Amirsalar Sojoudi <amirsalaar@gmail.com>
+date: 2026-10-08 16:26:17 +0700
+subject: feat(bedrock): add AWS Bedrock provider with AWS SSO credential support (#4157)
+body:
+Adds Amazon Bedrock (bedrock + bedrock-xai entries) with static-key and
+AWS SSO profile credential modes, a hand-rolled SigV4 signer on
+node:crypto, and the AWS EventStream decoder extracted from kiro.js into
+a shared util. Region and profile names are validated before use and
+signed headers/session tokens are redacted from logs and API responses.
+
+---files---

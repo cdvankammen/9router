@@ -1,0 +1,15 @@
+commit 8f181223
+author: cdvankammen
+date: 2026-10-22 12:19:30 -0600
+subject: docs: full tracking sweep — drop indicator, errors, new docs in every folder
+
+- CHANGELOG/SESSION-HISTORY/SESSION-NARRATIVE/TASK-LOG updated with drop
+  indicator work + all errors (toDraftText crash, stale badges, frozen
+  insert index, coordinate-space bug, E2E flakiness)
+- NEW learnings/2026-08-07-drop-indicator-dnd-kit-coordinates.md
+- NEW research/9router/16-ux-research-drop-indicator-and-override-placement.md
+- NEW decisions/ADR-006-drop-indicator-approach.md
+- NEW plans/fallback-rules-ux-plan.md
+- NEW meetings/2026-08-07-session-summary.md
+- workflows/ui-testing-workflow.md: synthetic pointer-event drag technique
+

@@ -1,0 +1,9 @@
+===COMMIT===
+hash: f5f880394eee7719a36181a0e9be9dfb18ba4161
+short: f5f88039
+author: mj10612 <5388892+mj10612@users.noreply.github.com>
+date: 2026-10-13 17:25:15 +0700
+subject: fix(capabilities): advertise PDF input for current Claude models (#4761)
+body:
+
+---files---

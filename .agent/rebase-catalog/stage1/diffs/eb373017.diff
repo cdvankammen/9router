@@ -1,0 +1,20 @@
+commit eb373017
+author: decolua
+date: 2026-10-15 20:53:52 +0700
+subject: fix(gemini): drop sampling params and order functionResponse-last for Gemini 4 (#4802)
+
+
+
+diff --git a/open-sse/providers/capabilities.js b/open-sse/providers/capabilities.js
+index 1439ee8f..1c3764ed 100644
+--- a/open-sse/providers/capabilities.js
++++ b/open-sse/providers/capabilities.js
+@@ -760,3 +760,8 @@ export function getCapabilitiesForModel(provider, model) {
+   // 4. Floor
+   return refine(null, provider, model);
+ }
++
++// Gemini 4 (Argon) drops sampling params and requires functionResponse-last merged user turns.
++export function isGemini4Model(model) {
++  return /(?:^|\/)gemini-4(?:$|[-.])/i.test(String(model || ""));
++}

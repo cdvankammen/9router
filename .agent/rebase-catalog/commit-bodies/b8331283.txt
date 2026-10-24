@@ -1,0 +1,9 @@
+===COMMIT===
+hash: b833128338ab5c1af7a994767167c3ed0daf8ab5
+short: b8331283
+author: anojndr <anojndr@gmail.com>
+date: 2026-10-23 12:45:25 +0700
+subject: fix(opencode-free): full reasoning support for oc/mimo-v2.6-flash-free
+body:
+
+---files---

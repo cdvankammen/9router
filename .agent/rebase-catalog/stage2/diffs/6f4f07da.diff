@@ -1,0 +1,9 @@
+commit 6f4f07da
+author: cdvankammen
+date: 2026-10-22 12:19:30 -0600
+subject: docs: hardening roadmap + origin classification (ours vs pre-existing) + mimo answer
+
+- Which mimo: oc/mimo-v2.5-free = OpenCode Free (user's own 8e59093d default, verified live)
+- 4-phase roadmap with per-item origin (OURS/YOURS/PRE-EXISTING/NEW), fix approach, importance
+- TASK-LOG 70-86 as working todo; 3 open questions block Phase 4 items
+

@@ -1,0 +1,12 @@
+commit 65ff65af
+author: cdvankammen
+date: 2026-10-22 12:26:40 -0600
+subject: feat(observability): atomic markdown flush + export pagination + drop surfacing
+
+Phase 3 robustness:
+- markdownLog: write temp + atomic rename (no partial files for readers)
+- export/requests: page param (page+limit, pagination.hasNext) for large datasets
+- requestDetailsRepo: cumulative droppedRecords counter when cap exceeded
+- /api/observability/status: enabled/maxRecords/currentCount/droppedRecords
+- RequestDetailsTab: amber banner when records are being dropped
+

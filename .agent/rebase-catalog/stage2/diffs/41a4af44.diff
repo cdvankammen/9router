@@ -1,0 +1,14 @@
+commit 41a4af44
+author: cdvankammen
+date: 2026-10-22 12:19:30 -0600
+subject: docs: code review + live verification of user's personal commits
+
+Verified live (real app :20130, in-app console logs as ground truth):
+- Capacity Adapter: vision request routed through adapter to mimo (pool 404 handled cleanly)
+- TokenRouter: pricing exact + cost math verified
+- Self-hosted STT/TTS/Embeddings: registered + 50 tests pass
+- Auto-provision key: review OK
+- Codex detection: 7/7 cases
+- Antigravity scoping: review OK
+Findings: xAI token invalid (env), OpenRouter guardrails (env), 2 minor refactor notes. No code changed. Regression 1718/88 baseline.
+

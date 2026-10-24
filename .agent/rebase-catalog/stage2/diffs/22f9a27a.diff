@@ -1,0 +1,12 @@
+commit 22f9a27a
+author: cdvankammen
+date: 2026-10-22 14:04:00 -0600
+subject: docs: model-serving policy (27) + runbook/TASK-LOG/CHANGELOG/SESSION updates
+
+- research/9router/27-model-serving-policy.md: control-plane policy (this Mac
+  never runs inference; mini2 + Linux box serve), env mechanism, streaming
+  endpoint rationale, ollama-on-macOS install recipe (tgz layout gotcha),
+  Linux-box join steps (SSH needed on exo/hass)
+- runbook: ollama column + Model serving section + verification curls
+- TASK-LOG #125-132, CHANGELOG, SESSION-HISTORY entries
+

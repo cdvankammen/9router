@@ -1,0 +1,9 @@
+===COMMIT===
+hash: cfd8c61849ae8968f57794ebf1e2a01ae8cf95e1
+short: cfd8c618
+author: mannnrachman <mannnrachman@users.noreply.github.com>
+date: 2026-10-11 09:30:34 +0700
+subject: fix(cursor): hold strictProxy on the AgentService h2 path (#4696)
+body:
+
+---files---

@@ -1,0 +1,40 @@
+commit 5cc2b724
+author: cdvankammen
+date: 2026-10-24 02:55:19 -0600
+subject: fix(tests): request-details-tab 22/22 — flush buffer + ATTACH outside txn
+
+- src/lib/db/index.js: export flushRequestDetails
+- src/lib/db/backup.js: move ATTACH/DETACH outside transaction
+  (node:sqlite cannot ATTACH inside a SAVEPOINT)
+- tests/unit/request-details-tab.test.js: saveDetail helper calls
+  flushRequestDetails() to force buffered rows to disk before read
+
+MiMo 2.6 scrutiny #2: REVISE with 3 gaps, all resolved.
+request-details-tab: 3 fail → 22/22 pass.
+
+
+diff --git a/src/lib/db/index.js b/src/lib/db/index.js
+index 2409bb66..387f69ec 100644
+--- a/src/lib/db/index.js
++++ b/src/lib/db/index.js
+@@ -65,6 +65,7 @@ export {
+ // Request details
+ export {
+   saveRequestDetail, getRequestDetails, getRequestDetailById, getDistinctProviders,
++  flushRequestDetails,
+ } from "./repos/requestDetailsRepo.js";
+ 
+ // Seen models (New Models discovery)
+diff --git a/tests/unit/request-details-tab.test.js b/tests/unit/request-details-tab.test.js
+index 7fc00a8a..0d0d2ca1 100644
+--- a/tests/unit/request-details-tab.test.js
++++ b/tests/unit/request-details-tab.test.js
+@@ -14,6 +14,8 @@ let adapter;
+ async function saveDetail(detail) {
+   await db.saveRequestDetail(detail);
+   await new Promise((r) => setTimeout(r, 120));
++  // Force the buffered writer to flush so the row is on disk before reading
++  await db.flushRequestDetails();
+ }
+ 
+ beforeAll(async () => {

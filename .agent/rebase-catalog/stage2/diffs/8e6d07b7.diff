@@ -1,0 +1,11 @@
+commit 8e6d07b7
+author: cdvankammen
+date: 2026-10-22 14:05:53 -0600
+subject: feat(failover): multi-peer proxy — works on any network (Tailscale/LAN/mDNS)
+
+- cli/failover-proxy.cjs --peer accepts comma-separated URLs; probes each,
+  forwards to first healthy peer (network-agnostic)
+- launchd both nodes: 3 peers each (Tailscale + LAN + mDNS)
+- verified: LAN failover 10.2.0.11:20142 → local; forward+reverse failover
+  with multi-peer; final health 200/200/200/200
+

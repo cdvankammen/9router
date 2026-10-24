@@ -1,0 +1,9 @@
+===COMMIT===
+hash: e10da16031cf1d327f84b88747f19219f9bfb4ec
+short: e10da160
+author: Đào Văn Hùng <memsenpai3@gmail.com>
+date: 2026-10-07 18:52:13 +0700
+subject: fix(usage): track exact Codex image token usage
+body:
+
+---files---

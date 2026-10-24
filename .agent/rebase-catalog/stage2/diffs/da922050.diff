@@ -1,0 +1,16 @@
+commit da922050
+author: cdvankammen
+date: 2026-10-22 12:19:30 -0600
+subject: feat(fallbacks): live drop indicator bar in Chain Flow drag-and-drop
+
+- While dragging a chain chip, a vertical accent bar shows the exact slot
+  where the chip will land; it slides live as the pointer moves (works across
+  wrapped rows via reading-order comparison of live sibling rects)
+- The drop uses the indicator-computed insert index, so the final order
+  matches where the bar was
+- rectSortingStrategy for wrap-correct layout math
+- E2E verified: bar tracked 378px -> 181px during a sweep, drop reordered to
+  the bar position and persisted; test env restored
+- Debug findings: dnd-kit translated rect is content-relative inside scrolled
+  containers; use initial rect + event.delta (viewport space) instead
+

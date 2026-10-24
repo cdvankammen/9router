@@ -1,0 +1,101 @@
+commit e10da160
+author: Đào Văn Hùng
+date: 2026-10-07 18:52:13 +0700
+subject: fix(usage): track exact Codex image token usage
+
+
+
+diff --git a/tests/unit/codex-image-models.test.js b/tests/unit/codex-image-models.test.js
+index 9a4e9c44..ea53407f 100644
+--- a/tests/unit/codex-image-models.test.js
++++ b/tests/unit/codex-image-models.test.js
+@@ -26,6 +26,17 @@ describe("Codex GPT-5.6 image models", () => {
+     const events = [
+       ["response.image_generation_call.partial_image", { partial_image_b64: "cGFydGlhbA==", partial_image_index: 0 }],
+       ["response.output_item.done", { item: { type: "image_generation_call", result: "ZmluYWw=" } }],
++      ["response.completed", {
++        response: {
++          usage: {
++            input_tokens: 321,
++            output_tokens: 654,
++            total_tokens: 975,
++            input_tokens_details: { cached_tokens: 111 },
++            output_tokens_details: { reasoning_tokens: 22 },
++          },
++        },
++      }],
+     ];
+     const fetchMock = vi.fn().mockResolvedValue(new Response(
+       events.map(([event, data]) => `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`).join(""),
+@@ -33,6 +44,7 @@ describe("Codex GPT-5.6 image models", () => {
+     ));
+     vi.stubGlobal("fetch", fetchMock);
+     const onRequestSuccess = vi.fn();
++    const onUsage = vi.fn();
+     const modelInfo = await getModelInfoCore(`cx/${model}-image`);
+     expect(modelInfo).toEqual({ provider: "codex", model: `${model}-image` });
+     expect(await getModelInfoCore(`codex/${model}-image`)).toEqual(modelInfo);
+@@ -51,6 +63,7 @@ describe("Codex GPT-5.6 image models", () => {
+       credentials: { accessToken: "test-token" },
+       streamToClient: true,
+       onRequestSuccess,
++      onUsage,
+     });
+ 
+     expect(result.success).toBe(true);
+@@ -72,5 +85,13 @@ describe("Codex GPT-5.6 image models", () => {
+     expect(stream).toContain("event: done\n");
+     expect(stream).toContain('"data":[{"b64_json":"ZmluYWw="}]');
+     expect(onRequestSuccess).toHaveBeenCalledTimes(1);
++    expect(onUsage).toHaveBeenCalledTimes(1);
++    expect(onUsage).toHaveBeenCalledWith({
++      prompt_tokens: 321,
++      completion_tokens: 654,
++      total_tokens: 975,
++      cached_tokens: 111,
++      reasoning_tokens: 22,
++    });
+   });
+ });
+diff --git a/tests/unit/image-generation.test.js b/tests/unit/image-generation.test.js
+index 6a22cd40..e91290e1 100644
+--- a/tests/unit/image-generation.test.js
++++ b/tests/unit/image-generation.test.js
+@@ -323,12 +323,16 @@ describe("handleImageGenerationCore", () => {
+           "event: response.output_item.done",
+           'data: {"item":{"type":"image_generation_call","result":"base64codeximage"}}',
+           "",
++          "event: response.completed",
++          'data: {"response":{"usage":{"input_tokens":123,"output_tokens":456,"total_tokens":579,"input_tokens_details":{"cached_tokens":12}}}}',
++          "",
+           "",
+         ].join("\n"),
+         { status: 200, headers: { "Content-Type": "text/event-stream" } }
+       )
+     );
+ 
++    const onUsage = vi.fn();
+     const result = await handleImageGenerationCore({
+       body: {
+         prompt: "A green square",
+@@ -341,6 +345,7 @@ describe("handleImageGenerationCore", () => {
+         providerSpecificData: { chatgptAccountId: "account-123" },
+       },
+       log: null,
++      onUsage,
+     });
+ 
+     expect(result.success).toBe(true);
+@@ -365,6 +370,12 @@ describe("handleImageGenerationCore", () => {
+ 
+     const responseBody = await result.response.json();
+     expect(responseBody.data[0].b64_json).toBe("base64codeximage");
++    expect(onUsage).toHaveBeenCalledWith({
++      prompt_tokens: 123,
++      completion_tokens: 456,
++      total_tokens: 579,
++      cached_tokens: 12,
++    });
+   });
+ 
+   it("generates image with Codex gpt-image-2.5 tool model", async () => {

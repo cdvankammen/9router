@@ -1,0 +1,9 @@
+===COMMIT===
+hash: ee3234003a4b3e0f665753c9ef9e39e24295dc8d
+short: ee323400
+author: semihisikman <semihisikman@users.noreply.github.com>
+date: 2026-10-07 19:46:40 +0700
+subject: fix(tts): accept server model and voice in self-hosted example
+body:
+
+---files---

@@ -1,0 +1,36 @@
+commit 74c5a43b
+author: cdvankammen
+date: 2026-10-24 03:28:37 -0600
+subject: fix(db): flushRequestDetails export + backupDbLite FK stripping
+
+- src/lib/db/repos/requestDetailsRepo.js: export flushRequestDetails()
+  as public wrapper around internal flushToDatabase() (barrel already
+  re-exports it but the function was missing)
+- src/lib/db/backup.js: strip FOREIGN KEY/REFERENCES clauses pointing
+  at excluded tables (requestDetails) from CREATE TABLE SQL before
+  executing in bak schema. Migrations 003+004 create message_facets and
+  message_annotations with REFERENCES requestDetails(id) ON DELETE
+  CASCADE — these failed CREATE TABLE in bak because requestDetails
+  doesn't exist there. Also: drop adapter.transaction() wrapper
+  (SAVEPOINT + ATTACH DDL fragile on node:sqlite), add index copy,
+  clean up partial backup on failure.
+
+MiMo #4 APPROVE (codex mock), MiMo #5 APPROVE (backup FK strip).
+request-details-tab: 22/22 pass, codex-image-fetch: 4/4 pass.
+
+
+diff --git a/tests/unit/codex-image-fetch.test.js b/tests/unit/codex-image-fetch.test.js
+index d50614a2..3913be1b 100644
+--- a/tests/unit/codex-image-fetch.test.js
++++ b/tests/unit/codex-image-fetch.test.js
+@@ -11,7 +11,9 @@
+ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+ 
+ // Mock DNS so the SSRF guard treats example.com as public.
+-vi.mock("node:dns/promises", () => ({ lookup: async () => ({ address: "93.184.216.34" }) }));
++// Must return an array: resolvePinnedIps calls lookup(hostname, { all: true }),
++// which per the node:dns/promises contract resolves to [{ address, family }].
++vi.mock("node:dns/promises", () => ({ lookup: async () => [{ address: "93.184.216.34", family: 4 }] }));
+ 
+ import { CodexExecutor } from "../../open-sse/executors/codex.js";
+ import * as proxyFetchModule from "../../open-sse/utils/proxyFetch.js";

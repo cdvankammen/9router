@@ -1,0 +1,9 @@
+===COMMIT===
+hash: 165f9b90a254cdbbe31a579687a82d2b61b401df
+short: 165f9b90
+author: fdkgenie <75261157+fdkgenie@users.noreply.github.com>
+date: 2026-10-15 09:22:04 +0700
+subject: feat(providers): add Nous Research OAuth + free-tier provider
+body:
+
+---files---

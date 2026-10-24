@@ -1,0 +1,24 @@
+commit 8b1ad5ec
+author: cdvankammen
+date: 2026-10-22 17:10:51 -0600
+subject: fix(memory): make toolPruner truncation idempotent
+
+PR #3599 review (§6) reproduced non-idempotent truncation in
+open-sse/services/memory/toolPruner.js: pruning the same already-truncated
+output again re-truncates (591→589 chars in probe) because the truncation
+notice itself gets cut on subsequent passes. Since the pipeline re-runs over
+stored history every request, repeated passes degrade historical tool outputs.
+
+Fix: truncateText now detects the '[... Tool output truncated by 9router
+memory optimizer:' marker and skips re-truncation (no-op, savedChars=0),
+so once-truncated output is stable under any later pass, even if
+maxHistoricalChars is lowered between passes.
+
+Tests (tests/unit/memory-enhancements.test.js, toolPruner section):
+- preserves recent tool turns and truncates older ones (PR original)
+- regression: prune(twice) === prune(once) — byte-identical, no re-cut
+- marker-bearing content never re-truncated even over budget
+
+Verified: node --test tests/unit/memory-enhancements.test.js → 3/3 pass;
+review probe: first pass 591 chars, second pass pruned=false 591 chars.
+

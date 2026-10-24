@@ -1,0 +1,27 @@
+commit 4a50b18c
+author: cdvankammen
+date: 2026-10-22 17:10:51 -0600
+subject: fix(memory): contextCompactor sequence validity — tool-pair boundary + no synthetic ack
+
+PR #3599 review §3 reproduced two defects:
+1. keep=2 with trailing tool result left a dangling tool message whose
+   tool_call_id had no matching tool_calls in the kept window (tc14).
+2. The synthetic assistant ack inserted after the summary created an
+   assistant->assistant alternation break when the first kept message was
+   an assistant message.
+
+Fixes:
+- Walk the cut back to a tool_use/tool_result pair boundary so pairs stay
+  together (no dangling tool results).
+- Drop the synthetic assistant ack entirely; merge the summary into the
+  first kept user message when it is a user message (no user->user
+  adjacency either).
+- Add validateSequence() (no same-role adjacency for user/assistant, no
+  dangling tool results, unresolved tool_calls tracked) and skip
+  compaction for the round when the resulting sequence is invalid.
+
+Tests: added 11 context-compactor regression tests covering keep 2/3/4
+with a trailing tool result, assistant-first recent window, summary merge,
+validator behavior, input-array form; extended tests/unit/
+memory-enhancements.test.js. 14/14 pass via node --test.
+

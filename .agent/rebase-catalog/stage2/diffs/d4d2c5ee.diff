@@ -1,0 +1,14 @@
+commit d4d2c5ee
+author: cdvankammen
+date: 2026-10-22 14:04:00 -0600
+subject: test(baseline): fix verify-no-regression judge — layout-agnostic matching
+
+- was: split on '/app/' (upstream layout) → all keys 'undefined :: …' → every
+  failure reported as regression → judge was a permanent false alarm
+- now: parse known-fails entries into {file, testName}; KNOWN iff file part is
+  a substring of the failure path AND testName is a substring of fullName;
+  handles both JSON shapes; reports known/stale/NEW; exit 1 only on NEW
+- verified against fresh run: 86 fails → 14 known, 10 stale (rtk), 72 NEW
+  (pre-existing drift — known-fails.txt update handled separately)
+- also verified layout-agnostic vs upstream baseline-results.json (24 known/2 NEW)
+

@@ -1,0 +1,15 @@
+===COMMIT===
+hash: eea082157b382d25f8425e262c84aa02c3104523
+short: eea08215
+author: decolua <decoluadt@gmail.com>
+date: 2026-10-08 17:35:44 +0700
+subject: fix(dashboard): fix mobile layouts for endpoint, provider models and cli-tools
+body:
+- endpoint: align key row items to top and wrap long key text
+- header: hide parent breadcrumb and donate button on mobile to avoid overlapping
+- provider: make model chips full width on mobile and break long model names
+- cli-tools: place model input and select button on same row, inline checkboxes
+
+Co-Authored-By: Claude Code <noreply@anthropic.com>
+
+---files---

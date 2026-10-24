@@ -1,0 +1,29 @@
+commit b6dcc553
+author: cdvankammen
+date: 2026-10-24 09:47:46 -0600
+subject: feat(rate-limiter): multi-bucket per-(ip,category) limits with shared route classifier
+
+Replace the single general/chat buckets with a proper route classifier so
+each traffic class gets an independent per-IP budget. Auth brute-force can
+no longer starve dashboard traffic, and LLM completions can't eat the API
+allowance.
+
+- src/lib/middleware/routeClassifier.js (ESM, Next middleware layer) +
+  an inline CJS twin in custom-server.rate-limiter.js (loads before ESM
+  is available). Behaviour pinned to identical fixtures by the test suites.
+- Buckets: static/rsc bypass entirely (framework traffic, Finding #16);
+  auth 10/min — narrowed to POST login/setup/reset-password only, since
+  /api/auth/status is polled by Header.js every page load and stays in
+  api; chat 20/min (POST completions only, GET uses api); api 120/min
+  (other /api/* + /v1/*); general 120/min fallback.
+- rateLimiter.js rewritten to per-(ip, category) buckets; checkRateLimit
+  classifies on pathname+search so the classifier sees ?_rsc= prefetches.
+- custom-server.rate-limiter.js (TCP layer) rewritten to ip|category
+  counters; cli/app copy synced (gitignored build artifact, regenerated
+  by cli:pack).
+
+Tests: TCP original 9/9 + multi-bucket 8/8 + route-classifier 35/35 +
+middleware 24/24 = 76/76 passing. ESLint clean on all touched files.
+
+Backlog item #1 from 51-mini2-dashboard-dom-error-audit.md.
+

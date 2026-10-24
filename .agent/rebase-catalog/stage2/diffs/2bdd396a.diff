@@ -1,0 +1,16 @@
+commit 2bdd396a
+author: cdvankammen
+date: 2026-10-22 17:10:51 -0600
+subject: fix(db): normalize node:sqlite rows to plain objects for RSC serialization
+
+node:sqlite (Node >= 22.5) returns rows with a null prototype. Next.js RSC
+serialization rejects null-prototype objects when passed Server -> Client
+("Only plain objects ... can be passed to Client Components"), causing the
+Statistics page to 500 on deployments running Node 26 (mini2).
+
+Normalize get()/all() results to plain objects so every consumer (repos,
+RSC pages, API routes) sees the same shape as better-sqlite3 / sql.js rows.
+
+Adds regression test asserting get/all return plain objects with enumerable
+keys (verified: fails without fix, passes with fix).
+

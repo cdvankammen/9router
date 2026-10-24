@@ -1,0 +1,24 @@
+===COMMIT===
+hash: 421f226261750e52323e15d2d26fc964113d96a5
+short: 421f2262
+author: Hermes Agent <hermes@emirhanc.com.tr>
+date: 2026-10-23 10:10:33 +0700
+subject: feat(stt): add Codex OAuth transcription provider
+body:
+Add cx/transcribe (codex/transcribe) to the STT registry and dashboard,
+reusing existing Codex OAuth chat connections instead of an OpenAI API key.
+
+Audio is converted to mono 24 kHz PCM16 WAV with ffmpeg and sent as a
+file-only multipart request to ChatGPT's transcription endpoint using the
+Codex identity headers. Responses are limited to {text} or plain text.
+
+Input, decoded duration, conversion, response size and concurrency are
+bounded, and private temp files are removed on both success and failure.
+Token refresh, one forced 401 retry, connection proxy resolution and
+account fallback reuse the existing persisted credential service. Direct
+requests use Node HTTPS/1 with normal certificate verification while
+proxied requests keep the shared transport.
+
+Refs #5074
+
+---files---

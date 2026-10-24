@@ -1,0 +1,9 @@
+===COMMIT===
+hash: cff2b1d976528860521781f42c8da468bc49a9e4
+short: cff2b1d9
+author: AhooraZen <ahoora935137@gmail.com>
+date: 2026-10-11 09:12:27 +0700
+subject: feat(antigravity): bump IDE version to 2.22.0
+body:
+
+---files---

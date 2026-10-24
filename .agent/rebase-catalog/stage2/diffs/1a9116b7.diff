@@ -1,0 +1,138 @@
+commit 1a9116b7
+author: cdvankammen
+date: 2026-10-22 12:24:35 -0600
+subject: feat(smart-router): score breakdown + configurable sticky TTL + source-app fingerprinting
+
+- resolveSmartRouter returns top-N scores (model + score) for a 'why did it pick X' panel; threaded via smartRouterMeta through chatCore → saveUsageStats → usageHistory.meta
+- stickyTtlMin setting (default 5, 1-1440) honored by sticky session cache; UI input in Smart Router card
+- sourceApps.js: UA → stable source-app class (privacy: never stores raw UA); persisted on requestDetails
+- 41 related unit tests pass
+
+
+diff --git a/open-sse/handlers/chatCore.js b/open-sse/handlers/chatCore.js
+index 91dad9e5..94fe05ac 100644
+--- a/open-sse/handlers/chatCore.js
++++ b/open-sse/handlers/chatCore.js
+@@ -16,6 +16,7 @@ import { trackPendingRequest, appendRequestLog, saveRequestDetail } from "@/lib/
+ import { getExecutor } from "../executors/index.js";
+ import { supportsGrokCliReasoningEffort } from "../config/grokCli.js";
+ import { buildRequestDetail, extractRequestConfig } from "./chatCore/requestDetail.js";
++import { fingerprintSourceApp } from "@/lib/sourceApps.js";
+ import { handleForcedSSEToJson } from "./chatCore/sseToJsonHandler.js";
+ import { handleNonStreamingResponse } from "./chatCore/nonStreamingHandler.js";
+ import { handleStreamingResponse, buildOnStreamComplete } from "./chatCore/streamingHandler.js";
+@@ -61,9 +62,12 @@ export function stripContinuityFields(body) {
+   return body;
+ }
+ 
+-export async function handleChatCore({ body, modelInfo, credentials, log, onCredentialsRefreshed, onRequestSuccess, onDisconnect, clientRawRequest, connectionId, userAgent, apiKey, ccFilterNaming, rtkEnabled, headroomEnabled, headroomUrl, headroomCompressUserMessages, headroomTimeoutMs, cavemanEnabled, cavemanLevel, ponytailEnabled, ponytailLevel, pxpipeEnabled, pxpipeMinChars, pxpipeTimeoutMs, pxpipeTransform, onPxpipeEvent, sourceFormatOverride, providerThinking, providerOverrides, conversationId, taskType }) {
++export async function handleChatCore({ body, modelInfo, credentials, log, onCredentialsRefreshed, onRequestSuccess, onDisconnect, clientRawRequest, connectionId, userAgent, apiKey, ccFilterNaming, rtkEnabled, headroomEnabled, headroomUrl, headroomCompressUserMessages, headroomTimeoutMs, cavemanEnabled, cavemanLevel, ponytailEnabled, ponytailLevel, pxpipeEnabled, pxpipeMinChars, pxpipeTimeoutMs, pxpipeTransform, onPxpipeEvent, sourceFormatOverride, providerThinking, providerOverrides, conversationId, taskType, smartRouterMeta }) {
+   const { provider, model } = modelInfo;
+   const requestStartTime = Date.now();
++  // Source-app fingerprint from UA — persisted on requestDetails for filtering.
++  // Never stores the raw UA; only the fingerprint class (privacy, research D.4).
++  const sourceApp = fingerprintSourceApp(userAgent);
+   // Stable per-session color so all lines of one CLI conversation share a tag
+   const sessionSeed = (() => {
+     try {
+@@ -406,6 +410,7 @@ export async function handleChatCore({ body, modelInfo, credentials, log, onCred
+     saveRequestDetail(buildRequestDetail({
+       provider, model, connectionId,
+       conversationId,
++      sourceApp,
+       errorCategory: categorizeError(error?.status || error?.statusCode || 502, error.message),
+       latency: { ttft: 0, total: Date.now() - requestStartTime },
+       tokens: { prompt_tokens: 0, completion_tokens: 0 },
+@@ -483,6 +488,7 @@ export async function handleChatCore({ body, modelInfo, credentials, log, onCred
+     saveRequestDetail(buildRequestDetail({
+       provider, model, connectionId,
+       conversationId,
++      sourceApp,
+       errorCategory: categorizeError(statusCode, message),
+       latency: { ttft: 0, total: Date.now() - requestStartTime },
+       tokens: { prompt_tokens: 0, completion_tokens: 0 },
+@@ -502,7 +508,7 @@ export async function handleChatCore({ body, modelInfo, credentials, log, onCred
+     return createErrorResult(statusCode, errMsg, resetsAtMs, upstreamResponseHeaders(providerResponse.headers));
+   }
+ 
+-  const sharedCtx = { provider, model, body, stream, translatedBody, finalBody, requestStartTime, connectionId, apiKey, clientRawRequest, onRequestSuccess, pxpipe: pxpipeSummary, reqTag, log, conversationId, taskType };
++  const sharedCtx = { provider, model, body, stream, translatedBody, finalBody, requestStartTime, connectionId, apiKey, clientRawRequest, onRequestSuccess, pxpipe: pxpipeSummary, reqTag, log, conversationId, taskType, smartRouterMeta, sourceApp, userAgent };
+   const appendLog = (extra) => appendRequestLog({ model, provider, connectionId, ...extra }).catch(() => { });
+   const trackDone = () => trackPendingRequest(model, provider, connectionId, false);
+ 
+diff --git a/open-sse/handlers/chatCore/requestDetail.js b/open-sse/handlers/chatCore/requestDetail.js
+index 54f26771..b41cd340 100644
+--- a/open-sse/handlers/chatCore/requestDetail.js
++++ b/open-sse/handlers/chatCore/requestDetail.js
+@@ -80,6 +80,8 @@ export function buildRequestDetail(base, overrides = {}) {
+     status: base.status || "success",
+     conversationId: base.conversationId || undefined,
+     errorCategory: base.errorCategory || undefined,
++    sourceApp: base.sourceApp || undefined,
++    userAgent: base.userAgent || undefined,
+     ...overrides
+   };
+ }
+@@ -102,7 +104,7 @@ export function formatDoneLine({ usage, latency }) {
+   return `DONE ${latency?.total ?? 0}ms${ttftStr} · ${inStr} · OUT ${outTok}`;
+ }
+ 
+-export function saveUsageStats({ provider, model, tokens, connectionId, apiKey, endpoint, label = "USAGE", silent = false, conversationId, taskType }) {
++export function saveUsageStats({ provider, model, tokens, connectionId, apiKey, endpoint, label = "USAGE", silent = false, conversationId, taskType, smartRouterMeta }) {
+   if (!tokens || typeof tokens !== "object") return;
+ 
+   const inTokens = tokens.input_tokens ?? tokens.prompt_tokens ?? 0;
+@@ -132,6 +134,9 @@ export function saveUsageStats({ provider, model, tokens, connectionId, apiKey,
+     apiKey: apiKey || undefined,
+     endpoint: endpoint || null,
+     conversationId: conversationId || undefined,
+-    meta: taskType ? { taskType } : undefined
++    meta: {
++      ...(taskType ? { taskType } : {}),
++      ...(smartRouterMeta || {}),
++    },
+   }).catch(() => {});
+ }
+diff --git a/open-sse/handlers/chatCore/sseToJsonHandler.js b/open-sse/handlers/chatCore/sseToJsonHandler.js
+index a91c52df..30618d09 100644
+--- a/open-sse/handlers/chatCore/sseToJsonHandler.js
++++ b/open-sse/handlers/chatCore/sseToJsonHandler.js
+@@ -180,7 +180,7 @@ export function parseSSEToOpenAIResponse(rawSSE, fallbackModel) {
+  * Handle case: provider forced streaming but client wants JSON.
+  * Supports both Codex/Responses API SSE and standard Chat Completions SSE.
+  */
+-export async function handleForcedSSEToJson({ providerResponse, sourceFormat, targetFormat, provider, model, body, stream, translatedBody, finalBody, requestStartTime, connectionId, apiKey, clientRawRequest, onRequestSuccess, customToolNames, toolNameMap, trackDone, appendLog, reqTag, log, conversationId, taskType }) {
++export async function handleForcedSSEToJson({ providerResponse, sourceFormat, targetFormat, provider, model, body, stream, translatedBody, finalBody, requestStartTime, connectionId, apiKey, clientRawRequest, onRequestSuccess, customToolNames, toolNameMap, trackDone, appendLog, reqTag, log, conversationId, taskType, smartRouterMeta }) {
+   const contentType = providerResponse.headers.get("content-type") || "";
+   const isSSE = contentType.includes("text/event-stream") || (contentType === "" && isResponsesProvider(provider));
+   if (!isSSE) return null; // not handled here
+@@ -206,7 +206,7 @@ export async function handleForcedSSEToJson({ providerResponse, sourceFormat, ta
+ 
+       const usage = jsonResponse.usage || {};
+       appendLog({ tokens: usage, status: "200 OK" });
+-      saveUsageStats({ provider, model, tokens: usage, connectionId, apiKey, endpoint: clientRawRequest?.endpoint, silent: true, conversationId, taskType });
++      saveUsageStats({ provider, model, tokens: usage, connectionId, apiKey, endpoint: clientRawRequest?.endpoint, silent: true, conversationId, taskType, smartRouterMeta });
+       if (log?.line) log.line(reqTag, "📊", formatDoneLine({ usage, latency: { total: Date.now() - requestStartTime } }));
+ 
+       // Same cache-inclusive total for the recorded detail, so the DB and the
+@@ -314,7 +314,7 @@ export async function handleForcedSSEToJson({ providerResponse, sourceFormat, ta
+ 
+     const usage = parsed.usage || {};
+     appendLog({ tokens: usage, status: "200 OK" });
+-    saveUsageStats({ provider, model, tokens: usage, connectionId, apiKey, endpoint: clientRawRequest?.endpoint, silent: true, conversationId, taskType });
++    saveUsageStats({ provider, model, tokens: usage, connectionId, apiKey, endpoint: clientRawRequest?.endpoint, silent: true, conversationId, taskType, smartRouterMeta });
+     if (log?.line) log.line(reqTag, "📊", formatDoneLine({ usage, latency: { total: Date.now() - requestStartTime } }));
+ 
+     const totalLatency = Date.now() - requestStartTime;
+diff --git a/src/lib/db/repos/settingsRepo.js b/src/lib/db/repos/settingsRepo.js
+index b198a2b1..0de25c38 100644
+--- a/src/lib/db/repos/settingsRepo.js
++++ b/src/lib/db/repos/settingsRepo.js
+@@ -24,6 +24,7 @@ const DEFAULT_SETTINGS = {
+     allowedModels: [],
+     costQualityTradeoff: 5,
+     maxCandidates: 3,
++    stickyTtlMin: 5,
+   },
+   // Optional sweep of stale smart-router (sr-*) combos. OFF by default —
+   // users opt in. ttlHours = age after which an unused sr- combo is deleted;

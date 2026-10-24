@@ -1,0 +1,6 @@
+commit cbd594ac
+author: mannnrachman
+date: 2026-10-07 19:11:45 +0700
+subject: fix(cursor): reject empty AgentService turns without successful stop
+
+

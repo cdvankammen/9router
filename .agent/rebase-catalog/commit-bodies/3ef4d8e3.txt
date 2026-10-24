@@ -1,0 +1,9 @@
+===COMMIT===
+hash: 3ef4d8e311ee17c8d0280b73eef3618011d7426e
+short: 3ef4d8e3
+author: mannnrachman <mannnrachman@users.noreply.github.com>
+date: 2026-10-11 09:10:36 +0700
+subject: feat(usage): Cursor IDE quota via DashboardService (spend + request buckets) (#4689)
+body:
+
+---files---

@@ -1,0 +1,6 @@
+commit 11537fc1
+author: cdvankammen
+date: 2026-10-22 17:13:22 -0600
+subject: docs(policy): add host isolation rule — code on mini, build/run on mini3/4/5 only, shared worktree — Chris directive 2026-09-17
+
+

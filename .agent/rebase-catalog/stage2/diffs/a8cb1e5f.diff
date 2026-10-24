@@ -1,0 +1,33 @@
+commit a8cb1e5f
+author: cdvankammen
+date: 2026-10-22 14:04:00 -0600
+subject: feat(failover): L1 in-app peer forwarding — settings.peerNodes
+
+- settings: new peerNodes array (default []) for L1 peer forwarding
+- custom-server.js: L1 hook — for /v1* requests, when the LOCAL node is
+  degraded (health probe failing) AND a healthy peer is configured, forward
+  to the peer (streaming-safe, no buffering, x-9r-failover loop protection)
+- Local probe uses the ACTUAL listening port (server.address().port), not
+  env PORT (which the tray/CLI doesn't set — was a real bug: probe hit :3000)
+- Covers 'node up but unusable' (DB lock / provider meltdown / hung) —
+  complements the L2 standalone proxy (node-DOWN)
+- Tested: 5/5 decision-logic cases (forward/local-first/non-v1/loop/no-peer);
+  E2E forward path verified (request reaches peer, response pipes back)
+
+
+diff --git a/src/lib/db/repos/settingsRepo.js b/src/lib/db/repos/settingsRepo.js
+index c17bd090..035e86b7 100644
+--- a/src/lib/db/repos/settingsRepo.js
++++ b/src/lib/db/repos/settingsRepo.js
+@@ -35,6 +35,11 @@ const DEFAULT_SETTINGS = {
+     intervalHours: 12,
+   },
+   analyzeErrorModel: "oc/mimo-v2.5-free",
++  // L1 in-app peer forwarding (node failover): array of peer base URLs
++  // (e.g. ["http://mini2-9.local:20128"]). When the LOCAL node is up but
++  // degraded (health probe failing / all providers dead), /v1* requests are
++  // forwarded to the first healthy peer. Empty = feature off.
++  peerNodes: [],
+   // Error Inbox (P2) triage assignments: { [errorFingerprint]: columnKey }.
+   // Coarse fingerprint key = provider|model|errorCategory (Sentry-style) —
+   // see requestDetailsRepo.getErrorSummary. Stored with MAP_REPLACE semantics

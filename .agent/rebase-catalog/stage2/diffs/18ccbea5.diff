@@ -1,0 +1,10 @@
+commit 18ccbea5
+author: cdvankammen
+date: 2026-10-22 14:04:00 -0600
+subject: test(baseline): reconcile known-fails.txt with current reality
+
+- remove 10 stale rtk.test.js entries (suite now passes)
+- add 72 un-catalogued pre-existing failures (cursor-agent-proto, security-audit,
+  golden-*, db-concurrent, windsurf-executor, combo-autoswitch, etc.)
+- judge now: 86 failing → 86 known, 0 stale, 0 NEW, exit 0
+

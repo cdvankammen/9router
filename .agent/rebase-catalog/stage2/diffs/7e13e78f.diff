@@ -1,0 +1,10 @@
+commit 7e13e78f
+author: cdvankammen
+date: 2026-10-22 14:51:35 -0600
+subject: fix(db): WAL checkpoint TRUNCATE -> PASSIVE in node:sqlite + bun adapters too
+
+The app can fall back to node:sqlite or bun:sqlite when better-sqlite3
+is unavailable (native module version mismatch). All three adapters ran
+wal_checkpoint(TRUNCATE) every 60s and on shutdown, so the event-loop
+hang was present regardless of driver. Apply PASSIVE everywhere.
+

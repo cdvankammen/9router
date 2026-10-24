@@ -1,0 +1,12 @@
+commit 4478865b
+author: cdvankammen
+date: 2026-10-22 15:41:21 -0600
+subject: fix(voices): add 10s fetch timeout to voice listing (GAP-P2-19)
+
+Prevent hung upstream providers from blocking the voice selection UI
+indefinitely. Adds AbortSignal.timeout(10000) to the fetch call in
+src/app/api/v1/audio/voices/route.js:35, matching the existing pattern
+used in tunnel health checks.
+
+Tests: 3 vitest unit tests including anti-false-positive assertion.
+

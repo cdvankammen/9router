@@ -1,0 +1,243 @@
+15fc46e61cd1820a52835b6371dd87007dcc2306|15fc46e6|cdvankammen|2026-10-06 13:06:10 -0600|update
+da52d462f27900511d87112cb79b7740ad707262|da52d462|cdvankammen|2026-10-22 11:44:10 -0600|feat(smart-router): add pre-combo interception smart router with dynamic combo fallback
+af09eecf7057b86d57b574f37d4bc2048db07dc1|af09eecf|cdvankammen|2026-10-22 11:46:06 -0600|feat(observability): add conversationId tracking + fix streaming non-SSE detail capture
+0b0441c23f2c9ee687432f89ded0e127cc57e3ad|0b0441c2|cdvankammen|2026-10-22 11:46:06 -0600|feat(observability): add request export endpoint (JSON + markdown by conversation)
+f5e0eafbed46ba23455ee165bbf0d54a4c892060|f5e0eafb|cdvankammen|2026-10-22 11:46:06 -0600|feat(ui): add Smart Router config section to combos page
+2c0080110a91cb9a27f0e2fcc02adfbd74ba947f|2c008011|cdvankammen|2026-10-22 11:56:24 -0600|feat(observability): persist smart router taskType in usageHistory meta
+d866fff9198830b544b7ceae24780416d1fa3c1a|d866fff9|cdvankammen|2026-10-22 11:56:24 -0600|feat(ui): add conversation filter + conversation column to usage details tab
+a38259d04dc0e7213e1e254925223ced528298be|a38259d0|cdvankammen|2026-10-22 11:56:24 -0600|feat(observability): track combo fallback chain per request
+f9d81b318f00f402966c2ec6c1d8a4f1efb28536|f9d81b31|cdvankammen|2026-10-22 11:56:24 -0600|feat(observability): add AI Error Analyst — analyze captured failures with your own models
+34e24ea25ed82bf812ec8a562c6a1d2c12629d25|34e24ea2|cdvankammen|2026-10-22 12:07:11 -0600|feat(observability): add markdown request log auto-flush to ~/.9router/logs
+47cb67def5eed90a8380a55b84ea0ac698070207|47cb67de|cdvankammen|2026-10-22 12:07:11 -0600|feat(observability): add error categorization engine
+f050d4b7d34ad4461dfc12f81f49b419bce483f9|f050d4b7|cdvankammen|2026-10-22 12:07:11 -0600|fix(observability): forward errorCategory through request-detail pipeline
+33af73ac73eade40ee003e3e3165949850adf3ac|33af73ac|cdvankammen|2026-10-22 12:07:11 -0600|test(observability): fix error-category integration test isolation
+1f7aa6effdb883b01b42c4cfee0038bb9d5059bd|1f7aa6ef|cdvankammen|2026-10-22 12:07:19 -0600|fix(smart-router): 4 real bugs caught by production E2E testing
+271686085aa15b699fb6f6744fa374c7e40bc292|27168608|cdvankammen|2026-10-22 12:10:05 -0600|feat(routing): full model catalog in pickers, smart-router model subset, per-model fallbacks
+68d0a831834e98f369bf1c65ed1d7da3d6710c59|68d0a831|cdvankammen|2026-10-22 12:10:05 -0600|feat(routing): per-model retry counts for fallback chains + custom node support in smart router
+8acf4c6f39149fdf7905865b02b02e9267aa073f|8acf4c6f|cdvankammen|2026-10-22 12:10:05 -0600|docs: comprehensive session tracking in plans-and-prompts
+85e5f90c982a75db16cbaab14fc52ade5e4ab9cb|85e5f90c|cdvankammen|2026-10-22 12:16:44 -0600|feat(ui): visual fallback rule builder + markdown log explanation
+79af3a5033a3bcd9f492b0a9de9452a40796ecd8|79af3a50|cdvankammen|2026-10-22 12:16:44 -0600|docs: E2E verification notes for fallback rule builder
+b12b22444031e1ec00477888e00fc724e8132a85|b12b2244|cdvankammen|2026-10-22 12:18:51 -0600|fix(streaming): prevent duplicate [DONE] sentinel in passthrough mode
+706675bf7b0f6abe1188196d51855ab2356e6b0f|706675bf|cdvankammen|2026-10-22 12:18:51 -0600|chore: sync VSCode Copilot Chat settings + Next.js agent rules
+dc4023d23f1f89cb604bf805150c7d6f2866bbef|dc4023d2|cdvankammen|2026-10-22 12:18:51 -0600|fix(streaming): stop forcing stream when client omits it — fixes [DONE] leak in JSON responses
+d0bc22e03c63e4dd4cb46a60e9fc12310f8bd5e2|d0bc22e0|cdvankammen|2026-10-22 12:18:51 -0600|docs: final [DONE] leak resolution + full commit history in narrative
+e5876065684022dec41d676335bd71360a889fbf|e5876065|cdvankammen|2026-10-22 12:19:30 -0600|feat(ui): add 3-view fallback rule manager (table, chain flow, cards)
+30b6d5b9ecbd188dd23ef9bf5301dfec312476fa|30b6d5b9|cdvankammen|2026-10-22 12:19:30 -0600|docs: record 3-view fallback rule manager completion + E2E verification
+66d35d187b3ccaa8da2232fb7ba028608bb7c353|66d35d18|cdvankammen|2026-10-22 12:19:30 -0600|fix(smart-router): pass credentials when fetching custom node /models
+fd97328080588b51f2eff5cbb6b568fffd7254b0|fd973280|cdvankammen|2026-10-22 12:19:30 -0600|feat(cleanup): optional sr-* combo sweeper, off by default
+c340e86d345d01323bfbee97833af16593561b3f|c340e86d|cdvankammen|2026-10-22 12:19:30 -0600|feat(fallbacks): provider picker + smart toggle + 2 new rule views
+1c4d7b875e54ea799883296ee1e46a1d4d24d8cc|1c4d7b87|cdvankammen|2026-10-22 12:19:30 -0600|docs: provider picker + 5 rule views + E2E verification
+315d16776c0b6af08eca855d13e4f42f29c78d66|315d1677|cdvankammen|2026-10-22 12:19:30 -0600|feat(fallbacks): drag-and-drop reorder in FallbackRuleModal chain
+73d6e72776fef19e408061c0a7de793d9eb05703|73d6e727|cdvankammen|2026-10-22 12:19:30 -0600|docs: drag-and-drop in fallback rule modal + stale badge fix
+da922050a67210b427c51efe62bc5c672a9f6cc9|da922050|cdvankammen|2026-10-22 12:19:30 -0600|feat(fallbacks): live drop indicator bar in Chain Flow drag-and-drop
+8f18122357edd62db36436909dc7702e1221997c|8f181223|cdvankammen|2026-10-22 12:19:30 -0600|docs: full tracking sweep — drop indicator, errors, new docs in every folder
+83a4c646f81b95266d0181334ec03453dda7a647|83a4c646|cdvankammen|2026-10-22 12:19:30 -0600|docs: browser-control workflow + 9router-browser-e2e agent skill
+69726c59f0eb7f804827d08afda96020a3a71633|69726c59|cdvankammen|2026-10-22 12:19:30 -0600|docs: browser-tool death incident + recovery (Reload Window, not app restart)
+1f54e453c5f2f24206e048f584390447ac33c373|1f54e453|cdvankammen|2026-10-22 12:19:30 -0600|docs: exhaustive message-capture research (v1+v2) now referenced in tracking docs
+9e80ec70d3ff0365d073261c3e4daea0a4c12f16|9e80ec70|cdvankammen|2026-10-22 12:19:30 -0600|docs: v3 obscure/low-star research pass for message capture & chat viewers
+41a4af44ca9a8b692c3589771f100e8d674695b2|41a4af44|cdvankammen|2026-10-22 12:19:30 -0600|docs: code review + live verification of user's personal commits
+1c362a4c2d5d6331e26158e5c1588e8b4e560af2|1c362a4c|cdvankammen|2026-10-22 12:19:30 -0600|docs: v4 no-limits research pass (subagents, 90 projects, 43 papers, community, schemas)
+1e51e647019cf274f310bbd7d5bad38ca9636632|1e51e647|cdvankammen|2026-10-22 12:19:30 -0600|chore(vscode): enable default Python language server
+bbdc77b4a13a53928ae1d433ad08496f11e4ce13|bbdc77b4|cdvankammen|2026-10-22 12:19:30 -0600|fix(smart-router): start sr-* combo cleanup scheduler from instrumentation.js
+1b510f54d56d695a873fe4493cb3c5f94788e04b|1b510f54|cdvankammen|2026-10-22 12:19:30 -0600|docs: research synthesis + messages page feature spec + gaps/risks (subagent-written)
+03da52cb3efa539d95bae6088e067b7fe9fe634f|03da52cb|cdvankammen|2026-10-22 12:19:30 -0600|docs: feature-gap review + upstream provider risks
+edf7d7ce2d534ad80e35c3b6abb19fe5cfb2eddb|edf7d7ce|cdvankammen|2026-10-22 12:19:30 -0600|feat(messages): Messages page P1 — list, detail drawer, conversation tree, export
+6f4f07da5ae5ae69d74f450a09b042fa84e44807|6f4f07da|cdvankammen|2026-10-22 12:19:30 -0600|docs: hardening roadmap + origin classification (ours vs pre-existing) + mimo answer
+e788d107fbc2dfaeeaa2f983708955ae2723c88b|e788d107|cdvankammen|2026-10-22 12:19:30 -0600|docs: messages drawer UI issues logged (compact overflow + scroll) — deferred fixes
+b0ee2b58fd37a057f2761fac2679cada4a0fd1e4|b0ee2b58|cdvankammen|2026-10-22 12:19:30 -0600|fix(messages): drawer overflow in compact mode + payload scrollability
+c35c0007b0f7ace2bfec95e3ed1539c8ab801d7c|c35c0007|cdvankammen|2026-10-22 12:21:59 -0600|feat(hardening): Phase 1 — deep-merge settings + conflict warnings + fallback validation
+cd25e3f3e993d740fe0ad4f7bd443fba61d0e63a|cd25e3f3|cdvankammen|2026-10-22 12:21:59 -0600|docs: message viewer design philosophies + filter dimensions research
+7f1360009d77c415bec6c423366380ac7fa53daf|7f136000|cdvankammen|2026-10-22 12:21:59 -0600|docs: review of other-bot work vs research (Messages P1 45%, hardening P1 7.5/10, uncommitted P0 crash flagged)
+6e59db512221bd35520cbdf53e644fef612ea0b4|6e59db51|cdvankammen|2026-10-22 12:23:11 -0600|fix(smart-router): declare smartRouterMeta — P0 crash in chat.js
+1df4b045a531a90b38eb882932831ab80e7ed6b1|1df4b045|cdvankammen|2026-10-22 12:23:11 -0600|feat(messages): richer detail tabs (headers/cURL/markdown) + larger drawer typography
+1a9116b7ee1d2603b79bb24601dfd9a10c5b08c9|1a9116b7|cdvankammen|2026-10-22 12:24:35 -0600|feat(smart-router): score breakdown + configurable sticky TTL + source-app fingerprinting
+fc39627709f1cad8bf3194b900a04b489c19a65f|fc396277|cdvankammen|2026-10-22 12:26:40 -0600|feat(smart-router): scores UI + node cache refresh + chip truncation + text validation
+65ff65afbb537057490ef95875c8e53fc4686a80|65ff65af|cdvankammen|2026-10-22 12:26:40 -0600|feat(observability): atomic markdown flush + export pagination + drop surfacing
+072d02875fe95596c70ac5b11844334deefae41e|072d0287|cdvankammen|2026-10-22 12:26:40 -0600|feat(messages): 3 new view tabs (Timeline/Trace/Board) + facet API + histogram
+620f31dfad45ca3df734e8dd5d10966ddbd527ca|620f31df|cdvankammen|2026-10-22 12:29:03 -0600|feat(resilience): provider health endpoint + auto-disable on refresh failures + node model error badge
+c433b2aeb0a0dfbb821dced7f0d1867f01791b7c|c433b2ae|cdvankammen|2026-10-22 12:29:03 -0600|docs: hardening phases 1-4 complete + live verification
+49ba33570b60d516208df04b74ef6665c1ac2306|49ba3357|cdvankammen|2026-10-22 12:30:23 -0600|fix(observability): thread sourceApp/userAgent through remaining sub-handlers + useCallback import
+ad4028e620dcc4019ed9cffef2052f03c26a89df|ad4028e6|cdvankammen|2026-10-22 13:46:38 -0600|fix(observability): thread sourceApp/userAgent through streaming handler
+1593386855d9ac46c1c73c70156343fa68ee8a3d|15933868|cdvankammen|2026-10-22 13:46:38 -0600|fix(settings): sequential partial PATCHes no longer clobber each other
+09a6793835699df3a51bb0179d96e1f5f9297d88|09a67938|cdvankammen|2026-10-22 13:46:38 -0600|fix: audit-found bugs — JSON1 message filters, health lock count, sourceApp droid regex
+8b0f367998ce0904b794524f89f37b70a3dc6691|8b0f3679|cdvankammen|2026-10-22 13:46:38 -0600|fix(messages): facets via SQL GROUP BY (perf) + histogram current-hour bug
+5f8f42b2ec72aaadf4c91edf0db6d7d8233d3959|5f8f42b2|cdvankammen|2026-10-22 13:46:38 -0600|fix(messages): status filter vocabulary matches stored values (B1)
+03c9882fc93c1aa344e22954887ac09cf0e0f1eb|03c9882f|cdvankammen|2026-10-22 13:46:38 -0600|docs: exhaustive audit (7 bugs), error sweep, refactor decisions + tracking update
+d7cc49c0fcfc599276629db022a06429fa884050|d7cc49c0|cdvankammen|2026-10-22 13:46:38 -0600|fix(observability): include sourceApp/userAgent in forced-SSE-to-JSON detail
+bd92a940c4c5b569fcaf42fe9851f7539e540dd3|bd92a940|cdvankammen|2026-10-22 13:46:38 -0600|docs: re-verification — bots fixed P0+B1+B2+hardening P1-P4; remaining: messages table/FTS5/cost/B3/B4
+455dbe4782285215cd6da1d4be547b1a1f0c4986|455dbe47|cdvankammen|2026-10-22 13:46:38 -0600|fix(messages): audit-found bugs — BoardView reconciliation, fetch race, curl export, TimelineView
+335e2b8ab6b550a06517b31c2a4728fcbad9147b|335e2b8a|cdvankammen|2026-10-22 13:46:38 -0600|docs(ha): exhaustive backup-node research for mini/mini2 + deployment runbook
+fd2f14ba74bbe4576e03449fabbbff4f3207cc81|fd2f14ba|cdvankammen|2026-10-22 13:46:38 -0600|refactor(messages): extract shared messageFormats module + dedupe formatters
+95e44e4aa68aedf654b75923d98da756d7063a4e|95e44e4a|cdvankammen|2026-10-22 13:46:38 -0600|docs: HA research + deployment runbook tracking update
+4f3b523d8c1460a0ee3c523ab71ba7cb4054e891|4f3b523d|cdvankammen|2026-10-22 13:46:38 -0600|test(request-details): fix settings-key rename drift (enableObservability2 → enableObservability)
+668ed5952c553768e8eab09f09c2cbca29acb71a|668ed595|cdvankammen|2026-10-22 13:46:38 -0600|docs: TASK-LOG #89-90 — research docs (learning + ADR-007) written
+4633150f1a5b48ff38dec4735b193af35f8d25d1|4633150f|cdvankammen|2026-10-22 13:46:38 -0600|feat(observability): per-request cost capture with provenance labels
+00baafb7188fc41a23d74d894a1149bcab8ee5af|00baafb7|cdvankammen|2026-10-22 13:46:38 -0600|docs(plans-and-prompts): changelog commit hash for cost capture
+80880b27512798c50110d6d43358af2236b34a4a|80880b27|cdvankammen|2026-10-22 13:46:38 -0600|fix(messages): restore Account line + unknown-fallbacks in exported markdown
+23fb0dbf2ec7f10b0aff5e3bbca15fa55df66ea0|23fb0dbf|cdvankammen|2026-10-22 13:46:38 -0600|feat(messages): full-text search over captured payloads (FTS5 + LIKE fallback)
+ce36b225f9dc595e542f2fc92356a85bc08cfe2b|ce36b225|cdvankammen|2026-10-22 13:46:38 -0600|fix(db): exclude FTS5 shadow tables from safety backups
+90b8f9bf932403f6fc1922ef6c0f1cbf31456e9a|90b8f9bf|cdvankammen|2026-10-22 13:46:38 -0600|docs: deployment runbook — both nodes on HEAD, verified procedure + gotchas
+b56a43475644a1488613ed2fd678b7d68a0d355f|b56a4347|cdvankammen|2026-10-22 13:46:38 -0600|docs: compact-mode sidebar scroll fix — learning doc + tracking update (#92-94)
+cc932dfac39eb8b1403141aa3a89ccc4bb442d39|cc932dfa|cdvankammen|2026-10-22 13:46:38 -0600|feat(messages): full-text search (FTS5 with LIKE fallback)
+345a4571ba95d4745fa6200ceb0576bd7e96f01b|345a4571|cdvankammen|2026-10-22 13:46:38 -0600|feat(failover): node-DOWN proxy prototype (L2) + HA implementation doc
+d070d44741779843729042f1a3f1cfd7c1de7b82|d070d447|cdvankammen|2026-10-22 13:46:38 -0600|fix(failover): scrutiny pass — 3 real bugs + header hygiene
+5760685703cbb542fc3523549a08d42129b0ea41|57606857|cdvankammen|2026-10-22 13:46:38 -0600|feat(messages): DB-level conversation aggregation + keyset pagination
+e23242578b94d001c1e527f7d2b7c1d4099fc1d1|e2324257|cdvankammen|2026-10-22 13:49:48 -0600|feat(messages): capture upstream URL (B4) — real URLs in curl export
+5139cc13519aeeed34b8ebdf4cf3abc411c59e89|5139cc13|cdvankammen|2026-10-22 13:49:48 -0600|docs: B4 upstream URL capture + Error Inbox P2 design research (#95-98)
+ea4a563a09edb329cedaa7d868e8c7b46107db20|ea4a563a|cdvankammen|2026-10-22 13:49:48 -0600|fix(messages): B4 — capture upstream URL, use it in cURL export
+8dbf11c1bdc9434108a5b49df4cd67b4e75fb4e6|8dbf11c1|cdvankammen|2026-10-22 13:49:48 -0600|feat(messages): Error Inbox P2 — server-side error aggregation + triage
+c31f9343b69392de244726da4d17dbf97a93ede2|c31f9343|cdvankammen|2026-10-22 13:49:48 -0600|docs: B4 + Error Inbox P2 changelog/session entries, drawer-status reconciliation
+bc0419efe28d977303b7b23907377229cf33254e|bc0419ef|cdvankammen|2026-10-22 13:49:48 -0600|docs: goal-mode Messages architecture completion — cost/FTS/keyset/B3 + 2 E2E bug fixes
+9478544b3d6fff52252cd651b7ab17ac50466dda|9478544b|cdvankammen|2026-10-22 13:49:48 -0600|fix(messages): Inbox renders with errors + provider-name object crash in all views
+a0757187bf75020649d5d2760d34cdac15e9b193|a0757187|cdvankammen|2026-10-22 13:49:48 -0600|docs: Inbox render + provider-name crash fixes (#113-115)
+0d8ed72db514485d30aa7bdc7ae0a1c1d566bf89|0d8ed72d|cdvankammen|2026-10-22 14:04:00 -0600|docs: fix plans-and-prompts gitignore — track knowledge base, keep temp/ secrets out
+b79371c114974706b9387864168bb712ce8e51b4|b79371c1|cdvankammen|2026-10-22 14:04:00 -0600|docs: create missing workflow docs (dialagram-setup, fallback-chain) + update index
+a34f2844528399764ab64bd860ad5558e947251c|a34f2844|cdvankammen|2026-10-22 14:04:00 -0600|test(failover): automated L2 proxy suite — 6 tests, all green
+79fb227ff3985bb7857219ae8445264780e81767|79fb227f|cdvankammen|2026-10-22 14:04:00 -0600|docs(failover): production hardening — launchd + Tailscale-peer requirement
+eba11fed422e2985c694601a4bf6dc26b0927c2f|eba11fed|cdvankammen|2026-10-22 14:04:00 -0600|docs: failover hardening changelog + task log (bugs A/B, launchd, e2e)
+ebd4bb4b1b71143acfd9466290c2449f3fb5b76d|ebd4bb4b|cdvankammen|2026-10-22 14:04:00 -0600|docs(runbook): proxy ships in bundle — launchd points at bundle path
+8edfd9e08c9269ef421c767ef0d5a0b93ddd2348|8edfd9e0|cdvankammen|2026-10-22 14:04:00 -0600|docs(failover): networking options matrix — real-world grounded (VRRP/HAProxy/DNS)
+681ea381e46585c5fc90a1adb0302cd03acb3529|681ea381|cdvankammen|2026-10-22 14:04:00 -0600|test: token helpers now test the REAL code (shared module) — no more drift copy
+c20cebe751c44a9c844cc37138780542aca83d85|c20cebe7|cdvankammen|2026-10-22 14:04:00 -0600|fix(messages): conversation thread expand — stale-closure toggle + start-closed
+80cba330e5c48b6feec21091705372389a108129|80cba330|cdvankammen|2026-10-22 14:04:00 -0600|fix(messages): Trace view crash — conversation summaries have no messages array
+1ad8c0c4139bffd1a9ad162c2f7c11f9a2ca262d|1ad8c0c4|cdvankammen|2026-10-22 14:04:00 -0600|docs: test authenticity + browser/vision QA fixes (#116-121)
+a8cb1e5f81a44af23e08fff9f2ff1dd0b72fd933|a8cb1e5f|cdvankammen|2026-10-22 14:04:00 -0600|feat(failover): L1 in-app peer forwarding — settings.peerNodes
+62e71434f3bb255963e224c4d96efbfb092c778b|62e71434|cdvankammen|2026-10-22 14:04:00 -0600|docs: L1 peer forwarding implemented + no-local-model note (#122-124)
+1b9edf4bc353356d411368a56632ba2b9d7ae55a|1b9edf4b|cdvankammen|2026-10-22 14:04:00 -0600|feat(models): remote-only model serving — ollama on mini2, never on control-plane Mac
+22f9a27afc4c04e749f18c9a64da59413fe01cb1|22f9a27a|cdvankammen|2026-10-22 14:04:00 -0600|docs: model-serving policy (27) + runbook/TASK-LOG/CHANGELOG/SESSION updates
+d4d2c5ee707159d4b5a07946d630386f51547f53|d4d2c5ee|cdvankammen|2026-10-22 14:04:00 -0600|test(baseline): fix verify-no-regression judge — layout-agnostic matching
+18ccbea5e54de7ac8e356f7b7fe272126e660fba|18ccbea5|cdvankammen|2026-10-22 14:04:00 -0600|test(baseline): reconcile known-fails.txt with current reality
+ac4b81a02cd8175895ef4097980e1d044d934e00|ac4b81a0|cdvankammen|2026-10-22 14:04:00 -0600|fix(cli): bundle full L1 settings closure — L1 peer forwarding works in production
+b0145763638e9df798781f72648c2c7325f250c7|b0145763|cdvankammen|2026-10-22 14:04:00 -0600|docs: mini2 proper packaged install + full test matrix (#125-127, goal d8beb497)
+f290e7bc6b9b85a9562102b091cf292d86f78c31|f290e7bc|cdvankammen|2026-10-22 14:04:00 -0600|docs: post-install verification — model routing to mini2, L1 forward, health matrix (#128-131)
+24f5feec72cb477ba018ae975590f8eb13c848c8|24f5feec|cdvankammen|2026-10-22 14:04:00 -0600|fix(failover): L1 settings-load retry + API key parity between nodes
+bd82a333d9a881634936140542b622aedceadd04|bd82a333|cdvankammen|2026-10-22 14:05:52 -0600|docs: L1 auth root cause + live forward proof + Phase 4.7 results (#132-134)
+ee2888ee7921b220297ed08ae9dab6d3ce4d50ad|ee2888ee|cdvankammen|2026-10-22 14:05:53 -0600|docs: mini2 full app (tray icon) on latest build — Rosetta fix
+8e6d07b77028d97408ea54eb6b9d61daade4f6b9|8e6d07b7|cdvankammen|2026-10-22 14:05:53 -0600|feat(failover): multi-peer proxy — works on any network (Tailscale/LAN/mDNS)
+92bc02e7bd52d5952760209b89c9a513684292ac|92bc02e7|cdvankammen|2026-10-22 14:05:53 -0600|feat(failover): --ipv6 security toggle + hostname/IPv4/IPv6 peer handling
+3f7264ca1147e08adcfbb87e3afc1a327c2b1ac6|3f7264ca|cdvankammen|2026-10-22 14:05:53 -0600|test(failover): IP-environment suite (v4/v6/hostname) + single-URL verification
+d2e4cc4971c3b2ce89e462d8910e0318d9f0aaf8|d2e4cc49|cdvankammen|2026-10-22 14:05:53 -0600|feat(failover): dynamic peer auto-discovery — no hardcoded IPs
+b82ec5312d42ae7b25832b63530b9a37b2f33c18|b82ec531|cdvankammen|2026-10-22 14:05:53 -0600|test(failover): upstream-dies-mid-stream coverage + probe hardening
+e5553b5a08a5ae9853cfdbf37296e89f3883f970|e5553b5a|cdvankammen|2026-10-22 14:05:53 -0600|docs(plans-and-prompts): reorganize knowledge base into category taxonomy
+c58df01bbfc17c31b8fe79d9c6c177638fe0e898|c58df01b|cdvankammen|2026-10-22 14:51:35 -0600|feat(combos+models): combo duplicate, dev flag, model chooser sorting, capability overrides, model import for all providers
+9a43bfbad0ec0cede7ae4304d6bb818c54a20565|9a43bfba|cdvankammen|2026-10-22 14:51:35 -0600|fix(db): WAL checkpoint TRUNCATE -> PASSIVE to stop event-loop hang
+7cc553e4adabd69072f0bbd11f13682659431e45|7cc553e4|cdvankammen|2026-10-22 14:51:35 -0600|build: bundle per-IP rate limiter into CLI package
+7e13e78faa0438fe70c7ee58c50cd6fb49942019|7e13e78f|cdvankammen|2026-10-22 14:51:35 -0600|fix(db): WAL checkpoint TRUNCATE -> PASSIVE in node:sqlite + bun adapters too
+cf4dfefb6dc13cccf1b0ea157dea66139d8de48a|cf4dfefb|cdvankammen|2026-10-22 15:04:36 -0600|feat(merge-prep): stage all local work for upstream merge
+d9e162ca387325dd3742a918b27acd5629cc4950|d9e162ca|cdvankammen|2026-10-22 15:24:30 -0600|docs(merge): add conflict resolution log + fix .gitignore missing upstream entries
+504b53037dcba432df52d672415f83190739d563|504b5303|cdvankammen|2026-10-22 15:32:12 -0600|fix(merge): close unclosed JSX button in providers page (MERGE-19 pre-build aid)
+d29f8080637126295767a015206bb6bd89bfffe0|d29f8080|cdvankammen|2026-10-22 15:36:33 -0600|fix(merge): remove /open-sse ignore + apply tray watchdog + registry p124 fix
+aa0a3b25e47bb214e091fb5784c48ef977784220|aa0a3b25|cdvankammen|2026-10-22 15:36:33 -0600|perf(providers): parallelize batch validation with bounded concurrency (GAP-P1-11)
+ae14ff4b9e48eeabdddb573c2fca74316298c3b0|ae14ff4b|cdvankammen|2026-10-22 15:36:33 -0600|fix(security): shutdown endpoint auth bypass (GAP-P0-02)
+c08004f0a9a074714d719202555c50c5fdabb0d5|c08004f0|cdvankammen|2026-10-22 15:36:33 -0600|fix(cli): log SQLite/tray runtime self-heal failures instead of swallowing
+dabb5fcde858b740bfaf440aaea94c15e37b4b48|dabb5fcd|cdvankammen|2026-10-22 15:36:33 -0600|fix(security): timing-safe comparison for shutdown endpoint auth (GAP-P0-10)
+59fc89ea6ab346c8a01473618613c064cc4e3da9|59fc89ea|cdvankammen|2026-10-22 15:36:33 -0600|security(version/update): add defense-in-depth auth to prevent unauthenticated RCE
+8a30d9b947ad4f842ff9a228124b97c6a4b7645c|8a30d9b9|cdvankammen|2026-10-22 15:36:33 -0600|test(chatCore): regression test for onRequestSuccess guard (GAP-P1-05)
+dd08c295280ee849eda7f5d658c8e66f790e00f4|dd08c295|cdvankammen|2026-10-22 15:36:33 -0600|fix(error-handling): log projectId persist failures (GAP-P2-02)
+b2c2e5e73207347d21af3d313d20b76cfa9d20f7|b2c2e5e7|cdvankammen|2026-10-22 15:37:58 -0600|fix(auth): log JWT secret file read failures instead of silent swallow (GAP-P1-08)
+71ca8b33a08ef92edf8b34eb1564bee22a3d0509|71ca8b33|cdvankammen|2026-10-22 15:37:58 -0600|fix(security): add path validation to Cursor auto-import route (GAP-P1-12)
+d7eceb7c2e39c5f441ba54138a9980096796564f|d7eceb7c|cdvankammen|2026-10-22 15:39:11 -0600|security(cors): replace wildcard CORS on web/fetch with configurable allowlist
+988387d89f00bdcbf215f725e75a5c884217ae9a|988387d8|cdvankammen|2026-10-22 15:39:11 -0600|security(auth): eliminate hardcoded default password acceptance (GAP-P1-14)
+b7415a089ead3225126e437f5e4c03f08e0a5c43|b7415a08|cdvankammen|2026-10-22 15:41:21 -0600|fix(providers): P3 UX improvements — error states, dead code removal
+437cd60fa51fad2ffc1fd58fa5886fb14e82625d|437cd60f|cdvankammen|2026-10-22 15:41:21 -0600|security(middleware): implement rate limiter + header sanitizer (GAP-P1-17)
+24078cc46e4b8eeb1538ea48e0e84ebd669b4eb9|24078cc4|cdvankammen|2026-10-22 15:41:21 -0600|fix(reliability): add AbortSignal.timeout(8000) to all 22 unprotected fetch calls in provider validation (GAP-P1-25)
+e5e50b02bc6e6e3d31a9df7d73b4d7af98279fe7|e5e50b02|cdvankammen|2026-10-22 15:41:21 -0600|test(reliability): add anti-false-positive timeout coverage test for GAP-P1-25
+5e4c3426e4fba1585366d4a24e13abe47613a655|5e4c3426|cdvankammen|2026-10-22 15:41:21 -0600|fix(translator): replace raw alert() with toast notification system
+25d7694d0f3ffe424358d5fc8c4ada68fba5f20f|25d7694d|cdvankammen|2026-10-22 15:41:21 -0600|fix(embeddings): log usage persistence failures instead of silent swallow (GAP-P2-03)
+f1ec50ee8bd0a6989f1165f427223774562dd73a|f1ec50ee|cdvankammen|2026-10-22 15:41:21 -0600|fix(security): replace shell-based brew detection with filesystem checks (GAP-P2-15)
+190c3b6956dbb53d969eae347f0821fbf639561c|190c3b69|cdvankammen|2026-10-22 15:41:21 -0600|test(models): regression test for fetch timeout guard (GAP-P2-18)
+4478865b3fd88c48deb9f5f3717c8f7cde8668b8|4478865b|cdvankammen|2026-10-22 15:41:21 -0600|fix(voices): add 10s fetch timeout to voice listing (GAP-P2-19)
+e3ee473bf868d83801fb93d32cded715d493a28e|e3ee473b|cdvankammen|2026-10-22 15:41:21 -0600|fix(gitlab-pat): add 10s AbortSignal.timeout + 504 timeout response (GAP-P2-20)
+6ec571fb423e70cec5541a2283c0c40db21ae95e|6ec571fb|cdvankammen|2026-10-22 15:41:21 -0600|fix(iflow): add AbortSignal.timeout(15s) to cookie validation fetches (GAP-P2-21)
+dae4c64d33d5016a3e8a74894b15884d6fea8dd7|dae4c64d|cdvankammen|2026-10-22 15:41:21 -0600|fix(cloudflare-deploy): add 30s fetch timeouts to all Cloudflare API calls
+cd9ae7b6f6e708b2f540038af8497ffd8b13db89|cd9ae7b6|cdvankammen|2026-10-22 15:41:21 -0600|fix(cloudflare-deploy): wrap subdomain-enable in try/catch + add regression tests
+099a45085d37193bee4fb1786dcca54e01ed0570|099a4508|cdvankammen|2026-10-22 15:41:21 -0600|fix(vercel-deploy): add AbortSignal.timeout to all fetch calls (GAP-P2-23)
+d02e6099f603977c25b4c9d64a01b13e4df02412|d02e6099|cdvankammen|2026-10-22 15:41:21 -0600|fix(ux): surface connection errors via toast notifications (GAP-P2-28)
+fe4fe239c93d86241169ce4a0362648614bb5afb|fe4fe239|cdvankammen|2026-10-22 15:41:21 -0600|test(ux): regression test for ConnectionsCard error toasts (GAP-P2-28)
+893c8ed78d9366a97685e07e20e2975529d24391|893c8ed7|cdvankammen|2026-10-22 15:41:21 -0600|fix(ux): replace silent console.log catches with user-visible toasts in ModelsCard (GAP-P2-29)
+9860c93adc0986ca4fdbdcd7d6e70f46ec50e6ef|9860c93a|cdvankammen|2026-10-22 15:41:21 -0600|fix(custom-server): always log warn when L1 settings load gives up (GAP-P2-34)
+aede6fde3636335f10be1528925d0b42483575d9|aede6fde|cdvankammen|2026-10-22 15:45:26 -0600|fix(error-handling): replace silent catch {} blocks with logging or intent comments (GAP-P2-ERR)
+aa2f1683bba06f862cc854fc25b7c206a648790c|aa2f1683|cdvankammen|2026-10-22 15:45:26 -0600|chore: remove accidental symlink and snapshot from commit
+7206f4a31e6778c833d178e55d404e4af3960cbf|7206f4a3|cdvankammen|2026-10-22 15:47:54 -0600|fix(cli): conditional log for tray runtime self-heal failure (GAP-P3-01)
+2551050b2770b9c311075b3f1060a2598cb23ba0|2551050b|cdvankammen|2026-10-22 15:47:54 -0600|fix(deno-deploy): log cleanup DELETE failures instead of silent swallow (GAP-P3-09)
+fe613368cf3a47d21cd3bb75cd3495a8c5702e54|fe613368|cdvankammen|2026-10-22 15:47:54 -0600|test(kilo): regression test for free-models fetch timeout guard (GAP-P3-26)
+ae8e55ad605842ee09fdd91e752a55c93bc5d709|ae8e55ad|cdvankammen|2026-10-22 15:48:20 -0600|fix(cowork-settings): return structured error on config read failure (GAP-P3-33)
+1d77247bc5e47a61dee7a1e788fa05312c986793|1d77247b|cdvankammen|2026-10-22 15:49:37 -0600|fix(reliability): exponential backoff + jitter for onboardUser retry loop (GAP-P3-37)
+b48161283be2b697859dc47e3836ff5fd4c9bb49|b4816128|cdvankammen|2026-10-22 15:49:37 -0600|fix(security): add SSRF guard to suggested-models + smartRouter (#3714)
+fea5b29d51ae58cd9118269c9a48fd9413851961|fea5b29d|cdvankammen|2026-10-22 15:49:37 -0600|fix(build): restore lost untracked files + merge artifacts for v2 build
+4013bfbfc62a214f8fc17e932f4c0a6188242c24|4013bfbf|cdvankammen|2026-10-22 15:51:43 -0600|feat(messages): message-driven tool-building — facets, identity, annotations, actions, hooks, UI
+33c737f367017cbc94a43f71b39fd456be1b9436|33c737f3|cdvankammen|2026-10-22 15:51:43 -0600|fix(messages): action/annotation API contract bugs found by E2E
+50da32ac9bd926dc7fed7a010d91fa8b4aa1bfbc|50da32ac|cdvankammen|2026-10-22 15:51:43 -0600|test(annotations): fix flaky createdAt assertion (same-ms upsert)
+4696538451ff8d495db7fb3c1a29fa163c444473|46965384|cdvankammen|2026-10-22 15:51:43 -0600|fix(models): add descriptive error logging to buildModelsList try/catch blocks
+2b611e3f6ba1458c613b50d7eef1855bddfb0e0b|2b611e3f|cdvankammen|2026-10-22 15:51:43 -0600|security(mitm): replace execSync shell string with execFileSync
+729e786da7b9c07618d8c7ab03469b9b0c06d4af|729e786d|cdvankammen|2026-10-22 15:52:45 -0600|fix(tests): resolve all 86 NEW test failures vs baseline
+a68c4625d4d5b31823709404e9cef4e52f816598|a68c4625|biedongbin|2026-10-22 17:04:05 -0600|feat: claude-compat layer, model-context & statistics dashboard rework, ops tooling
+9710b2cbd7ed3e02f161ee506eee9baa571e6897|9710b2cb|cdvankammen|2026-10-22 17:07:41 -0600|fix(tests): align post-merge tests with pr-3595-squash changes
+abea87bbbe8e37d993644f8fbf301573b1390d7c|abea87bb|cdvankammen|2026-10-22 17:10:13 -0600|fix(build): standalone bundle missing rate-limiter; dedupe getSettings import
+94f5b7afa6789e4e2c6696b8aabfefac8f6c3c56|94f5b7af|cdvankammen|2026-10-22 17:10:51 -0600|docs: record v2 merge completion, test reconciliation, and mini2 deploy
+d397e0cd8fd19d74ce4bd76cf85720823a949fb3|d397e0cd|cdvankammen|2026-10-22 17:10:51 -0600|docs(policy): v3-only branch policy + ADR-011 (v2 frozen, master off-limits) — Chris directive 2026-09-16
+960ccf03e78ef9b2ea00e91aca5f1ae7db3feb06|960ccf03|cdvankammen|2026-10-22 17:10:51 -0600|docs(tracking): record v3 branch policy in changelog, task log, decisions index — 2026-09-16
+2bdd396a75b8e61e38cd5dbd14a676bbf1c59a2a|2bdd396a|cdvankammen|2026-10-22 17:10:51 -0600|fix(db): normalize node:sqlite rows to plain objects for RSC serialization
+e3faf053ac380e23c7da5a6251c6b499ff23db18|e3faf053|cdvankammen|2026-10-22 17:10:51 -0600|feat(failover): L2 proxy status endpoint + dashboard card
+8b1ad5ec21fa37268f291e0173b6fc30aeed9dc1|8b1ad5ec|cdvankammen|2026-10-22 17:10:51 -0600|fix(memory): make toolPruner truncation idempotent
+4a50b18cbbc2fdc8c302834c4bb6affc96f12250|4a50b18c|cdvankammen|2026-10-22 17:10:51 -0600|fix(memory): contextCompactor sequence validity — tool-pair boundary + no synthetic ack
+81be35debb3827d622997e8751f9d5d13df269cf|81be35de|cdvankammen|2026-10-22 17:11:56 -0600|feat(memory): integrate PR #3599 additive modules onto v3
+6ec983a6ecd676c26ebb3fc74b59e1c54b0c977c|6ec983a6|cdvankammen|2026-10-22 17:13:22 -0600|feat(memory): complete PR #3599 integration — orchestrator + i18n + dashboard fixes
+6a9579d37aa704a67ced327240abe9c853a6d5b9|6a9579d3|cdvankammen|2026-10-22 17:13:22 -0600|docs(policy): add mandatory QA gate (tests + functional check + evidence) to branch policy — Chris directive 2026-09-16
+050584cb605270dc54acac120a4279bce8e53066|050584cb|cdvankammen|2026-10-22 17:13:22 -0600|docs(tracking): record QA-gate enforcement + audit evidence in changelog and task log — 2026-09-16
+7ff67efb451c437c1845c3a60de60c24ea8f2a28|7ff67efb|cdvankammen|2026-10-22 17:13:22 -0600|docs(tracking): definitive branch/worktree audit — no post-policy branches or worktrees; v3 sole write branch — 2026-09-17
+11537fc166be49847ca619c14bf0567e23e1427d|11537fc1|cdvankammen|2026-10-22 17:13:22 -0600|docs(policy): add host isolation rule — code on mini, build/run on mini3/4/5 only, shared worktree — Chris directive 2026-09-17
+f149beac2dae6046a12204a2e8daf09ffc5e31c0|f149beac|cdvankammen|2026-10-22 17:13:22 -0600|ci: add GitHub Actions workflow for memory unit tests
+f85d0d5cfafaf428b94197b6d9cfe55822d40c82|f85d0d5c|cdvankammen|2026-10-22 17:14:24 -0600|refactor(memory): remove handoff toggle from shipped pipeline — no capture path
+d49485051dc25e3cae6d9d1231a27d535fb7df75|d4948505|cdvankammen|2026-10-22 17:14:26 -0600|fix(memory): correct test syntax + remove handoff UI card
+5fc778e8ee3925520ee7ead047c2523ab50fc549|5fc778e8|cdvankammen|2026-10-22 17:14:26 -0600|test(usage): lock DefaultExecutor stream_options injection — BUG-OR-01
+0f64f5947184740aca4e232915566d92032a4fb3|0f64f594|cdvankammen|2026-10-22 17:14:35 -0600|docs: record node:sqlite RSC fix + macOS cli:pack rebuild (v2-merge-plan Phase 3 step 3)
+820aba36a34aa7525131f1aa1d9fc82e88362c47|820aba36|cdvankammen|2026-10-22 17:14:36 -0600|docs(policy): shared-worktree rule — cards work only in 9router-wt-cards, never main worktree, never change main branch — Chris directive 2026-09-17
+d1528743a762bf1747649c6d4e523b0fc4969067|d1528743|cdvankammen|2026-10-22 17:15:32 -0600|feat: surface connection IDs and drill-down in provider error panel
+37514ede18169c839a209165b0d9fde7028af92c|37514ede|rm1dev|2026-10-22 17:15:32 -0600|feat(kiro): update model definitions and CLI tool mappings
+96fc4e06d644cd9ade742020ed90cab1706487ce|96fc4e06|ViceEye|2026-10-22 17:15:32 -0600|feat(kiro): flatten top-level tool schema combinators + degrade oversized payloads
+e4c1db969ffbce6756d9170595d6c7fab6aad697|e4c1db96|chisewaguri|2026-10-22 17:15:32 -0600|feat(providers): add multi-protocol custom providers
+9a5b0443d5a41cf1b957cd507b2fb86980db3580|9a5b0443|ErfanBagheri404|2026-10-22 17:16:28 -0600|feat: New Models discovery for all providers (incl. custom/free)
+381bea70735091f10f64edff867d17e15888dab7|381bea70|ErfanBagheri404|2026-10-22 17:16:28 -0600|fix: add missing getUnseenModels, fix unseen detection for new models modal
+0cec51a699db6e321bc358071c8d3f4102737472|0cec51a6|cdvankammen|2026-10-22 17:16:28 -0600|docs(tracking): record shared-worktree rule + branch reconciliation + conflict resolution — Chris directive 2026-09-17
+bc2912cb415812ebe54730a1a20f349ca7ee6919|bc2912cb|cdvankammen|2026-10-22 17:16:28 -0600|fix(usage): add OpenRouter usage handler — quota tracker now fetches live quota from /auth/key (BUG-QUOTA-03)
+c7f791a1b110793d45f34fdfb412cd231d6b5538|c7f791a1|cdvankammen|2026-10-22 17:16:28 -0600|test(deps): declare uuid dependency for tests package — required by embeddingsCore/qoder/rtkKiro/perplexity-web/buildOutputFilter unit tests (v3 test health)
+b7dbb9e02b204b071d331d52e9b9f0018633ee54|b7dbb9e0|cdvankammen|2026-10-22 17:16:28 -0600|docs(tracking): record chat-log missing-task reconciliation — 7 new cards (5 branch RETROs + dual-instance research + review card), HOST-ISOLATION board rule — card t_9682b6d7
+4717c86dc194f64cb673da1153cd7553f99a87b6|4717c86d|cdvankammen|2026-10-22 17:16:28 -0600|docs(tracking): v3 full-suite QA run on mini3 with corrected reporter — ERR_LOAD_URL reporter crash documented (vitest 4.1.11)
+916fe133c92ef3b449daac09f4f2fa3818bbf3d7|916fe133|cdvankammen|2026-10-22 17:16:28 -0600|tracking: v3 full-suite QA baseline 87f/30 files on mini3 (2026-09-17)
+74df5efef011dd87327a425027da3fe6b176c2a3|74df5efe|cdvankammen|2026-10-22 17:16:28 -0600|fix(usage): correct OpenRouter handler to real /api/v1/key credit mapping (BUG-QUOTA-03-b)
+ff7ce121a12278f88df93723385b4c26c6a81d05|ff7ce121|cdvankammen|2026-10-22 17:16:29 -0600|feat(usage): add Trae entitlement quota support (trae usage handler)
+45d77a212f3bcd9def15086023f724f43e0dcb4a|45d77a21|cdvankammen|2026-10-22 17:17:03 -0600|feat(usage): generic quota endpoint for custom OpenAI-compatible provider nodes
+c804f787405386b6d62edfc48b748244016e0be2|c804f787|cdvankammen|2026-10-22 17:18:36 -0600|feat(combo): context-aware overflow routing to large-context target (FIX-B, card t_f5462249)
+79d904e8559fdc98a6c961d086f8f0fdd64ea9df|79d904e8|cdvankammen|2026-10-22 17:18:37 -0600|fix(db): GROUP_CONCAT(DISTINCT x, sep) invalid in SQLite — dedupe via subquery
+9123a03f3f564130d1d8618003ceeb6de96d0750|9123a03f|cdvankammen|2026-10-22 17:33:26 -0600|fix(rebase): restore branch features lost during conflict resolution
+323978459d7173be2d4f1a2a10fbdd915f620baa|32397845|cdvankammen|2026-10-23 16:46:44 -0600|fix(kiro): expose systemPrompt on translator payload
+bfc88ce4b39f505ab18cc2f31aa9bf5a57d34349|bfc88ce4|cdvankammen|2026-10-23 16:53:11 -0600|fix(kiro): clamp reasoning_effort max to high for models lacking xhigh
+67ca0d6e140b907d5d2f25ac00be82970c95a809|67ca0d6e|cdvankammen|2026-10-23 16:56:11 -0600|fix(tests): security-audit path.resolve CWD → ROOT
+c9374b05bf645e99dc0e6bf6c1d459fb017f7372|c9374b05|cdvankammen|2026-10-23 16:57:27 -0600|fix(tests): security-audit byApiKey key expectation
+d9ad728f9aa5d44fde8d674347552e6982acd696|d9ad728f|cdvankammen|2026-10-23 17:01:57 -0600|fix(db): add conversationId column to usageHistory and requestDetails
+2b63e0dd5304ea8ae290e315efd66709ae290176|2b63e0dd|cdvankammen|2026-10-23 19:38:21 -0600|fix(rebase): restore ~40 lost test regressions after rebase onto master
+e16a24a35e11054ecd6204449142181df2a53528|e16a24a3|cdvankammen|2026-10-23 19:40:18 -0600|fix(tests): add unique timestamps to prevent saveRequestUsage dedup in concurrent tests
+fa2b99e8294b25678e024109eccc5be7b0bc0be0|fa2b99e8|cdvankammen|2026-10-24 01:35:07 -0600|fix(rebase): resolve 13 post-rebase test regressions (35→22)
+ca67b883c641588feee8c264e9e58575864ad519|ca67b883|cdvankammen|2026-10-24 02:53:24 -0600|fix(build): resolve deleteSavedView import + model-context prerender errors
+5cc2b72428c92b79720e1b9dc563dc5809adba08|5cc2b724|cdvankammen|2026-10-24 02:55:19 -0600|fix(tests): request-details-tab 22/22 — flush buffer + ATTACH outside txn
+74c5a43b87eb675cfe406eed38cae146b64c35b9|74c5a43b|cdvankammen|2026-10-24 03:28:37 -0600|fix(db): flushRequestDetails export + backupDbLite FK stripping
+7b9fada29b372c6183003588b62ef24b585b56a6|7b9fada2|cdvankammen|2026-10-24 03:55:00 -0600|fix(tests): flush-race mutex + image-fetch-hardening mock + antigravity 429→6
+8ad9e3da21298ad8976bc5720ef6c4d6b8ab1570|8ad9e3da|cdvankammen|2026-10-24 04:01:55 -0600|fix(tests): tasktype-tracking + empty-choices + openrouter-usage flags
+6e17962a49094a66d234d51c2f9111f0f4190263|6e17962a|cdvankammen|2026-10-24 04:09:05 -0600|fix(rebase): restore lost branch features (codex refreshLeadMs, jwt-secret, model-fallbacks mock)
+bfe4ab7694aefd33c9f03aa9c752280452ab6c9b|bfe4ab76|cdvankammen|2026-10-24 04:21:28 -0600|fix(rebase): restore commandcode error-as-content + deno-deploy cleanup logging
+1ca9f5d8e06a21ec4f24384defba23369e100d04|1ca9f5d8|cdvankammen|2026-10-24 04:43:00 -0600|fix(rebase): restore dashboardGuard rate-limiting (middleware 429)
+28811ebb945c5da856492227cf998758ca35928f|28811ebb|cdvankammen|2026-10-24 04:53:27 -0600|fix(rebase): restore request-details-tab config key + backup FTS shadow exclusion
+ad06b3bcb0690e1f97730536dd362ccb8e207733|ad06b3bc|cdvankammen|2026-10-24 04:59:18 -0600|fix(rebase+scrutiny): codex-auto-review toMatchObject + gpt-6.1-sol caps + claude-compat display_name
+a59bdcaa91b22a68446a8e3d5f44be82e9d0e9c2|a59bdcaa|cdvankammen|2026-10-24 05:01:00 -0600|fix(rebase): restore translator-helpers-edge test expectations
+0ca07bf677c124a1c24a949145c3ade47912c8bc|0ca07bf6|cdvankammen|2026-10-24 07:24:22 -0600|fix(i18n): rewrite Chinese literals in dashboard + add eslint guard-rail
+3c3cb02a2a0efc43e0473d762a50c552e329ed04|3c3cb02a|cdvankammen|2026-10-24 07:24:24 -0600|feat(security): OIDC save-time validation gate on /api/settings PATCH
+b6fd4264d32cc3e33713fe2ff48322ef853ecf04|b6fd4264|cdvankammen|2026-10-24 07:24:26 -0600|fix(rate-limiter): exempt RSC prefetches from middleware-layer limiter
+16a1fe337711a51f11259ce8f96cdc827f335892|16a1fe33|cdvankammen|2026-10-24 07:24:27 -0600|docs(research): Finding #17 — published 9router@0.5.109 package audit
+88240fa26da7c7864da7b205a7bcc7194b9cdd20|88240fa2|cdvankammen|2026-10-24 07:46:13 -0600|feat(providers): client-side guard blocks non-addable providers before POST
+61bed9dd197f794af7de6d44a05df0af307efed9|61bed9dd|cdvankammen|2026-10-24 08:14:50 -0600|feat(dashboard): add error boundaries with transient 429/5xx retry UI
+b6dcc553bc56dd359e13e6b1fc594b8e37b3d72c|b6dcc553|cdvankammen|2026-10-24 09:47:46 -0600|feat(rate-limiter): multi-bucket per-(ip,category) limits with shared route classifier
+380ee9e9932d34cb489590c37240963cf713ab36|380ee9e9|cdvankammen|2026-10-24 10:22:02 -0600|feat(db): migration runner registry-integrity gate + dry-run preview
+9ce2241bd7fedbccd1f8ac51fab4375ff55a18ab|9ce2241b|cdvankammen|2026-10-24 10:29:03 -0600|docs(changelog): log this session's 8 commits under Unreleased
+602aefc931499723418abdb9111fca6bb0dddf98|602aefc9|cdvankammen|2026-10-24 11:06:20 -0600|docs(research): capture Day 3 live verification and draft PR
+d8af862d11a168d446a33969d3472c124339381b|d8af862d|cdvankammen|2026-10-24 12:44:46 -0600|fix(rebase+master-test): kiro-external-idp q-first ordering + cline-free pricing

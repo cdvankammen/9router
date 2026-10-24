@@ -1,0 +1,13 @@
+===COMMIT===
+hash: f3f86fdd52f9e9e9538847dddf233293224733d2
+short: f3f86fdd
+author: Михаил Голощанов <m.goloshchanov@s7.ru>
+date: 2026-10-23 14:46:07 +0700
+subject: feat(combos): add Smart Router (System One) with adaptive session stickiness (#4975)
+body:
+- Add smart combo routing strategy powered by in-process System One evaluation
+- Support adaptive session stickiness (Smart Switch, Strict Lock, Per-Turn) to retain prompt cache
+- Introduce SmartPolicyModal and System One router picker in dashboard combos
+- Include automated unit tests covering state extraction, policies, and resilience
+
+---files---

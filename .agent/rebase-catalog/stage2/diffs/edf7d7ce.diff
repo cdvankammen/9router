@@ -1,0 +1,59 @@
+commit edf7d7ce
+author: cdvankammen
+date: 2026-10-22 12:19:30 -0600
+subject: feat(messages): Messages page P1 — list, detail drawer, conversation tree, export
+
+Implements Phase 1 (View) of the Messages page feature spec
+(docs/plans-and-prompts/plans/messages-page-feature-spec.md) — the
+"Sentry for LLM requests" view over the existing requestDetails capture.
+No new data capture; pure projection over existing rows.
+
+NEW API ROUTES:
+- GET /api/messages — list with filters (provider, model, status,
+  errorCategory, conversationId, date range) + pagination + lightweight
+  conversation grouping (tokens/cost/messageCount per session)
+- GET /api/messages/:id — full detail of one captured request
+- GET /api/messages/:id/export?format=json|markdown|curl — export in
+  three formats (JSON normalized, Markdown transcript, curl snippet with
+  auth placeholder)
+
+NEW PAGE /dashboard/messages:
+- List view: timestamp, provider/model (resolved names), status badge
+  (done/error/partial/cancelled with errorCategory tooltip), tokens,
+  latency, conversation id, Detail action; keyset pagination
+- Detail drawer: status + info cells (latency/tokens/cost), 5 format
+  tabs (Pretty JSON / Raw / Headers / cURL / Markdown) with Copy button
+- Conversations view: per-session grouping with message count + token
+  totals, expandable per-message rows with status badges
+- Filters: conversation ID text, provider dropdown, status dropdown,
+  Clear button
+
+Sidebar: new "Messages" nav entry (forum icon) after Usage.
+
+VERIFICATION (production standalone, port 20131, 72 captured messages):
+- /api/messages: 5/page, pagination {totalItems:72, totalPages:15}
+- /api/messages/:id: full record (request.messages, response, tokens)
+- export json/markdown/curl: all three render correctly
+- Browser: list renders 50 rows, provider dropdown resolves node names
+  (Dialagram Router, MockReal), detail drawer opens with all 5 tabs,
+  cURL tab shows reconstructed command, Conversations view groups
+  correctly with status badges
+- Tray app (cli/app bundle) rebuilt + restarted: /dashboard/messages 200
+
+Spec: plans/messages-page-feature-spec.md (P1 scope)
+Research: research/message-capture-* (v1-v4), learnings/2026-08-07-research-synthesis.md
+Part of: Messages Page + Error Inbox plan (P1 — View)
+
+
+diff --git a/src/shared/components/Sidebar.js b/src/shared/components/Sidebar.js
+index edff69e3..18e0db97 100644
+--- a/src/shared/components/Sidebar.js
++++ b/src/shared/components/Sidebar.js
+@@ -24,6 +24,7 @@ const navItems = [
+   // { href: "/dashboard/basic-chat", label: "Basic Chat", icon: "chat" }, // Hidden
+   { href: "/dashboard/combos", label: "Combo & Vision Adapter", icon: "layers" },
+   { href: "/dashboard/usage", label: "Usage", icon: "bar_chart" },
++  { href: "/dashboard/messages", label: "Messages", icon: "forum" },
+   { href: "/dashboard/quota", label: "Quota Tracker", icon: "data_usage" },
+   { href: "/dashboard/token-saver", label: "Token Saver", icon: "savings" },
+   // { href: "/dashboard/pxpipe", label: "PXPIPE", icon: "image" },

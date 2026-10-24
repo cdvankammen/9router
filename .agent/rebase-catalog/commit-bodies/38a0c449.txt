@@ -1,0 +1,35 @@
+===COMMIT===
+hash: 38a0c4490a843b27a0985be32cd23cb5fe2aca79
+short: 38a0c449
+author: decolua <decoluadt@gmail.com>
+date: 2026-10-22 11:15:52 +0700
+subject: feat(web-cookie): add web provider executors, browser pool and login capture
+body:
+New providers (registry + executor + image/video handlers):
+- deepseek-web, gemini-web, muse-web, chatgpt-web, uc-web, veoaifree-web
+- grok-web gains Imagine image/video and native tool calling; its chat now
+  runs through a TLS-impersonating client (wreq-js) because grok.com rejects
+  Node's TLS fingerprint.
+
+Shared infrastructure:
+- browserPool: warm Chromium context per isolation key, Obscura -> cloakbrowser
+  -> Chromium engine preference, idle/TTL eviction and lifecycle metrics.
+- browserExecutableCheck: shared missing-browser classification, system Chrome
+  discovery and launch-with-fallback so an installed Chrome avoids the
+  ~360 MB `playwright-core install chromium` download.
+- lazyRuntime: download playwright-core / wreq-js into <DATA_DIR>/runtime on
+  first use instead of shipping them in the npm bundle.
+- webLogin + webLoginConfig: capture a real browser session as a cookie
+  credential, with per-profile cache pruning so profiles do not bloat.
+- webTools / tagBlocks / webCookieAuth: shared <tool> prompt contract and
+  cookie-input normalization for every web-cookie provider.
+
+Behaviour notes:
+- perplexity-web and chatgpt-web's LLM role are parked via serviceKinds, so
+  they are absent from dashboard lists while saved connections stay intact.
+- Existing grok-web connections holding only `sso` need the full Cookie header
+  (sso + cf_clearance) for the new image/video paths.
+
+Co-Authored-By: Claude Code <noreply@anthropic.com>
+
+---files---

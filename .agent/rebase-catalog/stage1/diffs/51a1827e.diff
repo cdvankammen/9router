@@ -1,0 +1,6 @@
+commit 51a1827e
+author: tmaarcxs
+date: 2026-10-14 15:17:23 +0700
+subject: fix(github): route Copilot embeddings to api.githubcopilot.com (#4793)
+
+

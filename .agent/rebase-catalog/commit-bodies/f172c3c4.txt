@@ -1,0 +1,12 @@
+===COMMIT===
+hash: f172c3c4a622dc531b4ce47a24f7a61ed0f530da
+short: f172c3c4
+author: Ulder Carrilho Júnior <uldercarrilho@gmail.com>
+date: 2026-10-23 14:28:33 +0700
+subject: fix(antigravity): use hub/2.24.0 User-Agent and add Gemini 4 Argon medium/low tiers (#4816)
+body:
+Update Antigravity User-Agent to hub/2.24.0 to resolve HTTP 404 on Gemini 4 Argon
+models, register gemini-4-argon-medium and gemini-4-argon-low tiers, and include
+gemini-4-argon-* in quota monitoring.
+
+---files---

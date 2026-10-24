@@ -1,0 +1,74 @@
+commit 90f89471
+author: IlyaKhalafi
+date: 2026-10-13 17:31:00 +0700
+subject: fix(nous): add API-key attribution tags (#4770)
+
+
+
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+index 933aeab6..b94b5f53 100644
+--- a/CHANGELOG.md
++++ b/CHANGELOG.md
+@@ -1,3 +1,8 @@
++# Unreleased
++
++## Fixes
++- **Nous**: add missing attribution tags to API-key requests through compatible Chat Completions connections, preserving caller tags and identities (#4745)
++
+ # v0.5.99 (2026-10-08)
+ 
+ ## Features
+diff --git a/open-sse/executors/default.js b/open-sse/executors/default.js
+index 6a05db8c..cd9fd089 100644
+--- a/open-sse/executors/default.js
++++ b/open-sse/executors/default.js
+@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
+ import { PROVIDERS, PROVIDER_OAUTH } from "../config/providers.js";
+ import { ANTHROPIC_API_VERSION, OPENAI_COMPAT_BASE, ANTHROPIC_COMPAT_BASE, selectAnthropicBeta, mergeAnthropicBeta } from "../providers/shared.js";
+ import { resolveOpenAICompatibleApiType } from "../services/provider.js";
+-import { OAUTH_ENDPOINTS, buildKimiHeaders } from "../config/appConstants.js";
++import { OAUTH_ENDPOINTS, buildKimiHeaders, NOUS_ATTRIBUTION } from "../config/appConstants.js";
+ import { buildClineHeaders } from "../shared/clineAuth.js";
+ import { proxyAwareFetch } from "../utils/proxyFetch.js";
+ import { injectReasoningContent } from "../utils/reasoningContentInjector.js";
+@@ -80,8 +80,8 @@ export class DefaultExecutor extends BaseExecutor {
+     super(provider, PROVIDERS[provider] || PROVIDERS.openai);
+   }
+ 
+-  transformRequest(model, body) {
+-    const transformed = this.applyJsonSchemaFallback(body);
++  transformRequest(model, body, stream, credentials) {
++    const transformed = this.applyJsonSchemaFallback(this.applyNousAttribution(model, body, stream, credentials));
+ 
+     if (transformed && typeof transformed === "object") {
+       // quirk: some openai-compatible providers reject Anthropic's client_metadata field
+@@ -94,6 +94,29 @@ export class DefaultExecutor extends BaseExecutor {
+     return injectReasoningContent({ provider: this.provider, model, body: transformed });
+   }
+ 
++  applyNousAttribution(model, body, stream, credentials) {
++    if (!this.provider?.startsWith?.("openai-compatible-") || !credentials?.apiKey
++      || !body || typeof body !== "object" || Array.isArray(body)
++      || (body.tags != null && !Array.isArray(body.tags))) return body;
++
++    try {
++      const url = new URL(this.buildUrl(model, stream, 0, credentials));
++      if (url.protocol !== "https:" || url.hostname !== NOUS_ATTRIBUTION.hostname
++        || url.pathname !== NOUS_ATTRIBUTION.chatCompletionsPath) return body;
++    } catch {
++      return body;
++    }
++
++    let tags = Array.isArray(body.tags) ? [...body.tags] : [];
++    for (const fallback of NOUS_ATTRIBUTION.tags) {
++      const prefix = fallback.slice(0, fallback.indexOf("=") + 1);
++      // Empty attribution values do not satisfy the upstream requirement.
++      tags = tags.filter((tag) => typeof tag !== "string" || !tag.startsWith(prefix) || tag.slice(prefix.length).trim());
++      if (!tags.some((tag) => typeof tag === "string" && tag.startsWith(prefix))) tags.push(fallback);
++    }
++    return { ...body, tags: [...new Set(tags)] };
++  }
++
+   // Fallback json_schema → json_object for openai-compatible providers without native Structured Output.
+   applyJsonSchemaFallback(body) {
+     if (!this.provider?.startsWith?.("openai-compatible-")) return body;

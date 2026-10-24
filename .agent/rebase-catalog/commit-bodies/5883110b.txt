@@ -1,0 +1,20 @@
+===COMMIT===
+hash: 5883110b9d9db32b76d113a378c0ec2abf5943d7
+short: 5883110b
+author: openhands <openhands@all-hands.dev>
+date: 2026-10-23 11:27:05 +0700
+subject: fix(deps): upgrade Monaco to 0.57.0 and pin the copy the dashboard loads
+body:
+npm audit reported DOMPurify advisories through monaco-editor, but bumping
+the package alone would not change what users run: @monaco-editor/react
+never imports the node_modules package. Its loader fetches Monaco from
+jsdelivr at a version hardcoded in @monaco-editor/loader, which shipped
+0.55.1 and bundled DOMPurify 3.2.7.
+
+Pin the CDN copy to 0.57.0 (DOMPurify 3.4.15) in a shared constant and
+configure the loader with it inside the existing dynamic() import, so the
+editor stays lazy-loaded and the browser fetches the pinned build. A test
+keeps the CDN pin, the package.json range and the installed package in
+step, so the next bump cannot silently leave the CDN copy behind.
+
+---files---

@@ -1,0 +1,13 @@
+===COMMIT===
+hash: 08ef047f8c2ede799294ca4d3ccac4548f63452b
+short: 08ef047f
+author: decolua <decoluadt@gmail.com>
+date: 2026-10-23 10:33:25 +0700
+subject: fix(security): bump undici to 7.30.1 and bind headroom to loopback
+body:
+- Bump undici to ^7.30.1 to address DoS on content-encodings and TLS bypass advisories
+- Restrict headroom port in docker-compose.yml to 127.0.0.1:8787:8787
+
+Co-Authored-By: Claude Code <noreply@anthropic.com>
+
+---files---

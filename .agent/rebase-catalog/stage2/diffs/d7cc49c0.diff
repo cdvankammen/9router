@@ -1,0 +1,42 @@
+commit d7cc49c0
+author: cdvankammen
+date: 2026-10-22 13:46:38 -0600
+subject: fix(observability): include sourceApp/userAgent in forced-SSE-to-JSON detail
+
+
+
+diff --git a/open-sse/handlers/chatCore.js b/open-sse/handlers/chatCore.js
+index 94fe05ac..cd81713a 100644
+--- a/open-sse/handlers/chatCore.js
++++ b/open-sse/handlers/chatCore.js
+@@ -411,6 +411,7 @@ export async function handleChatCore({ body, modelInfo, credentials, log, onCred
+       provider, model, connectionId,
+       conversationId,
+       sourceApp,
++      userAgent,
+       errorCategory: categorizeError(error?.status || error?.statusCode || 502, error.message),
+       latency: { ttft: 0, total: Date.now() - requestStartTime },
+       tokens: { prompt_tokens: 0, completion_tokens: 0 },
+@@ -489,6 +490,7 @@ export async function handleChatCore({ body, modelInfo, credentials, log, onCred
+       provider, model, connectionId,
+       conversationId,
+       sourceApp,
++      userAgent,
+       errorCategory: categorizeError(statusCode, message),
+       latency: { ttft: 0, total: Date.now() - requestStartTime },
+       tokens: { prompt_tokens: 0, completion_tokens: 0 },
+diff --git a/open-sse/handlers/chatCore/sseToJsonHandler.js b/open-sse/handlers/chatCore/sseToJsonHandler.js
+index 3dca9803..aa024acd 100644
+--- a/open-sse/handlers/chatCore/sseToJsonHandler.js
++++ b/open-sse/handlers/chatCore/sseToJsonHandler.js
+@@ -191,7 +191,9 @@ export async function handleForcedSSEToJson({ providerResponse, sourceFormat, ta
+     provider, model, connectionId,
+     conversationId,
+     request: extractRequestConfig(body, stream),
+-    providerRequest: finalBody || translatedBody || null
++    providerRequest: finalBody || translatedBody || null,
++    sourceApp,
++    userAgent
+   };
+ 
+   // Codex/Responses API SSE path

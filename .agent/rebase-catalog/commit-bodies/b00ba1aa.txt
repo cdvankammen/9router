@@ -1,0 +1,9 @@
+===COMMIT===
+hash: b00ba1aa4b2bf4290fa0e9772cba7ffe8db23d8e
+short: b00ba1aa
+author: Dasep Moch Luay <dasepmm@gmail.com>
+date: 2026-10-07 19:24:32 +0700
+subject: fix(muse): route Responses-only models to their declared transport + nest reasoning effort
+body:
+
+---files---

@@ -1,0 +1,23 @@
+commit 988387d8
+author: cdvankammen
+date: 2026-10-22 15:39:11 -0600
+subject: security(auth): eliminate hardcoded default password acceptance (GAP-P1-14)
+
+The login route previously accepted '123456' as a fallback when no password
+hash was stored and no INITIAL_PASSWORD env was set. The mustChangePassword
+gate only triggered for non-local requests, but tunnel/Tailscale clients
+terminate on loopback — isLocalRequest() returned true for them, letting
+remote users authenticate with the well-known default.
+
+Fix: when no hash AND no INITIAL_PASSWORD exist, login ALWAYS rejects with
+setupRequired=true regardless of request origin. A new /api/auth/setup
+endpoint (local-only POST) lets the operator create the first password
+from the machine itself. The login page detects setup state via GET and
+shows a dedicated setup form.
+
+- Login route: setup gate after SSO check, no recordFail on state condition
+- Setup endpoint: isLocalRequest guard, bcrypt hash, 6-char minimum
+- dashboardGuard: /api/auth/setup added to PUBLIC_API_PATHS
+- Login page: setupRequired probe, setup form with confirm field
+- 14 unit tests covering all branches (login gate + setup endpoint)
+

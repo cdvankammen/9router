@@ -1,0 +1,6 @@
+commit e7f41c13
+author: mannnrachman
+date: 2026-10-11 09:15:15 +0700
+subject: fix(cursor): recover long sessions from empty AgentService turns (#4690)
+
+

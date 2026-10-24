@@ -1,0 +1,11 @@
+commit 8acf4c6f
+author: cdvankammen
+date: 2026-10-22 12:10:05 -0600
+subject: docs: comprehensive session tracking in plans-and-prompts
+
+Fill all subfolders per the folder's AGENTS.md conventions:
+- decisions/: ADR-001..004
+- learnings/: 3 postmortems
+- plans/, architecture/, meetings/, prompts/: session artifacts
+- SESSION-HISTORY.md / CHANGELOG.md / TASK-LOG.md updated
+

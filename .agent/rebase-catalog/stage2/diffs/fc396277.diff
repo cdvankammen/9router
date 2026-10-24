@@ -1,0 +1,12 @@
+commit fc396277
+author: cdvankammen
+date: 2026-10-22 12:26:40 -0600
+subject: feat(smart-router): scores UI + node cache refresh + chip truncation + text validation
+
+Phase 2 UX gaps:
+- 2.1 Usage drawer: Smart Router panel shows taskType, sticky badge, and top-N score bars ('why this model')
+- 2.3 bustNodeModelsCache export; /api/providers/[id]/models?refresh=1 busts smart-router cache; compatible-node Import now refreshes
+- 2.4 Chain Flow chips: truncate at 180px + full model in title tooltip
+- 2.5 Expert Text: invalid-line detection (#N list) + red banner; Apply still works on valid lines
+- 41+6 unit tests pass; suite 1724/88 baseline
+

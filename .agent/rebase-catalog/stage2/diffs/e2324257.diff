@@ -1,0 +1,85 @@
+commit e2324257
+author: cdvankammen
+date: 2026-10-22 13:49:48 -0600
+subject: feat(messages): capture upstream URL (B4) — real URLs in curl export
+
+- buildRequestDetail: url pass-through (base/overrides, legacy-compat absent)
+- chatCore + sub-handlers: thread providerUrl (authoritative executor URL) into
+  all 8 capture sites, falling back to providerResponse?.url
+  (providerResponse.url is empty for synthetic new Response() executors:
+  codex/commandcode/cursor)
+- repo flushToDatabase: persist url in data blob (no schema change)
+- buildCurl: use detail.url with placeholder fallback for legacy rows
+- tests: b4-curl-url-capture (5 tests) — forward/omit/override/curl/fallback
+
+
+diff --git a/open-sse/handlers/chatCore.js b/open-sse/handlers/chatCore.js
+index cd81713a..f75f8a3f 100644
+--- a/open-sse/handlers/chatCore.js
++++ b/open-sse/handlers/chatCore.js
+@@ -412,6 +412,7 @@ export async function handleChatCore({ body, modelInfo, credentials, log, onCred
+       conversationId,
+       sourceApp,
+       userAgent,
++      url: providerUrl,
+       errorCategory: categorizeError(error?.status || error?.statusCode || 502, error.message),
+       latency: { ttft: 0, total: Date.now() - requestStartTime },
+       tokens: { prompt_tokens: 0, completion_tokens: 0 },
+@@ -491,6 +492,7 @@ export async function handleChatCore({ body, modelInfo, credentials, log, onCred
+       conversationId,
+       sourceApp,
+       userAgent,
++      url: providerUrl,
+       errorCategory: categorizeError(statusCode, message),
+       latency: { ttft: 0, total: Date.now() - requestStartTime },
+       tokens: { prompt_tokens: 0, completion_tokens: 0 },
+@@ -510,7 +512,7 @@ export async function handleChatCore({ body, modelInfo, credentials, log, onCred
+     return createErrorResult(statusCode, errMsg, resetsAtMs, upstreamResponseHeaders(providerResponse.headers));
+   }
+ 
+-  const sharedCtx = { provider, model, body, stream, translatedBody, finalBody, requestStartTime, connectionId, apiKey, clientRawRequest, onRequestSuccess, pxpipe: pxpipeSummary, reqTag, log, conversationId, taskType, smartRouterMeta, sourceApp, userAgent };
++  const sharedCtx = { provider, model, body, stream, translatedBody, finalBody, requestStartTime, connectionId, apiKey, clientRawRequest, onRequestSuccess, pxpipe: pxpipeSummary, reqTag, log, conversationId, taskType, smartRouterMeta, sourceApp, userAgent, providerUrl };
+   const appendLog = (extra) => appendRequestLog({ model, provider, connectionId, ...extra }).catch(() => { });
+   const trackDone = () => trackPendingRequest(model, provider, connectionId, false);
+ 
+diff --git a/open-sse/handlers/chatCore/requestDetail.js b/open-sse/handlers/chatCore/requestDetail.js
+index 69154f82..e3d61271 100644
+--- a/open-sse/handlers/chatCore/requestDetail.js
++++ b/open-sse/handlers/chatCore/requestDetail.js
+@@ -139,6 +139,7 @@ export function buildRequestDetail(base, overrides = {}) {
+     errorCategory: base.errorCategory || undefined,
+     sourceApp: base.sourceApp || undefined,
+     userAgent: base.userAgent || undefined,
++    url: base.url || undefined,
+     ...overrides
+   };
+ 
+diff --git a/open-sse/handlers/chatCore/sseToJsonHandler.js b/open-sse/handlers/chatCore/sseToJsonHandler.js
+index aa024acd..26f58614 100644
+--- a/open-sse/handlers/chatCore/sseToJsonHandler.js
++++ b/open-sse/handlers/chatCore/sseToJsonHandler.js
+@@ -180,7 +180,7 @@ export function parseSSEToOpenAIResponse(rawSSE, fallbackModel) {
+  * Handle case: provider forced streaming but client wants JSON.
+  * Supports both Codex/Responses API SSE and standard Chat Completions SSE.
+  */
+-export async function handleForcedSSEToJson({ providerResponse, sourceFormat, targetFormat, provider, model, body, stream, translatedBody, finalBody, requestStartTime, connectionId, apiKey, clientRawRequest, onRequestSuccess, customToolNames, toolNameMap, trackDone, appendLog, reqTag, log, conversationId, taskType, smartRouterMeta, sourceApp, userAgent }) {
++export async function handleForcedSSEToJson({ providerResponse, sourceFormat, targetFormat, provider, model, body, stream, translatedBody, finalBody, requestStartTime, connectionId, apiKey, clientRawRequest, onRequestSuccess, customToolNames, toolNameMap, trackDone, appendLog, reqTag, log, conversationId, taskType, smartRouterMeta, sourceApp, userAgent, upstreamUrl }) {
+   const contentType = providerResponse.headers.get("content-type") || "";
+   const isSSE = contentType.includes("text/event-stream") || (contentType === "" && isResponsesProvider(provider));
+   if (!isSSE) return null; // not handled here
+@@ -221,6 +221,7 @@ export async function handleForcedSSEToJson({ providerResponse, sourceFormat, ta
+ 
+       saveRequestDetail(buildRequestDetail({
+         ...ctx,
++        url: providerUrl || providerResponse?.url,
+         latency: { ttft: totalLatency, total: totalLatency },
+         tokens: { prompt_tokens: inTokensForLog, completion_tokens: usage.output_tokens || 0 },
+         response: { content: textContent, thinking: null, finish_reason: jsonResponse.status || "unknown" },
+@@ -322,6 +323,7 @@ export async function handleForcedSSEToJson({ providerResponse, sourceFormat, ta
+     const totalLatency = Date.now() - requestStartTime;
+     saveRequestDetail(buildRequestDetail({
+       ...ctx,
++      url: providerUrl || providerResponse?.url,
+       latency: { ttft: totalLatency, total: totalLatency },
+       tokens: usage,
+       response: {

@@ -1,0 +1,14 @@
+commit 09a67938
+author: cdvankammen
+date: 2026-10-22 13:46:38 -0600
+subject: fix: audit-found bugs — JSON1 message filters, health lock count, sourceApp droid regex
+
+- messages API: errorCategory/sourceApp now filter in SQL (json_extract) so
+  pagination totals are correct; previously client-side post-filter produced
+  wrong totals + empty pages with matches on later pages
+- health/providers: use getEarliestModelLockUntil (all modelLock_* keys) —
+  isModelLockActive(conn) only caught account-level locks
+- sourceApps: /droid/i matched ordinary 'Android' browser UAs → misclassified
+  as Codex CLI; require codex adjacency
+- +3 tests (JSON1 filter + pagination math)
+

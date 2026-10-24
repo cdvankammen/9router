@@ -1,0 +1,13 @@
+===COMMIT===
+hash: be51142b4aca48d0599ec00b45bd9ccaaed420dd
+short: be51142b
+author: XFairesV1 <jonathanbrianmelquides@gmail.com>
+date: 2026-10-15 14:47:25 +0700
+subject: feat(quota): anchored auto-ping schedule at fixed local times (#4848)
+body:
+- Add anchored ping schedule per connection at fixed local wall-clock slots
+- Calculate and preview daily slots with timezone and DST support
+- Fire scheduled slots independently or alongside reactive auto-ping
+- Add schedule modal to provider connection dashboard
+
+---files---

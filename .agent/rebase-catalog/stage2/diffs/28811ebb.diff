@@ -1,0 +1,29 @@
+commit 28811ebb
+author: cdvankammen
+date: 2026-10-24 04:53:27 -0600
+subject: fix(rebase): restore request-details-tab config key + backup FTS shadow exclusion
+
+- tests/unit/request-details-tab.test.js: enableObservability2→enableObservability
+  (pre-rebase branch used 'enableObservability' key; current source reads
+  settings.enableObservability; the '2' suffix was a rebase artifact)
+- src/lib/db/backup.js: exclude FTS5 shadow tables (<name>_fts, _data, _idx,
+  _config, _docsize) of excluded tables from the copy loop — they cannot be
+  re-created via CREATE TABLE and would collide with the parent virtual
+  table's implicit shadows
+
+request-details-tab: 22/22 pass (was 20/22).
+
+
+diff --git a/tests/unit/request-details-tab.test.js b/tests/unit/request-details-tab.test.js
+index 0d0d2ca1..5be15884 100644
+--- a/tests/unit/request-details-tab.test.js
++++ b/tests/unit/request-details-tab.test.js
+@@ -24,7 +24,7 @@ beforeAll(async () => {
+   vi.resetModules();
+   db = await import("@/lib/db/index.js");
+   await db.initDb();
+-  await db.updateSettings({ enableObservability2: true, observabilityBatchSize: 1 });
++  await db.updateSettings({ enableObservability: true, observabilityBatchSize: 1 });
+ 
+   const { getAdapter } = await import("@/lib/db/driver.js");
+   adapter = await getAdapter();

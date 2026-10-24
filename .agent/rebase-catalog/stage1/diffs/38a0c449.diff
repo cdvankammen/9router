@@ -1,0 +1,229 @@
+commit 38a0c449
+author: decolua
+date: 2026-10-22 11:15:52 +0700
+subject: feat(web-cookie): add web provider executors, browser pool and login capture
+
+New providers (registry + executor + image/video handlers):
+- deepseek-web, gemini-web, muse-web, chatgpt-web, uc-web, veoaifree-web
+- grok-web gains Imagine image/video and native tool calling; its chat now
+  runs through a TLS-impersonating client (wreq-js) because grok.com rejects
+  Node's TLS fingerprint.
+
+Shared infrastructure:
+- browserPool: warm Chromium context per isolation key, Obscura -> cloakbrowser
+  -> Chromium engine preference, idle/TTL eviction and lifecycle metrics.
+- browserExecutableCheck: shared missing-browser classification, system Chrome
+  discovery and launch-with-fallback so an installed Chrome avoids the
+  ~360 MB `playwright-core install chromium` download.
+- lazyRuntime: download playwright-core / wreq-js into <DATA_DIR>/runtime on
+  first use instead of shipping them in the npm bundle.
+- webLogin + webLoginConfig: capture a real browser session as a cookie
+  credential, with per-profile cache pruning so profiles do not bloat.
+- webTools / tagBlocks / webCookieAuth: shared <tool> prompt contract and
+  cookie-input normalization for every web-cookie provider.
+
+Behaviour notes:
+- perplexity-web and chatgpt-web's LLM role are parked via serviceKinds, so
+  they are absent from dashboard lists while saved connections stay intact.
+- Existing grok-web connections holding only `sso` need the full Cookie header
+  (sso + cf_clearance) for the new image/video paths.
+
+Co-Authored-By: Claude Code <noreply@anthropic.com>
+
+
+diff --git a/.gitignore b/.gitignore
+index e17d69b7..7c9ca338 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -101,3 +101,4 @@ graphify-out/*
+ .start-dev.ps1
+ start-dev-silent.cjs
+ debug.log
++.scratch/
+diff --git a/open-sse/providers/registry/index.js b/open-sse/providers/registry/index.js
+index 3053d25a..d7a4e7df 100644
+--- a/open-sse/providers/registry/index.js
++++ b/open-sse/providers/registry/index.js
+@@ -138,6 +138,12 @@ import p135 from "./minimax-code-global.js";
+ import p136 from "./bedrock.js";
+ import p137 from "./bedrock-xai.js";
+ import p138 from "./nous.js";
++import p140 from "./deepseek-web.js";
++import p143 from "./gemini-web.js";
++import p144 from "./muse-web.js";
++import p146 from "./chatgpt-web.js";
++import p147 from "./veoaifree-web.js";
++import p151 from "./uc-web.js";
+ export default [
+   p0,
+   p1,
+@@ -276,4 +282,10 @@ export default [
+   p136,
+   p137,
+   p138,
++  p140,
++  p143,
++  p144,
++  p146,
++  p147,
++  p151,
+ ];
+diff --git a/package.json b/package.json
+index 09c8e20a..dd3ec3fc 100644
+--- a/package.json
++++ b/package.json
+@@ -29,8 +29,6 @@
+     "chalk": "^5.6.2",
+     "confbox": "^0.2.4",
+     "enquirer": "^2.4.1",
+-    "express": "^5.2.1",
+-    "http-proxy-middleware": "^3.0.5",
+     "jose": "^6.1.3",
+     "marked": "^18.0.1",
+     "material-symbols": "^0.44.6",
+@@ -43,9 +41,7 @@
+     "prop-types": "^15.8.1",
+     "react": "19.2.4",
+     "react-dom": "19.2.4",
+-    "react-is": "^16.13.1",
+     "recharts": "^3.7.0",
+-    "selfsigned": "^5.5.0",
+     "socks-proxy-agent": "^8.0.5",
+     "sql.js": "^1.14.1",
+     "undici": "^7.19.2",
+@@ -54,15 +50,20 @@
+   },
+   "optionalDependencies": {
+     "@aws-sdk/credential-providers": "^3.1135.0",
+-    "better-sqlite3": "^12.6.2"
++    "ajv": "^8.17.1",
++    "better-sqlite3": "^12.6.2",
++    "ws": "^8.18.0"
+   },
+   "comment_better_sqlite3": "kept in optionalDependencies so npm install doesn't fail on systems without build tools — sql.js is used as fallback at runtime",
+   "comment_aws_sdk_credential_providers": "kept in optionalDependencies (npm still installs these by default) and imported lazily in shared/awsCredentials.js — only AWS Bedrock connections using profile/SSO mode need it; static accessKeyId/secretAccessKey connections never load it",
++  "comment_playwright_core": "devDependency only (keeps end-user installs small); open-sse/services/lazyRuntime.js downloads it + wreq-js on first use into <DATA_DIR>/runtime. playwright-core ships no browser binaries (run `npx playwright-core install chromium` or point OBSCURA_CDP_ENDPOINT/cloakbrowser at a stealth engine)",
+   "devDependencies": {
+     "@tailwindcss/postcss": "^4.1.18",
+     "eslint": "^9",
+     "eslint-config-next": "16.1.6",
++    "playwright-core": "^1.62.1",
+     "postcss": "^8.5.6",
+-    "tailwindcss": "^4"
++    "tailwindcss": "^4",
++    "wreq-js": "^3.2.0"
+   }
+ }
+diff --git a/src/app/(dashboard)/dashboard/providers/[id]/page.js b/src/app/(dashboard)/dashboard/providers/[id]/page.js
+index 5bc2b6cd..444babef 100644
+--- a/src/app/(dashboard)/dashboard/providers/[id]/page.js
++++ b/src/app/(dashboard)/dashboard/providers/[id]/page.js
+@@ -25,6 +25,7 @@ import BulkImportCodexModal from "./BulkImportCodexModal";
+ import BulkImportGrokCliModal from "./BulkImportGrokCliModal";
+ import CustomConfigCard from "./CustomConfigCard";
+ import AutoPingScheduleModal from "./AutoPingScheduleModal";
++import WebLoginButton, { WEB_LOGIN_PROVIDERS } from "../components/WebLoginButton.js";
+ import { getScheduleSlotLabels } from "@/shared/services/quotaPingSchedule";
+ 
+ const ONE_BY_ONE_DELAY_MS = 1000;
+@@ -1621,6 +1622,9 @@ export default function ProviderDetailPage() {
+                   </>
+                 ) : (
+                   <>
++                    {!isCompatible && WEB_LOGIN_PROVIDERS.has(providerId) && (
++                      <WebLoginButton providerId={providerId} onConnected={fetchConnections} />
++                    )}
+                     {!isCompatible && providerId === "iflow" && (
+                       <Button size="sm" icon="cookie" variant="secondary" onClick={() => setShowIFlowCookieModal(true)}>
+                         Cookie
+@@ -1681,6 +1685,9 @@ export default function ProviderDetailPage() {
+               {connectionsList}
+               {!isCompatible && (
+                 <div className="mt-4 grid grid-cols-1 gap-2 sm:flex">
++                  {WEB_LOGIN_PROVIDERS.has(providerId) && (
++                    <WebLoginButton providerId={providerId} onConnected={fetchConnections} />
++                  )}
+                   {providerId === "iflow" && (
+                     <Button
+                       size="sm"
+diff --git a/src/app/(dashboard)/dashboard/providers/page.js b/src/app/(dashboard)/dashboard/providers/page.js
+index a0eb586c..f03d1b4a 100644
+--- a/src/app/(dashboard)/dashboard/providers/page.js
++++ b/src/app/(dashboard)/dashboard/providers/page.js
+@@ -367,6 +367,23 @@ export default function ProvidersPage() {
+       : apikeyEntries.slice(0, APIKEY_INITIAL_VISIBLE);
+   const hiddenApikeyCount = apikeyEntries.length - APIKEY_INITIAL_VISIBLE;
+ 
++  // Web Cookie: providers authenticated by a pasted browser/session cookie
++  // (connections are stored with authType "cookie" — see POST /api/providers).
++  const webCookieEntries = Object.entries(WEB_COOKIE_PROVIDERS)
++    .filter(
++      ([key, info]) =>
++        !info.hidden &&
++        (info.serviceKinds ?? ["llm"]).includes("llm") &&
++        matchSearch(info.name) &&
++        matchStatus(getProviderStats(key, "cookie"), info.noAuth),
++    )
++    .sort(([ka, a], [kb, b]) => {
++      const ca = getProviderStats(ka, "cookie").total > 0 ? 0 : 1;
++      const cb = getProviderStats(kb, "cookie").total > 0 ? 0 : 1;
++      if (ca !== cb) return ca - cb;
++      return (a.name || "").localeCompare(b.name || "");
++    });
++
+   if (loading) {
+     return (
+       <div className="flex flex-col gap-8">
+@@ -381,6 +398,7 @@ export default function ProvidersPage() {
+     freeEntries.length > 0 ||
+     freeTierEntries.length > 0 ||
+     apikeyEntries.length > 0 ||
++    webCookieEntries.length > 0 ||
+     compatibleProviders.length > 0 ||
+     anthropicCompatibleProviders.length > 0;
+ 
+@@ -609,6 +627,16 @@ export default function ProvidersPage() {
+               onToggle={(active) => handleToggleProvider(key, "apikey", active)}
+             />
+           ))}
++          {webCookieEntries.map(([key, info]) => (
++            <ApiKeyProviderCard
++              key={key}
++              providerId={key}
++              provider={info}
++              stats={getProviderStats(key, "cookie")}
++              authType="cookie"
++              onToggle={(active) => handleToggleProvider(key, "cookie", active)}
++            />
++          ))}
+         </div>
+         {!isApikeySearching && !showAllApikey && hiddenApikeyCount > 0 && (
+           <button
+@@ -622,27 +650,6 @@ export default function ProvidersPage() {
+       </div>
+       )}
+ 
+-      {/* Web Cookie Providers — use browser subscription cookie instead of API key */}
+-      {/* <div className="flex flex-col gap-4">
+-        <div className="flex items-center justify-between">
+-          <h2 className="text-xl font-semibold flex items-center gap-2">
+-            Web Cookie Providers{" "}
+-          </h2>
+-        </div>
+-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+-          {Object.entries(WEB_COOKIE_PROVIDERS).map(([key, info]) => (
+-            <ApiKeyProviderCard
+-              key={key}
+-              providerId={key}
+-              provider={info}
+-              stats={getProviderStats(key, "apikey")}
+-              authType="apikey"
+-              onToggle={(active) => handleToggleProvider(key, "apikey", active)}
+-            />
+-          ))}
+-        </div>
+-      </div> */}
+-
+       <AddCompatibleModal
+         variant="openai"
+         isOpen={showAddCompatibleModal}

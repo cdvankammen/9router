@@ -1,0 +1,15 @@
+commit f5e0eafb
+author: cdvankammen
+date: 2026-10-22 11:46:06 -0600
+subject: feat(ui): add Smart Router config section to combos page
+
+New SmartRouterSection on /dashboard/combos (mirrors CapacityAdapterSection
+pattern): enable toggle, trigger model names (comma-separated), allowed
+provider IDs, cost/quality tradeoff slider (0-10), fallback chain size.
+Saves via existing PATCH /api/settings { smartRouter } — settings defaults
+and router logic already exist; this makes the feature usable from the UI.
+
+Verified: production build compiles /dashboard/combos.
+
+Part of: Smart Router & Fallback UX plan (Phase 2 UI)
+

@@ -1,0 +1,14 @@
+commit b2c2e5e7
+author: cdvankammen
+date: 2026-10-22 15:37:58 -0600
+subject: fix(auth): log JWT secret file read failures instead of silent swallow (GAP-P1-08)
+
+Replace silent 'catch {}' in loadJwtSecret() with console.warn that logs
+the error code before regenerating. Prevents silent session invalidation
+when jwt-secret file becomes unreadable (corrupted/perms changed).
+
+Added unit tests with anti-false-positive assertion-break verification.
+
+Fixes: GAP-P1-08 from /tmp/9router-gaps.json
+Thread: 1544031399110119588
+

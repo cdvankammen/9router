@@ -1,0 +1,6 @@
+commit d397e0cd
+author: cdvankammen
+date: 2026-10-22 17:10:51 -0600
+subject: docs(policy): v3-only branch policy + ADR-011 (v2 frozen, master off-limits) — Chris directive 2026-09-16
+
+

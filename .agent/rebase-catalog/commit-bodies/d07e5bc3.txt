@@ -1,0 +1,28 @@
+===COMMIT===
+hash: d07e5bc3fbfd80ba870e91acb2a93f40f6a58f9f
+short: d07e5bc3
+author: Cristiano <cristiano@cristianocosta.me>
+date: 2026-10-22 11:46:28 +0700
+subject: fix(thinking): let a transport declare its thinking shape; nest reasoning on OpenCode Go /responses
+body:
+A Responses-format client routed to an OpenCode Go model that also serves
+/responses (deepseek-v4*, gpt-*-luna, grok-4.*) was passed through to
+https://opencode.ai/zen/go/v1/responses without translation. applyThinking
+then resolved the model's thinking format, which describes the Chat wire
+(e.g. "deepseek" for deepseek-v4.1-flash), and wrote Chat-shaped fields
+(thinking:{type}, reasoning_effort) into the Responses body. The upstream
+answered 503 "Endpoint is unavailable", so any request asking for reasoning
+effort failed and a combo silently fell through to the next model.
+
+- A transports[] entry may now declare thinkingFormat; for that endpoint it
+  wins over the model's thinkingFormat, which describes the Chat wire.
+- opencode-go and muse declare thinkingFormat: "openai-responses" on their
+  /responses entry, so the body carries reasoning:{effort,summary} instead.
+- The hardcoded provider === "muse" branch in resolveFormat is removed; Muse
+  output is unchanged.
+- Chat routes are untouched, and providers without the declaration keep their
+  current behaviour.
+
+Refs #3014
+
+---files---

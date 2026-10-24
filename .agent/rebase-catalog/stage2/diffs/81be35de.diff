@@ -1,0 +1,100 @@
+commit 81be35de
+author: cdvankammen
+date: 2026-10-22 17:11:56 -0600
+subject: feat(memory): integrate PR #3599 additive modules onto v3
+
+Cherry-pick the additive pieces of PR #3599 (AI memory/context optimization):
+
+New modules:
+- open-sse/services/memory/mediaPruner.js: prune historical base64 media
+- open-sse/services/memory/handoffStore.js: cross-session handoff store
+- open-sse/services/memory/cacheAnchor.js: prompt cache breakpoint anchoring
+  (NOTE: CACHE task t_48dffc7d is reimplementing this with v2 anchorClaudeCache
+  semantics — current version is the PR's naive implementation)
+
+Dashboard:
+- src/app/(dashboard)/dashboard/memory/page.js + MemoryClient.js
+- Sidebar nav: added Memory & Context entry
+
+CLI:
+- cli/src/cli/menus/memory.js: Memory & Context management menu
+- cli/src/cli/terminalUI.js: wired Memory menu into main menu
+
+Settings:
+- src/lib/db/repos/settingsRepo.js: added memory* scalars to DEFAULT_SETTINGS
+  (all default-OFF except memoryCacheAnchorEnabled which CACHE task will fix)
+- src/sse/handlers/chat.js: pass memorySettings to handleChatCore
+
+Tests:
+- tests/unit/memory-enhancements.test.js: extended from 14 to 20 tests
+  (added mediaPruner, handoffStore, applyMemoryEnhancements integration)
+
+Docs:
+- docs/MEMORY_OPTIMIZATION.md: comprehensive documentation
+- .gitignore: added MEMORY_OPTIMIZATION.md exception
+
+All 20 tests pass. Coordinate with TIER3-MEMORY-CACHE (t_48dffc7d) for
+cacheAnchor.js reimplementation and TIER3-MEMORY-HANDOFF (t_117cd5ab) for
+wiring recordHandoff call sites.
+
+
+diff --git a/.gitignore b/.gitignore
+index e17d69b7..e23bbd3f 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -51,6 +51,9 @@ source/*
+ .cursor/*
+ docs/*
+ !docs/ARCHITECTURE.md
++!docs/plans-and-prompts/
++!docs/plans-and-prompts/**
++!docs/MEMORY_OPTIMIZATION.md
+ test/*
+ open-sse/test/*
+ RM.vn.md
+diff --git a/src/lib/db/repos/settingsRepo.js b/src/lib/db/repos/settingsRepo.js
+index c63933a7..187b4126 100644
+--- a/src/lib/db/repos/settingsRepo.js
++++ b/src/lib/db/repos/settingsRepo.js
+@@ -131,6 +131,16 @@ const DEFAULT_SETTINGS = {
+   // "glm-5.3" or "glm-5*"). Consumed by open-sse/providers/capabilities.js
+   // via setContextWindowOverrides(); managed on /dashboard/model-context.
+   contextWindowOverrides: {},
++  // ── AI Memory & Context Optimization (PR #3599 additive) ──
++  memoryToolPruningEnabled: false,
++  memoryMaxToolTurnsKeepFull: 2,
++  memoryMaxHistoricalToolChars: 4000,
++  memoryMediaPruningEnabled: false,
++  memoryCompactionEnabled: false,
++  memoryCompactionThresholdTokens: 128000,
++  memoryRecentTurnsToKeep: 8,
++  memoryCacheAnchorEnabled: false,
++  memoryHandoffEnabled: false,
+ };
+ 
+ async function readRaw() {
+diff --git a/src/shared/components/Sidebar.js b/src/shared/components/Sidebar.js
+index edff69e3..fcceac46 100644
+--- a/src/shared/components/Sidebar.js
++++ b/src/shared/components/Sidebar.js
+@@ -26,6 +26,8 @@ const navItems = [
+   { href: "/dashboard/usage", label: "Usage", icon: "bar_chart" },
+   { href: "/dashboard/quota", label: "Quota Tracker", icon: "data_usage" },
+   { href: "/dashboard/token-saver", label: "Token Saver", icon: "savings" },
++  { href: "/dashboard/claude-compat", label: "Claude Compat", icon: "smart_toy" },
++  { href: "/dashboard/memory", label: "Memory & Context", icon: "psychology" },
+   // { href: "/dashboard/pxpipe", label: "PXPIPE", icon: "image" },
+   { href: "/dashboard/cli-tools", label: "CLI Tools", icon: "terminal" },
+ ];
+diff --git a/src/sse/handlers/chat.js b/src/sse/handlers/chat.js
+index bbd89242..eeb2b68b 100644
+--- a/src/sse/handlers/chat.js
++++ b/src/sse/handlers/chat.js
+@@ -295,6 +295,7 @@ async function handleSingleModelChat(body, modelStr, clientRawRequest = null, re
+       providerThinking,
+       // Per-provider user overrides (custom headers / connect timeout) from settings
+       providerOverrides: (chatSettings.providerOverrides || {})[provider] || null,
++      memorySettings: chatSettings,
+       // Detect source format by endpoint + body
+       sourceFormatOverride: request?.url ? detectFormatByEndpoint(new URL(request.url).pathname, body) : null,
+       onCredentialsRefreshed: async (newCreds) => {

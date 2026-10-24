@@ -1,0 +1,14 @@
+commit c20cebe7
+author: cdvankammen
+date: 2026-10-22 14:04:00 -0600
+subject: fix(messages): conversation thread expand — stale-closure toggle + start-closed
+
+- ConversationView toggle used the closure `open` — a fast double-click
+  computed `!open` twice from the stale value and never fetched the thread
+- openRef keeps the latest state; conversations without a loaded thread now
+  start closed so one click opens + fetches (was: started open with a
+  'Click to load' hint that just closed on click)
+- Also fixed loadThread pageSize 500 → 100 (API route rejects >100 with 400)
+- Browser-verified: click opens conversation, thread message renders
+  (19:01:43 success gpt-4o-mini)
+

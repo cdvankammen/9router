@@ -1,0 +1,12 @@
+===COMMIT===
+hash: c61ee37dde5bc0bfff8ea50fcefb57c54a8c3a82
+short: c61ee37d
+author: Nikan Wystaf <nikan.wystaf@gmail.com>
+date: 2026-10-08 15:53:07 +0700
+subject: fix(capabilities): GLM-5.3 cannot disable thinking (#4656)
+body:
+Fixes #4409. z.ai docs state GLM-5.3 and GLM-5.3-FLASH no longer support
+disabling thinking (returns 400 code 1210 if thinking is disabled).
+Mark thinkingCanDisable: false for the GLM-5.3 line.
+
+---files---

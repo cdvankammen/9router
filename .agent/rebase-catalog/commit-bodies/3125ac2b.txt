@@ -1,0 +1,9 @@
+===COMMIT===
+hash: 3125ac2bd127d925873fd6c4ef788b4262dad112
+short: 3125ac2b
+author: warelik <warelik@gmail.com>
+date: 2026-10-07 19:59:40 +0700
+subject: fix(kimi): route Responses clients to the Kimi Code /responses endpoint
+body:
+
+---files---

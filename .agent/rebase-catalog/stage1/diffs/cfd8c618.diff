@@ -1,0 +1,22 @@
+commit cfd8c618
+author: mannnrachman
+date: 2026-10-11 09:30:34 +0700
+subject: fix(cursor): hold strictProxy on the AgentService h2 path (#4696)
+
+
+
+diff --git a/open-sse/handlers/chatCore.js b/open-sse/handlers/chatCore.js
+index 465bf523..14152eb5 100644
+--- a/open-sse/handlers/chatCore.js
++++ b/open-sse/handlers/chatCore.js
+@@ -348,6 +348,10 @@ export async function handleChatCore({ body, modelInfo, credentials, log, onCred
+     connectionProxyUrl: credentials?.providerSpecificData?.connectionProxyUrl || "",
+     connectionNoProxy: credentials?.providerSpecificData?.connectionNoProxy || "",
+     vercelRelayUrl: credentials?.providerSpecificData?.vercelRelayUrl || "",
++    // Strict pools must never silently fall back to a direct connection —
++    // honored on the Cursor AgentService h2 path and in proxyFetch (#4333).
++    proxyPoolId: credentials?.providerSpecificData?.connectionProxyPoolId || null,
++    strictProxy: credentials?.providerSpecificData?.strictProxy === true,
+   };
+ 
+   if (proxyOptions.vercelRelayUrl) {

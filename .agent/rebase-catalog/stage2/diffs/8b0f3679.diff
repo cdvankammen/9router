@@ -1,0 +1,28 @@
+commit 8b0f3679
+author: cdvankammen
+date: 2026-10-22 13:46:38 -0600
+subject: fix(messages): facets via SQL GROUP BY (perf) + histogram current-hour bug
+
+- getRequestFacets: facet counts + histogram computed in SQL (COUNT/GROUP BY)
+  instead of fetching 10k full JSON records per page load (tens of MB) and
+  truncating counts past 10k; shared buildWhere() with getRequestDetails
+- BUG: histogram window [now-24h, now) keyed by hour dropped every row in the
+  current partial hour (its key fell past the last bucket) — anchor buckets at
+  the current hour start (23 full + current = 24)
+- messages route uses getRequestFacets; errorCategory/sourceApp flow through
+  SQL filters (no post-pagination client filtering)
+- +3 tests (facets counts, filtered facets, histogram totals)
+
+
+diff --git a/src/lib/db/index.js b/src/lib/db/index.js
+index e1c68472..843248d2 100644
+--- a/src/lib/db/index.js
++++ b/src/lib/db/index.js
+@@ -65,6 +65,7 @@ export {
+ // Request details
+ export {
+   saveRequestDetail, getRequestDetails, getRequestDetailById, getDistinctProviders,
++  getRequestFacets, getDroppedRecordsCount,
+ } from "./repos/requestDetailsRepo.js";
+ 
+ // Export/import full DB

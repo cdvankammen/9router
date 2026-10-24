@@ -1,0 +1,13 @@
+===COMMIT===
+hash: 2d94d3ab8eac8a509190cda5eca178428b6b0b09
+short: 2d94d3ab
+author: decolua <decoluadt@gmail.com>
+date: 2026-10-08 16:39:22 +0700
+subject: feat(dashboard): open 9Remote sidebar item directly to website
+body:
+Replace the promo modal with a direct link to https://9remote.cc,
+matching the 9English sidebar item behavior.
+
+Co-Authored-By: Claude Code <noreply@anthropic.com>
+
+---files---

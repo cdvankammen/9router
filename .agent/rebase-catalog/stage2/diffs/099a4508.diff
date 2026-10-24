@@ -1,0 +1,20 @@
+commit 099a4508
+author: cdvankammen
+date: 2026-10-22 15:41:21 -0600
+subject: fix(vercel-deploy): add AbortSignal.timeout to all fetch calls (GAP-P2-23)
+
+Add configurable timeout budgets to prevent deploy operations from
+hanging indefinitely on stuck Vercel API responses:
+
+- VERCEL_API_TIMEOUT_MS (60s): deploy creation + project PATCH
+- VERCEL_POLL_TIMEOUT_MS (30s): per-poll fetch in pollDeployment loop
+- RELAY_FORWARD_TIMEOUT_MS (60s): edge relay proxy forwarding
+
+All 3 handler fetches (deploy create, project PATCH, pollDeployment)
+now pass AbortSignal.timeout(). The relay function code deployed to
+Vercel Edge also receives AbortSignal.timeout via template interpolation.
+
+Unit test suite: 5 tests covering signal presence on each fetch call,
+abort propagation, and relay code source verification. Anti-false-
+positive check: confirmed test catches broken assertions.
+

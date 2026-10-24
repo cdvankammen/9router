@@ -1,0 +1,13 @@
+commit 6ec571fb
+author: cdvankammen
+date: 2026-10-22 15:41:21 -0600
+subject: fix(iflow): add AbortSignal.timeout(15s) to cookie validation fetches (GAP-P2-21)
+
+iFlow platform.iflow.cn API may be slow/unreachable from some networks,
+causing the settings page to hang indefinitely during cookie validation.
+
+- Add signal: AbortSignal.timeout(15000) to both GET and POST fetch calls
+- Catch TimeoutError/AbortError and return 504 with user-friendly message
+- Add 7-test regression suite covering both fetch paths, both error names,
+  non-timeout passthrough (500), and anti-false-positive source check
+

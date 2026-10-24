@@ -1,0 +1,47 @@
+commit d7eceb7c
+author: cdvankammen
+date: 2026-10-22 15:39:11 -0600
+subject: security(cors): replace wildcard CORS on web/fetch with configurable allowlist
+
+Replace Access-Control-Allow-Origin: * on the web fetch endpoint with a
+settings-driven origin allowlist. When corsAllowedOrigins is empty (the
+default), legacy wildcard behavior is preserved for backward compatibility.
+When non-empty, only listed origins receive CORS headers; disallowed browser
+origins get no CORS headers (browser blocks), and server-side clients
+(curl, SDKs) are unaffected since they don't send Origin headers.
+
+Changes:
+- src/shared/utils/cors.js: new resolveCorsHeaders() utility
+- src/app/api/v1/web/fetch/route.js: use utility for OPTIONS + POST
+- src/lib/db/repos/settingsRepo.js: add corsAllowedOrigins default
+- tests/unit/cors-allowlist.test.js: 6 tests covering all paths
+
+Fixes: GAP-P1-13 (security scan)
+
+
+diff --git a/src/lib/db/repos/settingsRepo.js b/src/lib/db/repos/settingsRepo.js
+index 5dd6c608..c857a3e7 100644
+--- a/src/lib/db/repos/settingsRepo.js
++++ b/src/lib/db/repos/settingsRepo.js
+@@ -98,10 +98,8 @@ const DEFAULT_SETTINGS = {
+   pxpipeAutoInstall: true,
+   pxpipeMinChars: 25000,
+   pxpipeTimeoutMs: 15000,
+-<<<<<<< HEAD
+   // Per-provider user header overrides applied at dispatch: { [providerId]: { headers: {..} } }
+   providerOverrides: {},
+-=======
+   // Auto-persist discovered model IDs from compatible providers to kv customModels.
+   // Default OFF — users opt in via dashboard settings toggle.
+   // First-discovery only (addCustomModel is idempotent). No auto-reap.
+@@ -110,7 +108,9 @@ const DEFAULT_SETTINGS = {
+     maxModelsPerProvider: 200,
+     markSource: true,
+   },
+->>>>>>> a0650fda (feat(merge-prep): stage all local work for upstream merge)
++  // CORS allowlist for API endpoints. Empty = wildcard (legacy behavior).
++  // When non-empty, only listed origins receive Access-Control-Allow-Origin.
++  corsAllowedOrigins: [],
+ };
+ 
+ async function readRaw() {

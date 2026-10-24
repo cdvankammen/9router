@@ -1,0 +1,10 @@
+commit 161e3493
+author: dangphuc2470
+date: 2026-10-23 14:39:36 +0700
+subject: feat(image, mitm): support reference image inputs for Gemini and ensure MITM directory (#4981)
+
+- Support input reference images (base64 and data URIs) for Gemini and Antigravity image generation
+- Preserve inlineData in Antigravity executor contents filtering
+- Parse quotaResetTimeStamp from Google API errors for accurate cooldown tracking
+- Ensure MITM directory is auto-created on startup
+

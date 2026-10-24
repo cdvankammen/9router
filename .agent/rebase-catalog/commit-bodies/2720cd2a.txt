@@ -1,0 +1,14 @@
+===COMMIT===
+hash: 2720cd2a06e1154804b33ca5f7cdbb47a1792336
+short: 2720cd2a
+author: capncodes69 <290566460+capncodes69@users.noreply.github.com>
+date: 2026-10-23 12:44:44 +0700
+subject: fix(qoder): stop failing queued models, route Sonus/Cantus, restore capabilities
+body:
+- Handle 10605 queue capacity signals as transient rather than billing blocks
+- Add static model_config fallback for Sonus (smodel) and Cantus (cmodel)
+- Restore PROVIDER_CAPABILITIES table for qoder and qoder-cn
+- Derive stable machineId from userId to preserve queue position
+- Add unit tests for queue parsing, stream reconstruction, and static models
+
+---files---

@@ -1,0 +1,23 @@
+===COMMIT===
+hash: ef4679dfa4a160c6e0977e0ad0a101e89fc3db4f
+short: ef4679df
+author: ShayNeeo <phamquocthanh357@gmail.com>
+date: 2026-10-13 17:18:24 +0700
+subject: fix(opencode): encode inverted timestamp in translated session IDs (#4780)
+body:
+Upstream OpenCode Zen verifies that the 12-hex prefix in `ses_<12hex><14base62>`
+decodes to a recent inverted timestamp `~(BigInt(Date.now()) * 4096n + counter)`.
+Synthesizing session IDs from SHA-256 digests in `translateSessionId` caused
+all non-OpenCode clients (curl, omp, pi, Claude Code, etc.) to receive
+HTTP 403 FreeTierError ('OpenCode\'s free tier can only be used from within OpenCode').
+
+This commit:
+- Updates `translateSessionId` in both `opencode` and `opencode-zen` executors to
+  generate valid inverted-timestamp session IDs using `generateSessionId()`.
+- Adds an in-memory `Map` cache with TTL eviction to ensure session stability
+  and multi-turn conversational affinity across requests.
+- Adds unit tests verifying valid timestamp encoding and translation stability.
+
+Fixes #4780, #4778, #4777, #4101, #4127, #4781.
+
+---files---

@@ -1,0 +1,34 @@
+commit f9d81b31
+author: cdvankammen
+date: 2026-10-22 11:56:24 -0600
+subject: feat(observability): add AI Error Analyst — analyze captured failures with your own models
+
+- New POST /api/analyze-error: loads a requestDetail by id, builds a compact
+  diagnostic context (provider, model, status, error, request, provider
+  response — all truncated), and runs it through the normal internal pipeline
+  (getModelInfo → getProviderCredentials → handleChatCore) using
+  settings.analyzeErrorModel (default oc/mimo-v2.5-free). Any connected
+  provider works — no new auth surface.
+- RequestDetailsTab drawer: 'Analyze error with AI' button on failed requests,
+  shows the model used, loading state, error state, and the analysis result.
+- settingsRepo: analyzeErrorModel default added.
+
+Tests: tests/unit/analyze-error.test.js — 4 tests (400 missing id, 404 not
+found, 400 no credentials without calling chatCore, 200 with analysis text +
+context assertions). All pass.
+
+Part of: Observability & Conversation Analytics plan (Phase P2)
+
+
+diff --git a/src/lib/db/repos/settingsRepo.js b/src/lib/db/repos/settingsRepo.js
+index dd6eb8d9..710fbec1 100644
+--- a/src/lib/db/repos/settingsRepo.js
++++ b/src/lib/db/repos/settingsRepo.js
+@@ -24,6 +24,7 @@ const DEFAULT_SETTINGS = {
+     costQualityTradeoff: 5,
+     maxCandidates: 3,
+   },
++  analyzeErrorModel: "oc/mimo-v2.5-free",
+   capacityAdapter: {
+     vision: { enabled: true, roundRobin: false, models: [] },
+     pdf: { enabled: false, roundRobin: false, models: [] },

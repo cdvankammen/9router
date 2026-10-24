@@ -1,0 +1,11 @@
+commit 83a4c646
+author: cdvankammen
+date: 2026-10-22 12:19:30 -0600
+subject: docs: browser-control workflow + 9router-browser-e2e agent skill
+
+Answers 'where am I working / which browser / headless / how do I know it
+works' — integrated VS Code browser (visible Chromium, Playwright-driven),
+state-based verification loop, synthetic drag recipe, stale-chunk busting,
+coordinate-space gotchas. Skill at ~/.agents/skills/9router-browser-e2e/
+(manifest-registered).
+

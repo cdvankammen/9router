@@ -1,0 +1,10 @@
+===COMMIT===
+hash: 5a4e812e44680b18a2ffe4d21386df2c0f426d8a
+short: 5a4e812e
+author: mj10612 <5388892+mj10612@users.noreply.github.com>
+date: 2026-10-23 13:57:38 +0700
+subject: fix(db): strip NUL bytes from bound strings
+body:
+Strip NUL bytes from bound strings across all SQLite drivers so raw binary values in telemetry do not throw on better-sqlite3 or truncate on node:sqlite. (#5055)
+
+---files---

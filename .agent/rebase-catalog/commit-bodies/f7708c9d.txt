@@ -1,0 +1,9 @@
+===COMMIT===
+hash: f7708c9d724d49d9207ae8d03699552a1caca6f2
+short: f7708c9d
+author: mannnrachman <mannnrachman@users.noreply.github.com>
+date: 2026-10-11 09:23:44 +0700
+subject: test(cursor): lock KV ack metadata echo with round-trip tests (#4694)
+body:
+
+---files---

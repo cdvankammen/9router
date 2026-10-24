@@ -1,0 +1,70 @@
+commit ca67b883
+author: cdvankammen
+date: 2026-10-24 02:53:24 -0600
+subject: fix(build): resolve deleteSavedView import + model-context prerender errors
+
+- src/lib/db/index.js: add annotationsRepo block (getAnnotations,
+  addAnnotation, deleteAnnotation, toggleStar, getSavedViews,
+  saveView, deleteSavedView)
+- src/lib/usageDb.js: re-export getSavedViews, saveView,
+  deleteSavedView from db barrel so saved-views route resolves
+- src/shared/components/index.js: export MultiSelect (file existed
+  but was missing from barrel)
+- src/shared/hooks/useModelCaps.js: export module-level
+  invalidateModelCaps (cache=null + CustomEvent dispatch)
+
+Build now succeeds: /dashboard/model-context prerenders static.
+Full suite stable: 3533 pass / 47 fail / 33 regressions.
+
+
+diff --git a/src/lib/db/index.js b/src/lib/db/index.js
+index 216494db..2409bb66 100644
+--- a/src/lib/db/index.js
++++ b/src/lib/db/index.js
+@@ -73,6 +73,12 @@ export {
+   seedSeenModels,
+ } from "./repos/seenModelsRepo.js";
+ 
++// Annotations + saved views
++export {
++  getAnnotations, addAnnotation, deleteAnnotation, toggleStar,
++  getSavedViews, saveView, deleteSavedView,
++} from "./repos/annotationsRepo.js";
++
+ // Export/import full DB
+ export async function exportDb() {
+   const db = await getAdapter();
+diff --git a/src/shared/components/index.js b/src/shared/components/index.js
+index b51e27e1..72f253a0 100644
+--- a/src/shared/components/index.js
++++ b/src/shared/components/index.js
+@@ -35,6 +35,7 @@ export { default as EditConnectionModal } from "./EditConnectionModal";
+ export { default as AddCustomEmbeddingModal } from "./AddCustomEmbeddingModal";
+ export { default as NoAuthProxyCard } from "./NoAuthProxyCard";
+ export { default as SegmentedControl } from "./SegmentedControl";
++export { default as MultiSelect } from "./MultiSelect";
+ export { default as Tooltip } from "./Tooltip";
+ export { default as ProviderInfoCard } from "./ProviderInfoCard";
+ export { default as CapacityBadges } from "./CapacityBadges";
+diff --git a/src/shared/hooks/useModelCaps.js b/src/shared/hooks/useModelCaps.js
+index 88c6410f..3d4a7dae 100644
+--- a/src/shared/hooks/useModelCaps.js
++++ b/src/shared/hooks/useModelCaps.js
+@@ -37,6 +37,17 @@ function loadModelCaps() {
+   return inflight;
+ }
+ 
++// Drop the shared cache and notify mounted hooks to refetch.
++// Fired after context-window overrides / custom model changes so capability
++// lookups re-resolve. Dispatching "customModelChanged" lets every mounted
++// useModelCaps instance resync via its existing event listener.
++export function invalidateModelCaps() {
++  cache = null;
++  if (typeof window !== "undefined") {
++    window.dispatchEvent(new CustomEvent("customModelChanged"));
++  }
++}
++
+ // Resolve caps from a "provider/model" string or a bare model id.
+ function resolveCaps(byFull, byId, key) {
+   if (!key) return null;

@@ -1,0 +1,30 @@
+commit c340e86d
+author: cdvankammen
+date: 2026-10-22 12:19:30 -0600
+subject: feat(fallbacks): provider picker + smart toggle + 2 new rule views
+
+- ProviderSelectModal: visual provider picker (icon, name, id, connected badge,
+  search, custom nodes) — no more typing provider ids
+- FallbackRuleModal: Pick provider… button in provider mode; toggle switching
+  strips provider from model (mockreal/gpt-4o-mini → mockreal) and clears going
+  back — simple, no state-keeping
+- New views: Guided Wizard (3-step: target → chain → retries) + Expert Text
+  (target:model1,model2 DSL with example + apply + live parsed preview)
+- Extract toDraftText/parseDraftText to src/lib/fallbackTextFormat.js
+  (advanced-shape safe: retries preserved on re-parse)
+- E2E caught + fixed crash: toDraftText assumed legacy array shape
+- 13 new unit tests; suite 1718 pass / 88 baseline fail (flaky 89th run)
+
+
+diff --git a/src/shared/components/index.js b/src/shared/components/index.js
+index b51e27e1..b3d912e7 100644
+--- a/src/shared/components/index.js
++++ b/src/shared/components/index.js
+@@ -15,6 +15,7 @@ export { default as Header } from "./Header";
+ export { default as Footer } from "./Footer";
+ export { default as OAuthModal } from "./OAuthModal";
+ export { default as ModelSelectModal } from "./ModelSelectModal";
++export { default as ProviderSelectModal } from "./ProviderSelectModal";
+ export { default as ManualConfigModal } from "./ManualConfigModal";
+ export { default as ComboFormModal } from "./ComboFormModal";
+ export { default as McpMarketplaceModal } from "./McpMarketplaceModal";

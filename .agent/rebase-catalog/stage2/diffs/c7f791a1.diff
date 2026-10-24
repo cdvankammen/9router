@@ -1,0 +1,6 @@
+commit c7f791a1
+author: cdvankammen
+date: 2026-10-22 17:16:28 -0600
+subject: test(deps): declare uuid dependency for tests package — required by embeddingsCore/qoder/rtkKiro/perplexity-web/buildOutputFilter unit tests (v3 test health)
+
+

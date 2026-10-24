@@ -1,0 +1,9 @@
+===COMMIT===
+hash: d8c585fb7def1ea674ec23b518af6213585ef5c0
+short: d8c585fb
+author: omar-nahhas <omar@innovativerealities.com>
+date: 2026-10-07 19:52:23 +0700
+subject: feat(keys): per-API-key access control: restrict a key to selected combos and models
+body:
+
+---files---

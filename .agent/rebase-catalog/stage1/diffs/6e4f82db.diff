@@ -1,0 +1,6 @@
+commit 6e4f82db
+author: Nikan Wystaf
+date: 2026-10-07 19:42:12 +0700
+subject: fix(translator): uniquify duplicate tool_call_ids for Gemini (#4532)
+
+

@@ -1,0 +1,48 @@
+commit 47cb67de
+author: cdvankammen
+date: 2026-10-22 12:07:11 -0600
+subject: feat(observability): add error categorization engine
+
+- New open-sse/utils/errorCategorizer.js: pure categorizeError(status, text)
+  mapping failures to stable categories: rate_limit, auth, billing, timeout,
+  overloaded, content_filter, invalid_request, network, unknown. Status-code
+  rules are decisive; text patterns catch generic-status cases; 5xx/4xx
+  range fallbacks; null-safe.
+- chatCore error paths (executor throw + provider non-ok) and the streaming
+  non-SSE path attach errorCategory to the captured requestDetail.
+- Markdown report shows category per failed request.
+
+Tests: tests/unit/error-categorizer.test.js — 4 tests (status rules, text
+rules, fallbacks, case-insensitivity/null-safety). All pass.
+
+Part of: Observability & Conversation Analytics plan (Phase P3)
+
+
+diff --git a/open-sse/handlers/chatCore.js b/open-sse/handlers/chatCore.js
+index 4e529c97..010a7476 100644
+--- a/open-sse/handlers/chatCore.js
++++ b/open-sse/handlers/chatCore.js
+@@ -19,6 +19,7 @@ import { buildRequestDetail, extractRequestConfig } from "./chatCore/requestDeta
+ import { handleForcedSSEToJson } from "./chatCore/sseToJsonHandler.js";
+ import { handleNonStreamingResponse } from "./chatCore/nonStreamingHandler.js";
+ import { handleStreamingResponse, buildOnStreamComplete } from "./chatCore/streamingHandler.js";
++import { categorizeError } from "../utils/errorCategorizer.js";
+ import { detectClientTool, isNativePassthrough } from "../utils/clientDetector.js";
+ import { dedupeTools } from "../utils/toolDeduper.js";
+ import { takeRenamedToolNames } from "../utils/opencodeFingerprint.js";
+@@ -401,6 +402,7 @@ export async function handleChatCore({ body, modelInfo, credentials, log, onCred
+     saveRequestDetail(buildRequestDetail({
+       provider, model, connectionId,
+       conversationId,
++      errorCategory: categorizeError(error?.status || error?.statusCode || 502, error.message),
+       latency: { ttft: 0, total: Date.now() - requestStartTime },
+       tokens: { prompt_tokens: 0, completion_tokens: 0 },
+       request: extractRequestConfig(body, stream),
+@@ -477,6 +479,7 @@ export async function handleChatCore({ body, modelInfo, credentials, log, onCred
+     saveRequestDetail(buildRequestDetail({
+       provider, model, connectionId,
+       conversationId,
++      errorCategory: categorizeError(statusCode, message),
+       latency: { ttft: 0, total: Date.now() - requestStartTime },
+       tokens: { prompt_tokens: 0, completion_tokens: 0 },
+       request: extractRequestConfig(body, stream),

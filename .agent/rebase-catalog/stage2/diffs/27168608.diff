@@ -1,0 +1,125 @@
+commit 27168608
+author: cdvankammen
+date: 2026-10-22 12:10:05 -0600
+subject: feat(routing): full model catalog in pickers, smart-router model subset, per-model fallbacks
+
+Three user-requested capabilities:
+
+1. ModelSelectModal now shows the FULL 9Router catalog — every registered
+   provider's models, connected or not (previously only CONNECTED providers
+   appeared, so a fresh install showed just the mock/no-auth providers).
+   Unconnected providers get an amber "not connected" badge. Works for
+   combos, capacity adapter (vision/audio) and judge pickers alike.
+
+2. Smart Router "Allowed models" subset: settings.smartRouter.allowedModels
+   restricts the router to explicit "provider/model" strings or wildcard
+   patterns ("openai/*", "*/claude-*"). Complements allowedProviders. New
+   input + help text in the Smart Router card.
+
+3. Per-Model / Per-Provider Fallbacks (settings.modelFallbacks): attach an
+   ordered fallback chain directly to an exact model ("openai/gpt-4o") or
+   an entire provider ("openai") — single-model requests route through the
+   combo engine automatically when the target fails. Composes with combos
+   (combos unchanged); guard prevents infinite recursion. New "Per-Model /
+   Per-Provider Fallbacks" card on /dashboard/combos with a line-editor UI
+   (target:fallback1,fallback2 per line).
+
+Tests: unit/model-fallbacks.test.js (4: exact-model chain, provider-level
+chain, no-wrap when unset, dedupe) + smart-router-resolve.test.js extended
+with allowedModels wildcard + no-match cases (7 total). Full suite: 1691
+passed / 88 failed (pre-existing baseline only).
+
+Part of: Smart Router & Fallback UX plan (Phase 2/3)
+
+
+diff --git a/src/lib/db/repos/settingsRepo.js b/src/lib/db/repos/settingsRepo.js
+index 23e864e3..3035d21f 100644
+--- a/src/lib/db/repos/settingsRepo.js
++++ b/src/lib/db/repos/settingsRepo.js
+@@ -21,12 +21,14 @@ const DEFAULT_SETTINGS = {
+     enabled: false,
+     names: ["modelRouter"],
+     allowedProviders: [],
++    allowedModels: [],
+     costQualityTradeoff: 5,
+     maxCandidates: 3,
+   },
+   analyzeErrorModel: "oc/mimo-v2.5-free",
+   markdownLogEnabled: false,
+   markdownLogFlushIntervalMin: 5,
++  modelFallbacks: {},
+   capacityAdapter: {
+     vision: { enabled: true, roundRobin: false, models: [] },
+     pdf: { enabled: false, roundRobin: false, models: [] },
+diff --git a/src/sse/handlers/chat.js b/src/sse/handlers/chat.js
+index a2428875..446c6048 100644
+--- a/src/sse/handlers/chat.js
++++ b/src/sse/handlers/chat.js
+@@ -50,15 +50,11 @@ export async function handleChat(request, clientRawRequest = null) {
+       headers: Object.fromEntries(request.headers.entries())
+     };
+   }
+-<<<<<<< HEAD
+   // Claude Code marks a 1M-context request as `<model>[1m]`; the marker matches
+   // no combo, alias or provider/model pair, so it must not reach resolution.
+   // The capability travels in the anthropic-beta header, forwarded as-is.
+-  const { model: modelStr, contextMarker } = stripModelContextMarker(body.model);
++  let { model: modelStr, contextMarker } = stripModelContextMarker(body.model);
+   if (contextMarker) body.model = modelStr;
+-=======
+-  let modelStr = body.model;
+->>>>>>> 4627a299 (fix(smart-router): 4 real bugs caught by production E2E testing)
+   let smartRouterTaskType = null; // set by smart router interception; used for usage analytics
+ 
+   // Request summary is emitted as the unified "▶" line in chatCore (has fmt/thinking/account)
+@@ -179,8 +175,11 @@ export async function handleChat(request, clientRawRequest = null) {
+ 
+ /**
+  * Handle single model chat request
++ * @param {boolean} [skipModelFallback] - Internal guard: when true, don't
++ *   re-apply settings.modelFallbacks (prevents infinite recursion from the
++ *   fallback chain's own handleSingleModel callback).
+  */
+-async function handleSingleModelChat(body, modelStr, clientRawRequest = null, request = null, apiKey = null, requestedModel = null, taskType = null) {
++async function handleSingleModelChat(body, modelStr, clientRawRequest = null, request = null, apiKey = null, requestedModel = null, taskType = null, skipModelFallback = false) {
+   const modelInfo = await getModelInfo(modelStr);
+ 
+   // If provider is null, this might be a combo name - check and handle
+@@ -238,6 +237,37 @@ async function handleSingleModelChat(body, modelStr, clientRawRequest = null, re
+ 
+   const { provider, model } = modelInfo;
+ 
++  // ── PER-MODEL / PER-PROVIDER FALLBACK CHAINS ─────────────────────────────
++  // settings.modelFallbacks lets users attach an ordered fallback list to an
++  // exact model ("openai/gpt-4o") or an entire provider ("openai"). When
++  // configured, the single-model request becomes a fallback chain through the
++  // combo engine — automatic retry on failure, same semantics as combos, but
++  // configured directly on the model/provider the client actually requested.
++  if (!skipModelFallback) {
++    const fbSettings = await getSettings();
++    const fbMap = fbSettings.modelFallbacks || {};
++    const fallbacks = fbMap[modelStr] || fbMap[provider];
++    if (Array.isArray(fallbacks) && fallbacks.length > 0) {
++      const chain = [modelStr, ...fallbacks.filter((f) => typeof f === "string" && f && f !== modelStr)];
++      const requiredCapabilities = detectRequiredCapabilities(body);
++      const augmented = augmentModelsWithCapacityAdapter(chain, requiredCapabilities, fbSettings);
++      const adapterAdded = augmented.filter((m) => !chain.includes(m));
++      log.info("CHAT", `Model fallback "${modelStr}" → [${chain.join(" → ")}]`);
++      return handleComboChat({
++        body,
++        models: augmented,
++        handleSingleModel: withCapacityAdapterStripping(
++          (b, m) => handleSingleModelChat(b, m, clientRawRequest, request, apiKey, taskType, true),
++          adapterAdded
++        ),
++        log,
++        comboName: `${modelStr}-fallback`,
++        comboStrategy: "fallback",
++        onFallbackEvent: (a) => log.debug("FALLBACK", `${modelStr} → ${a.model} ${a.ok ? "ok" : `failed ${a.status}`} (${a.latencyMs}ms)`),
++      });
++    }
++  }
++
+   // Routing shown in the unified "▶" line (client model → provider/model)
+ 
+   // Extract userAgent from request

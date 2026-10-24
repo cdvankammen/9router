@@ -1,0 +1,9 @@
+commit dbdbb648
+author: gamer
+date: 2026-10-23 12:46:01 +0700
+subject: fix(github): refresh Copilot fallback model catalog
+
+Refresh the fallback static model catalog with current documented Copilot models.
+Set default fallback model to gpt-5-mini, replace retired models with current
+GPT, Claude, Gemini, Kimi, and MAI-Code models, and add catalog verification tests.
+

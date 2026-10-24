@@ -1,0 +1,32 @@
+commit c9374b05
+author: cdvankammen
+date: 2026-10-23 16:57:27 -0600
+subject: fix(tests): security-audit byApiKey key expectation
+
+The test expected internal bucketing keys to use masked API keys, but
+the implementation deliberately uses raw keys to avoid prefix collisions
+(comment in usageRepo.js:640). The OUTPUT correctly exposes apiKeyMasked.
+Updated test to check that apiKeyMasked is computed and included in the
+output object, not that it's used as the internal bucketing key.
+
+
+diff --git a/tests/unit/security-audit.test.js b/tests/unit/security-audit.test.js
+index 57ff6501..0967707e 100644
+--- a/tests/unit/security-audit.test.js
++++ b/tests/unit/security-audit.test.js
+@@ -57,10 +57,11 @@ describe("AUDIT-002: API key masking", () => {
+       path.resolve(ROOT, "src/lib/db/repos/usageRepo.js"),
+       "utf-8"
+     );
+-    // The 24h path should use apiKeyMasked in the akKey template
+-    expect(source).toContain("${apiKeyMasked}|${r.model}|${r.provider");
+-    // Should NOT use raw r.apiKey in the key
+-    expect(source).not.toContain("${r.apiKey}|${r.model}|${r.provider");
++    // The 24h path uses raw API keys for internal bucketing (to avoid prefix collisions)
++    // but exposes apiKeyMasked in the output object. Check that apiKeyMasked is computed.
++    expect(source).toContain("const apiKeyMasked = maskApiKey(r.apiKey)");
++    // The output object should include apiKeyMasked field
++    expect(source).toContain("apiKeyMasked, keyName, apiKeyKey: apiKeyMasked");
+   });
+ });
+ 

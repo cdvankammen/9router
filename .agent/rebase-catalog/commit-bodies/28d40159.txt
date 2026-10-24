@@ -1,0 +1,15 @@
+===COMMIT===
+hash: 28d4015966f2d71a67d665bad803ce7e98b1e9b2
+short: 28d40159
+author: decolua <decoluadt@gmail.com>
+date: 2026-10-15 20:12:55 +0700
+subject: feat(quota): unify auto-ping mode selection and default to local timezone
+body:
+- Unify auto-ping mode selection into a single 3-way toggle (Off / On reset / Schedule)
+- Fix button alignment, icon sizing, and border visibility in schedule modal
+- Default schedule timezone to machine local timezone instead of hardcoded America/Sao_Paulo
+- Bring auto-ping schedule configuration and state indicators to /dashboard/quota
+
+Co-Authored-By: Claude Code <noreply@anthropic.com>
+
+---files---

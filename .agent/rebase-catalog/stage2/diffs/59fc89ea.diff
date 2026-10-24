@@ -1,0 +1,22 @@
+commit 59fc89ea
+author: cdvankammen
+date: 2026-10-22 15:36:33 -0600
+subject: security(version/update): add defense-in-depth auth to prevent unauthenticated RCE
+
+The /api/version/update endpoint had no authentication in the handler itself,
+relying solely on middleware (ALWAYS_PROTECTED in dashboardGuard). If middleware
+was bypassed or misconfigured, any network-reachable client could trigger
+killAppProcesses() + spawnUpdaterAndExit() — a remote code execution + DoS vector.
+
+Fix: require either CLI machine-id token (x-9r-cli-token) OR dashboard JWT
+cookie (auth_token) before executing. Optional UPDATE_SECRET env var provides
+second factor when configured. Uses timing-safe comparisons to prevent
+side-channel attacks.
+
+Follows the exact pattern from src/app/api/shutdown/route.js.
+
+Tests: 6 unit tests covering auth gate, JWT path, CLI token path, UPDATE_SECRET
+enforcement, and production-only restriction. All passing.
+
+Fixes: GAP-P0-11
+

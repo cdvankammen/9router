@@ -1,0 +1,79 @@
+commit 8a842043
+author: decolua
+date: 2026-10-23 10:23:49 +0700
+subject: feat(rtk): add a user-authored custom system prompt
+
+The built-in savers (caveman, ponytail) ship a fixed doctrine each, so an
+install that wants a different instruction — house style, language, a
+coding convention — has to edit the source or skip the feature entirely.
+
+Add customPromptEnabled/customPrompt settings and inject the text onto the
+final request body through the shared injectSystemPrompt, which already
+dispatches across OpenAI chat, Responses, Claude, Gemini and Kiro shapes.
+The toggle stands on its own: it does not depend on the Ponytail level
+picker, and with both on the two prompts append rather than replace.
+
+An empty or blank prompt injects nothing, and the request log records only
+the prompt length so the text never reaches the traces.
+
+
+diff --git a/open-sse/handlers/chatCore.js b/open-sse/handlers/chatCore.js
+index e014effa..06db22d1 100644
+--- a/open-sse/handlers/chatCore.js
++++ b/open-sse/handlers/chatCore.js
+@@ -24,6 +24,7 @@ import { dedupeTools } from "../utils/toolDeduper.js";
+ import { takeRenamedToolNames } from "../utils/opencodeFingerprint.js";
+ import { injectCaveman } from "../rtk/caveman.js";
+ import { injectPonytail } from "../rtk/ponytail.js";
++import { injectCustomPrompt } from "../rtk/customPrompt.js";
+ import { compressMessages, formatRtkLog } from "../rtk/index.js";
+ import { compressWithHeadroom, formatHeadroomLog, formatHeadroomSizeLog, isHeadroomPhantomSavings } from "../rtk/headroom.js";
+ import { compressWithPxpipe } from "../rtk/pxpipe.js";
+@@ -60,7 +61,7 @@ export function stripContinuityFields(body) {
+   return body;
+ }
+ 
+-export async function handleChatCore({ body, modelInfo, credentials, log, onCredentialsRefreshed, onRequestSuccess, onDisconnect, clientRawRequest, connectionId, userAgent, apiKey, ccFilterNaming, rtkEnabled, headroomEnabled, headroomUrl, headroomCompressUserMessages, headroomTimeoutMs, cavemanEnabled, cavemanLevel, ponytailEnabled, ponytailLevel, pxpipeEnabled, pxpipeMinChars, pxpipeTimeoutMs, pxpipeTransform, onPxpipeEvent, sourceFormatOverride, providerThinking, providerOverrides }) {
++export async function handleChatCore({ body, modelInfo, credentials, log, onCredentialsRefreshed, onRequestSuccess, onDisconnect, clientRawRequest, connectionId, userAgent, apiKey, ccFilterNaming, rtkEnabled, headroomEnabled, headroomUrl, headroomCompressUserMessages, headroomTimeoutMs, cavemanEnabled, cavemanLevel, ponytailEnabled, ponytailLevel, customPromptEnabled, customPrompt, pxpipeEnabled, pxpipeMinChars, pxpipeTimeoutMs, pxpipeTransform, onPxpipeEvent, sourceFormatOverride, providerThinking, providerOverrides }) {
+   const { provider, model } = modelInfo;
+   const requestStartTime = Date.now();
+   // Stable per-session color so all lines of one CLI conversation share a tag
+@@ -308,6 +309,11 @@ export async function handleChatCore({ body, modelInfo, credentials, log, onCred
+     xf.push(`PONYTAIL:${ponytailLevel}`);
+   }
+ 
++  // Custom prompt: user-authored instruction, independent of the savers above
++  if (customPromptEnabled && injectCustomPrompt(translatedBody, finalFormat, customPrompt)) {
++    xf.push(`CUSTOMPROMPT:${customPrompt.trim().length}c`);
++  }
++
+   // PXPIPE: image bulky context (Claude-format bodies only), last saver before dispatch
+   let pxpipeSummary = null;
+   if (pxpipeEnabled) {
+diff --git a/src/lib/db/repos/settingsRepo.js b/src/lib/db/repos/settingsRepo.js
+index 60afee27..e4fdc1d0 100644
+--- a/src/lib/db/repos/settingsRepo.js
++++ b/src/lib/db/repos/settingsRepo.js
+@@ -58,6 +58,9 @@ const DEFAULT_SETTINGS = {
+   cavemanLevel: "full",
+   ponytailEnabled: false,
+   ponytailLevel: "full",
++  // User-authored system prompt, injected independently of the built-in savers.
++  customPromptEnabled: false,
++  customPrompt: "",
+   pxpipeEnabled: false,
+   pxpipeAutoInstall: true,
+   pxpipeMinChars: 25000,
+diff --git a/src/sse/handlers/chat.js b/src/sse/handlers/chat.js
+index 93b20e6f..2480b5d2 100644
+--- a/src/sse/handlers/chat.js
++++ b/src/sse/handlers/chat.js
+@@ -297,6 +297,8 @@ async function handleSingleModelChat(body, modelStr, clientRawRequest = null, re
+       cavemanLevel: chatSettings.cavemanLevel || "full",
+       ponytailEnabled: !!chatSettings.ponytailEnabled,
+       ponytailLevel: chatSettings.ponytailLevel || "full",
++      customPromptEnabled: !!chatSettings.customPromptEnabled,
++      customPrompt: chatSettings.customPrompt || "",
+       pxpipeEnabled: !!chatSettings.pxpipeEnabled,
+       pxpipeMinChars: chatSettings.pxpipeMinChars,
+       pxpipeTimeoutMs: chatSettings.pxpipeTimeoutMs,

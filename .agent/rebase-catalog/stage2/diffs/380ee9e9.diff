@@ -1,0 +1,38 @@
+commit 380ee9e9
+author: cdvankammen
+date: 2026-10-24 10:22:02 -0600
+subject: feat(db): migration runner registry-integrity gate + dry-run preview
+
+Harden the schema migration runner against silent corruption (backlog #2).
+
+- src/lib/db/migrations/index.js: added registryFingerprint() (ordered
+  version:name signature, stable across bundling but changes on
+  add/remove/reorder/rename) and validateMigrationRegistry() ({ok,
+  problems[]} — non-integer versions, missing name/up(), duplicates,
+  non-monotonic ordering).
+- src/lib/db/migrate.js: runMigrationOnce() now REFUSES to apply
+  migrations when (a) the registry fails validation, (b) the stored
+  _meta.migrationRegistryFingerprint diverges from the current build
+  (a migration was added/removed/reordered/renamed since this DB was
+  migrated), or (c) the DB schemaVersion is newer than the build's
+  latest migration (downgrade). Refusal is non-fatal — throwing would
+  kill getAdapter() and the whole app — so it skips applying, logs
+  loudly, persists the reason to _meta.migrationWarnings, and still
+  runs the declarative additive syncSchemaFromTables (idempotent,
+  registry-independent) so the DB stays read-usable. On success the
+  fingerprint is stamped and stale warnings cleared.
+- New read-only previewMigrations(adapter) dry-run reports
+  {registry, currentVersion, latestVersion, pending[], fingerprint,
+  storedFingerprint, diverged, downgrade, wouldApply, warnings}
+  without applying anything.
+- src/app/api/settings/database/migrations/route.js: GET endpoint
+  exposing the dry-run (auth-gated by dashboardGuard ALWAYS_PROTECTED
+  prefix /api/settings/database).
+
+Tests: 5 new in db-migration-hardening.test.js (registry validation,
+fresh-DB stamp, diverged-fingerprint refusal, downgrade refusal,
+dry-run no-op); all green alongside db-migration-chain.test.js and
+silent-catch-coverage.test.js (29/29 combined). ESLint clean.
+
+Backlog item #2 from 51-mini2-dashboard-dom-error-audit.md.
+

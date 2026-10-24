@@ -1,0 +1,15 @@
+commit c08004f0
+author: cdvankammen
+date: 2026-10-22 15:36:33 -0600
+subject: fix(cli): log SQLite/tray runtime self-heal failures instead of swallowing
+
+Empty catch blocks at cli.js:85,88 silently swallowed ensureSqliteRuntime
+and ensureTrayRuntime failures. When self-heal failed (e.g. npm EACCES,
+network timeout), the server would crash later with cryptic 'No SQLite
+driver available' instead of an actionable diagnostic.
+
+Now logs '[sqlite-runtime] self-heal failed: <msg>' and
+'[tray-runtime] self-heal failed: <msg>' to stderr so users see root cause.
+
+Fixes GAP-P2-00 from comprehensive gap analysis.
+

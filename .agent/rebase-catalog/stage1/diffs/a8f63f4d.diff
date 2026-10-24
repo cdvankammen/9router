@@ -1,0 +1,68 @@
+commit a8f63f4d
+author: Mike
+date: 2026-10-15 20:54:00 +0700
+subject: fix(models): expose no-auth free providers in /v1/models and prune custom models on node deletion
+
+Register virtual connections for noAuth free providers in buildModelsList so their models (oc/*, edge-tts, ...) stay listed once other providers are connected (#3115), and check isDisabled by providerId alongside aliases. Also delete a compatible node customModels kv rows inside deleteProviderNode so deleted nodes stop surfacing models.
+
+
+diff --git a/src/app/api/v1/models/route.js b/src/app/api/v1/models/route.js
+index e4f53d6c..83ee968e 100644
+--- a/src/app/api/v1/models/route.js
++++ b/src/app/api/v1/models/route.js
+@@ -2,6 +2,7 @@ import { PROVIDER_MODELS, PROVIDER_ID_TO_ALIAS, getModelKind } from "@/shared/co
+ import {
+   ALIAS_TO_ID,
+   AI_PROVIDERS,
++  FREE_PROVIDERS,
+   getProviderAlias,
+   isAnthropicCompatibleProvider,
+   isOpenAICompatibleProvider,
+@@ -366,6 +367,17 @@ export async function buildModelsList(kindFilter, options = {}) {
+     }
+   }
+ 
++  // Include no-auth free providers (e.g. opencode) so their models are exposed in /v1/models
++  for (const [id, provider] of Object.entries(FREE_PROVIDERS || {})) {
++    if (provider?.noAuth && !activeConnectionByProvider.has(id)) {
++      activeConnectionByProvider.set(id, {
++        id: "noauth",
++        provider: id,
++        isActive: true,
++      });
++    }
++  }
++
+   const models = [];
+   const combosByName = new Map(
+     combos.filter((c) => typeof c?.name === "string").map((c) => [c.name, c]),
+@@ -405,7 +417,7 @@ export async function buildModelsList(kindFilter, options = {}) {
+       if (!providerMatchesKinds(providerId, kindFilter)) continue;
+       for (const model of providerModels) {
+         if (!kindFilter.includes(modelKind(model))) continue;
+-        if (isDisabled(alias, model.id)) continue;
++        if (isDisabled(alias, model.id) || isDisabled(providerId, model.id)) continue;
+         models.push({
+           id: `${alias}/${model.id}`,
+           object: "model",
+@@ -560,7 +572,7 @@ export async function buildModelsList(kindFilter, options = {}) {
+         // imageToText custom models stay in the LLM list (vision-capable chat models)
+         const allowAsLlm = kind === "imageToText" && kindFilter.includes(LLM_KIND);
+         if (!kindFilter.includes(kind) && !allowAsLlm) continue;
+-        if (isDisabled(outputAlias, modelId) || isDisabled(staticAlias, modelId)) continue;
++        if (isDisabled(outputAlias, modelId) || isDisabled(staticAlias, modelId) || isDisabled(providerId, modelId)) continue;
+ 
+         const model = {
+           id: `${outputAlias}/${modelId}`,
+diff --git a/src/lib/db/repos/nodesRepo.js b/src/lib/db/repos/nodesRepo.js
+index cd63b5b8..287b69dc 100644
+--- a/src/lib/db/repos/nodesRepo.js
++++ b/src/lib/db/repos/nodesRepo.js
+@@ -90,6 +90,7 @@ export async function deleteProviderNode(id) {
+     if (!row) return;
+     removed = rowToNode(row);
+     db.run(`DELETE FROM providerNodes WHERE id = ?`, [id]);
++    db.run(`DELETE FROM kv WHERE scope = 'customModels' AND key LIKE ?`, [`${id}|%`]);
+   });
+   return removed;
+ }

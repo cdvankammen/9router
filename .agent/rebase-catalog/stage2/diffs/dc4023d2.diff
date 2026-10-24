@@ -1,0 +1,53 @@
+commit dc4023d2
+author: cdvankammen
+date: 2026-10-22 12:18:51 -0600
+subject: fix(streaming): stop forcing stream when client omits it — fixes [DONE] leak in JSON responses
+
+CAUGHT BY E2E BROWSER TEST (production standalone + mock upstream):
+
+Symptom: a request WITHOUT a stream field returned valid JSON with a
+literal "data: [DONE]\n\n" appended, breaking JSON.parse for clients
+(e.g. AI SDK, curl, simple HTTP consumers).
+
+Root cause (debug-traced):
+1. chatCore.js: `stream = providerRequiresStreaming ? true : (body.stream !== false)`
+   → client omitting stream got stream=true (forced upstream SSE)
+2. Mock received stream:false (translator/executor normalized it) → returned JSON
+3. handleForcedSSEToJson correctly returned null (content-type was
+   application/json, not SSE)
+4. Code fell through to the streaming path (stream=true) → piped the JSON
+   body through the SSE transform → wrapped as SSE chunks + appended [DONE]
+
+Fix: `stream = body.stream === true` — only stream upstream when the
+client EXPLICITLY requested it (or provider requires streaming via
+forceStream). A client that omits stream now gets a true JSON response.
+
+Also verified: explicit stream:true still returns exactly one [DONE]
+(passthrough duplicate-[DONE] fix in open-sse/utils/stream.js from a
+parallel agent's commit is confirmed working — streamDoneSent tracking).
+
+Tests: full suite 1692 passed / 88 pre-existing baseline failures (no new
+regressions). E2E: no-stream → clean JSON; stream:true → exactly 1 [DONE].
+
+Refs: learnings/2026-08-06-sse-done-duplicate-leak.md (parallel agent's
+postmortem of the passthrough duplicate); OpenRouter SSE protocol
+(https://platform.openai.com/docs/api-reference/streaming\)
+
+
+diff --git a/open-sse/handlers/chatCore.js b/open-sse/handlers/chatCore.js
+index c9a6e14e..91dad9e5 100644
+--- a/open-sse/handlers/chatCore.js
++++ b/open-sse/handlers/chatCore.js
+@@ -133,7 +133,11 @@ export async function handleChatCore({ body, modelInfo, credentials, log, onCred
+ 
+   const clientRequestedStreaming = body.stream === true || sourceFormat === FORMATS.ANTIGRAVITY || sourceFormat === FORMATS.GEMINI || sourceFormat === FORMATS.GEMINI_CLI;
+   const providerRequiresStreaming = PROVIDERS[provider]?.forceStream === true;
+-  let stream = providerRequiresStreaming ? true : (body.stream !== false);
++  // Default: only stream when the client explicitly asked, OR the provider
++  // requires streaming. A client that omits `stream` gets a JSON response —
++  // forcing streaming upstream and re-converting risks SSE leakage (e.g.
++  // [DONE] sentinels in the JSON body).
++  let stream = providerRequiresStreaming ? true : (body.stream === true);
+ 
+   // Image generation models require non-streaming (Google v1internal:generateContent)
+   const modelType = getModelType(alias, model);

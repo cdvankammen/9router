@@ -1,0 +1,20 @@
+commit 190c3b69
+author: cdvankammen
+date: 2026-10-22 15:41:21 -0600
+subject: test(models): regression test for fetch timeout guard (GAP-P2-18)
+
+The AbortController + 5s timeout on fetchCompatibleModelIds() already exists
+at HEAD (upstream commit 838d9a7a, 2026-04-10) — the gap scanner flagged a
+false positive because it searched for AbortSignal.timeout() while the code
+uses the equivalent AbortController pattern.
+
+This regression test locks the behavior so the guard cannot be silently
+removed:
+
+- fetch is called with the provider URL and a signal (AbortSignal)
+- buildModelsList returns [] in bounded time when upstream hangs
+- signal reaches fetch and is aborted (anti-false-positive assertion)
+
+Anti-false-positive verified: intentionally removing the signal wiring from
+route.js makes both tests time out and fail; restoring returns to 2/2 pass.
+

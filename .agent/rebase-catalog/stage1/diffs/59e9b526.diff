@@ -1,0 +1,9 @@
+commit 59e9b526
+author: alwaghani
+date: 2026-10-13 17:44:15 +0700
+subject: fix(opencode-zen): use attested free-tier identity for -free models on keyed lane (#4784)
+
+- Detect free-tier models via isOpencodeFreeTierModel() (-free suffix)
+- Send Bearer public and x-opencode-request for free-tier models on keyed connections
+- Keep connection key untouched for paid models
+

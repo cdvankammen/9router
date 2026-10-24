@@ -1,0 +1,20 @@
+commit dd08c295
+author: cdvankammen
+date: 2026-10-22 15:36:33 -0600
+subject: fix(error-handling): log projectId persist failures (GAP-P2-02)
+
+
+
+diff --git a/src/sse/handlers/chat.js b/src/sse/handlers/chat.js
+index 6af224fd..26c5fdf0 100644
+--- a/src/sse/handlers/chat.js
++++ b/src/sse/handlers/chat.js
+@@ -329,7 +329,7 @@ async function handleSingleModelChat(body, modelStr, clientRawRequest = null, re
+       if (pid) {
+         refreshedCredentials.projectId = pid;
+         // Persist to DB in background so subsequent requests have it immediately
+-        updateProviderCredentials(credentials.connectionId, { projectId: pid }).catch(() => { });
++        updateProviderCredentials(credentials.connectionId, { projectId: pid }).catch((e) => log.warn('CHAT', `projectId persist failed for ${credentials.connectionId}: ${e.message}`));
+       }
+     }
+ 

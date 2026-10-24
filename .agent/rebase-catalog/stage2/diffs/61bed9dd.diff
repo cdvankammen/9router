@@ -1,0 +1,28 @@
+commit 61bed9dd
+author: cdvankammen
+date: 2026-10-24 08:14:50 -0600
+subject: feat(dashboard): add error boundaries with transient 429/5xx retry UI
+
+Sweep confirmed zero error.js / global-error.js files existed anywhere
+under src/app — all 29 dashboard pages fell through to Next.js's default
+error screen on any uncaught render error.
+
+- src/app/(dashboard)/error.js: dashboard-group boundary sitting INSIDE
+  DashboardLayout so sidebar/header stay visible during a page error.
+  Detects transient HTTP errors (429 / 5xx) via error.message/digest
+  and shows targeted retry UI; generic fallback with reset + back-to-
+  dashboard otherwise. Self-contained (inline buttons, no shared-
+  component imports) so the boundary cannot be taken down by the same
+  failure it catches.
+- src/app/global-error.js: root fallback for errors escaping the group
+  boundary (DashboardLayout itself, login, landing). Renders its own
+  <html>/<body> with zero layout dependencies; uses a plain <a> (not
+  next/link) deliberately since it renders outside the app-router
+  context it is catching failures of.
+
+Scope: covers render-time errors only. Ad-hoc fetch error handling
+inside individual pages (alert(), silent .catch(() => {}), console.log)
+is a separate cleanup not addressed here.
+
+Backlog item #3 from 51-mini2-dashboard-dom-error-audit.md.
+

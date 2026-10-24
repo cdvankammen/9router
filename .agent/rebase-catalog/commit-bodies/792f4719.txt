@@ -1,0 +1,21 @@
+===COMMIT===
+hash: 792f4719859b50ac1e7a797ee40ceb4383d491b0
+short: 792f4719
+author: mj10612 <5388892+mj10612@users.noreply.github.com>
+date: 2026-10-23 11:08:43 +0700
+subject: fix(headroom): support native CommandCode requests
+body:
+CommandCode stores its conversation under params.messages, so Headroom
+logged "unsupported commandcode request shape" and never called the
+compression proxy.
+
+Project the system prompt, text blocks, tool calls and text tool results
+into OpenAI messages, then copy compressed text back into the original
+fields. The CommandCode envelope, reasoning, images, tool ids/arguments,
+schemas and non-text outputs stay untouched, and message count, roles and
+tool-result ids are validated before any update is applied. Malformed
+proxy responses and connection failures leave the request intact.
+
+Refs #4552
+
+---files---

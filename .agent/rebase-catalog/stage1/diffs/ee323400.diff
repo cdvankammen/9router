@@ -1,0 +1,6 @@
+commit ee323400
+author: semihisikman
+date: 2026-10-07 19:46:40 +0700
+subject: fix(tts): accept server model and voice in self-hosted example
+
+

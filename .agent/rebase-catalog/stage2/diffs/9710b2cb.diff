@@ -1,0 +1,27 @@
+commit 9710b2cb
+author: cdvankammen
+date: 2026-10-22 17:07:41 -0600
+subject: fix(tests): align post-merge tests with pr-3595-squash changes
+
+- claude-compat-layer: display_name mirrors [1m] suffix (matches impl)
+- opencode-go-models: add free-tier models, drop claude format for DeepSeek
+- commandcode-executor: 15s timeout for 503 cooldown fallback (5s cooldown)
+- golden-url-header: regenerate snapshot against merged code
+
+
+diff --git a/tests/unit/opencode-go-models.test.js b/tests/unit/opencode-go-models.test.js
+index fcdf3888..08dd8bd2 100644
+--- a/tests/unit/opencode-go-models.test.js
++++ b/tests/unit/opencode-go-models.test.js
+@@ -81,9 +81,9 @@ describe("OpenCode Go per-model supportedFormats", () => {
+     }
+   });
+ 
+-  it("declares [openai, claude, openai-responses] for DeepSeek models", () => {
++  it("declares [openai, openai-responses] for DeepSeek models (zen-go /v1/messages rejects tool declarations)", () => {
+     for (const m of RESPONSES_CAPABLE) {
+-      expect(getModelSupportedFormats("opencode-go", m)).toEqual(["openai", "claude", "openai-responses"]);
++      expect(getModelSupportedFormats("opencode-go", m)).toEqual(["openai", "openai-responses"]);
+     }
+   });
+ 

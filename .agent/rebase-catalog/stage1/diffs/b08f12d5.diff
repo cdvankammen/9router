@@ -1,0 +1,35 @@
+commit b08f12d5
+author: dinhkarate
+date: 2026-10-23 11:57:26 +0700
+subject: fix(codex-image): skip ChatGPT Free accounts and use a Go-compatible main model
+
+Codex image generation failed for every non-Plus/Pro setup:
+
+- ChatGPT Free accounts get the image_generation tool stripped server-side,
+  so upstream answers 400 "Tool choice 'image_generation' must be specified
+  with 'tools' parameter". A 400 is not fallback-eligible, so the request
+  died on the first Free account even when a paid account was available.
+- The hardcoded main model gpt-5.6-sol is rejected for ChatGPT Go accounts
+  ("model is not supported when using Codex with a ChatGPT account");
+  gpt-5.6-terra is accepted and only drives the tool call.
+
+Image adapters can now expose canUseCredentials(creds). The codex adapter
+reads chatgpt_plan_type from the access token, then the id token, then the
+stored providerSpecificData (which goes stale on plan changes), and rejects
+"free". The image handler skips such accounts without locking them, so
+they stay usable for chat, and returns 403 when no entitled account is left.
+
+
+diff --git a/tests/unit/image-generation.test.js b/tests/unit/image-generation.test.js
+index 8217fb32..15b822fc 100644
+--- a/tests/unit/image-generation.test.js
++++ b/tests/unit/image-generation.test.js
+@@ -409,7 +409,7 @@ describe("handleImageGenerationCore", () => {
+     expect(result.success).toBe(true);
+     const fetchCall = global.fetch.mock.calls[0];
+     const requestBody = JSON.parse(fetchCall[1].body);
+-    expect(requestBody.model).toBe("gpt-5.6-sol");
++    expect(requestBody.model).toBe("gpt-5.6-terra");
+     expect(requestBody.tools).toEqual([
+       { type: "image_generation", output_format: "png", size: "1024x1024", action: "generate", model: "gpt-image-2.5" },
+     ]);

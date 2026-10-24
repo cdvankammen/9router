@@ -1,0 +1,9 @@
+===COMMIT===
+hash: 0f7f6e72a9a63678e2d7801be0cd907fc67df739
+short: 0f7f6e72
+author: Nikan Wystaf <nikan.wystaf@gmail.com>
+date: 2026-10-07 20:05:23 +0700
+subject: fix(capabilities): GLM-5.2/5.3 context is 1M, not the stale 200k pin (#4544)
+body:
+
+---files---

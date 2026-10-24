@@ -1,0 +1,10 @@
+===COMMIT===
+hash: 2aa9307f5030b563bd2e5aa339847bba9d697533
+short: 2aa9307f
+author: Mike <108046712+miqonee@users.noreply.github.com>
+date: 2026-10-15 21:23:54 +0700
+subject: feat(keys): per-key token quotas and pattern-based model access
+body:
+API keys gain tokenLimit/usedTokens (additive schema columns), enforced with 429 once exhausted and incremented from saveRequestUsage; the dashboard shows usage progress and can reset the counter. Model restrictions stay in keyAccess.js on resolved identities, now supporting wildcard entries (oc/*, *claude*), alias/id provider spellings, and deny entries (!opus / -haiku) with deny-only lists open-except-denied; an empty allow list still denies everything. The auth gate (checkApiKeyQuota) applies pause/quota to known keys regardless of requireApiKey while unknown keys keep passing in local mode.
+
+---files---

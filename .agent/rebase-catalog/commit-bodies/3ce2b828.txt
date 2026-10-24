@@ -1,0 +1,11 @@
+===COMMIT===
+hash: 3ce2b828f33bce0c88374077bc20b6b24382a1fd
+short: 3ce2b828
+author: qianze0628 <qianze0628@users.noreply.github.com>
+date: 2026-10-23 11:16:23 +0700
+subject: fix(kiro): normalize Anthropic model ids onto Kiro upstream aliases
+body:
+Map Anthropic model spellings and date snapshot suffixes to Kiro-accepted
+aliases in resolveKiroModel(), and fix MiniMax casing to minimax-m2.5.
+
+---files---

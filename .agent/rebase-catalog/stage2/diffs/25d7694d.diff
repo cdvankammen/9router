@@ -1,0 +1,11 @@
+commit 25d7694d
+author: cdvankammen
+date: 2026-10-22 15:41:21 -0600
+subject: fix(embeddings): log usage persistence failures instead of silent swallow (GAP-P2-03)
+
+- Replace .catch(() => {}) with .catch((e) => log.warn(...)) at line 148
+- Add unit test verifying warning is emitted on DB write failure
+- Pre-existing vitest module resolution issue confirmed (open-sse/ bare imports)
+
+Skills loaded: clean-code-principles, 9router-mcp-hub-workflow
+

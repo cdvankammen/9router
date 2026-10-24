@@ -1,0 +1,276 @@
+commit a9d0ad26
+author: Amirsalar Sojoudi
+date: 2026-10-08 16:26:17 +0700
+subject: feat(bedrock): add AWS Bedrock provider with AWS SSO credential support (#4157)
+
+Adds Amazon Bedrock (bedrock + bedrock-xai entries) with static-key and
+AWS SSO profile credential modes, a hand-rolled SigV4 signer on
+node:crypto, and the AWS EventStream decoder extracted from kiro.js into
+a shared util. Region and profile names are validated before use and
+signed headers/session tokens are redacted from logs and API responses.
+
+
+diff --git a/open-sse/executors/kiro.js b/open-sse/executors/kiro.js
+index 9d5d754f..87e90e4a 100644
+--- a/open-sse/executors/kiro.js
++++ b/open-sse/executors/kiro.js
+@@ -10,12 +10,14 @@ import { refreshKiroToken } from "../services/tokenRefresh.js";
+ import { SSE_DONE, SSE_HEADERS } from "../utils/sseConstants.js";
+ import { getCapabilitiesForModel } from "../providers/capabilities.js";
+ import { STREAM_FIRST_CHUNK_TIMEOUT_MS } from "../config/runtimeConfig.js";
++import { AWS_EVENTSTREAM } from "../config/awsConstants.js";
++import { crc32, parseEventFrame } from "../utils/awsEventStream.js";
+ 
+ const KIRO_REPAIR_BUFFER_MAX_BYTES = 8 * 1024 * 1024;
+ const KIRO_REPAIR_HEARTBEAT_MS = 10_000;
+ const KIRO_SHORT_FINAL_MAX_CHARS = 800;
+-const EVENTSTREAM_MAX_MESSAGE_BYTES = 24 * 1024 * 1024;
+-const EVENTSTREAM_MAX_HEADERS_BYTES = 128 * 1024;
++const EVENTSTREAM_MAX_MESSAGE_BYTES = AWS_EVENTSTREAM.maxMessageBytes;
++const EVENTSTREAM_MAX_HEADERS_BYTES = AWS_EVENTSTREAM.maxHeadersBytes;
+ const KIRO_EVENT_TYPES = new Set([
+   "assistantResponseEvent",
+   "reasoningContentEvent",
+@@ -30,14 +32,6 @@ const KIRO_EVENT_TYPES = new Set([
+ ]);
+ const encoder = new TextEncoder();
+ const decoder = new TextDecoder();
+-const CRC32_TABLE = Uint32Array.from({ length: 256 }, (_, index) => {
+-  let value = index;
+-  for (let bit = 0; bit < 8; bit++) {
+-    value = (value >>> 1) ^ ((value & 1) ? 0xedb88320 : 0);
+-  }
+-  return value >>> 0;
+-});
+-
+ const REPAIR_INSTRUCTIONS = Object.freeze({
+   tool: "Retry the previous response because its Kiro tool_call wrapper was malformed. If you use the wrapper tool named tool_call, its input must contain a non-empty name and an arguments field.",
+   ellipsis: "Retry the previous response because it ended with only an ellipsis. Return the complete final answer, not only ... or ….",
+@@ -55,12 +49,6 @@ const USER_WAIT = /(?:請(?:你|先)|你(?:先|需要|可以|提供|確認|批
+ const COMPLETED_FINAL = /(?:已(?:經)?完成|完成(?:了|驗證|確認)|修復完成|確認無誤|驗證(?:完成|通過)|測試(?:均)?通過|結論|總結|\b(?:done|completed|fixed|verified|confirmed|passed|in conclusion|summary)\b|\b(?:is|are) complete\b)/iu;
+ const RESULT_EVIDENCE = /(?:顯示|發現|因此|成功|失敗|正常|無錯誤|沒有錯誤|\b(?:found|shows?|showed|because|therefore|succeeded|failed|healthy|green|no errors?)\b)/iu;
+ 
+-function crc32(bytes) {
+-  let crc = 0xffffffff;
+-  for (const byte of bytes) crc = CRC32_TABLE[(crc ^ byte) & 0xff] ^ (crc >>> 8);
+-  return (crc ^ 0xffffffff) >>> 0;
+-}
+-
+ function envPositiveInt(name, fallback) {
+   const parsed = Number.parseInt(process.env?.[name] || "", 10);
+   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+@@ -1209,94 +1197,4 @@ export class KiroExecutor extends BaseExecutor {
+   }
+ }
+ 
+-/**
+- * Parse AWS EventStream frame
+- */
+-
+-function parseEventFrame(data) {
+-  if (!(data instanceof Uint8Array) || data.byteLength < 16) {
+-    throw new Error("AWS EventStream frame is shorter than 16 bytes");
+-  }
+-  const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
+-  const totalLength = view.getUint32(0, false);
+-  const headersLength = view.getUint32(4, false);
+-  if (totalLength !== data.byteLength) {
+-    throw new Error("AWS EventStream frame length does not match its prelude");
+-  }
+-  if (totalLength > EVENTSTREAM_MAX_MESSAGE_BYTES ||
+-      headersLength > EVENTSTREAM_MAX_HEADERS_BYTES ||
+-      headersLength > totalLength - 16) {
+-    throw new Error("AWS EventStream frame bounds are invalid");
+-  }
+-  if (view.getUint32(8, false) !== crc32(data.subarray(0, 8))) {
+-    throw new Error("AWS EventStream prelude CRC mismatch");
+-  }
+-  if (view.getUint32(totalLength - 4, false) !== crc32(data.subarray(0, totalLength - 4))) {
+-    throw new Error("AWS EventStream message CRC mismatch");
+-  }
+-
+-  const headers = Object.create(null);
+-  const names = new Set();
+-  let offset = 12;
+-  const headerEnd = offset + headersLength;
+-  const requireBytes = (count) => {
+-    if (offset + count > headerEnd) {
+-      throw new Error("AWS EventStream header exceeds its declared bounds");
+-    }
+-  };
+-
+-  while (offset < headerEnd) {
+-    requireBytes(1);
+-    const nameLength = data[offset++];
+-    requireBytes(nameLength + 1);
+-    const name = decoder.decode(data.subarray(offset, offset + nameLength));
+-    offset += nameLength;
+-    if (names.has(name)) throw new Error(`AWS EventStream contains duplicate header: ${name}`);
+-    names.add(name);
+-    const type = data[offset++];
+-
+-    if (type === 0 || type === 1) {
+-      headers[name] = type === 0;
+-    } else if (type === 2) {
+-      requireBytes(1);
+-      headers[name] = view.getInt8(offset);
+-      offset += 1;
+-    } else if (type === 3) {
+-      requireBytes(2);
+-      headers[name] = view.getInt16(offset, false);
+-      offset += 2;
+-    } else if (type === 4) {
+-      requireBytes(4);
+-      headers[name] = view.getInt32(offset, false);
+-      offset += 4;
+-    } else if (type === 5 || type === 8) {
+-      requireBytes(8);
+-      offset += 8;
+-    } else if (type === 6 || type === 7) {
+-      requireBytes(2);
+-      const valueLength = view.getUint16(offset, false);
+-      offset += 2;
+-      requireBytes(valueLength);
+-      const bytes = data.subarray(offset, offset + valueLength);
+-      headers[name] = type === 7 ? decoder.decode(bytes) : bytes;
+-      offset += valueLength;
+-    } else if (type === 9) {
+-      requireBytes(16);
+-      offset += 16;
+-    } else {
+-      throw new Error(`AWS EventStream header ${name} has unknown type ${type}`);
+-    }
+-  }
+-
+-  const payloadBytes = data.subarray(headerEnd, totalLength - 4);
+-  if (payloadBytes.byteLength === 0) return { headers, payload: null };
+-  const payloadText = decoder.decode(payloadBytes);
+-  if (!payloadText.trim()) return { headers, payload: null };
+-  try {
+-    return { headers, payload: JSON.parse(payloadText) };
+-  } catch (error) {
+-    throw new Error(`AWS EventStream payload is not valid JSON (${error.message})`);
+-  }
+-}
+-
+ export default KiroExecutor;
+diff --git a/open-sse/providers/registry/index.js b/open-sse/providers/registry/index.js
+index f9904282..a370637c 100644
+--- a/open-sse/providers/registry/index.js
++++ b/open-sse/providers/registry/index.js
+@@ -135,6 +135,8 @@ import p132 from "./v1m.js";
+ import p133 from "./muse.js";
+ import p134 from "./minimax-code.js";
+ import p135 from "./minimax-code-global.js";
++import p136 from "./bedrock.js";
++import p137 from "./bedrock-xai.js";
+ export default [
+   p0,
+   p1,
+@@ -270,4 +272,6 @@ export default [
+   p133,
+   p134,
+   p135,
++  p136,
++  p137,
+ ];
+diff --git a/open-sse/services/model.js b/open-sse/services/model.js
+index 7715b586..535229b4 100644
+--- a/open-sse/services/model.js
++++ b/open-sse/services/model.js
+@@ -138,6 +138,10 @@ const MODEL_PREFIX_PROVIDERS = [
+   [/^gpt-daybreak-/, "codex"],
+   [/^gpt-reserve/, "codex"],
+   [/^claude-/, "anthropic"],
++  // Bedrock inference profile IDs: us.anthropic.*, global.anthropic.*, eu.anthropic.*, etc.
++  // Claude Code stores the Bedrock model ID directly (e.g. us.anthropic.claude-sonnet-4-6),
++  // so bare usage without a provider/ prefix must route to bedrock, not fall through to openai.
++  [/^(us|eu|ap|global)\.(anthropic|meta|amazon|mistral|xai)\./, "bedrock"],
+   [/^gemini-/, "gemini"],
+   [/^gpt-/, "openai"],
+   [/^o[134]/, "openai"],
+diff --git a/package.json b/package.json
+index 51b5caa3..fcbf71ee 100644
+--- a/package.json
++++ b/package.json
+@@ -53,9 +53,11 @@
+     "zustand": "^5.0.10"
+   },
+   "optionalDependencies": {
++    "@aws-sdk/credential-providers": "^3.1135.0",
+     "better-sqlite3": "^12.6.2"
+   },
+   "comment_better_sqlite3": "kept in optionalDependencies so npm install doesn't fail on systems without build tools — sql.js is used as fallback at runtime",
++  "comment_aws_sdk_credential_providers": "kept in optionalDependencies (npm still installs these by default) and imported lazily in shared/awsCredentials.js — only AWS Bedrock connections using profile/SSO mode need it; static accessKeyId/secretAccessKey connections never load it",
+   "devDependencies": {
+     "@tailwindcss/postcss": "^4.1.18",
+     "eslint": "^9",
+diff --git a/src/app/api/providers/route.js b/src/app/api/providers/route.js
+index 49f611aa..ae58e599 100644
+--- a/src/app/api/providers/route.js
++++ b/src/app/api/providers/route.js
+@@ -9,6 +9,7 @@ import {
+ import { APIKEY_PROVIDERS } from "@/shared/constants/config";
+ import { AI_PROVIDERS, FREE_TIER_PROVIDERS, WEB_COOKIE_PROVIDERS, isOpenAICompatibleProvider, isAnthropicCompatibleProvider, isCustomEmbeddingProvider } from "@/shared/constants/providers";
+ import { normalizeProviderId, normalizeProviderSpecificData } from "@/lib/providerNormalization";
++import { toProviderConnectionResponse } from "@/lib/providerConnectionResponse";
+ 
+ export const dynamic = "force-dynamic";
+ 
+@@ -67,12 +68,8 @@ export async function GET() {
+         ? (c.name || nodeNameMap[c.provider] || c.providerSpecificData?.nodeName || c.provider)
+         : c.name;
+       return {
+-        ...c,
++        ...toProviderConnectionResponse(c),
+         name,
+-        apiKey: undefined,
+-        accessToken: undefined,
+-        refreshToken: undefined,
+-        idToken: undefined,
+       };
+     });
+ 
+@@ -116,7 +113,12 @@ export async function POST(request) {
+     if (!provider || !isValidProvider) {
+       return NextResponse.json({ error: "Invalid provider" }, { status: 400 });
+     }
+-    if (!apiKey && provider !== "ollama-local") {
++    // A provider may declare a providerSpecificData field that stands in for an API key — e.g.
++    // Bedrock's `profile`, where the credential lives in the local AWS config and there is no
++    // key to paste. Without this, following such a provider's own setup notice returns 400.
++    const apiKeySubstitute = AI_PROVIDERS[provider]?.apiKeyOptionalWith;
++    const hasApiKeySubstitute = !!(apiKeySubstitute && body.providerSpecificData?.[apiKeySubstitute]);
++    if (!apiKey && provider !== "ollama-local" && !hasApiKeySubstitute) {
+       return NextResponse.json({ error: `${isWebCookieProvider ? "Cookie value" : "API Key"} is required` }, { status: 400 });
+     }
+     const connectionName = name || displayName || AI_PROVIDERS[provider]?.name;
+@@ -188,11 +190,10 @@ export async function POST(request) {
+       allowOverwrite: body.id ? true : (body.allowOverwrite === true || body.overwrite === true),
+     });
+ 
+-    // Hide sensitive fields
+-    const result = { ...newConnection };
+-    delete result.apiKey;
+-
+-    return NextResponse.json({ connection: result }, { status: 201 });
++    return NextResponse.json(
++      { connection: toProviderConnectionResponse(newConnection) },
++      { status: 201 },
++    );
+   } catch (error) {
+     if (error?.code === "PROVIDER_NAME_CONFLICT") {
+       return NextResponse.json(
+diff --git a/src/shared/constants/providers.js b/src/shared/constants/providers.js
+index fa289469..cd25585e 100644
+--- a/src/shared/constants/providers.js
++++ b/src/shared/constants/providers.js
+@@ -35,6 +35,8 @@ function buildProviderEntry(r) {
+     ...(r.authModes ? { authModes: r.authModes } : {}),
+     ...(r.authType ? { authType: r.authType } : {}),
+     ...(r.authHint ? { authHint: r.authHint } : {}),
++    ...(r.apiKeyOptionalWith ? { apiKeyOptionalWith: r.apiKeyOptionalWith } : {}),
++    ...(r.credentialForm ? { credentialForm: r.credentialForm } : {}),
+   };
+ }
+ 

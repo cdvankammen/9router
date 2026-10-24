@@ -1,0 +1,6 @@
+commit e964e482
+author: ErfanBagheri404
+date: 2026-10-15 09:36:45 +0700
+subject: fix(opencode): inject reasoning_content placeholder for Zen multi-turn chats (#4805)
+
+

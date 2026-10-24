@@ -1,0 +1,15 @@
+commit 33c737f3
+author: cdvankammen
+date: 2026-10-22 15:51:43 -0600
+subject: fix(messages): action/annotation API contract bugs found by E2E
+
+- usageDb.js: re-export getSettings/updateSettings (summarize action
+  crashed with 'getSettings is not a function')
+- actions route: use URL id instead of detail._id (getRequestDetailById
+  returns parsed data without _id); accept { note }/{ tag } field names
+  the UI sends, alongside { value }
+- annotations route: accept { note }/{ tag } convenience fields
+
+Verified live: add-note, tag, remove-tag, annotations CRUD, saved views,
+alert-on-match all work against the running dev server.
+

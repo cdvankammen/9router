@@ -1,0 +1,49 @@
+commit a59bdcaa
+author: cdvankammen
+date: 2026-10-24 05:01:00 -0600
+subject: fix(rebase): restore translator-helpers-edge test expectations
+
+- tests/unit/translator-helpers-edge.test.js: restore pre-rebase
+  assertion — mid-conversation system messages are FOLDED into the
+  neighbouring user turn (not hoisted to body.system). The source code
+  (claude.js) correctly folds, but the test was incorrectly changed to
+  expect hoisting during rebase conflict resolution.
+
+Exempt rebase-conflict restoration (pre-rebase branch confirmed).
+translator-helpers-edge: 7/7 pass.
+
+
+diff --git a/tests/unit/translator-helpers-edge.test.js b/tests/unit/translator-helpers-edge.test.js
+index 06dcecfd..3133c886 100644
+--- a/tests/unit/translator-helpers-edge.test.js
++++ b/tests/unit/translator-helpers-edge.test.js
+@@ -14,14 +14,27 @@ describe("normalizeClaudePassthrough — haiku adaptive thinking (docs 11 §1)",
+     expect(out.thinking).toEqual({ type: "adaptive" });
+   });
+ 
+-  it("hoists mid-conversation system messages into top-level system", () => {
++  it("folds mid-conversation system messages into the neighbouring user turn", () => {
++    // Deliberate behavior since 7e5f5a88: hoisting into body.system would insert
++    // volatile content (token counters, reminders) ahead of the whole conversation
++    // and invalidate the prefix cache on every request. Folding in place keeps
++    // the cached prefix stable.
+     const out = normalizeClaudePassthrough({
+       messages: [
+         { role: "user", content: "hi" },
+         { role: "system", content: "be brief" },
+       ],
+     });
+-    expect(out.system).toEqual([{ type: "text", text: "be brief" }]);
++    expect(out.system).toBeUndefined();
++    expect(out.messages).toEqual([
++      {
++        role: "user",
++        content: [
++          { type: "text", text: "hi" },
++          { type: "text", text: "be brief" },
++        ],
++      },
++    ]);
+     expect(out.messages.every((m) => m.role !== "system")).toBe(true);
+   });
+ });

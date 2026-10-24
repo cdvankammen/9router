@@ -1,0 +1,13 @@
+===COMMIT===
+hash: 00dd3dfcbe76e967ace4f7166a017f3dcea45800
+short: 00dd3dfc
+author: decolua <decoluadt@gmail.com>
+date: 2026-10-23 10:11:10 +0700
+subject: fix(media-providers): keep the connection card for non-STT OAuth media pages
+body:
+The OAuth shortcut only makes sense where the service shares its chat
+OAuth connections, which today is only STT. Gate the branch on the
+viewed kind so OAuth providers with API-key media lanes (antigravity,
+github, glm, kimi, xai, xiaomi-mimo) keep their Add Connection form.
+
+---files---

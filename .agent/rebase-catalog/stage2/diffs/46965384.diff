@@ -1,0 +1,56 @@
+commit 46965384
+author: cdvankammen
+date: 2026-10-22 15:51:43 -0600
+subject: fix(models): add descriptive error logging to buildModelsList try/catch blocks
+
+GAP-P2-32: Replace 5 generic console.log messages with console.warn
+that includes the function name and e.message for each catch block.
+Enables debugging of provider/combos/customModels/aliases/disabled
+fetch failures instead of silent swallowing.
+
+
+diff --git a/src/app/api/v1/models/route.js b/src/app/api/v1/models/route.js
+index f9114740..a678115e 100644
+--- a/src/app/api/v1/models/route.js
++++ b/src/app/api/v1/models/route.js
+@@ -328,35 +328,35 @@ export async function buildModelsList(kindFilter, options = {}) {
+     connections = await getProviderConnections();
+     connections = connections.filter(c => c.isActive !== false);
+   } catch (e) {
+-    console.log("Could not fetch providers, returning all models");
++    console.warn(`[models] getProviderConnections failed:`, e.message);
+   }
+ 
+   let combos = [];
+   try {
+     combos = await getCombos();
+   } catch (e) {
+-    console.log("Could not fetch combos");
++    console.warn(`[models] getCombos failed:`, e.message);
+   }
+ 
+   let customModels = [];
+   try {
+     customModels = await getCustomModels();
+   } catch (e) {
+-    console.log("Could not fetch custom models");
++    console.warn(`[models] getCustomModels failed:`, e.message);
+   }
+ 
+   let modelAliases = {};
+   try {
+     modelAliases = await getModelAliases();
+   } catch (e) {
+-    console.log("Could not fetch model aliases");
++    console.warn(`[models] getModelAliases failed:`, e.message);
+   }
+ 
+   let disabledByAlias = {};
+   try {
+     disabledByAlias = await getDisabledModels();
+   } catch (e) {
+-    console.log("Could not fetch disabled models");
++    console.warn(`[models] getDisabledModels failed:`, e.message);
+   }
+   const isDisabled = (alias, modelId) => Array.isArray(disabledByAlias[alias]) && disabledByAlias[alias].includes(modelId);
+ 

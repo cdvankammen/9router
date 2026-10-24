@@ -1,0 +1,7 @@
+commit d2f90177
+author: decolua
+date: 2026-10-07 18:51:36 +0700
+subject: feat(systemone): support Cloudflare AI clef-flash endpoint
+
+Co-Authored-By: Claude Code <noreply@anthropic.com>
+

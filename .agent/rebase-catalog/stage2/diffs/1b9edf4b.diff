@@ -1,0 +1,40 @@
+commit 1b9edf4b
+author: cdvankammen
+date: 2026-10-22 14:04:00 -0600
+subject: feat(models): remote-only model serving — ollama on mini2, never on control-plane Mac
+
+- config/providers.js: OLLAMA_LOCAL_DEFAULT_HOST env override (launchd sets
+  it to mini2's Tailscale IP); per-credential baseUrl still wins
+- services/model.js: qwen2.5*/llama3* prefixes infer provider ollama-local
+- registry/ollama-local.js: category free + noAuth → keyless virtual
+  connection via FREE_PROVIDERS (auth.js injects it)
+- executors/ollama-local.js: streaming uses OpenAI-compatible
+  /v1/chat/completions (real SSE) + responseFormat openai; non-stream keeps
+  native /api/chat
+- E2E verified: non-stream + stream via this Mac app, via failover proxy,
+  on mini2 app; ultimate failover (local app killed → proxy → mini2 →
+  its ollama) OK; targeted tests 18/18
+
+
+diff --git a/open-sse/services/model.js b/open-sse/services/model.js
+index 7715b586..765ce7a4 100644
+--- a/open-sse/services/model.js
++++ b/open-sse/services/model.js
+@@ -123,6 +123,8 @@ export async function getModelInfoCore(modelStr, aliasesOrGetter) {
+ }
+ 
+ // Config-driven prefix → provider inference (first match wins, fallback "openai").
++// Ollama-local models are served REMOTELY (model-serving policy: never on the
++// control-plane Mac — see OLLAMA_LOCAL_DEFAULT_HOST in config/providers.js).
+ const MODEL_PREFIX_PROVIDERS = [
+   // Codex CLI sends this bare virtual model for auto-review - keep it on OAuth Codex (#1398).
+   [/^codex-auto-review$/, "codex"],
+@@ -142,6 +144,8 @@ const MODEL_PREFIX_PROVIDERS = [
+   [/^gpt-/, "openai"],
+   [/^o[134]/, "openai"],
+   [/^deepseek-/, "openrouter"],
++  [/^qwen2\.5/, "ollama-local"],
++  [/^llama3\./, "ollama-local"],
+ ];
+ 
+ /**

@@ -1,0 +1,10 @@
+commit b79371c1
+author: cdvankammen
+date: 2026-10-22 14:04:00 -0600
+subject: docs: create missing workflow docs (dialagram-setup, fallback-chain) + update index
+
+- workflows README referenced 2 docs that never existed (dead links)
+- Created both per the README template: prerequisites, test cases (T1-T5),
+  when-to-re-run sync notes
+- Updated index Last Verified to 31413a21
+

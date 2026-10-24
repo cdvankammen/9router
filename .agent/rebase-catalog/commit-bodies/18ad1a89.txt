@@ -1,0 +1,9 @@
+===COMMIT===
+hash: 18ad1a89ff4f91636b4f08135b8efcfcc36af7c7
+short: 18ad1a89
+author: mannnrachman <mannnrachman@users.noreply.github.com>
+date: 2026-10-07 19:13:45 +0700
+subject: fix(cursor): forward reasoning effort to AgentService Run
+body:
+
+---files---

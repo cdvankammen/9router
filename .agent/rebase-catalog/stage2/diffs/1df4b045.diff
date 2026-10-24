@@ -1,0 +1,31 @@
+commit 1df4b045
+author: cdvankammen
+date: 2026-10-22 12:23:11 -0600
+subject: feat(messages): richer detail tabs (headers/cURL/markdown) + larger drawer typography
+
+Addresses user feedback: Raw/Headers/cURL/Markdown tabs showed too little,
+and status/category/model/date text was too small.
+
+TAB IMPROVEMENTS:
+- Headers: explains headers are stripped at capture for privacy + shows
+  known metadata (x-provider, x-model, x-account, x-conversation-id) +
+  note that header capture is planned P3 enrichment
+- cURL: reconstructs the upstream request (providerRequest body) with
+  endpoint pattern + provider/model/account comments
+- Markdown: role-styled transcript (user/assistant/tool/thinking via
+  extractText), plus provider request (sent upstream) JSON block, account,
+  conversation, category metadata
+
+TYPOGRAPHY (drawer):
+- Status badge: text-xs font-medium (was 10px)
+- Provider/model: text-sm text-text-main (was 11px muted)
+- Timestamp: text-xs (was 11px)
+- InfoCells (status/latency/tokens/cost): text-sm (was text-xs)
+- New Conversation ID block when present
+
+VERIFICATION: rebuilt tray app (cli/app bundle, 62M), restarted on 20130,
+messages page 200 + table renders 30 rows, no ChunkLoadError (fixed stale
+build); detail API returns full record for real tray IDs.
+
+Part of: Messages Page + Error Inbox plan (P1 UX polish per user feedback)
+

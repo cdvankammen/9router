@@ -1,0 +1,20 @@
+commit 0b0441c2
+author: cdvankammen
+date: 2026-10-22 11:46:06 -0600
+subject: feat(observability): add request export endpoint (JSON + markdown by conversation)
+
+- New GET /api/export/requests: filters by provider, model, conversationId,
+  status, date range; returns JSON (default) or markdown report grouped by
+  conversation with request bodies, responses, errors, latency, tokens
+- requestDetailsRepo: getRequestDetails() supports conversationId filter
+- Markdown sections ordered chronologically by earliest request in each
+  conversation (details arrive newest-first — caught by test)
+
+Tests: tests/unit/export-requests.test.js — 3 tests with real assertions:
+  conversation grouping + error surfacing, conversationId filter, status
+  filter. All pass. Test caught actual ordering bug during development.
+
+Verified: production build compiles /api/export/requests route.
+
+Part of: Observability & Conversation Analytics plan (Phase P1)
+

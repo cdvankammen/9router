@@ -1,0 +1,9 @@
+===COMMIT===
+hash: 6a1573ebafd1b9cc1b509650e15d3d669e56df94
+short: 6a1573eb
+author: Wnghao <292746174@qq.com>
+date: 2026-10-08 15:48:55 +0700
+subject: fix(combo): show compatible node models in picker without a connection (#4659)
+body:
+
+---files---

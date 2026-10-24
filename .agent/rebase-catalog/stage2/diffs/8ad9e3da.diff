@@ -1,0 +1,81 @@
+commit 8ad9e3da
+author: cdvankammen
+date: 2026-10-24 04:01:55 -0600
+subject: fix(tests): tasktype-tracking + empty-choices + openrouter-usage flags
+
+- src/lib/db/repos/usageRepo.js: saveRequestUsage INSERT now includes
+  conversationId column and passes entry.meta (not empty {}) so
+  taskType + conversationId round-trip through usageHistory
+- open-sse/handlers/chatCore/sseToJsonHandler.js: parseSSEToOpenAIResponse
+  distinguishes truly-empty input (no data lines → null) from
+  [DONE]-only streams (returns valid empty completion object with
+  choices:[]) so downstream handlers see well-formed responses
+- open-sse/providers/registry/openrouter.js: add features.usage and
+  features.usageApikey flags so USAGE_SUPPORTED_PROVIDERS and
+  USAGE_APIKEY_PROVIDERS include openrouter
+
+MiMo E APPROVE (tasktype-tracking)
+MiMo F APPROVE (empty-choices)
+MiMo G APPROVE (openrouter-usage)
+
+
+diff --git a/open-sse/handlers/chatCore/sseToJsonHandler.js b/open-sse/handlers/chatCore/sseToJsonHandler.js
+index 800c92a7..87094cf1 100644
+--- a/open-sse/handlers/chatCore/sseToJsonHandler.js
++++ b/open-sse/handlers/chatCore/sseToJsonHandler.js
+@@ -113,10 +113,12 @@ function chatCompletionToResponses(responseBody, customToolNames = null) {
+ export function parseSSEToOpenAIResponse(rawSSE, fallbackModel) {
+   const chunks = [];
+   let streamError = null;
++  let sawDataLine = false;
+ 
+   for (const line of String(rawSSE || "").split("\n")) {
+     const trimmed = line.trim();
+     if (!trimmed.startsWith("data:")) continue;
++    sawDataLine = true;
+     const payload = trimmed.slice(5).trim();
+     if (!payload || payload === "[DONE]") continue;
+     try {
+@@ -127,7 +129,21 @@ export function parseSSEToOpenAIResponse(rawSSE, fallbackModel) {
+   }
+ 
+   if (streamError) return { error: streamError };
+-  if (chunks.length === 0) return null;
++  if (chunks.length === 0) {
++    // No data lines at all → truly empty input, return null.
++    if (!sawDataLine) return null;
++    // [DONE]-only stream (data lines present but no parseable chunks) —
++    // return a valid empty completion so downstream handlers see a
++    // well-formed response with empty choices.
++    return {
++      id: `chatcmpl-${Date.now()}`,
++      object: "chat.completion",
++      created: Math.floor(Date.now() / 1000),
++      model: fallbackModel || "unknown",
++      choices: [],
++      usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 },
++    };
++  }
+ 
+   const first = chunks[0];
+   const contentParts = [];
+diff --git a/src/lib/db/repos/usageRepo.js b/src/lib/db/repos/usageRepo.js
+index 4ea3b8bd..40be9be4 100644
+--- a/src/lib/db/repos/usageRepo.js
++++ b/src/lib/db/repos/usageRepo.js
+@@ -280,12 +280,13 @@ export async function saveRequestUsage(entry) {
+       }
+ 
+       db.run(
+-        `INSERT INTO usageHistory(timestamp, provider, model, connectionId, apiKey, endpoint, promptTokens, completionTokens, cost, status, tokens, meta) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
++        `INSERT INTO usageHistory(timestamp, provider, model, connectionId, apiKey, endpoint, promptTokens, completionTokens, cost, status, tokens, meta, conversationId) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         [
+           entry.timestamp, entry.provider || null, entry.model || null,
+           entry.connectionId || null, entry.apiKey || null, entry.endpoint || null,
+           promptTokens, completionTokens, entry.cost || 0, entry.status || "ok",
+-          stringifyJson(tokens), stringifyJson({}),
++          stringifyJson(tokens), stringifyJson(entry.meta || {}),
++          entry.conversationId || null,
+         ]
+       );
+ 

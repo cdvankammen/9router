@@ -1,0 +1,11 @@
+commit bc4a3cc7
+author: Nadeem Sajjad
+date: 2026-10-23 11:01:11 +0700
+subject: feat(ollama): support System One decision models (clef, clef-flash)
+
+Enable System One on Ollama Cloud and Ollama Local, adding clef and
+clef-flash decision models. Normalize host paths via buildSystemoneUrl()
+and restrict opencode session headers to OpenCode providers.
+
+Refs #4731
+

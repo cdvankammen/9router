@@ -1,0 +1,10 @@
+===COMMIT===
+hash: 813a0121b09c4181712a902e47e1ed418a88c473
+short: 813a0121
+author: Mike <108046712+miqonee@users.noreply.github.com>
+date: 2026-10-15 21:09:13 +0700
+subject: fix(usage): token fallback for input_tokens rows and stable key masking in stats
+body:
+The 24h/today live-history branch read only tokens.prompt_tokens from the JSON blob, so rows recorded with input_tokens (embeddings, Gemini) counted as zero; fall back to input_tokens and the persisted promptTokens column like the other read paths. maskApiKey and the apiKeyMap lookup now trim so whitespace variants resolve and mask consistently; key name fallback shows the masked key (#3640, #2918). Grouping keys stay on the full API key.
+
+---files---

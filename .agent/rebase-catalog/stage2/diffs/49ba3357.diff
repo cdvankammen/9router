@@ -1,0 +1,35 @@
+commit 49ba3357
+author: cdvankammen
+date: 2026-10-22 12:30:23 -0600
+subject: fix(observability): thread sourceApp/userAgent through remaining sub-handlers + useCallback import
+
+- nonStreamingHandler + sseToJsonHandler accept sourceApp/userAgent (completes source-app capture on all response paths)
+- providers page: useCallback import (needed for health banner refresh)
+- TASK-LOG: Messages multi-view + review tasks 75-92 recorded
+
+
+diff --git a/open-sse/handlers/chatCore/sseToJsonHandler.js b/open-sse/handlers/chatCore/sseToJsonHandler.js
+index 30618d09..3dca9803 100644
+--- a/open-sse/handlers/chatCore/sseToJsonHandler.js
++++ b/open-sse/handlers/chatCore/sseToJsonHandler.js
+@@ -180,7 +180,7 @@ export function parseSSEToOpenAIResponse(rawSSE, fallbackModel) {
+  * Handle case: provider forced streaming but client wants JSON.
+  * Supports both Codex/Responses API SSE and standard Chat Completions SSE.
+  */
+-export async function handleForcedSSEToJson({ providerResponse, sourceFormat, targetFormat, provider, model, body, stream, translatedBody, finalBody, requestStartTime, connectionId, apiKey, clientRawRequest, onRequestSuccess, customToolNames, toolNameMap, trackDone, appendLog, reqTag, log, conversationId, taskType, smartRouterMeta }) {
++export async function handleForcedSSEToJson({ providerResponse, sourceFormat, targetFormat, provider, model, body, stream, translatedBody, finalBody, requestStartTime, connectionId, apiKey, clientRawRequest, onRequestSuccess, customToolNames, toolNameMap, trackDone, appendLog, reqTag, log, conversationId, taskType, smartRouterMeta, sourceApp, userAgent }) {
+   const contentType = providerResponse.headers.get("content-type") || "";
+   const isSSE = contentType.includes("text/event-stream") || (contentType === "" && isResponsesProvider(provider));
+   if (!isSSE) return null; // not handled here
+diff --git a/src/app/(dashboard)/dashboard/providers/page.js b/src/app/(dashboard)/dashboard/providers/page.js
+index e31a81bf..787d9e14 100644
+--- a/src/app/(dashboard)/dashboard/providers/page.js
++++ b/src/app/(dashboard)/dashboard/providers/page.js
+@@ -1,6 +1,6 @@
+ "use client";
+ 
+-import { useState, useEffect } from "react";
++import { useState, useEffect, useCallback } from "react";
+ import PropTypes from "prop-types";
+ import {
+   Card,

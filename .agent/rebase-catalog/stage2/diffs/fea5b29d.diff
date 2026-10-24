@@ -1,0 +1,38 @@
+commit fea5b29d
+author: cdvankammen
+date: 2026-10-22 15:49:37 -0600
+subject: fix(build): restore lost untracked files + merge artifacts for v2 build
+
+- open-sse/utils/responseValidator.js: recreated from research spec (34-malformed-response-handling.md)
+- open-sse/services/smartRouter.js: recreated from chat-log spec (d4294fc8)
+- open-sse/executors/index.js: remove dead NineRouterExecutor import (abandoned
+  pre-combo interception approach; file never existed in any commit)
+- src/models/index.js: re-export getOrphanConnections/deleteOrphanConnections/
+  cleanupProviderConnections (gap-branch orphan-cleanup feature)
+- src/app/(dashboard)/dashboard/providers/[id]/page.js: restore lost if(loading)
+  guard (merge artifact orphaned CardSkeleton)
+- src/app/api/cli-tools/cowork-settings/route.js: drop export from getWriteRoot
+  (Server Actions must be async; matches upstream)
+
+
+diff --git a/src/app/(dashboard)/dashboard/providers/[id]/page.js b/src/app/(dashboard)/dashboard/providers/[id]/page.js
+index c942070a..71782cb0 100644
+--- a/src/app/(dashboard)/dashboard/providers/[id]/page.js
++++ b/src/app/(dashboard)/dashboard/providers/[id]/page.js
+@@ -1589,13 +1589,15 @@ export default function ProviderDetailPage() {
+       </div>
+     );
+   }
++
++  if (loading) {
+     return (
+       <div className="flex flex-col gap-8">
+         <CardSkeleton />
+         <CardSkeleton />
+       </div>
+     );
+-}
++  }
+ 
+   if (!providerInfo) {
+     return (

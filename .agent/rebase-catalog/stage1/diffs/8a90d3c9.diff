@@ -1,0 +1,19 @@
+commit 8a90d3c9
+author: B1nh M1nh
+date: 2026-10-07 20:02:28 +0700
+subject: fix(cli): take `connect` models from the server; add `show`, `--save`, Pi and Oh My Pi
+
+
+
+diff --git a/package.json b/package.json
+index a4240c30..51b5caa3 100644
+--- a/package.json
++++ b/package.json
+@@ -28,6 +28,7 @@
+     "bcryptjs": "^3.0.3",
+     "chalk": "^5.6.2",
+     "confbox": "^0.2.4",
++    "enquirer": "^2.4.1",
+     "express": "^5.2.1",
+     "http-proxy-middleware": "^3.0.5",
+     "jose": "^6.1.3",

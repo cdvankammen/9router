@@ -1,0 +1,19 @@
+commit 57606857
+author: cdvankammen
+date: 2026-10-22 13:46:38 -0600
+subject: feat(messages): DB-level conversation aggregation + keyset pagination
+
+
+
+diff --git a/src/lib/db/index.js b/src/lib/db/index.js
+index 843248d2..9a44737b 100644
+--- a/src/lib/db/index.js
++++ b/src/lib/db/index.js
+@@ -66,6 +66,7 @@ export {
+ export {
+   saveRequestDetail, getRequestDetails, getRequestDetailById, getDistinctProviders,
+   getRequestFacets, getDroppedRecordsCount,
++  getConversationSummary, getConversationMessages,
+ } from "./repos/requestDetailsRepo.js";
+ 
+ // Export/import full DB

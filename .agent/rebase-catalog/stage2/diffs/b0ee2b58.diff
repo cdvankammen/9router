@@ -1,0 +1,35 @@
+commit b0ee2b58
+author: cdvankammen
+date: 2026-10-22 12:19:30 -0600
+subject: fix(messages): drawer overflow in compact mode + payload scrollability
+
+Two UI issues found via browser testing (attached element evidence:
+drawer at left:-160px, pre not scrollable):
+
+1. DRAWER OVERFLOW — the detail drawer was hard-coded w-[800px] + right-0,
+   so in any window narrower than 800px it hung off the left edge.
+   FIX (src/shared/components/Drawer.js): all width presets now use
+   w-[min(Npx,100vw)] so the drawer caps at the viewport width. This is
+   strictly better for every drawer consumer (never larger than the
+   screen), no other behavior changes.
+
+2. PAYLOAD NOT SCROLLABLE — the pre content grew unbounded because the
+   middle flex wrapper lacked min-h-0 and the drawer body is a nested
+   scroll container; long payloads pushed the pre past the drawer height
+   instead of scrolling internally.
+   FIX (messages page FormatTabs): wrapped the <pre> in a
+   min-h-0 flex-1 overflow-auto container and gave the pre
+   h-full min-h-0 overflow-auto, so the payload scrolls within the
+   drawer. Added a Wrap/No-wrap toggle (whitespace-pre-wrap+break-words
+   vs whitespace-pre) so long lines can either wrap or horizontally
+   scroll.
+
+VERIFICATION (production build, port 20131):
+- drawer class now w-[min(800px,100vw)] (hasMinWidthClass=true)
+- pre wrapper: "min-h-0 flex-1 overflow-auto", overflow=auto
+- pre overflow=auto, scrollable (scrollH 22018 > clientH)
+- Wrap toggle present and functional
+
+Deferred-from: messages-page-feature-spec.md §12.1/12.2 (TASK-LOG #87-89)
+Part of: Messages Page + Error Inbox plan (P1 UI polish)
+

@@ -1,0 +1,10 @@
+===COMMIT===
+hash: 6ed886857da125f4908a8a3c3e64f7f1d8ff8366
+short: 6ed88685
+author: decolua <decoluadt@gmail.com>
+date: 2026-10-15 21:43:37 +0700
+subject: Revert "feat(keys): per-key token quotas and pattern-based model access"
+body:
+This reverts commit 2aa9307f5030b563bd2e5aa339847bba9d697533.
+
+---files---

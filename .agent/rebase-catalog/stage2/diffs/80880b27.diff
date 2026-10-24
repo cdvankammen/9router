@@ -1,0 +1,9 @@
+commit 80880b27
+author: cdvankammen
+date: 2026-10-22 13:46:38 -0600
+subject: fix(messages): restore Account line + unknown-fallbacks in exported markdown
+
+Subagent scrutiny of c6988820 found the shared buildMarkdown dropped the
+Account (connectionId) line that the old export had, and raw fields rendered
+'undefined' for legacy rows missing provider/model/status. Restored both.
+

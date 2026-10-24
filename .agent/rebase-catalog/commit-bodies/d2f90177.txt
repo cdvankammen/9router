@@ -1,0 +1,10 @@
+===COMMIT===
+hash: d2f9017758485f6ab0ffeaaa72f66831c6cd9d26
+short: d2f90177
+author: decolua <decoluadt@gmail.com>
+date: 2026-10-07 18:51:36 +0700
+subject: feat(systemone): support Cloudflare AI clef-flash endpoint
+body:
+Co-Authored-By: Claude Code <noreply@anthropic.com>
+
+---files---

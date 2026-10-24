@@ -1,0 +1,10 @@
+===COMMIT===
+hash: 1d4335d44d94f18b4d8c1dde70db800c2600e88b
+short: 1d4335d4
+author: duongloc216 <135154079+duongloc216@users.noreply.github.com>
+date: 2026-10-13 18:03:36 +0700
+subject: fix(translator): return Claude messages for forced SSE JSON responses (#4789)
+body:
+Reuse the existing Claude message converter in both forced-stream JSON paths and cover text preservation, tool calls, and client format compatibility.
+
+---files---

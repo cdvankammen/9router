@@ -1,0 +1,9 @@
+commit 5f8f42b2
+author: cdvankammen
+date: 2026-10-22 13:46:38 -0600
+subject: fix(messages): status filter vocabulary matches stored values (B1)
+
+Rows are stored as status:'success'/'error'/'streaming' but the filter offered
+'done/partial/cancelled' — selecting 'done' returned an empty list (review doc
+20, bug B1, verified). Filter now matches the actual vocabulary.
+

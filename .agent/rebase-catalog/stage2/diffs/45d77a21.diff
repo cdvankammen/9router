@@ -1,0 +1,131 @@
+commit 45d77a21
+author: cdvankammen
+date: 2026-10-22 17:17:03 -0600
+subject: feat(usage): generic quota endpoint for custom OpenAI-compatible provider nodes
+
+Add optional usageUrl + usageAuthMode fields to compatible provider nodes
+(openai-compatible, anthropic-compatible) and surface them on the quota page:
+
+- open-sse/services/usage/custom.js: generic GET fetcher normalizing common
+  quota JSON shapes ({data}, {usage}, flat used/limit, remaining, credits,
+  balance, quotas) into the UI row shape {name, used, total, remaining,
+  remainingPercentage, resetAt, unlimited}; auth modes bearer/header/none.
+- usage.js: dispatch connections with providerSpecificData.usageUrl to the
+  generic handler (CUSTOM_USAGE_MARKER) before registry lookup.
+- api/usage/[connectionId]: gate now also allows connections whose
+  providerSpecificData declares a non-empty usageUrl.
+- provider-nodes POST/PUT: accept, validate, persist usageUrl/usageAuthMode;
+  PUT propagates to existing connections (clearing works end-to-end).
+- providers POST: copy usage fields from node into connection
+  providerSpecificData at connection creation.
+- ProviderLimits utils.parseQuotaData: default branch now forwards
+  remainingPercentage + unlimited so custom nodes render progress bars.
+- AddCompatibleModal / EditCompatibleNodeModal: usageUrl + usageAuthMode
+  inputs (hidden for multi-compatible).
+- tests/unit/custom-usage.test.js: 20 tests covering normalization, auth
+  modes, dispatch routing, unlimited, error mapping, parseQuotaData.
+
+Addresses BUG-QUOTA-03 class: custom connections appear on quota page but
+fail; now they render when the node declares a usage endpoint.
+
+
+diff --git a/open-sse/services/usage.js b/open-sse/services/usage.js
+index 899501ff..1df28834 100644
+--- a/open-sse/services/usage.js
++++ b/open-sse/services/usage.js
+@@ -2,6 +2,10 @@
+  * Usage Fetcher - Get usage data from provider APIs
+  */
+ 
++// Sentinel key for the generic custom-usage handler (usageUrl-declared nodes).
++// Never a real provider id, so it cannot collide with registry entries.
++const CUSTOM_USAGE_MARKER = "__custom_usage__";
++
+ import { getGitHubUsage } from "./usage/github.js";
+ import { getGeminiUsage, getAntigravityUsage } from "./usage/google.js";
+ import { getClaudeUsage, consumeClaudeResetGrant } from "./usage/claude.js";
+@@ -21,6 +25,7 @@ import { getOpenRouterUsage } from "./usage/openrouter.js";
+ import { getZedUsage } from "./usage/zed.js";
+ import { getTraeUsage } from "./usage/trae.js";
+ import { getXiaomiMimoUsage } from "./usage/xiaomi-mimo.js";
++import { getCustomUsage } from "./usage/custom.js";
+ import { resolveQoderCredentials } from "./qoderModels.js";
+ import { getGlmUsage } from "./usage/glm.js";
+ import { getCommandCodeUsage } from "./usage/commandcode.js";
+@@ -67,6 +72,10 @@ const USAGE_HANDLERS = {
+   trae: (c) => getTraeUsage(c.accessToken, c.providerSpecificData, c.proxyOptions),
+   "xiaomi-mimo": (c) => getXiaomiMimoUsage(c.accessToken, c.providerSpecificData, c.proxyOptions),
+   commandcode: (c) => getCommandCodeUsage(c.apiKey, c.proxyOptions),
++  // Generic user-declared usage endpoint on custom provider nodes
++  // (usageUrl + usageAuthMode on providerSpecificData). Handled before the
++  // registry lookup so any connection with a declared usageUrl works.
++  [CUSTOM_USAGE_MARKER]: (c) => getCustomUsage(c),
+ };
+ 
+ // Qoder intl/CN share one usage path: PATs must be exchanged to a job token
+@@ -84,7 +93,14 @@ export async function getUsageForProvider(connection, proxyOptions = null, optio
+     ...(projectId ? { projectId } : {}),
+   };
+ 
+-  const handler = USAGE_HANDLERS[provider];
++  // Custom provider nodes may declare a user-facing usage URL (usageUrl +
++  // usageAuthMode). The explicit field IS the capability declaration — route
++  // to the generic fetcher whenever it is set, regardless of registry entry.
++  const hasCustomUsageUrl = Boolean(
++    providerSpecificData?.usageUrl && typeof providerSpecificData.usageUrl === "string" && providerSpecificData.usageUrl.trim()
++  );
++
++  const handler = hasCustomUsageUrl ? USAGE_HANDLERS[CUSTOM_USAGE_MARKER] : USAGE_HANDLERS[provider];
+   if (!handler) return { message: `Usage API not implemented for ${provider}` };
+   return await handler({
+     provider,
+diff --git a/src/app/(dashboard)/dashboard/usage/components/ProviderLimits/utils.js b/src/app/(dashboard)/dashboard/usage/components/ProviderLimits/utils.js
+index 2a024aab..50672085 100644
+--- a/src/app/(dashboard)/dashboard/usage/components/ProviderLimits/utils.js
++++ b/src/app/(dashboard)/dashboard/usage/components/ProviderLimits/utils.js
+@@ -751,6 +751,8 @@ export function parseQuotaData(provider, data) {
+         }
+         break;
+ 
++      // Custom provider nodes (openai-compatible-*, anthropic-compatible-*, custom-embedding-*)
++      // declared via usageUrl field. Generic handler returns {name, used, total, remainingPercentage, unlimited, resetAt}.
+       default:
+         // Generic fallback for unknown providers
+         if (data.quotas) {
+@@ -760,6 +762,8 @@ export function parseQuotaData(provider, data) {
+               used: quota.used || 0,
+               total: quota.total || 0,
+               resetAt: quota.resetAt || null,
++              remainingPercentage: quota.remainingPercentage,
++              unlimited: quota.unlimited,
+             });
+           });
+         }
+diff --git a/src/app/api/providers/route.js b/src/app/api/providers/route.js
+index a3a221a2..2301ee26 100644
+--- a/src/app/api/providers/route.js
++++ b/src/app/api/providers/route.js
+@@ -139,6 +139,7 @@ export async function POST(request) {
+         baseUrl: node.baseUrl,
+         nodeName: node.name,
+         ...(Array.isArray(node.transports) ? { transports: node.transports } : {}),
++        ...(node.usageUrl ? { usageUrl: node.usageUrl, usageAuthMode: node.usageAuthMode || "bearer" } : {}),
+       };
+     } else if (isAnthropicCompatibleProvider(provider)) {
+       const node = await getProviderNodeById(provider);
+@@ -149,6 +150,7 @@ export async function POST(request) {
+         prefix: node.prefix,
+         baseUrl: node.baseUrl,
+         nodeName: node.name,
++        ...(node.usageUrl ? { usageUrl: node.usageUrl, usageAuthMode: node.usageAuthMode || "bearer" } : {}),
+       };
+     } else if (isCustomEmbeddingProvider(provider)) {
+       const node = await getProviderNodeById(provider);
+@@ -159,6 +161,7 @@ export async function POST(request) {
+         prefix: node.prefix,
+         baseUrl: node.baseUrl,
+         nodeName: node.name,
++        ...(node.usageUrl ? { usageUrl: node.usageUrl, usageAuthMode: node.usageAuthMode || "bearer" } : {}),
+       };
+     }
+ 

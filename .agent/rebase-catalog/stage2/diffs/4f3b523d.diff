@@ -1,0 +1,24 @@
+commit 4f3b523d
+author: cdvankammen
+date: 2026-10-22 13:46:38 -0600
+subject: test(request-details): fix settings-key rename drift (enableObservability2 → enableObservability)
+
+The test wrote enableObservability2:true (renamed in 3fab15ae to
+enableObservability, default false) so saveRequestDetail silently early-
+returned — 2 tests deterministically failed standalone. Full suite now
+1733 pass / 86 baseline fail (2 fewer than documented baseline).
+
+
+diff --git a/tests/unit/request-details-tab.test.js b/tests/unit/request-details-tab.test.js
+index 6b056503..dc8197d3 100644
+--- a/tests/unit/request-details-tab.test.js
++++ b/tests/unit/request-details-tab.test.js
+@@ -22,7 +22,7 @@ beforeAll(async () => {
+   vi.resetModules();
+   db = await import("@/lib/db/index.js");
+   await db.initDb();
+-  await db.updateSettings({ enableObservability2: true, observabilityBatchSize: 1 });
++  await db.updateSettings({ enableObservability: true, observabilityBatchSize: 1 });
+ 
+   const { getAdapter } = await import("@/lib/db/driver.js");
+   adapter = await getAdapter();

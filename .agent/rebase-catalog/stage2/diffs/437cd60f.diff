@@ -1,0 +1,25 @@
+commit 437cd60f
+author: cdvankammen
+date: 2026-10-22 15:41:21 -0600
+subject: security(middleware): implement rate limiter + header sanitizer (GAP-P1-17)
+
+Replace placeholder src/lib/middleware/index.js with full middleware module:
+
+- rateLimiter.js: per-IP sliding window (120 req/min) + burst cap (30/5s)
+  using trusted x-9r-real-ip from custom-server.js for IP bucketing
+- headerSanitizer.js: strips injection chars (CRLF/null), oversized headers,
+  and server-only headers (x-9r-real-ip, x-9r-peer-token, x-9r-via-proxy)
+  unless request came through trusted proxy
+- index.js: barrel export of all middleware utilities
+
+Wire into dashboardGuard.js proxy():
+1. Sanitize request headers before any route logic (mutates in place)
+2. Apply rate limiting to /api/* and /dashboard routes
+3. Return 429 with Retry-After + X-RateLimit-* headers when exceeded
+
+21 new tests in tests/unit/middleware.test.js (all pass).
+44 existing dashboard-guard tests pass (no regressions).
+
+Fixes GAP-P1-17 from /tmp/9router-gaps.json (P1 severity).
+Ref: UX005-I (rate limiter), UX006-I (header sanitizer)
+

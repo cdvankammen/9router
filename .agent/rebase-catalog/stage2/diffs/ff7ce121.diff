@@ -1,0 +1,67 @@
+commit ff7ce121
+author: cdvankammen
+date: 2026-10-22 17:16:29 -0600
+subject: feat(usage): add Trae entitlement quota support (trae usage handler)
+
+- open-sse/services/usage/trae.js: getTraeUsage() mirroring zed/xiaomi-mimo
+  handler convention; entitlement-based quota from cockpit-tools reference
+  (jlcodes99). Quota rows from ide_user_ent_usage + ide_user_pay_status.
+  Region-aware origins: growsg-normal.trae.ai / grow-normal.trae.ai /
+  grow-normal.traeapi.us / api.trae.cn (CN v2 paths). Plan from
+  user_pay_identity_str; unlimited when entitlement unlimited.
+- open-sse/services/usage.js: register trae in USAGE_HANDLERS.
+- tests/unit/trae-usage.test.js: 13 vitest cases (region mapping, quota
+  parsing, error handling, auth header).
+- ProviderLimits/utils.js: parseQuotaData trae case (remainingPercentage
+  + unlimited forwarding).
+
+
+diff --git a/open-sse/services/usage.js b/open-sse/services/usage.js
+index e4223567..899501ff 100644
+--- a/open-sse/services/usage.js
++++ b/open-sse/services/usage.js
+@@ -19,6 +19,7 @@ import { getOpenCodeZenUsage } from "./usage/opencode-zen.js";
+ import { getGroqUsage } from "./usage/groq.js";
+ import { getOpenRouterUsage } from "./usage/openrouter.js";
+ import { getZedUsage } from "./usage/zed.js";
++import { getTraeUsage } from "./usage/trae.js";
+ import { getXiaomiMimoUsage } from "./usage/xiaomi-mimo.js";
+ import { resolveQoderCredentials } from "./qoderModels.js";
+ import { getGlmUsage } from "./usage/glm.js";
+@@ -63,6 +64,7 @@ const USAGE_HANDLERS = {
+   groq: (c) => getGroqUsage(c.apiKey, c.proxyOptions),
+   openrouter: (c) => getOpenRouterUsage(c.apiKey, c.proxyOptions),
+   zed: (c) => getZedUsage(c.accessToken, c.providerSpecificData, c.proxyOptions),
++  trae: (c) => getTraeUsage(c.accessToken, c.providerSpecificData, c.proxyOptions),
+   "xiaomi-mimo": (c) => getXiaomiMimoUsage(c.accessToken, c.providerSpecificData, c.proxyOptions),
+   commandcode: (c) => getCommandCodeUsage(c.apiKey, c.proxyOptions),
+ };
+diff --git a/src/app/(dashboard)/dashboard/usage/components/ProviderLimits/utils.js b/src/app/(dashboard)/dashboard/usage/components/ProviderLimits/utils.js
+index 9cb7ad71..2a024aab 100644
+--- a/src/app/(dashboard)/dashboard/usage/components/ProviderLimits/utils.js
++++ b/src/app/(dashboard)/dashboard/usage/components/ProviderLimits/utils.js
+@@ -717,6 +717,24 @@ export function parseQuotaData(provider, data) {
+         }
+         break;
+ 
++      case "trae":
++        // Trae entitlement packs (Basic Usage / Bonus Usage / On-Demand Usage).
++        // Forward explicit remainingPercentage + unlimited so entitlement rows
++        // render % correctly (used/total are absolute counts, not percentages).
++        if (data.quotas) {
++          Object.entries(data.quotas).forEach(([name, quota]) => {
++            normalizedQuotas.push({
++              name,
++              used: quota.used || 0,
++              total: quota.total || 0,
++              resetAt: quota.resetAt || null,
++              remainingPercentage: quota.remainingPercentage,
++              unlimited: quota.unlimited,
++            });
++          });
++        }
++        break;
++
+       case "zed":
+         // Edit predictions + optional hosted model_requests; unlimited uses remainingPercentage.
+         if (data.quotas) {

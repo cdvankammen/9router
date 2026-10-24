@@ -1,0 +1,95 @@
+commit aede6fde
+author: cdvankammen
+date: 2026-10-22 15:45:26 -0600
+subject: fix(error-handling): replace silent catch {} blocks with logging or intent comments (GAP-P2-ERR)
+
+19 server-side files patched:
+- API routes: chat, oauth, providers, ping, tunnel-install
+- Auth: dashboardSession — log unexpected JWT errors, keep expected ones silent
+- DB adapters: nodeSqlite, bunSqlite, betterSqlite, sqljs — checkpoint + rollback errors logged
+- DB repos: usageRepo — connection/apiKey errors logged with context
+- DB backup: cleanup catches commented as intentional
+- DB migrate: index creation commented as idempotent, marker write failure logged
+- machineId: warn on fallback to random UUID, warn on persist failure
+- OAuth: kilocode org fetch logged on failure, qoder parse commented as intentional
+- MITM: onResponse callback error logged, client.close catches commented as cleanup
+- Tailscale: tmp cleanup commented as intentional
+
+Anti-false-positive test added: tests/unit/silent-catch-coverage.test.js
+- Scans all 19 target files for bare catch {} without logging or comment
+- Proven: test fails when catch {} is reintroduced (anti-false-positive verified)
+
+Co-authored-by: hermes-agent
+Signed-off: hermes-agent
+
+
+diff --git a/src/app/api/providers/route.js b/src/app/api/providers/route.js
+index eac919dd..2b5dabd1 100644
+--- a/src/app/api/providers/route.js
++++ b/src/app/api/providers/route.js
+@@ -86,7 +86,7 @@ export async function GET(request) {
+       for (const node of nodes) {
+         if (node.id && node.name) nodeNameMap[node.id] = node.name;
+       }
+-    } catch { }
++    } catch (e) { console.error("[providers] GET failed to enrich names:", e.message); }
+ 
+     // Hide sensitive fields, enrich name for compatible providers
+     const safeConnections = connections.map(c => {
+diff --git a/src/lib/db/repos/usageRepo.js b/src/lib/db/repos/usageRepo.js
+index 91725730..d5a06318 100644
+--- a/src/lib/db/repos/usageRepo.js
++++ b/src/lib/db/repos/usageRepo.js
+@@ -114,7 +114,9 @@ async function getConnectionMapCached() {
+     for (const c of all) map[c.id] = c.name || c.email || c.id;
+     connCache.map = map;
+     connCache.ts = Date.now();
+-  } catch {}
++  } catch (e) {
++    console.error("[usageRepo] getConnectionMapCached failed to load connections:", e.message);
++  }
+   return connCache.map;
+ }
+ 
+@@ -129,7 +131,9 @@ async function ensureRingInitialized() {
+       apiKey: r.apiKey, endpoint: r.endpoint, cost: r.cost, status: r.status,
+       tokens: parseJson(r.tokens, {}),
+     }));
+-  } catch {}
++  } catch (e) {
++    console.error("[usageRepo] ensureRingInitialized failed:", e.message);
++  }
+ }
+ 
+ async function calculateCost(provider, model, tokens) {
+@@ -354,7 +358,7 @@ export async function getUsageStats(period = "all") {
+   ]);
+ 
+   let allConnections = [];
+-  try { allConnections = await getProviderConnections(); } catch {}
++  try { allConnections = await getProviderConnections(); } catch (e) { console.error("[usageRepo] getUsageStats: getProviderConnections failed:", e.message); }
+   const connectionMap = {};
+   for (const c of allConnections) connectionMap[c.id] = c.name || c.email || c.id;
+ 
+@@ -362,10 +366,10 @@ export async function getUsageStats(period = "all") {
+   try {
+     const nodes = await getProviderNodes();
+     for (const n of nodes) if (n.id && n.name) providerNodeNameMap[n.id] = n.name;
+-  } catch {}
++  } catch (e) { console.error("[usageRepo] getUsageStats: getProviderNodes failed:", e.message); }
+ 
+   let allApiKeys = [];
+-  try { allApiKeys = await getApiKeys(); } catch {}
++  try { allApiKeys = await getApiKeys(); } catch (e) { console.error("[usageRepo] getUsageStats: getApiKeys failed:", e.message); }
+   const apiKeyMap = {};
+   for (const k of allApiKeys) apiKeyMap[k.key] = { name: k.name, id: k.id, createdAt: k.createdAt };
+ 
+@@ -792,7 +796,7 @@ export async function getRecentLogs(limit = 200) {
+       const { getProviderConnections } = await import("./connectionsRepo.js");
+       const connections = await getProviderConnections();
+       for (const c of connections) connMap[c.id] = c.name || c.email || "";
+-    } catch {}
++    } catch (e) { console.error("[usageRepo] getRecentLogs: connections enrichment failed:", e.message); }
+ 
+     return rows.map((r) => {
+       const ts = formatLogDate(new Date(r.timestamp));

@@ -1,0 +1,23 @@
+===COMMIT===
+hash: a440ef43b5e670aa041f7cc35081e9989fc997db
+short: a440ef43
+author: mj10612 <5388892+mj10612@users.noreply.github.com>
+date: 2026-10-23 11:09:15 +0700
+subject: fix(headroom): compress native Gemini and Responses tool outputs
+body:
+Gemini and Antigravity keep tool results under native contents rather than
+messages, and Responses requests with tool history were skipped by the
+round-trip safety guard even when the outputs were compressible plain
+text. Both lanes reached the proxy with nothing to compress.
+
+Project only eligible tool-output text into temporary OpenAI tool
+messages, validate the response, then write shorter non-empty text back
+to its original fields. Cover the Gemini, Gemini CLI, Vertex and
+Antigravity envelopes plus Responses function_call_output strings and
+text parts. Traversal is limited to known text containers with a depth
+bound, so JSON strings, images, reasoning items, thought signatures, call
+ids/arguments and user/system instructions are preserved.
+
+Refs #4070
+
+---files---

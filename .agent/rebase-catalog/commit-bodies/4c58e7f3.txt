@@ -1,0 +1,38 @@
+===COMMIT===
+hash: 4c58e7f318fcd0a59cd05a10fa8f777c258b8b0c
+short: 4c58e7f3
+author: kuroringo90 <ak4700@gmx.com>
+date: 2026-10-13 17:34:53 +0700
+subject: fix(capabilities): add missing OpenCode Free reasoning entries (space-bunny & co)
+body:
+An id present in none of MODEL_CAPABILITIES / PROVIDER_CAPABILITIES /
+PATTERN_CAPABILITIES falls through to DEFAULT_CAPABILITIES, which has
+reasoning: false. applyThinking() then takes the early return and runs
+stripAll(body), so the client's reasoning_effort is deleted before the
+request reaches the upstream — the same silent drop reported in #2690,
+with a different trigger: not an alias that matches no pattern, but an id
+that shipped after the tables were last touched.
+
+Adds per-id entries for the OpenCode Free models that models.dev reports
+as reasoning-capable and that have no table entry: space-bunny-free,
+space-bunny, big-pickle, exo-free, fledge-alpha-free, longcat-2.0,
+longcat-2.0-free, longcat-2.5-preview-free, north-mini-code-free,
+ring-2.6-1t-free, x-preview-f-free.
+
+Modalities and limits are taken verbatim from models.dev. Entries are
+per-id rather than a shared glob because the ids disagree on modalities
+(text-only vs vision vs video) and on context/output limits — a glob
+would overstate several of them.
+
+thinkingFormat: "openai" matches the value resolveFormat() already falls
+back to for these ids, so the wire format is unchanged; declaring it
+makes getThinkingLevels() return the openai set, which is what clamps
+"max" to "xhigh".
+
+Tests: regression coverage in tests/translator/thinking-unified.test.js
+(effort preserved, max clamped, control case with no entry still stripped)
+and data coverage in tests/unit/capabilities.test.js.
+
+Refs #2690.
+
+---files---

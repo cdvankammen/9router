@@ -1,0 +1,9 @@
+commit 7cc553e4
+author: cdvankammen
+date: 2026-10-22 14:51:35 -0600
+subject: build: bundle per-IP rate limiter into CLI package
+
+custom-server.js requires ./custom-server.rate-limiter at boot but
+build-cli.js never copied it, so a v1 build crashed with MODULE_NOT_FOUND.
+Add step 3a1 to copy it alongside custom-server.js.
+

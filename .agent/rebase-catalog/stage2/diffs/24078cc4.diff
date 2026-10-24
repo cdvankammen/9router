@@ -1,0 +1,18 @@
+commit 24078cc4
+author: cdvankammen
+date: 2026-10-22 15:41:21 -0600
+subject: fix(reliability): add AbortSignal.timeout(8000) to all 22 unprotected fetch calls in provider validation (GAP-P1-25)
+
+The validateProvider function makes 27 sequential fetch calls to different
+provider APIs. Only 5 had AbortSignal.timeout(8000). This adds the same
+timeout to the remaining 22, preventing indefinite hangs when a provider
+API is unreachable or slow.
+
+Affected providers: openai-compatible, custom-embedding, anthropic-compat,
+cloudflare-ai, azure, openai, vercel-ai-gateway, anthropic, gemini,
+openrouter, glm/kimi/minimax/alicode (both formats), volcengine-ark,
+byteplus, opencode-go, commandcode, deepgram, blackbox, vertex,
+vertex-partner, grok-web, perplexity-web.
+
+Card: t_a2e69706
+

@@ -1,0 +1,9 @@
+===COMMIT===
+hash: 2f827bcf7cf426f76d2ae9f28204a475e7bfc2cf
+short: 2f827bcf
+author: Mochamad Muzayyid Al Hakim <58965738+zayyid123@users.noreply.github.com>
+date: 2026-10-07 20:17:20 +0700
+subject: feat(elevenlabs): add Scribe speech-to-text support (#4537)
+body:
+
+---files---

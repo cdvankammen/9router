@@ -1,0 +1,6 @@
+commit 3125ac2b
+author: warelik
+date: 2026-10-07 19:59:40 +0700
+subject: fix(kimi): route Responses clients to the Kimi Code /responses endpoint
+
+

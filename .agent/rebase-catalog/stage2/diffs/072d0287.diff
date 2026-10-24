@@ -1,0 +1,39 @@
+commit 072d0287
+author: cdvankammen
+date: 2026-10-22 12:26:40 -0600
+subject: feat(messages): 3 new view tabs (Timeline/Trace/Board) + facet API + histogram
+
+Implements the multi-view design research (message-viewer-design-philosophies.md):
+Messages page now has 5 view tabs — List / Conversations / Timeline / Trace / Board.
+
+NEW VIEWS:
+1. Timeline (Messages 2) — trace-style waterfall: request-volume histogram
+   (recharts, last 24h, errors red) + per-request latency bars (ttft + total
+   segments, status color-coded). CloudWatch/New Relic/GitHub Actions style.
+2. Trace (Messages 3) — 3-panel APM tree: conversation list → request chain
+   (nodes = requests in session, status dots, errorCategory labels) → detail
+   hint. Claude Code trace / Sentry breadcrumbs style.
+3. Board (Messages 4) — kanban triage: New/Investigating/Resolved/Snoozed
+   columns, cards grouped by fingerprint (provider+model+errorCategory+error),
+   drag-and-drop between columns, error category chips + counts. Sentry/Linear
+   style. (Column persistence is a P2 item.)
+
+API (/api/messages):
+- New sourceApp filter (UA fingerprint class)
+- facets: provider/model/status/errorCategory/sourceApp counts over the full
+  filtered set (stable across pagination)
+- histogram: 24 hourly buckets (count + errors) for the timeline header
+
+FIX: providers/[id]/models/route.js — duplicate `url` declaration broke the
+whole build (const url at GET top-level vs let url in same scope). Renamed the
+latter to modelsUrl. This was blocking every build.
+
+VERIFICATION (production build, port 20131):
+- Timeline: histogram renders (recharts bars), 50 waterfall rows
+- Trace: conversation list + request chain + hint panel
+- Board: 4 columns, 10 fingerprint-grouped cards, drag works, View opens drawer
+- Facet API: provider/model/status/errorCategory/sourceApp counts + 24 histogram buckets
+
+Research: docs/plans-and-prompts/research/message-viewer-design-philosophies.md
+Part of: Messages Page + Error Inbox plan (P1 views expansion)
+

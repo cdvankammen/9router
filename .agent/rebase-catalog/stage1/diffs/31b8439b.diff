@@ -1,0 +1,39 @@
+commit 31b8439b
+author: AMD-it
+date: 2026-10-23 14:35:54 +0700
+subject: fix(usage): support /api/balance for ollama cloud quota tracking (#5026)
+
+Ollama Cloud has migrated active quota limits from /api/usage to /api/balance.
+The /api/usage endpoint now only reports activity history metrics.
+
+- Fall back to /api/balance when /api/usage limits are missing
+- Support session (5h) and weekly (7d) remaining percentages and reset timestamps
+- Support allowance_usd and purchased credits
+- Pass through balance metadata (isCreditBalance, currency, unit, unlimited) to QuotaTable
+- Add comprehensive vitest coverage for /api/balance parsing
+
+
+diff --git a/src/app/(dashboard)/dashboard/usage/components/ProviderLimits/utils.js b/src/app/(dashboard)/dashboard/usage/components/ProviderLimits/utils.js
+index 23ca0300..c070f27f 100644
+--- a/src/app/(dashboard)/dashboard/usage/components/ProviderLimits/utils.js
++++ b/src/app/(dashboard)/dashboard/usage/components/ProviderLimits/utils.js
+@@ -741,7 +741,7 @@ export function parseQuotaData(provider, data) {
+         break;
+ 
+       case "ollama":
+-        // Session (5h) / Weekly (7d) / Monthly usage % from ollama.com/api/usage.
++        // Session (5h) / Weekly (7d) / Monthly usage % from ollama.com/api/balance (or /api/usage).
+         // remainingPercentage only — no absolute remaining (UI treats remaining as %).
+         if (data.quotas) {
+           Object.entries(data.quotas).forEach(([name, quota]) => {
+@@ -751,6 +751,10 @@ export function parseQuotaData(provider, data) {
+               total: quota.total || 0,
+               resetAt: quota.resetAt || null,
+               remainingPercentage: quota.remainingPercentage,
++              isCreditBalance: quota.isCreditBalance,
++              currency: quota.currency,
++              unit: quota.unit,
++              unlimited: quota.unlimited,
+             });
+           });
+         }

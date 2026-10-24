@@ -1,0 +1,11 @@
+===COMMIT===
+hash: 313559f4709368aee020f598747593ef57a462a8
+short: 313559f4
+author: anojndr <anojndr@gmail.com>
+date: 2026-10-23 14:00:41 +0700
+subject: fix(opencode): honor low|high|max reasoning efforts for zen free deepseek-v4.1-flash
+body:
+Support low, high, and max reasoning efforts for oc/deepseek-v4.1-flash-free
+instead of collapsing low to high via generic DeepSeek rules.
+
+---files---

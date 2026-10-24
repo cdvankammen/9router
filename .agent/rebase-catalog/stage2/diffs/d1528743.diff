@@ -1,0 +1,16 @@
+commit d1528743
+author: cdvankammen
+date: 2026-10-22 17:15:32 -0600
+subject: feat: surface connection IDs and drill-down in provider error panel
+
+BUG-ERR-02: Provider error chips show but detail page hides rich requestDetails
+
+- Add connectionIds aggregation to getErrorSummary (GROUP_CONCAT DISTINCT)
+- Display connection IDs as blue badges in ErrorGroupList
+- Add 'View Details' drill-down button to expand individual error records
+- Show connection ID, timestamp, latency, and error message for each record
+- Fetch up to 10 detailed records per error group on demand
+
+Verification: error groups now show which connections are affected and allow
+users to drill into specific failed requests with full context.
+

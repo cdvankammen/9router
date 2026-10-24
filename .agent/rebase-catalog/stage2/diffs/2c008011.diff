@@ -1,0 +1,204 @@
+commit 2c008011
+author: cdvankammen
+date: 2026-10-22 11:56:24 -0600
+subject: feat(observability): persist smart router taskType in usageHistory meta
+
+- resolveSmartRouter now returns { comboName, taskType } (sticky-hit path
+  re-classifies for taskType)
+- chat.js threads smartRouterTaskType through every handleSingleModelChat
+  call site (combo, fusion, capacity-adapter, single-model paths) into
+  handleChatCore
+- chatCore.js destructures taskType, adds to sharedCtx; sub-handlers pass
+  it to saveUsageStats
+- saveUsageStats stores meta: { taskType }; usageRepo now persists entry.meta
+  (was hardcoded {}) — enables per-task-type analytics from usageHistory
+
+Tests: tests/unit/tasktype-tracking.test.js — 2 tests verifying meta.taskType
++ conversationId persist at SQLite layer, and backward-compat empty meta.
+All pass.
+
+Verified: production build compiles.
+
+Part of: Smart Router & Fallback UX plan (Phase 3 metrics)
+
+
+diff --git a/open-sse/handlers/chatCore.js b/open-sse/handlers/chatCore.js
+index 8a6d3b9e..4e529c97 100644
+--- a/open-sse/handlers/chatCore.js
++++ b/open-sse/handlers/chatCore.js
+@@ -60,7 +60,7 @@ export function stripContinuityFields(body) {
+   return body;
+ }
+ 
+-export async function handleChatCore({ body, modelInfo, credentials, log, onCredentialsRefreshed, onRequestSuccess, onDisconnect, clientRawRequest, connectionId, userAgent, apiKey, ccFilterNaming, rtkEnabled, headroomEnabled, headroomUrl, headroomCompressUserMessages, headroomTimeoutMs, cavemanEnabled, cavemanLevel, ponytailEnabled, ponytailLevel, pxpipeEnabled, pxpipeMinChars, pxpipeTimeoutMs, pxpipeTransform, onPxpipeEvent, sourceFormatOverride, providerThinking, providerOverrides, conversationId }) {
++export async function handleChatCore({ body, modelInfo, credentials, log, onCredentialsRefreshed, onRequestSuccess, onDisconnect, clientRawRequest, connectionId, userAgent, apiKey, ccFilterNaming, rtkEnabled, headroomEnabled, headroomUrl, headroomCompressUserMessages, headroomTimeoutMs, cavemanEnabled, cavemanLevel, ponytailEnabled, ponytailLevel, pxpipeEnabled, pxpipeMinChars, pxpipeTimeoutMs, pxpipeTransform, onPxpipeEvent, sourceFormatOverride, providerThinking, providerOverrides, conversationId, taskType }) {
+   const { provider, model } = modelInfo;
+   const requestStartTime = Date.now();
+   // Stable per-session color so all lines of one CLI conversation share a tag
+@@ -495,7 +495,7 @@ export async function handleChatCore({ body, modelInfo, credentials, log, onCred
+     return createErrorResult(statusCode, errMsg, resetsAtMs, upstreamResponseHeaders(providerResponse.headers));
+   }
+ 
+-  const sharedCtx = { provider, model, body, stream, translatedBody, finalBody, requestStartTime, connectionId, apiKey, clientRawRequest, onRequestSuccess, pxpipe: pxpipeSummary, reqTag, log, conversationId };
++  const sharedCtx = { provider, model, body, stream, translatedBody, finalBody, requestStartTime, connectionId, apiKey, clientRawRequest, onRequestSuccess, pxpipe: pxpipeSummary, reqTag, log, conversationId, taskType };
+   const appendLog = (extra) => appendRequestLog({ model, provider, connectionId, ...extra }).catch(() => { });
+   const trackDone = () => trackPendingRequest(model, provider, connectionId, false);
+ 
+diff --git a/open-sse/handlers/chatCore/requestDetail.js b/open-sse/handlers/chatCore/requestDetail.js
+index 4da99b3e..94a6f4fa 100644
+--- a/open-sse/handlers/chatCore/requestDetail.js
++++ b/open-sse/handlers/chatCore/requestDetail.js
+@@ -101,7 +101,7 @@ export function formatDoneLine({ usage, latency }) {
+   return `DONE ${latency?.total ?? 0}ms${ttftStr} · ${inStr} · OUT ${outTok}`;
+ }
+ 
+-export function saveUsageStats({ provider, model, tokens, connectionId, apiKey, endpoint, label = "USAGE", silent = false, conversationId }) {
++export function saveUsageStats({ provider, model, tokens, connectionId, apiKey, endpoint, label = "USAGE", silent = false, conversationId, taskType }) {
+   if (!tokens || typeof tokens !== "object") return;
+ 
+   const inTokens = tokens.input_tokens ?? tokens.prompt_tokens ?? 0;
+@@ -130,6 +130,7 @@ export function saveUsageStats({ provider, model, tokens, connectionId, apiKey,
+     connectionId: connectionId || undefined,
+     apiKey: apiKey || undefined,
+     endpoint: endpoint || null,
+-    conversationId: conversationId || undefined
++    conversationId: conversationId || undefined,
++    meta: taskType ? { taskType } : undefined
+   }).catch(() => {});
+ }
+diff --git a/open-sse/handlers/chatCore/sseToJsonHandler.js b/open-sse/handlers/chatCore/sseToJsonHandler.js
+index b321ec14..a91c52df 100644
+--- a/open-sse/handlers/chatCore/sseToJsonHandler.js
++++ b/open-sse/handlers/chatCore/sseToJsonHandler.js
+@@ -180,7 +180,7 @@ export function parseSSEToOpenAIResponse(rawSSE, fallbackModel) {
+  * Handle case: provider forced streaming but client wants JSON.
+  * Supports both Codex/Responses API SSE and standard Chat Completions SSE.
+  */
+-export async function handleForcedSSEToJson({ providerResponse, sourceFormat, targetFormat, provider, model, body, stream, translatedBody, finalBody, requestStartTime, connectionId, apiKey, clientRawRequest, onRequestSuccess, customToolNames, toolNameMap, trackDone, appendLog, reqTag, log, conversationId }) {
++export async function handleForcedSSEToJson({ providerResponse, sourceFormat, targetFormat, provider, model, body, stream, translatedBody, finalBody, requestStartTime, connectionId, apiKey, clientRawRequest, onRequestSuccess, customToolNames, toolNameMap, trackDone, appendLog, reqTag, log, conversationId, taskType }) {
+   const contentType = providerResponse.headers.get("content-type") || "";
+   const isSSE = contentType.includes("text/event-stream") || (contentType === "" && isResponsesProvider(provider));
+   if (!isSSE) return null; // not handled here
+@@ -206,7 +206,7 @@ export async function handleForcedSSEToJson({ providerResponse, sourceFormat, ta
+ 
+       const usage = jsonResponse.usage || {};
+       appendLog({ tokens: usage, status: "200 OK" });
+-      saveUsageStats({ provider, model, tokens: usage, connectionId, apiKey, endpoint: clientRawRequest?.endpoint, silent: true, conversationId });
++      saveUsageStats({ provider, model, tokens: usage, connectionId, apiKey, endpoint: clientRawRequest?.endpoint, silent: true, conversationId, taskType });
+       if (log?.line) log.line(reqTag, "📊", formatDoneLine({ usage, latency: { total: Date.now() - requestStartTime } }));
+ 
+       // Same cache-inclusive total for the recorded detail, so the DB and the
+@@ -314,7 +314,7 @@ export async function handleForcedSSEToJson({ providerResponse, sourceFormat, ta
+ 
+     const usage = parsed.usage || {};
+     appendLog({ tokens: usage, status: "200 OK" });
+-    saveUsageStats({ provider, model, tokens: usage, connectionId, apiKey, endpoint: clientRawRequest?.endpoint, silent: true, conversationId });
++    saveUsageStats({ provider, model, tokens: usage, connectionId, apiKey, endpoint: clientRawRequest?.endpoint, silent: true, conversationId, taskType });
+     if (log?.line) log.line(reqTag, "📊", formatDoneLine({ usage, latency: { total: Date.now() - requestStartTime } }));
+ 
+     const totalLatency = Date.now() - requestStartTime;
+diff --git a/src/lib/db/repos/usageRepo.js b/src/lib/db/repos/usageRepo.js
+index 41abc716..91725730 100644
+--- a/src/lib/db/repos/usageRepo.js
++++ b/src/lib/db/repos/usageRepo.js
+@@ -285,7 +285,7 @@ export async function saveRequestUsage(entry) {
+           entry.timestamp, entry.provider || null, entry.model || null,
+           entry.connectionId || null, entry.apiKey || null, entry.endpoint || null,
+           promptTokens, completionTokens, entry.cost || 0, entry.status || "ok",
+-          stringifyJson(tokens), stringifyJson({}), entry.conversationId || null,
++          stringifyJson(tokens), stringifyJson(entry.meta || {}), entry.conversationId || null,
+         ]
+       );
+ 
+diff --git a/src/sse/handlers/chat.js b/src/sse/handlers/chat.js
+index 8db350ad..1a714683 100644
+--- a/src/sse/handlers/chat.js
++++ b/src/sse/handlers/chat.js
+@@ -55,6 +55,7 @@ export async function handleChat(request, clientRawRequest = null) {
+   // The capability travels in the anthropic-beta header, forwarded as-is.
+   const { model: modelStr, contextMarker } = stripModelContextMarker(body.model);
+   if (contextMarker) body.model = modelStr;
++  let smartRouterTaskType = null; // set by smart router interception; used for usage analytics
+ 
+   // Request summary is emitted as the unified "▶" line in chatCore (has fmt/thinking/account)
+ 
+@@ -97,7 +98,9 @@ export async function handleChat(request, clientRawRequest = null) {
+   // ── SMART ROUTER: resolve virtual model to dynamic combo BEFORE translation ──
+   const smartRouterResult = await resolveSmartRouter(modelStr, body, settings);
+   if (smartRouterResult) {
+-    modelStr = smartRouterResult;
++    modelStr = smartRouterResult.comboName;
++    // Thread the classified task type through for usage analytics (meta.taskType)
++    smartRouterTaskType = smartRouterResult.taskType;
+   }
+ 
+   // Check if model is a combo (has multiple models with fallback)
+@@ -121,7 +124,7 @@ export async function handleChat(request, clientRawRequest = null) {
+             const { tools, tool_choice, ...cleanBody } = clientRawRequest.body || {};
+             cleanRawReq = { ...clientRawRequest, body: cleanBody };
+           }
+-          return handleSingleModelChat(b, m, cleanRawReq, request, apiKey);
++          return handleSingleModelChat(b, m, cleanRawReq, request, apiKey, smartRouterTaskType);
+         },
+         log,
+         comboName: modelStr,
+@@ -136,7 +139,7 @@ export async function handleChat(request, clientRawRequest = null) {
+       body,
+       models: augmentedModels,
+       handleSingleModel: withCapacityAdapterStripping(
+-        (b, m) => handleSingleModelChat(b, m, clientRawRequest, request, apiKey),
++        (b, m) => handleSingleModelChat(b, m, clientRawRequest, request, apiKey, smartRouterTaskType),
+         adapterAdded
+       ),
+       log,
+@@ -156,7 +159,7 @@ export async function handleChat(request, clientRawRequest = null) {
+       body,
+       models: soloAugmented,
+       handleSingleModel: withCapacityAdapterStripping(
+-        (b, m) => handleSingleModelChat(b, m, clientRawRequest, request, apiKey),
++        (b, m) => handleSingleModelChat(b, m, clientRawRequest, request, apiKey, smartRouterTaskType),
+         adapterAdded
+       ),
+       log,
+@@ -165,13 +168,13 @@ export async function handleChat(request, clientRawRequest = null) {
+     });
+   }
+ 
+-  return handleSingleModelChat(body, modelStr, clientRawRequest, request, apiKey, contextMarker ? `${modelStr.slice(modelStr.indexOf("/") + 1)}[${contextMarker}]` : null);
++  return handleSingleModelChat(body, modelStr, clientRawRequest, request, apiKey, contextMarker ? `${modelStr.slice(modelStr.indexOf("/") + 1)}[${contextMarker}]` : null, smartRouterTaskType);
+ }
+ 
+ /**
+  * Handle single model chat request
+  */
+-async function handleSingleModelChat(body, modelStr, clientRawRequest = null, request = null, apiKey = null, requestedModel = null) {
++async function handleSingleModelChat(body, modelStr, clientRawRequest = null, request = null, apiKey = null, requestedModel = null, taskType = null) {
+   const modelInfo = await getModelInfo(modelStr);
+ 
+   // If provider is null, this might be a combo name - check and handle
+@@ -198,7 +201,7 @@ async function handleSingleModelChat(body, modelStr, clientRawRequest = null, re
+               const { tools, tool_choice, ...cleanBody } = clientRawRequest.body || {};
+               cleanRawReq = { ...clientRawRequest, body: cleanBody };
+             }
+-            return handleSingleModelChat(b, m, cleanRawReq, request, apiKey);
++            return handleSingleModelChat(b, m, cleanRawReq, request, apiKey, taskType);
+           },
+           log,
+           comboName: modelStr,
+@@ -213,7 +216,7 @@ async function handleSingleModelChat(body, modelStr, clientRawRequest = null, re
+         body,
+         models: augmentedModels,
+         handleSingleModel: withCapacityAdapterStripping(
+-          (b, m) => handleSingleModelChat(b, m, clientRawRequest, request, apiKey),
++          (b, m) => handleSingleModelChat(b, m, clientRawRequest, request, apiKey, taskType),
+           adapterAdded
+         ),
+         log,
+@@ -289,6 +292,7 @@ async function handleSingleModelChat(body, modelStr, clientRawRequest = null, re
+       modelInfo: { provider, model },
+       credentials: refreshedCredentials,
+       conversationId,
++      taskType,
+       log,
+       clientRawRequest,
+       connectionId: credentials.connectionId,

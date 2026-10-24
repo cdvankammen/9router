@@ -1,0 +1,9 @@
+commit 09f6d395
+author: ves
+date: 2026-10-08 16:06:53 +0700
+subject: fix(gemini): do not treat properties map as schema node when tool param named properties (#4620)
+
+Fixes 400 error from Google Vertex/Gemini when an MCP tool contains a
+parameter literally named 'properties'. ensureObjectType recurses into
+values of properties maps instead of the map itself.
+

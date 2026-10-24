@@ -1,0 +1,15 @@
+commit e3ee473b
+author: cdvankammen
+date: 2026-10-22 15:41:21 -0600
+subject: fix(gitlab-pat): add 10s AbortSignal.timeout + 504 timeout response (GAP-P2-20)
+
+- Added signal: AbortSignal.timeout(10000) to the fetch verifying a GitLab PAT
+  against /api/v4/user. Self-hosted GitLab behind firewalls can no longer hang
+  the connection indefinitely.
+- Catch block now detects AbortError/TimeoutError and returns HTTP 504 with a
+  clear timeout message instead of a generic 500.
+- Added tests/unit/gitlab-pat-timeout.test.js (8 tests): body validation,
+  missing token, failed verification, happy path, AbortSignal presence,
+  timeout->504, default base URL, custom base URL.
+- Anti-false-positive check confirmed: breaking an assertion fails the suite.
+

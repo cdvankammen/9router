@@ -1,0 +1,93 @@
+commit 7878f53b
+author: decolua
+date: 2026-10-15 16:36:11 +0700
+subject: fix(codex): drop retired gpt-5.5 from registry, image and auto-ping
+
+gpt-5.5 is retired from Codex with ChatGPT sign-in (2026-10-14), so the
+backend rejects it with HTTP 400. Remove the registry entries and image
+variant, route image generation and quota auto-ping through gpt-5.6 models,
+and update the CLI preset default to gpt-6.1-sol.
+
+Co-Authored-By: Claude Haiku 5.5 <noreply@anthropic.com>
+
+
+diff --git a/open-sse/providers/registry/codex.js b/open-sse/providers/registry/codex.js
+index abc5ec26..1e990eb2 100644
+--- a/open-sse/providers/registry/codex.js
++++ b/open-sse/providers/registry/codex.js
+@@ -68,10 +68,8 @@ export default {
+     { id: "gpt-5.6-luna", name: "GPT 5.6 Luna" },
+     { id: "gpt-5.6-luna[1m]", name: "GPT 5.6 Luna (extended context)", upstreamModelId: "gpt-5.6-luna" },
+     { id: "gpt-5.6-luna-review", name: "GPT 5.6 Luna Review", upstreamModelId: "gpt-5.6-luna", quotaFamily: "review" },
+-    { id: "gpt-5.5", name: "GPT 5.5" },
+-    { id: "gpt-5.5-review", name: "GPT 5.5 Review", upstreamModelId: "gpt-5.5", quotaFamily: "review" },
+-    // gpt-5.4 / gpt-5.4-mini / gpt-5.3-codex-spark removed: absent from backend-api/codex/models
+-    // for ChatGPT Plus/Pro accounts and return HTTP 400 "model is not supported" (#4202).
++    // gpt-5.5 / gpt-5.5-review / gpt-5.4 / gpt-5.4-mini / gpt-5.3-codex-spark removed:
++    // absent from backend-api/codex/models for ChatGPT accounts and return HTTP 400 (#4202, #4848).
+     // gpt-daybreak-blue-latest and gpt-reserve added: confirmed live via backend-api/codex/models (#4202).
+     { id: "gpt-daybreak-blue-latest", name: "GPT Daybreak Blue" },
+     { id: "gpt-reserve", name: "GPT Reserve" },
+@@ -86,9 +84,7 @@ export default {
+     { id: "gpt-5.6-sol-image", name: "GPT 5.6 Sol Image", capabilities: ["text2img","edit"], params: ["size","quality","background","image_detail","output_format"], kind: "image" },
+     { id: "gpt-5.6-terra-image", name: "GPT 5.6 Terra Image", capabilities: ["text2img","edit"], params: ["size","quality","background","image_detail","output_format"], kind: "image" },
+     { id: "gpt-5.6-luna-image", name: "GPT 5.6 Luna Image", capabilities: ["text2img","edit"], params: ["size","quality","background","image_detail","output_format"], kind: "image" },
+-    { id: "gpt-5.5-image", name: "GPT 5.5 Image", capabilities: ["text2img","edit"], params: ["size","quality","background","image_detail","output_format"], kind: "image" },
+-    // gpt-5.4-image removed alongside gpt-5.4 (both are dead on the backend) (#4202).
+-    { id: "gpt-5.3-image", name: "GPT 5.3 Image", capabilities: ["text2img","edit"], params: ["size","quality","background","image_detail","output_format"], kind: "image" },
++    // gpt-5.5-image / gpt-5.4-image / gpt-5.3-image removed alongside base models.
+   ],
+   serviceKinds: ["llm","image"],
+   oauth: {
+diff --git a/src/shared/constants/cliTools.js b/src/shared/constants/cliTools.js
+index 08b59140..718a5b4d 100644
+--- a/src/shared/constants/cliTools.js
++++ b/src/shared/constants/cliTools.js
+@@ -404,7 +404,7 @@ amp --model "{{model}}"
+     defaultModels: [
+       { id: "claude-opus-5", name: "Claude Opus 5", alias: "opus", defaultValue: "cc/claude-opus-5" },
+       { id: "claude-sonnet-4-6", name: "Claude Sonnet 4.6", alias: "sonnet", defaultValue: "cc/claude-sonnet-4-6" },
+-      { id: "gpt-5.5", name: "GPT 5.5", alias: "gpt5", defaultValue: "cx/gpt-5.5" },
++      { id: "gpt-6.1-sol", name: "GPT 6.1 Sol", alias: "gpt6", defaultValue: "cx/gpt-6.1-sol" },
+       { id: "gemini-3.1-pro", name: "Gemini 3.1 Pro", alias: "gemini", defaultValue: "gemini/gemini-3.1-pro" },
+     ],
+   },
+diff --git a/tests/unit/image-generation.test.js b/tests/unit/image-generation.test.js
+index e91290e1..8217fb32 100644
+--- a/tests/unit/image-generation.test.js
++++ b/tests/unit/image-generation.test.js
+@@ -11,6 +11,7 @@
+ 
+ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+ import { handleImageGenerationCore } from "../../open-sse/handlers/imageGenerationCore.js";
++import { CODEX_CLI_VERSION } from "../../open-sse/config/appConstants.js";
+ 
+ const originalFetch = global.fetch;
+ 
+@@ -316,7 +317,7 @@ describe("handleImageGenerationCore", () => {
+     expect(responseBody.data[0].b64_json).toBeTruthy();
+   });
+ 
+-  it.each(["gpt-5.5", "gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna"])("generates image with Codex %s-image using current Codex version header", async (model) => {
++  it.each(["gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna"])("generates image with Codex %s-image using current Codex version header", async (model) => {
+     global.fetch.mockResolvedValueOnce(
+       new Response(
+         [
+@@ -356,7 +357,7 @@ describe("handleImageGenerationCore", () => {
+         headers: expect.objectContaining({
+           authorization: "Bearer codex-token",
+           "chatgpt-account-id": "account-123",
+-          version: "0.154.0",
++          version: CODEX_CLI_VERSION,
+         }),
+       })
+     );
+@@ -408,7 +409,7 @@ describe("handleImageGenerationCore", () => {
+     expect(result.success).toBe(true);
+     const fetchCall = global.fetch.mock.calls[0];
+     const requestBody = JSON.parse(fetchCall[1].body);
+-    expect(requestBody.model).toBe("gpt-5.5");
++    expect(requestBody.model).toBe("gpt-5.6-sol");
+     expect(requestBody.tools).toEqual([
+       { type: "image_generation", output_format: "png", size: "1024x1024", action: "generate", model: "gpt-image-2.5" },
+     ]);

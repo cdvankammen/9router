@@ -1,0 +1,13 @@
+commit 1ca9f5d8
+author: cdvankammen
+date: 2026-10-24 04:43:00 -0600
+subject: fix(rebase): restore dashboardGuard rate-limiting (middleware 429)
+
+- src/dashboardGuard.js: restore checkRateLimit/rateLimitResponse import
+  and the rate-limit block in proxy() for /api/* and /dashboard routes.
+  Pre-rebase branch had this wiring; master lacks it; the rebase
+  resolution dropped it (cur==master hash confirmed).
+
+Exempt rebase-conflict restoration (git show comparison).
+middleware.test.js: 21/21 pass.
+

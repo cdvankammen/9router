@@ -1,0 +1,8 @@
+commit 7c42d8f8
+author: Renato Prado
+date: 2026-10-23 11:26:22 +0700
+subject: fix(openai): rename max_tokens to max_completion_tokens
+
+Current OpenAI models reject max_tokens with HTTP 400. Add a renameParams
+rule to STRIP_RULES for the openai provider, with unit tests.
+

@@ -1,0 +1,11 @@
+commit e5e50b02
+author: cdvankammen
+date: 2026-10-22 15:41:21 -0600
+subject: test(reliability): add anti-false-positive timeout coverage test for GAP-P1-25
+
+Verifies every fetch() call in provider validation uses
+AbortSignal.timeout(8000), plus behavioral tests that mocked
+providers respect AbortSignal and outer catch blocks handle errors.
+
+Card: t_a2e69706
+

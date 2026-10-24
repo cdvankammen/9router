@@ -1,0 +1,16 @@
+commit 9478544b
+author: cdvankammen
+date: 2026-10-22 13:49:48 -0600
+subject: fix(messages): Inbox renders with errors + provider-name object crash in all views
+
+- page.js: InboxView branch moved before the messages-empty check — when
+  viewMode=errors and error groups exist, the wrong 'No messages captured yet'
+  empty state fired (errors.length > 0 but messages.length === 0)
+- InboxView/BoardView/TimelineView: providerNames values can be provider-config
+  OBJECTS (AI_PROVIDERS) or display-name strings (nodes); rendering the object
+  as a React child threw React #31. Added resolveProviderName() helper
+  (string | .name | fallback id) in all three views
+- Browser-verified: all 6 tabs (List/Conversations/Timeline/Trace/Board/Inbox)
+  render real data (OpenAI / OpenAI Codex resolved, rate_limit group ×62 with
+  triage)
+

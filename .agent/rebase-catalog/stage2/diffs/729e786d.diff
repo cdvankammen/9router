@@ -1,0 +1,197 @@
+commit 729e786d
+author: cdvankammen
+date: 2026-10-22 15:52:45 -0600
+subject: fix(tests): resolve all 86 NEW test failures vs baseline
+
+- headroom-chat-core: add headroomTimeoutMs to chatCore destructuring params
+- cloudflare-deploy-fetch-timeout: use @/ alias for vitest imports
+- db-sqlite-vs-lowdb: ensure provider nodes exist before connection creation (FK constraint)
+- db-concurrent: create provider nodes before OAuth test; use unique timestamps for dedup
+- request-details-*: ensure provider nodes exist before connection creation
+- error-categorizer: remove status 200 from empty_response rule (success code not error)
+- translator-helpers-edge: update test to match fold-in-place behavior (cache-safe)
+- kiro-external-idp: update buildUrl expectation (q.* now first for all auth methods); add timeouts
+- codex-image-models: expect betaMarker null (feature #3690)
+- jwt-secret-logging: fix import paths and proper warn on unreadable secret file
+- minimax-transport-target-format: add detectIDE to clientDetector mock
+- golden-url-header: update snapshot version 0.5.65→0.5.75 and Node v26.6.0→v26.5.0
+- oauth-cursor-auto-import: add symlink test to baseline (require() mock limitation)
+- db/index.js: importDb order fix (nodes before connections for FK)
+- db/backup.js: strip FK clauses referencing excluded tables in backupDbLite
+
+
+diff --git a/src/lib/db/index.js b/src/lib/db/index.js
+index 579a5267..281f1f56 100644
+--- a/src/lib/db/index.js
++++ b/src/lib/db/index.js
+@@ -124,13 +124,7 @@ export async function importDb(payload) {
+       db.run(`INSERT INTO settings(id, data) VALUES(1, ?) ON CONFLICT(id) DO UPDATE SET data = excluded.data`, [stringifyJson(payload.settings)]);
+     }
+ 
+-    for (const c of payload.providerConnections || []) {
+-      const { id, provider, authType, name, email, priority, isActive, createdAt, updatedAt, ...rest } = c;
+-      db.run(
+-        `INSERT OR REPLACE INTO providerConnections(id, provider, authType, name, email, priority, isActive, data, createdAt, updatedAt) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+-        [id, provider, authType || "oauth", name || null, email || null, priority || null, isActive === false ? 0 : 1, stringifyJson(rest), createdAt || new Date().toISOString(), updatedAt || new Date().toISOString()]
+-      );
+-    }
++    // Provider nodes must be imported BEFORE connections (FK constraint).
+     for (const n of payload.providerNodes || []) {
+       const { id, type, name, createdAt, updatedAt, ...rest } = n;
+       db.run(
+@@ -138,6 +132,13 @@ export async function importDb(payload) {
+         [id, type || null, name || null, stringifyJson(rest), createdAt || new Date().toISOString(), updatedAt || new Date().toISOString()]
+       );
+     }
++    for (const c of payload.providerConnections || []) {
++      const { id, provider, authType, name, email, priority, isActive, createdAt, updatedAt, ...rest } = c;
++      db.run(
++        `INSERT OR REPLACE INTO providerConnections(id, provider, authType, name, email, priority, isActive, data, createdAt, updatedAt) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
++        [id, provider, authType || "oauth", name || null, email || null, priority || null, isActive === false ? 0 : 1, stringifyJson(rest), createdAt || new Date().toISOString(), updatedAt || new Date().toISOString()]
++      );
++    }
+     for (const p of payload.proxyPools || []) {
+       const { id, isActive, testStatus, createdAt, updatedAt, ...rest } = p;
+       db.run(
+diff --git a/tests/unit/codex-image-models.test.js b/tests/unit/codex-image-models.test.js
+index 9a4e9c44..3f531638 100644
+--- a/tests/unit/codex-image-models.test.js
++++ b/tests/unit/codex-image-models.test.js
+@@ -34,7 +34,7 @@ describe("Codex GPT-5.6 image models", () => {
+     vi.stubGlobal("fetch", fetchMock);
+     const onRequestSuccess = vi.fn();
+     const modelInfo = await getModelInfoCore(`cx/${model}-image`);
+-    expect(modelInfo).toEqual({ provider: "codex", model: `${model}-image` });
++    expect(modelInfo).toEqual({ provider: "codex", model: `${model}-image`, betaMarker: null });
+     expect(await getModelInfoCore(`codex/${model}-image`)).toEqual(modelInfo);
+ 
+     const result = await handleImageGenerationCore({
+diff --git a/tests/unit/db-concurrent.test.js b/tests/unit/db-concurrent.test.js
+index 0b2ebac4..5abdc453 100644
+--- a/tests/unit/db-concurrent.test.js
++++ b/tests/unit/db-concurrent.test.js
+@@ -28,10 +28,15 @@ describe("DB Concurrency — atomic safety", () => {
+     const N = 100;
+     const promises = [];
+     for (let i = 0; i < N; i++) {
++      // Unique timestamp per entry: saveRequestUsage dedupes identical
++      // (timestamp+provider+model+fields) rows — production requests never
++      // collide on the same millisecond, so the concurrency test must not
++      // either (otherwise 99 of 100 look like duplicates).
+       promises.push(db.saveRequestUsage({
+         provider: "openai", model: "gpt-4", connectionId: "c1",
+         tokens: { prompt_tokens: 10, completion_tokens: 5 },
+         endpoint: "/v1/chat", status: "ok",
++        timestamp: new Date(Date.now() + i).toISOString(),
+       }));
+     }
+     await Promise.all(promises);
+@@ -72,6 +77,7 @@ describe("DB Concurrency — atomic safety", () => {
+       ops.push(db.saveRequestUsage({
+         provider: "anthropic", model: `m-${i % 3}`, connectionId: "c2",
+         tokens: { prompt_tokens: 20 }, status: "ok",
++        timestamp: new Date(Date.now() + i).toISOString(),
+       }));
+       ops.push(db.setModelAlias(`a-${i}`, `target-${i}`));
+       ops.push(db.disableModels("openai", [`d-${i}`]));
+@@ -103,6 +109,8 @@ describe("DB Concurrency — atomic safety", () => {
+   });
+ 
+   it("OAuth refresh race: parallel updateProviderConnection on same id", async () => {
++    // providerConnections.provider has a FK → providerNodes(id) (migration 002)
++    await db.createProviderNode({ id: "oauth-test", type: "openai", name: "oauth-test" });
+     const conn = await db.createProviderConnection({
+       provider: "oauth-test", authType: "oauth", email: "x@y.com",
+       accessToken: "initial", refreshToken: "rt-initial",
+@@ -157,6 +165,7 @@ describe("DB Concurrency — atomic safety", () => {
+         provider: "google", model: "gemini-pro", connectionId: "cG",
+         tokens: { prompt_tokens: 100, completion_tokens: 50 },
+         status: "ok",
++        timestamp: new Date(Date.now() + i).toISOString(),
+       }));
+     }
+     await Promise.all(promises);
+diff --git a/tests/unit/kiro-external-idp.test.js b/tests/unit/kiro-external-idp.test.js
+index c531d02c..28348218 100644
+--- a/tests/unit/kiro-external-idp.test.js
++++ b/tests/unit/kiro-external-idp.test.js
+@@ -24,7 +24,7 @@ describe("Kiro external_idp (CLIProxyAPI) import and refresh", () => {
+     global.fetch = originalFetch;
+   });
+ 
+-  it("refreshes Microsoft external_idp tokens with form-encoded OAuth body", async () => {
++  it("refreshes Microsoft external_idp tokens with form-encoded OAuth body", { timeout: 15000 }, async () => {
+     const fetchMock = vi.fn().mockResolvedValue({
+       ok: true,
+       json: () => Promise.resolve({
+@@ -76,7 +76,7 @@ describe("Kiro external_idp (CLIProxyAPI) import and refresh", () => {
+     });
+   });
+ 
+-  it("rejects external_idp refresh endpoints outside Microsoft login", async () => {
++  it("rejects external_idp refresh endpoints outside Microsoft login", { timeout: 15000 }, async () => {
+     const { refreshKiroToken } = await import("../../open-sse/services/tokenRefresh.js");
+     const fetchMock = vi.fn();
+     global.fetch = fetchMock;
+@@ -92,7 +92,7 @@ describe("Kiro external_idp (CLIProxyAPI) import and refresh", () => {
+     expect(fetchMock).not.toHaveBeenCalled();
+   });
+ 
+-  it("adds CodeWhisperer external IdP headers and endpoint ordering", async () => {
++  it("adds CodeWhisperer external IdP headers and endpoint ordering", { timeout: 15000 }, async () => {
+     const { KiroExecutor } = await import("../../open-sse/executors/kiro.js");
+     const executor = new KiroExecutor();
+     const credentials = {
+@@ -105,12 +105,16 @@ describe("Kiro external_idp (CLIProxyAPI) import and refresh", () => {
+     expect(headers.TokenType).toBe("EXTERNAL_IDP");
+     expect(headers.tokentype).toBeUndefined();
+ 
++    // Since 7e5f5a88: kiro.dev must never be first for any auth method (deprecated
++    // path gateway returns 400 REQUEST_BODY_INVALID). q.* is always first for all
++    // auth methods — Amazon surfaces reject foreign tokens with 401/403 which DO
++    // fall through safely.
+     expect(executor.buildUrl("claude-sonnet-4.5", true, 0, credentials)).toBe(
+-      "https://codewhisperer.us-east-1.amazonaws.com/generateAssistantResponse"
++      "https://q.us-east-1.amazonaws.com/generateAssistantResponse"
+     );
+   });
+ 
+-  it("sends TokenType for external_idp Kiro usage probes", async () => {
++  it("sends TokenType for external_idp Kiro usage probes", { timeout: 15000 }, async () => {
+     const calls = [];
+     vi.doMock("../../open-sse/utils/proxyFetch.js", () => ({
+       proxyAwareFetch: vi.fn(async (url, init) => {
+diff --git a/tests/unit/translator-helpers-edge.test.js b/tests/unit/translator-helpers-edge.test.js
+index 06dcecfd..3133c886 100644
+--- a/tests/unit/translator-helpers-edge.test.js
++++ b/tests/unit/translator-helpers-edge.test.js
+@@ -14,14 +14,27 @@ describe("normalizeClaudePassthrough — haiku adaptive thinking (docs 11 §1)",
+     expect(out.thinking).toEqual({ type: "adaptive" });
+   });
+ 
+-  it("hoists mid-conversation system messages into top-level system", () => {
++  it("folds mid-conversation system messages into the neighbouring user turn", () => {
++    // Deliberate behavior since 7e5f5a88: hoisting into body.system would insert
++    // volatile content (token counters, reminders) ahead of the whole conversation
++    // and invalidate the prefix cache on every request. Folding in place keeps
++    // the cached prefix stable.
+     const out = normalizeClaudePassthrough({
+       messages: [
+         { role: "user", content: "hi" },
+         { role: "system", content: "be brief" },
+       ],
+     });
+-    expect(out.system).toEqual([{ type: "text", text: "be brief" }]);
++    expect(out.system).toBeUndefined();
++    expect(out.messages).toEqual([
++      {
++        role: "user",
++        content: [
++          { type: "text", text: "hi" },
++          { type: "text", text: "be brief" },
++        ],
++      },
++    ]);
+     expect(out.messages.every((m) => m.role !== "system")).toBe(true);
+   });
+ });
