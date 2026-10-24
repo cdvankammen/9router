@@ -1,3 +1,17 @@
+# Unreleased
+
+## Features
+- **Security**: OIDC save-time validation gate on the `/api/settings` PATCH — hard gate (full discovery fetch, 5s timeout) when the effective auth mode would disable password login (`oidc`, or `sso` with `ssoType: oidc`), soft probe (URL format + HTTPS only) otherwise, and a `skipOidcValidation` escape hatch for air-gapped IdPs
+- **Rate Limiter**: multi-bucket per-(IP, category) limits with a shared route classifier — `auth` 10/min (POST login/setup/reset-password), `chat` 20/min (POST completions), `api` 120/min, `general` 120/min, with `static`/RSC framework traffic bypassing entirely; applied in both the TCP-layer and middleware-layer limiters
+- **Dashboard**: error boundaries for the dashboard route group plus a root `global-error.js`, with targeted retry UI for transient 429/5xx errors
+- **Providers**: client-side guard in the add-provider form blocks OAuth-only and free providers before POST, with a targeted reason and deep link to the provider page instead of the opaque "Invalid provider"
+- **DB**: migration runner registry-integrity gate — refuses to apply migrations when the registry is malformed, diverges from the fingerprint stamped on the database, or the database schema is newer than the build (downgrade); persists refusal reasons to `_meta.migrationWarnings`; new read-only dry-run at `GET /api/settings/database/migrations`
+- **DX**: `local-i18n/no-chinese-literals` ESLint rule scoped to dashboard pages catches hardcoded Chinese literals at author time
+
+## Fixes
+- **Rate Limiter**: exempt Next.js RSC prefetches (`?_rsc=`) and `/_next/` assets from the middleware-layer limiter so busy dashboards cannot 429 their own framework traffic
+- **i18n**: rewrite hardcoded Chinese strings in the Model Context and Statistics pages to English source text with matching `zh-CN`/`zh-TW` literal keys; fix the lowercase "web" heading on `/media-providers/web`
+
 # v0.5.95 (2026-10-01)
 
 ## Features
