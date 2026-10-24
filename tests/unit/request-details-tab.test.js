@@ -14,6 +14,8 @@ let adapter;
 async function saveDetail(detail) {
   await db.saveRequestDetail(detail);
   await new Promise((r) => setTimeout(r, 120));
+  // Force the buffered writer to flush so the row is on disk before reading
+  await db.flushRequestDetails();
 }
 
 beforeAll(async () => {
