@@ -9,12 +9,16 @@
 
 ## ⚠️ AGENT REVIEW NOTE (READ FIRST)
 
-> **The code in this plan is a starting point, not a final decision.**
-> Every agent that reads this plan MUST review the code below and make a decision:
-> is there a better way to implement this? If yes, **make those changes happen** —
-> update the code, note the improvement, and proceed. Do not treat this code as
-> sacred. It follows 9router's existing conventions (quotaAutoPing, chatCore),
-> but the agent is the final arbiter of implementation quality.
+> **⚠️ THIS PLAN IS A RESEARCH DOCUMENT — NOT AN IMPLEMENTATION INSTRUCTION.**
+>
+> **The code in this plan is a SUGGESTION / OPTION for future agents — it is NOT a final decision and NOT an instruction to implement anything.**
+>
+> Every agent that reads this plan MUST understand:
+> - This plan documents **research-grade suggestions** for how a feature *could* be implemented
+> - The code snippets show **possible approaches** (file paths, function signatures, patterns) — they are **options**, not requirements
+> - **Nothing in this plan should be implemented automatically** — a future agent must evaluate each suggestion, decide if there's a better way, and only then proceed
+> - The agent is the final arbiter: if a better approach exists, **make those changes happen** — update the code, note the improvement, and proceed
+> - Do not treat this code as sacred. It follows 9router's existing conventions, but the agent decides what to use.
 
 ---
 
@@ -34,6 +38,39 @@ Implement M4 of the webhook system: the internal event emitter + outbound trigge
 **Out of scope (v1):**
 - Rule engine + actions (M3) — emitter just produces events
 - Dashboard UI (M5)
+
+## Rationale & Design Decisions
+
+**Purpose:** Emit outbound webhooks from internal 9router events (provider errors, quota warnings, fallback usage, request completion) so external systems can react to gateway state.
+
+**Research grounding:** R21–R24 (exp-07 internal events) — see Related Docs below for the exact experiment documents this plan derives from.
+
+**Key design decisions:**
+- **Event namespacing** (`provider.error`, `quota.warning`, …) — a small, documented vocabulary that maps 1:1 to rule triggers, so rules and outbound hooks share one event model.
+- **Hook points in existing code paths** — `chatCore`/analyze-error/quota paths emit events at the same places they already log, minimizing new surface area.
+- **Async emission** — events are queued, never awaited inline, so a slow subscriber cannot slow request handling.
+- **Settings-gated** — each trigger class can be disabled independently via `settingsRepo`, matching the instrumentation.js gating pattern.
+
+**Trade-offs & risks:** Trade-off: emitting from hot paths adds a tiny per-request cost; mitigated by async queueing. Event vocabulary is v1-minimal — extend as new needs appear.
+
+---
+## Grounding in 9router
+
+**Auth registration:** — (no new API route; emitters only)
+
+Emits from existing request paths; reuse the `usageDb` emitter pattern rather than adding a parallel bus.
+
+**Conventions this plan must follow:**
+- Import `getSettings`/`updateSettings` from `@/lib/localDb` in route handlers (matches `src/app/api/settings/route.js`)
+- Start workers from `src/instrumentation.js` (settings-gated, `NEXT_RUNTIME === "nodejs"`) — layout chunks tree-shake in standalone builds
+- New migrations start at **006** (`src/lib/db/migrations/` currently ends at `005-seen-models.js`)
+- Keep `export const dynamic = "force-dynamic"` on every route
+- Strip secrets from request bodies and never return them in GET responses (CWE-915 pattern from `src/app/api/settings/route.js`)
+- Reuse `src/shared/hookTemplate.js` for `{{field}}` expansion — it already exists
+
+See `2026-10-03-webhook-grounding-in-9router.md` for the full discrepancy list.
+
+---
 
 ## Files
 

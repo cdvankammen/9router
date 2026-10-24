@@ -1,5 +1,91 @@
 # CHANGELOG — Smart Router & Observability Session
 
+## 2026-09-21 — Final verification pass (routing-exp structure + import plans review note)
+
+**Actions taken:**
+- Re-ran structural verification on all **61 routing-exp docs** (`2026-09-17-routing-exp-*.md`): every doc has exactly 1× `## L1` … `## L6`, 1× `## Confidence`, 1× `## Sources` — **61/61 pass**.
+- Re-ran review-note verification on all **20 import plans** (`impl-plan-import-*.md`): every plan carries the **AGENT REVIEW NOTE** — **20/20 pass**.
+- Mapped routing-exp roots (R01–R61) to code-bearing plan coverage: all topics are covered by the 222-plan series (e.g. session-affinity → plan 144, win-probability → plan 175, POMDP → plan 132, eval → plans 07/148/149/187, cascade → plans 02/90/133/137/152/182/183/196). External-system roots (RouteLLM, RouterBench, FrugalGPT, AutoMix, Tryage, ClawRouter, coai, OpenRouter, LiteLLM) are research sources whose findings feed the impl-plan series — no separate code-bearing plans needed.
+
+**Status:** All research streams verified gapless and structurally complete. Implementation deferred — awaiting user go-ahead.
+
+## 2026-09-20 — Hermes import plans 01–20 grounding pass complete (all verified against real codebase)
+
+**Directive (Chris):** "make sure that the plans are grounded and fully complete then with all the needed parts of what a plan for programming would require all the way down to the individual functions code and what each is supposed to do and set up and be there for and framework architectures etc."
+
+**Actions taken:**
+- Rewrote all 20 implementation plans (`research/9router/impl-plan-import-01…20-*.md`) with the full grounding treatment:
+  - **AGENT REVIEW NOTE (READ FIRST)** block — research document, code is SUGGESTION/OPTION, nothing implemented automatically
+  - **Grounding table** — verified facts with real file paths (adapter API, migration format, real module locations)
+  - **Function-by-function breakdown tables** — every function's purpose + return value
+  - **Per-part Steps with verification commands** — each step has a runnable check
+  - **Dependencies & Risks** table + **Verification commands** + **Note to Implementing Agents** footer
+- Verified every code snippet against the real codebase; fixed grounding errors:
+  - Migration format `export default {version, name, up(db)}` (not `export const up`)
+  - Adapter API `db.run/get/all/exec` positional params (no `.prepare()`, no named `@param`)
+  - `all_messages` view uses JSON1 `json_extract` on `requestDetails.data` (no `request_json` columns)
+  - `SCHEMA_VERSION` bump 3→4 required
+  - Real matcher source: `open-sse/providers/index.js` `PROVIDER_MODELS` (registry is `export default [...]`, no `getRegistry()`)
+  - `src/config/providerModels.js` doesn't exist — real is `open-sse/config/providerModels.js`
+  - Zod NOT installed — hand-rolled validation in plans 03/17/19
+  - `categorizeError(status, text)` positional, lowercase categories
+  - `getPricingForModel(provider, model)` — $/1M tokens (÷1,000,000)
+  - `usage.json`/`log.txt` are LEGACY (`appendRequestLog` is a no-op) — live source is `usageHistory`
+  - `comboRules` doesn't exist — use `getComboModelsFromData` from `open-sse/services/combo.js`
+  - `decodeCursorProtobuf` doesn't exist — real exports `decodeMessage`/`parseConnectRPCFrame`
+  - Existing models.dev sync (`src/lib/modelCatalog/sync.js`) — plan 18 extends, doesn't duplicate
+  - Migration version collisions resolved (5–12 assigned across plans 01/02/04/10/11/12/13)
+  - `matchModelToProvider` is synchronous (plan 20 tests fixed)
+- Updated master map (`2026-09-17-hermes-import-master-map.md`): component map corrected to real paths, grounding-pass status table + per-plan fix table added.
+
+**Status:** Complete. All 20 plans grounded + gapless. Implementation still deferred (code in plans is suggestions only).
+
+## 2026-09-19 — Routing exponential expansion complete (60 roots R01–R60 + R61, all 6+ levels)
+
+**Directive (Chris):** "binary tree expansion" means a true **exponential N-ary expansion** — every phrase in a source document is a root, each root goes at least 6 levels deep, and each level can spawn hundreds of phrases to research (exponential, not 1→2→4→8).
+
+**Actions taken:**
+- Created `research/9router/2026-09-17-routing-exponential-master-map.md` (new): master map enumerating **60 roots (R01–R60)** from the main routing research — doc `37-ai-model-routing-deep-research.md` (R01–R19) + branch docs `41`–`48` (R20–R60). Additive to the strict binary trees (193 roots / 24,511 nodes / 242,852 searches); this is the full exponential body. R61 (Wu's LLM Router) added later.
+- Created **61 expansion docs** `research/9router/2026-09-17-routing-exp-*.md` (R01–R61), each with L1–L6 (6+ levels), variable N-ary branching (3–15 children per node typical), Confidence & open questions, and Sources:
+  - R01–R19: core decision problem, RouteLLM, RouterBench, Shnitzer, Tryage, AutoMix, FrugalGPT, Hybrid LLM, semantic routers, OpenRouter Auto Router, ClawRouter, LiteLLM gateway, coai, 9Router decision points, other repos, universal pipeline, three philosophies, key findings, 9Router implications.
+  - R20–R25: learned routing (preference/benchmark data, win-probability, POMDP, data augmentation, cost-aware adaptive).
+  - R26–R33: cascades & fallbacks (model cascades, provider fallbacks, escalation policies, weighted failover, cooldown/retry, retry amplification, account selection, executor retry config).
+  - R34–R36: MoE (architecture, expert selection/sparse routing, MoE-aware dispatch).
+  - R37–R41: gateways (architecture, load balancing, virtual models/groups, session affinity, observability).
+  - R42–R45: semantic routing (vector-space, embedding, prompt routing, vLLM Semantic Router).
+  - R46–R49: evaluation (RouterBench, cost-quality tradeoffs, model ranking, eval harness).
+  - R50–R57: 9Router internals (executors, translator engine, providers registry, OAuth lifecycle, error systems, MITM security, enforcement layers, gap/divergence).
+  - R58–R60: frontier (emerging techniques, frontier research, future directions).
+  - R61: Wu's LLM Router (renamed from an earlier R16 draft to resolve the naming conflict).
+- Master map status table updated: all 12 batches ✅.
+- `research/README.md` updated: routing exponential family (master map + 60 expansion docs) added to contents.
+- **Audit verified:** 61/61 docs have L1–L6 + Confidence + Sources sections (grep-verified).
+
+**Key findings:**
+- The main routing research previously had ONLY the strict binary tree — the exponential N-ary expansion was the missing piece the user's clarification targeted (governance E01–E26 and webhook R01–R48 families already had theirs).
+- With average branching 4: 60 × (4^6 − 1)/3 ≈ 81,900 nodes; branching 6: ≈ 560,000 nodes.
+
+**Status:** Complete. All 61 expansion docs exist and are format-verified.
+
+## 2026-09-18 — All 222 research impl-plans now have code-bearing counterparts (gap-filling complete)
+
+**Directive (Chris):** every research implementation plan must have a code-bearing counterpart — reference code down to file level, plus the mandatory "Note to implementing agents (READ FIRST)" block telling agents the code is for review, that they should decide if there are better ways to implement, and make those changes happen.
+
+**Actions taken:**
+- Created code-bearing plans **37–198** (research impl-plan series) — reference JS code (repos, migrations, services, routes, dashboard pages, tests), Dependencies & Risks tables, Verification steps.
+- Created code-bearing plans **199, 200, 203, 204** (final numbered gaps): retry-storm mitigation & bundling, load-balancing strategies deep dive, per-request override mechanism, sandbox environment coexistence.
+- Created code-bearing plans **import-01–20** (Hermes message import series): DB schema, provider matching, import API, log-file tail, Hermes hook, error reconstruction, cost calculation, messages-page UI, observability export, multi-tenant import, scheduler, retention lifecycle, deduplication/idempotency, format adapters, streaming/realtime, analytics, agent adapters, model catalog sync, API contracts/SDKs, quality & rollout.
+- **Gap audit verified:** 222 research plans (impl-plan-01…204 minus 201/202, plus import-01…20) → **222 code-bearing counterparts, ZERO remaining gaps**.
+- `planning/README.md` index extended with "Research impl-plan code versions (37–204)" and "(import-01–20)" tables.
+- Tracking files updated (TASKS.md, CHANGELOG.md, SESSION-HISTORY.md).
+
+**Key findings:**
+- Research plans 201 and 202 have no source files (numbering gap) — no code versions exist.
+- Three apparent "missing" counterparts were false positives from slug renames (`02-cascade-fallback`, `14-message-driven-tools-protocol`, `74-model-version-pinning-rollback`).
+- Every code-bearing plan carries the agent-review note; overlap between plans is intentional per user directive.
+
+**Status:** All 222 code-bearing plans complete. Code implementation deferred — awaiting user go-ahead.
+
 ## 2026-09-17 15:57 — Shared-worktree rule + branch reconciliation (v3)
 
 **Directive (Chris, 2026-09-17):** All cards work in ONE shared card worktree

@@ -5,19 +5,36 @@
 **Status:** draft (awaiting user go-ahead)
 **Tags:** #plan #webhook #events #automation #notifications #milestones #code
 
-> **Note to implementing agents (READ FIRST):**
-> The reference code in this plan is a **starting point for review, not a final implementation**. It was written from research + codebase inspection without running the app. Before (and while) implementing each milestone:
-> 1. **Review the reference code critically** — check it against the actual codebase (imports, function signatures, DB adapter API, settings shape, Next.js route conventions, instrumentation.js pattern).
-> 2. **Decide if there is a better way** — if you find a cleaner pattern, a more idiomatic approach, or a bug in the reference code, **make that change happen**. Do not blindly copy.
-> 3. **Verify** — run the app, hit the endpoints, check the DB, confirm acceptance criteria.
-> 4. **Update this plan** — mark milestones done, note deviations, link commits.
->
-> Research foundation (read before implementing each milestone):
-> - `../research/2026-09-15-webhook-receive-act-research.md`
-> - `../research/2026-09-15-webhook-master-research-tree.md` + `../research/2026-09-15-webhook-branch-*.md`
-> - `../research/2026-09-15-webhook-exponential-master-map.md` + `../research/2026-09-15-webhook-exp-*.md`
-> - `../interpretation/2026-09-15-webhook-synthesis.md` (distilled knowledge)
+## ⚠️ AGENT REVIEW NOTE (READ FIRST)
 
+> **⚠️ THIS PLAN IS A RESEARCH DOCUMENT — NOT AN IMPLEMENTATION INSTRUCTION.**
+>
+> **The code in this plan is a SUGGESTION / OPTION for future agents — it is NOT a final decision and NOT an instruction to implement anything.**
+>
+> Every agent that reads this plan MUST understand:
+> - This plan documents **research-grade suggestions** for how a feature *could* be implemented
+> - The code snippets show **possible approaches** (file paths, function signatures, patterns) — they are **options**, not requirements
+> - **Nothing in this plan should be implemented automatically** — a future agent must evaluate each suggestion, decide if there's a better way, and only then proceed
+> - The agent is the final arbiter: if a better approach exists, **make those changes happen** — update the code, note the improvement, and proceed
+> - Do not treat this code as sacred. It follows 9router's existing conventions, but the agent decides what to use.
+
+---
+
+## Rationale & Design Decisions
+
+**Purpose:** This is the master implementation plan for the entire webhook system (M1–M5). It exists so a future agent can see the full picture — every milestone, every file, every dependency — before diving into the per-milestone plans.
+
+**Research grounding:** All 48 research roots (R01–R48) across the 11 experiment documents (`research/2026-09-15-webhook-exp-01` through `exp-11`). See the master map `research/2026-09-15-webhook-exponential-master-map.md`.
+
+**Key design decisions:**
+- **Milestone ordering M1 → M2 → M3 → M4 → M5** — receiver first (everything consumes events), then durability, then rules/actions, then outbound, then UI.
+- **Standard Webhooks spec as the baseline contract** — with Stripe/GitHub/Hookdeck compatibility layers as optional add-ons (see their plans).
+- **Settings-backed configuration throughout** — webhook configs live in `settingsRepo`, consistent with 9router's existing config model.
+- **Overlapping plans are intentional** — messaging/push overlap M3 actions; SSE/WS/long-poll are three alternatives for the same feed; the agent picks per need.
+
+**Trade-offs & risks:** The full system is large; each milestone is independently shippable, so value arrives incrementally. The per-milestone plans carry their own trade-offs.
+
+---
 ## Scope
 
 **In scope:**

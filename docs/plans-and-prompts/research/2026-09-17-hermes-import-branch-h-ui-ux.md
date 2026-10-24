@@ -132,3 +132,12 @@ Integrate imported messages into the existing Messages page and dashboard so the
 - Should imported messages be editable (e.g., add notes, tags)?
 - How to handle very large imports (10,000+ messages) without blocking the UI?
 - Should the import workflow support scheduling (e.g., import every hour)?
+
+## Related Implementation Plans
+
+- `9router/impl-plan-import-08-messages-page-ui.md` — source filter, `SourceBadge`, `ConfidenceBadge`, `ImportMetadata`, `ImportModal` on the real page `src/app/(dashboard)/dashboard/messages/page.js`
+- `9router/impl-plan-import-16-analytics-insights.md` — analytics page + components under `src/app/(dashboard)/dashboard/analytics/`
+- `9router/impl-plan-import-17-agent-adapters.md` — per-agent setup tabs in the import modal (snippet API)
+- `9router/impl-plan-import-11-import-scheduler.md` — jobs panel UI
+- `9router/impl-plan-import-12-retention-lifecycle.md` — retention settings UI (days, archive dir, toggles)
+- `9router/impl-plan-import-18-model-catalog-sync.md` — Unknown Models UI (suggestions + manual mapping)

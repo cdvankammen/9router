@@ -9,12 +9,16 @@
 
 ## ⚠️ AGENT REVIEW NOTE (READ FIRST)
 
-> **The code in this plan is a starting point, not a final decision.**
-> Every agent that reads this plan MUST review the code below and make a decision:
-> is there a better way to implement this? If yes, **make those changes happen** —
-> update the code, note the improvement, and proceed. Do not treat this code as
-> sacred. It follows 9router's existing conventions, but the agent is the final
-> arbiter of implementation quality.
+> **⚠️ THIS PLAN IS A RESEARCH DOCUMENT — NOT AN IMPLEMENTATION INSTRUCTION.**
+>
+> **The code in this plan is a SUGGESTION / OPTION for future agents — it is NOT a final decision and NOT an instruction to implement anything.**
+>
+> Every agent that reads this plan MUST understand:
+> - This plan documents **research-grade suggestions** for how a feature *could* be implemented
+> - The code snippets show **possible approaches** (file paths, function signatures, patterns) — they are **options**, not requirements
+> - **Nothing in this plan should be implemented automatically** — a future agent must evaluate each suggestion, decide if there's a better way, and only then proceed
+> - The agent is the final arbiter: if a better approach exists, **make those changes happen** — update the code, note the improvement, and proceed
+> - Do not treat this code as sacred. It follows 9router's existing conventions, but the agent decides what to use.
 
 ---
 
@@ -33,6 +37,38 @@ Implement Helicone-style observability (R44): per-request logging with cost/late
 **Out of scope (v1):**
 - Helicone's full dashboard
 - Prompt caching / session tracking
+
+## Rationale & Design Decisions
+
+**Purpose:** Add Helicone-style observability — custom properties on requests, event hooks, and a feedback endpoint — so LLM traffic is inspectable and improvable.
+
+**Research grounding:** R44 (exp-10 patterns/platforms) — see Related Docs below for the exact experiment documents this plan derives from.
+
+**Key design decisions:**
+- **Custom properties** — clients attach metadata to requests; it flows through to logs/events.
+- **`request.completed` events** — the M4 event vocabulary already emits completion; observability subscribes to it.
+- **Feedback endpoint** — a small API to record human feedback on responses, stored alongside usage data.
+
+**Trade-offs & risks:** Trade-off: observability adds per-request overhead (metadata capture); keep it opt-in per provider/request. Overlaps with existing usage tracking — reuse, don't duplicate.
+
+---
+## Grounding in 9router
+
+**Auth registration:** `/api/observability/*` → **`PROTECTED_API_PATHS`**
+
+9router already has `api/observability/status` — extend it rather than adding a parallel surface.
+
+**Conventions this plan must follow:**
+- Import `getSettings`/`updateSettings` from `@/lib/localDb` in route handlers (matches `src/app/api/settings/route.js`)
+- Start workers from `src/instrumentation.js` (settings-gated, `NEXT_RUNTIME === "nodejs"`) — layout chunks tree-shake in standalone builds
+- New migrations start at **006** (`src/lib/db/migrations/` currently ends at `005-seen-models.js`)
+- Keep `export const dynamic = "force-dynamic"` on every route
+- Strip secrets from request bodies and never return them in GET responses (CWE-915 pattern from `src/app/api/settings/route.js`)
+- Reuse `src/shared/hookTemplate.js` for `{{field}}` expansion — it already exists
+
+See `2026-10-03-webhook-grounding-in-9router.md` for the full discrepancy list.
+
+---
 
 ## Files
 

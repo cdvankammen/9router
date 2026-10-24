@@ -9,12 +9,16 @@
 
 ## ⚠️ AGENT REVIEW NOTE (READ FIRST)
 
-> **The code in this plan is a starting point, not a final decision.**
-> Every agent that reads this plan MUST review the code below and make a decision:
-> is there a better way to implement this? If yes, **make those changes happen** —
-> update the code, note the improvement, and proceed. Do not treat this code as
-> sacred. It follows 9router's existing conventions, but the agent is the final
-> arbiter of implementation quality.
+> **⚠️ THIS PLAN IS A RESEARCH DOCUMENT — NOT AN IMPLEMENTATION INSTRUCTION.**
+>
+> **The code in this plan is a SUGGESTION / OPTION for future agents — it is NOT a final decision and NOT an instruction to implement anything.**
+>
+> Every agent that reads this plan MUST understand:
+> - This plan documents **research-grade suggestions** for how a feature *could* be implemented
+> - The code snippets show **possible approaches** (file paths, function signatures, patterns) — they are **options**, not requirements
+> - **Nothing in this plan should be implemented automatically** — a future agent must evaluate each suggestion, decide if there's a better way, and only then proceed
+> - The agent is the final arbiter: if a better approach exists, **make those changes happen** — update the code, note the improvement, and proceed
+> - Do not treat this code as sacred. It follows 9router's existing conventions, but the agent decides what to use.
 
 ---
 
@@ -33,6 +37,38 @@ Implement an n8n-style workflow engine (R37): multi-step workflows with nodes (t
 **Out of scope (v1):**
 - Visual node editor (n8n canvas) — JSON workflows only
 - Loops/retries within workflows (v2)
+
+## Rationale & Design Decisions
+
+**Purpose:** Let users define multi-step automation workflows (trigger → transform → condition → action) in a n8n-style DAG, for logic beyond single rules.
+
+**Research grounding:** R37 (exp-10 patterns/platforms) — see Related Docs below for the exact experiment documents this plan derives from.
+
+**Key design decisions:**
+- **DAG executor** — nodes with explicit connections; topological execution with cycle detection.
+- **Node types** — trigger/transform/condition/action cover the observed workflow shapes; each node is a small registered function.
+- **JSON workflow definition** — workflows are data (settings-backed), not code, so they're editable and versionable.
+
+**Trade-offs & risks:** Trade-off: a DAG engine is more complex than linear rules (M3); it's justified only when branching/merging is a real need. Linear steps (Pipedream plan R39) are the simpler alternative.
+
+---
+## Grounding in 9router
+
+**Auth registration:** `/api/webhooks/workflows` → **`PROTECTED_API_PATHS`**
+
+Workflow CRUD is dashboard surface; overlaps M3 rules — pick one as the engine.
+
+**Conventions this plan must follow:**
+- Import `getSettings`/`updateSettings` from `@/lib/localDb` in route handlers (matches `src/app/api/settings/route.js`)
+- Start workers from `src/instrumentation.js` (settings-gated, `NEXT_RUNTIME === "nodejs"`) — layout chunks tree-shake in standalone builds
+- New migrations start at **006** (`src/lib/db/migrations/` currently ends at `005-seen-models.js`)
+- Keep `export const dynamic = "force-dynamic"` on every route
+- Strip secrets from request bodies and never return them in GET responses (CWE-915 pattern from `src/app/api/settings/route.js`)
+- Reuse `src/shared/hookTemplate.js` for `{{field}}` expansion — it already exists
+
+See `2026-10-03-webhook-grounding-in-9router.md` for the full discrepancy list.
+
+---
 
 ## Files
 

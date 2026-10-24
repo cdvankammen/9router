@@ -9,12 +9,16 @@
 
 ## ⚠️ AGENT REVIEW NOTE (READ FIRST)
 
-> **The code in this plan is a starting point, not a final decision.**
-> Every agent that reads this plan MUST review the code below and make a decision:
-> is there a better way to implement this? If yes, **make those changes happen** —
-> update the code, note the improvement, and proceed. Do not treat this code as
-> sacred. It follows 9router's existing conventions, but the agent is the final
-> arbiter of implementation quality.
+> **⚠️ THIS PLAN IS A RESEARCH DOCUMENT — NOT AN IMPLEMENTATION INSTRUCTION.**
+>
+> **The code in this plan is a SUGGESTION / OPTION for future agents — it is NOT a final decision and NOT an instruction to implement anything.**
+>
+> Every agent that reads this plan MUST understand:
+> - This plan documents **research-grade suggestions** for how a feature *could* be implemented
+> - The code snippets show **possible approaches** (file paths, function signatures, patterns) — they are **options**, not requirements
+> - **Nothing in this plan should be implemented automatically** — a future agent must evaluate each suggestion, decide if there's a better way, and only then proceed
+> - The agent is the final arbiter: if a better approach exists, **make those changes happen** — update the code, note the improvement, and proceed
+> - Do not treat this code as sacred. It follows 9router's existing conventions, but the agent decides what to use.
 
 ---
 
@@ -33,6 +37,38 @@ Implement a Huginn-style agent system (R40): autonomous agents that watch for co
 **Out of scope (v1):**
 - Huginn's full UI (scenarios, dry-run)
 - Agent types beyond watch/schedule/digest
+
+## Rationale & Design Decisions
+
+**Purpose:** Support Huginn-style scheduled agents that watch sources, run on schedules, and emit events chained to other agents — a self-hosted automation classic.
+
+**Research grounding:** R40 (exp-10 patterns/platforms) — see Related Docs below for the exact experiment documents this plan derives from.
+
+**Key design decisions:**
+- **Agent types** — watch (poll a source), schedule (cron), digest (aggregate) cover Huginn's core patterns.
+- **Event chaining** — agent outputs feed other agents' inputs, forming pipelines.
+- **Scheduler integration** — agents run on the existing instrumentation.js scheduler, not a new cron system.
+
+**Trade-offs & risks:** Trade-off: Huginn-style agents overlap with workflows (R37–R39); they shine for *scheduled polling* specifically. If scheduling isn't needed, skip this plan.
+
+---
+## Grounding in 9router
+
+**Auth registration:** `/api/webhooks/agents` → **`PROTECTED_API_PATHS`**
+
+Agent CRUD is dashboard surface; scheduler runs from `instrumentation.js`.
+
+**Conventions this plan must follow:**
+- Import `getSettings`/`updateSettings` from `@/lib/localDb` in route handlers (matches `src/app/api/settings/route.js`)
+- Start workers from `src/instrumentation.js` (settings-gated, `NEXT_RUNTIME === "nodejs"`) — layout chunks tree-shake in standalone builds
+- New migrations start at **006** (`src/lib/db/migrations/` currently ends at `005-seen-models.js`)
+- Keep `export const dynamic = "force-dynamic"` on every route
+- Strip secrets from request bodies and never return them in GET responses (CWE-915 pattern from `src/app/api/settings/route.js`)
+- Reuse `src/shared/hookTemplate.js` for `{{field}}` expansion — it already exists
+
+See `2026-10-03-webhook-grounding-in-9router.md` for the full discrepancy list.
+
+---
 
 ## Files
 

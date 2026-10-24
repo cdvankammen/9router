@@ -92,3 +92,13 @@ How to get the data from external agents (Hermes, Claude Code, Cursor, Codex, et
 - Should import be idempotent (dedupe by request hash)?
 - Max batch size for import API?
 - Rate limits per source?
+
+## Related Implementation Plans
+
+- `9router/impl-plan-import-03-import-api.md` — the ingest endpoint every capture mechanism posts into
+- `9router/impl-plan-import-04-log-file-tail.md` — log file tailing (A2) with `logWatcher.js` + persistent sync state
+- `9router/impl-plan-import-05-hermes-hook.md` — Hermes post-request hook (A1) + config endpoint
+- `9router/impl-plan-import-14-format-adapters.md` — per-agent log parsers (A2): Hermes/Claude Code/Cursor/Codex
+- `9router/impl-plan-import-15-streaming-realtime.md` — NDJSON streaming (A4 alternative) + SSE live tail
+- `9router/impl-plan-import-17-agent-adapters.md` — per-agent capture recipes (A1/A3): hook YAML, proxy env vars, detection
+- `9router/impl-plan-import-20-quality-rollout.md` — staged rollout of capture mechanisms (Stage 1 Manual → 2 Log Tail → 3 Hook/Proxy)

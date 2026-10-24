@@ -691,3 +691,103 @@ Audited the 48-root master map (`research/2026-09-15-webhook-exponential-master-
 - `tracking/SESSION-NARRATIVE.md` — this PART 14
 
 **Status:** 29 implementation plans complete — every research root R01–R48 covered, all code-level with agent-review notes. Code implementation deferred — awaiting user go-ahead.
+
+
+---
+
+## PART 15 — Clarification: "Implementation plan" = research document with suggested code (2026-09-17)
+
+**User clarification:** *"when i say implementation plan it does not mean to implement anything it only means that you are researching every possible option to the point that you have code in that plan as a part of suggestions for future agents to look at and with explicit work that those are specifically made to be suggestions and options for code to implement and allow future agents to know better how to implement and where etc"*
+
+### What was done
+- Standardized the **AGENT REVIEW NOTE (READ FIRST)** block across **all 31 webhook plan files** (29 code-level plans + 2 outline docs).
+- The note now explicitly states:
+  1. ⚠️ THIS PLAN IS A RESEARCH DOCUMENT — NOT AN IMPLEMENTATION INSTRUCTION
+  2. Code is a SUGGESTION / OPTION for future agents — NOT a final decision, NOT an instruction to implement anything
+  3. Code snippets show possible approaches (file paths, function signatures, patterns) — options, not requirements
+  4. Nothing in this plan should be implemented automatically — future agents evaluate each suggestion, decide if there's a better way, and only then proceed
+  5. The agent is the final arbiter: if a better approach exists, make those changes happen
+- Verified: 31/31 files contain all four key phrases (grep counts confirmed).
+
+**Status:** All 31 webhook plans are now explicitly framed as research documents with suggested code for future agents. No implementation has been done — and the plans now say so explicitly.
+
+
+---
+
+## PART 16 — Grounding pass: Rationale & Design Decisions added to all 31 plans (2026-09-17)
+
+**User question:** *"are they fully implementable meaning they actually are ready for being used and not just ungrounded in research and ungrounded in purpose and explanation"*
+
+### Audit result (before this pass)
+- ✅ 31/31 plans had: code blocks, file paths, acceptance criteria, testing, related-docs references
+- ✅ 30/31 referenced research docs; 28/31 carried root IDs (the 2 outline docs and m5 are milestone-level by design)
+- ❌ **0/31 had an explicit Rationale / Design-Decisions section** — the "why" was implicit in prose but not stated as a first-class section
+
+### What was added (all 31 files)
+A **"Rationale & Design Decisions"** section inserted after Scope, containing:
+1. **Purpose** — the problem the feature solves
+2. **Research grounding** — exact experiment docs + root IDs (R01–R48) the plan derives from
+3. **Key design decisions** — choices made and why (e.g., Standard Webhooks spec over custom auth; HMAC + timingSafeEqual; settings-backed registry; fail-open evaluation; adapter interfaces)
+4. **Trade-offs & risks** — what was given up and when to pick an alternative plan (e.g., SSE vs WebSocket vs long-poll; Apprise npm vs native; BullMQ vs in-process)
+
+### Verification
+- `grep -l "^## Rationale & Design Decisions"` → **31/31**
+- `grep -l "**Purpose:**"` → **31/31**
+- `grep -l "**Research grounding:**"` → **31/31**
+- `grep -l "**Trade-offs"` → **31/31**
+
+**Status:** All 31 webhook plans are now grounded in research (citations), purpose (why), and explanation (trade-offs) — and remain research documents with suggested code, not implementation instructions.
+
+---
+
+## PART 16 — Chat-log mining: everything learned from the actual chat logs & session DBs (2026-09-17)
+
+**User request:** *"now hwen you are completely done with all of your research i want you to take everyhting tha tyou have learned, that you have placed in this chat log (and that means making sure that you look at the actually chat log files and dbs etc and make sure that you interpret record and and save everything nicely in the promtps and plans folder. )"*
+
+### What was done
+1. **Mined 20 transcript `.jsonl` files** (311 user messages) from the VS Code Copilot chat transcripts directory, using a new reusable script `scripts/mine-transcripts.mjs` that extracts verbatim user prompts + assistant summaries.
+2. **Queried the session DB** via `session_store_sql` — 30+ sessions with turn counts and summaries.
+3. **Authored 4 new docs:**
+   - `research/9router/49-chat-log-mining-report.md` — the full mining report (what was mined, the research method's 4 variants, key verbatim user prompts, interpretation, deliverables).
+   - `research/9router/50-chat-log-session-index.md` — browsable session index + the 8-phase research arc.
+   - `tracking/learnings/2026-09-17-chat-log-mining.md` — transcript format, session DB schema, turn-count divergence.
+   - `tracking/decisions/ADR-012-chat-log-mining.md` — chat-log mining as a first-class knowledge source.
+4. **Updated** `40-binary-tree-expansion-report.md` (final stats: 193 roots / 24511 nodes / 242852 searches) and `39-binary-tree-expansion-master-plan.md` (execution items 10 done, 11 not run).
+5. **Updated indexes:** `tracking/FINDINGS.md`, `tracking/DECISIONS.md`, `tracking/CHANGELOG.md`, `tracking/SESSION-NARRATIVE.md`.
+
+### Key interpretation
+- The user's research method is a **signature**: deep research → binary-tree expansion (6 levels) → verbatim recording → unlimited implementation plans → research-only mode → meta-capture of the process itself.
+- The chat logs reveal the **process knowledge** (method, decisions, tooling gotchas) that the artifacts alone don't capture.
+- The research tree is **frozen at 193 roots** per the user's "when you are completely done" framing; Tier 2 (top-200 corpus roots) remains optional.
+
+**Status:** Chat-log mining complete. All knowledge from the actual chat logs and session DBs is now recorded in `docs/plans-and-prompts/`.
+
+---
+
+## PART 17 — Routing Exponential Expansion: the N-ary clarification (2026-09-17 → 2026-09-19)
+
+**User clarification (verbatim):** *"when you say per program and when i say a binary tree expansion i am referencing that your not just building one single binary tree or nodes specifically you are making sure that for everything that you research from one document (and you can have more than one that you start with) and for every phrase that you decide i want to learn more about in that document that for each of those phrases you go at least 6 levels deep and for each level you may find hundreds of more phrases you want to research and then you will go and research each of those. and from that level you would have 4 more levels left you could go from that level worth of hundreds of phrases you could decide to research on each level so it would be exponential not just a 1 to 2 to 4 to 8 etc kind of research tree. so make sure that you do this ....if you have not already then do it now"*
+
+### The gap discovered
+The main routing research (doc `37-ai-model-routing-deep-research.md` + branches `41`–`48`) had ONLY the strict binary tree (193 roots, 24,511 nodes, 242,852 searches — frozen per the user's "completely done" framing). The governance family (E01–E26) and webhook family (R01–R48) both already had full exponential N-ary master maps + expansion docs. **The routing family was the missing piece** — this is exactly what the user's clarification targeted.
+
+### What was done
+1. **Created the master map** `research/9router/2026-09-17-routing-exponential-master-map.md` — enumerates **60 roots (R01–R60)** from the routing research: R01–R19 from doc 37, R20–R25 from branch 41, R26–R33 from branch 42, R34–R36 from branch 43, R37–R41 from branch 44, R42–R45 from branch 45, R46–R49 from branch 46, R50–R57 from branch 47, R58–R60 from branch 48. Additive to the binary trees (the spine); this is the full exponential body.
+2. **Authored 61 expansion docs** `research/9router/2026-09-17-routing-exp-*.md` (R01–R61), each with:
+   - L1 — sub-phrases discovered in the root (4–12 items)
+   - L2 — expansion of each L1 node (3–10 each)
+   - L3–L6 — continuing expansion with variable N-ary branching (numbered 1a/1a-i/1a-i-a/1a-i-a-1/1a-i-a-1-i)
+   - Confidence & open questions + Sources (arXiv IDs + branch doc refs)
+3. **R16 naming conflict resolved:** master map defined R16 as "Universal decision pipeline" but an earlier draft created R16 as "Wu's LLM Router" — renamed Wu's router to **R61** and created the proper R16.
+4. **Updated indexes:** master map status table (12 batches → ✅), `research/README.md` (routing exponential family added), `tracking/CHANGELOG.md` (2026-09-19 entry), this PART 17.
+
+### Verification (terminal, 2026-09-19)
+- `ls 2026-09-17-routing-exp-*.md | wc -l` → **61** (R01–R60 + R61)
+- Format audit: **61/61 docs have L1–L6 + Confidence + Sources sections** (grep-verified per file)
+
+### Scale of the exponential
+- With average branching 4: 60 × (4^6 − 1)/3 ≈ 60 × 1,365 ≈ **81,900 nodes**
+- With branching 6: 60 × 9,331 ≈ **560,000 nodes**
+- This is the "crazy exponential" the user asked for — not 1→2→4→8.
+
+**Status:** Routing exponential expansion complete — 61 docs, all format-verified. The routing family now matches the governance (E01–E26) and webhook (R01–R48) families.

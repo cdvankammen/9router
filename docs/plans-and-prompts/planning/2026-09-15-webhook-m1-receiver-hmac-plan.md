@@ -9,12 +9,16 @@
 
 ## ⚠️ AGENT REVIEW NOTE (READ FIRST)
 
-> **The code in this plan is a starting point, not a final decision.**
-> Every agent that reads this plan MUST review the code below and make a decision:
-> is there a better way to implement this? If yes, **make those changes happen** —
-> update the code, note the improvement, and proceed. Do not treat this code as
-> sacred. It follows 9router's existing conventions (settingsRepo, instrumentation.js,
-> Next.js route handlers), but the agent is the final arbiter of implementation quality.
+> **⚠️ THIS PLAN IS A RESEARCH DOCUMENT — NOT AN IMPLEMENTATION INSTRUCTION.**
+>
+> **The code in this plan is a SUGGESTION / OPTION for future agents — it is NOT a final decision and NOT an instruction to implement anything.**
+>
+> Every agent that reads this plan MUST understand:
+> - This plan documents **research-grade suggestions** for how a feature *could* be implemented
+> - The code snippets show **possible approaches** (file paths, function signatures, patterns) — they are **options**, not requirements
+> - **Nothing in this plan should be implemented automatically** — a future agent must evaluate each suggestion, decide if there's a better way, and only then proceed
+> - The agent is the final arbiter: if a better approach exists, **make those changes happen** — update the code, note the improvement, and proceed
+> - Do not treat this code as sacred. It follows 9router's existing conventions, but the agent decides what to use.
 
 ---
 
@@ -36,6 +40,39 @@ Implement M1 of the webhook system: the inbound HTTP receiver with HMAC verifica
 - Rule engine + actions (M3)
 - Outbound triggers (M4)
 - Dashboard UI (M5)
+
+## Rationale & Design Decisions
+
+**Purpose:** Provide the inbound entry point for the webhook system: a verified HTTP receiver that accepts events from external senders and makes them available to the rest of the pipeline (outbox, rules, actions).
+
+**Research grounding:** R01–R08 (exp-01 receiver transport, exp-02 auth/secrets) — see Related Docs below for the exact experiment documents this plan derives from.
+
+**Key design decisions:**
+- **Standard Webhooks spec headers** (`webhook-id`, `webhook-timestamp`, `webhook-signature`) — chosen over custom auth because it is a published, interoperable standard (used by Stripe, GitHub, Svix) and gives replay protection + idempotency for free.
+- **HMAC SHA-256 with `crypto.timingSafeEqual`** — constant-time comparison prevents timing attacks; raw-body preservation is required so the signature is computed over exactly what was sent.
+- **Settings-backed registry** (via `settingsRepo`) — webhook configs live in the same persistence layer as the rest of 9router's config, no new DB table needed for v1.
+- **5-minute timestamp tolerance** — matches the spec's default and rejects stale replays without requiring a full replay-protection store.
+
+**Trade-offs & risks:** Trade-off: settings-backed registry is simpler but not queryable at scale; if webhook counts grow, migrate to a dedicated table (see M2 outbox). HMAC-only auth means the secret must be shared out-of-band — acceptable for a local-first gateway.
+
+---
+## Grounding in 9router
+
+**Auth registration:** `src/app/api/webhooks/[id]/route.js` → **`src/dashboardGuard.js` → `PUBLIC_API_PATHS`**
+
+Inbound webhooks are called by third parties with an HMAC signature, NOT a dashboard JWT. The HMAC verify in `verify.js` IS the auth for this route, so it must not also require a session.
+
+**Conventions this plan must follow:**
+- Import `getSettings`/`updateSettings` from `@/lib/localDb` in route handlers (matches `src/app/api/settings/route.js`)
+- Start workers from `src/instrumentation.js` (settings-gated, `NEXT_RUNTIME === "nodejs"`) — layout chunks tree-shake in standalone builds
+- New migrations start at **006** (`src/lib/db/migrations/` currently ends at `005-seen-models.js`)
+- Keep `export const dynamic = "force-dynamic"` on every route
+- Strip secrets from request bodies and never return them in GET responses (CWE-915 pattern from `src/app/api/settings/route.js`)
+- Reuse `src/shared/hookTemplate.js` for `{{field}}` expansion — it already exists
+
+See `2026-10-03-webhook-grounding-in-9router.md` for the full discrepancy list.
+
+---
 
 ## Files
 

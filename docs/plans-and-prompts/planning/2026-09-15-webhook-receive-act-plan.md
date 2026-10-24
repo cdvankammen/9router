@@ -5,6 +5,35 @@
 **Status:** draft (awaiting user go-ahead)
 **Tags:** #plan #webhook #events #automation #notifications #milestones
 
+## ⚠️ AGENT REVIEW NOTE (READ FIRST)
+
+> **⚠️ THIS PLAN IS A RESEARCH DOCUMENT — NOT AN IMPLEMENTATION INSTRUCTION.**
+>
+> **The code in this plan is a SUGGESTION / OPTION for future agents — it is NOT a final decision and NOT an instruction to implement anything.**
+>
+> Every agent that reads this plan MUST understand:
+> - This plan documents **research-grade suggestions** for how a feature *could* be implemented
+> - The code snippets show **possible approaches** (file paths, function signatures, patterns) — they are **options**, not requirements
+> - **Nothing in this plan should be implemented automatically** — a future agent must evaluate each suggestion, decide if there's a better way, and only then proceed
+> - The agent is the final arbiter: if a better approach exists, **make those changes happen** — update the code, note the improvement, and proceed
+> - Do not treat this code as sacred. It follows 9router's existing conventions, but the agent decides what to use.
+
+---
+
+## Rationale & Design Decisions
+
+**Purpose:** This is the milestone outline for the webhook system — the high-level map of what gets built (M1–M5) and in what order, without the code-level detail (which lives in the per-milestone plans).
+
+**Research grounding:** All 48 research roots (R01–R48); see `research/2026-09-15-webhook-exponential-master-map.md` and the 11 experiment docs.
+
+**Key design decisions:**
+- **Receive → Act pipeline** — inbound events (M1–M2) flow into rules/actions (M3), which can trigger outbound notifications (M4), surfaced in the dashboard (M5).
+- **Durability before automation** — the outbox (M2) lands before rules (M3) so no event is lost when automation runs.
+- **UI last** — the API is fully usable without the dashboard; UI is P2.
+
+**Trade-offs & risks:** Outlined at milestone level; each milestone plan carries its own detailed trade-offs.
+
+---
 ## Scope
 
 **In scope:**

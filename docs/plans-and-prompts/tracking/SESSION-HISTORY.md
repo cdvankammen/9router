@@ -7,6 +7,41 @@
 
 ---
 
+## Session 2026-09-21 — Final verification pass (routing-exp structure + import plans review note)
+
+**Objective:** User directive: *"continue till done"* — complete the remaining verification and close out the planning phase.
+
+**Deliverables:**
+- **Structural verification (61/61):** every `2026-09-17-routing-exp-*.md` doc has exactly one `## L1`–`## L6`, `## Confidence`, `## Sources` section — the exponential N-ary expansion (R01–R61) is structurally complete.
+- **Review-note verification (20/20):** every `impl-plan-import-*.md` carries the mandatory **AGENT REVIEW NOTE** (research doc, code is SUGGESTION/OPTION, nothing implemented automatically).
+- **Coverage mapping:** routing-exp roots R01–R61 all map to existing code-bearing plans in the 222-plan series (session-affinity → 144, win-probability → 175, POMDP → 132, eval → 07/148/149/187, cascade → 02/90/133/137/152/182/183/196, etc.). External-system roots (RouteLLM, RouterBench, FrugalGPT, AutoMix, Tryage, ClawRouter, coai, OpenRouter, LiteLLM) are research sources feeding the impl-plan series — no separate code-bearing plans required.
+- **Tracking updated:** `tracking/TASKS.md`, `tracking/CHANGELOG.md`, `tracking/SESSION-HISTORY.md` (this entry).
+
+**Status:** All research streams verified gapless and structurally complete. Implementation deferred — awaiting user go-ahead.
+
+---
+
+## Session 2026-09-18 — Gap-filling complete: ALL 222 research impl-plans have code-bearing counterparts
+
+**Objective:** User directive: *"okay then make sure it is fully planned out and that you have interpreted everything and verified the plans are gapless"* — every research implementation plan must have a code-bearing counterpart with reference code and the mandatory agent-review note.
+
+**Deliverables (222 code-bearing plans total, all verified present):**
+- **Numbered series 01–204** (minus 201/202 which have no research source files): plans 01–36 from prior sessions; **37–198, 199, 200, 203, 204 created in this gap-filling phase** — each with reference JS code (repos, migrations, services, routes, dashboard pages, tests), Dependencies & Risks table, Verification steps.
+- **Import series import-01–20** (Hermes message import): DB schema, provider matching, import API, log-file tail, Hermes hook, error reconstruction, cost calculation, messages-page UI, observability export, multi-tenant import, scheduler, retention lifecycle, deduplication/idempotency, format adapters, streaming/realtime, analytics, agent adapters, model catalog sync, API contracts/SDKs, quality & rollout.
+- **Every plan carries the mandatory "Note to implementing agents (READ FIRST)":** the reference code is a starting point for review, not a final implementation — agents MUST review it against the actual codebase, decide if there is a better way, make those changes happen, verify by running, and update the plan.
+- **README updated:** `planning/README.md` now indexes all 222 code-bearing plans (01–36, 37–204, import-01–20 tables).
+- **Tracking updated:** `tracking/TASKS.md`, `tracking/CHANGELOG.md`, `tracking/SESSION-HISTORY.md` (this entry).
+
+**Key findings:**
+- Gap audit verified: 222 research plans → 222 code-bearing counterparts, **ZERO remaining gaps**.
+- Research plans 201 and 202 have no source files (numbering gap) — no code versions exist for them.
+- Three apparent "missing" counterparts were false positives from slug renames (`02-cascade-fallback`, `14-message-driven-tools-protocol`, `74-model-version-pinning-rollback`).
+- Overlap between plans is intentional per user directive; plans compose rather than conflict.
+
+**Status:** All 222 code-bearing plans complete. Code implementation deferred — awaiting user go-ahead.
+
+---
+
 ## Session 2026-09-15 — Interpretation Layer + Code-Bearing Implementation Plans (all 36 research impl-plans + 5 feature-area plans)
 
 **Objective:** User directive: *"then clean up the goal and continue your work and make sure that all the documents have been interpreted and that you have put all tasks and implementation work (meaning if you have not create all sorts of different implementation plans, no matter if we ended up making ones that overlap then you need to make sure that you create those implementation plans all the way to the point that we even have code for in the implementation plan and making sure that it is mentioned for agents that read those plans that this code is for the agent to review and make decision for if there are better ways to implement and make those changes happen)."*
@@ -1399,3 +1434,50 @@ sites: Qoder import, manual add, `ModelSelectModal`).
   warnings on unrelated effects, no new errors.
 - See `learnings/2026-08-13-openrouter-refresh-models-serial-import-hang.md`
   and `CHANGELOG.md` UPDATE 2026-08-13.
+
+---
+
+## Session 2026-09-17 — Chat-Log Mining + Research Tree Finalization
+
+**Objective:** User directive: *"now hwen you are completely done with all of your research i want you to take everyhting tha tyou have learned, that you have placed in this chat log (and that means making sure that you look at the actually chat log files and dbs etc and make sure that you interpret record and and save everything nicely in the promtps and plans folder. )"*
+
+**Deliverables:**
+- **Research tree finalized:** Tier 1 re-run + Tier 3 complete — **193 roots, 24511 nodes, 242852 searches**, CSV regenerated (24511 rows) and Python-verified. `40-binary-tree-expansion-report.md` updated with final stats; `39-binary-tree-expansion-master-plan.md` execution items 10 ✅ / 11 ⏳.
+- **204 implementation plans** written (`impl-plan-001`…`impl-plan-204`), each with metadata, goal, background, design, implementation steps, files touched, risks, success criteria, related plans.
+- **Chat-log mining (new):**
+  - `scripts/mine-transcripts.mjs` — reusable transcript miner (verbatim user prompts + assistant summaries).
+  - Mined 20 `.jsonl` transcripts (311 user messages) + queried the session DB (30+ sessions).
+  - `research/9router/49-chat-log-mining-report.md` — full report incl. the research method's 4 variants.
+  - `research/9router/50-chat-log-session-index.md` — session index + 8-phase research arc.
+  - `tracking/learnings/2026-09-17-chat-log-mining.md` — transcript format + session DB schema learnings.
+  - `tracking/decisions/ADR-012-chat-log-mining.md` — chat-log mining as a first-class knowledge source.
+- **Indexes updated:** `tracking/FINDINGS.md`, `tracking/DECISIONS.md`, `tracking/CHANGELOG.md`, `tracking/SESSION-NARRATIVE.md`, `tracking/SESSION-HISTORY.md` (this entry).
+
+**Key findings:**
+- The user's research method is a signature: deep research → binary-tree expansion (6 levels) → verbatim recording → unlimited implementation plans → research-only mode → meta-capture.
+- The chat logs hold process knowledge (method, decisions, tooling gotchas) that artifacts alone don't capture.
+- Research tree frozen at 193 roots; Tier 2 (top-200 corpus roots) optional.
+
+**Status:** Chat-log mining complete. All knowledge from the actual chat logs and session DBs recorded in `docs/plans-and-prompts/`.
+
+---
+
+## Session 2026-09-17 → 2026-09-19 — Routing Exponential Expansion (N-ary, 60 roots)
+
+**Objective:** User clarification: *"binary tree expansion"* means a true **exponential N-ary expansion** — every phrase in a source document is a root, each root goes at least 6 levels deep, and each level can spawn hundreds of phrases to research (exponential, not 1→2→4→8). *"so make sure that you do this ....if you have not already then do it now"*
+
+**Deliverables:**
+- **Master map (new):** `research/9router/2026-09-17-routing-exponential-master-map.md` — 60 roots (R01–R60) from doc 37 + branches 41–48; additive to the frozen binary trees (193 roots / 24,511 nodes / 242,852 searches).
+- **61 expansion docs (new):** `research/9router/2026-09-17-routing-exp-01…61.md` — R01–R19 (doc 37), R20–R25 (branch 41), R26–R33 (branch 42), R34–R36 (branch 43), R37–R41 (branch 44), R42–R45 (branch 45), R46–R49 (branch 46), R50–R57 (branch 47), R58–R60 (branch 48), R61 (Wu's LLM Router). Each has L1–L6 (6+ levels), variable N-ary branching, Confidence & open questions, Sources.
+- **R16 conflict resolved:** Wu's LLM Router renamed R16 → R61; proper R16 (Universal decision pipeline) created.
+- **Indexes updated:** master map status table (12 batches ✅), `research/README.md`, `tracking/CHANGELOG.md` (2026-09-19 entry), `tracking/SESSION-NARRATIVE.md` (PART 17), `tracking/SESSION-HISTORY.md` (this entry).
+
+**Verification:**
+- `ls 2026-09-17-routing-exp-*.md | wc -l` → **61**
+- Format audit: **61/61 docs have L1–L6 + Confidence + Sources** (grep-verified per file)
+
+**Key findings:**
+- The routing family was the ONLY research family missing the exponential expansion (governance E01–E26 and webhook R01–R48 already had theirs) — the user's clarification targeted exactly this gap.
+- Scale: branching 4 → ≈81,900 nodes; branching 6 → ≈560,000 nodes.
+
+**Status:** Routing exponential expansion complete — 61 docs, all format-verified.

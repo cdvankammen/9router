@@ -101,3 +101,9 @@ The core enabler: match imported model names to known providers so records can b
 - Should matching be case-insensitive? (Yes — model names are case-insensitive in practice)
 - How to handle provider-specific model versions (`claude-3-5-sonnet-20241022` vs `claude-3.5-sonnet`)?
 - Should the matcher learn from user corrections (feedback loop)?
+
+## Related Implementation Plans
+
+- `9router/impl-plan-import-02-provider-matching.md` — `matcher.js` (exact 1.0 → prefix 0.9 → fuzzy 0.7 → local 0.5 → none 0) + `unknown_models` table + `unknownModels.js`
+- `9router/impl-plan-import-18-model-catalog-sync.md` — unknown-model suggestion/resolution using `PROVIDER_MODELS` + the existing models.dev catalog sync
+- `9router/impl-plan-import-07-cost-calculation.md` — provider must be resolved before pricing can be looked up

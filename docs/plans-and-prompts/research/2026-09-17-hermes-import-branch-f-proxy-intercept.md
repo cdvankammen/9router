@@ -105,3 +105,15 @@ Transparently capture agent traffic by routing it through 9Router as a proxy, wi
 - Should 9Router support both proxy and hook modes simultaneously?
 - How to handle agents that don't respect `HTTP_PROXY`?
 - Should the SDK wrappers be published as separate npm/pip packages?
+
+## Updated Access Points (2026-09-17)
+
+- Config: `open-sse/providers/registry/*.js` → getProxyTargets / getSdkWrappers
+- README: `skills/9router-web-fetch` → curl-through-proxy examples
+- COMBO docs: `docs/plans-and-prompts/research/42-branch-cascades-and-fallbacks.md` → proxy-fallback patterns
+## Related Implementation Plans
+
+- `9router/impl-plan-import-17-agent-adapters.md` — transparent-proxy recipes: `ANTHROPIC_BASE_URL`, `OPENAI_BASE_URL`, `OPENAI_API_BASE` (A3 proxy pattern) — when traffic goes *through* 9Router it is captured natively, no import needed
+- `9router/impl-plan-import-04-log-file-tail.md` — log file tailing for agents that can't be proxied (A2)
+- `9router/impl-plan-import-03-import-api.md` — the ingest endpoint for agents that can only post-hoc report (A1/A4)
+- `9router/impl-plan-import-06-error-reconstruction.md` — error categorization + fallback suggestions for proxied failures

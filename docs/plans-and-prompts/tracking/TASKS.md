@@ -1,5 +1,39 @@
 # TASK-LOG — Smart Router & Observability Session
 
+## 2026-09-21 — Final verification pass (routing-exp structure + import plans review note)
+
+| Task | Status |
+|------|--------|
+| Verify all 61 routing-exp docs have L1–L6 + Confidence + Sources sections | ✅ (61/61) |
+| Verify all 20 import plans carry the AGENT REVIEW NOTE | ✅ (20/20) |
+| Map routing-exp roots (R01–R61) to code-bearing plan coverage | ✅ (all topics covered via impl-plan series; external-system roots feed plans 07/132/144/148/149/171–190 etc.) |
+| Summarize findings + next steps for user | ✅ |
+
+## 2026-09-20 — Hermes import plans 01–20 grounding pass complete
+
+| Task | Status |
+|------|--------|
+| Rewrite plans 01–06 with full grounding (migration format, adapter API, real module paths) | ✅ |
+| Rewrite plans 17–20 with full grounding (Zod absent, sync matcher, catalog sync exists) | ✅ |
+| Verify plans 07–16 tails complete + grounded (read + confirmed) | ✅ |
+| Master map updated: component map → real paths, grounding status + per-plan fix table | ✅ |
+| `tracking/CHANGELOG.md` updated with grounding-pass entry | ✅ |
+| `tracking/TASKS.md` updated (this entry) | ✅ |
+| Implementation of plans 01–03 (MVP) | ⏳ pending user approval |
+
+## 2026-09-18 — Gap-filling complete: ALL 222 research impl-plans have code-bearing counterparts
+
+| Task | Status |
+|------|--------|
+| Code-bearing plans 37–198 (research impl-plan series) | ✅ |
+| Code-bearing plans 199, 200, 203, 204 (final numbered gaps) | ✅ |
+| Code-bearing plans import-01–20 (Hermes message import series) | ✅ |
+| Gap audit: 222 research plans → 222 code-bearing counterparts, ZERO remaining gaps | ✅ |
+| `planning/README.md` index updated (37–204 + import-01–20 tables) | ✅ |
+| `tracking/TASKS.md` / `CHANGELOG.md` / `SESSION-HISTORY.md` updated | ✅ |
+
+**Note:** research plans 201 and 202 do not exist as source files (numbering gap) — no code versions exist for them. Three apparent "missing" entries were false positives from slug renames (`02-cascade-fallback`, `14-message-driven-tools-protocol`, `74-model-version-pinning-rollback`).
+
 ## 2026-09-17 15:57 — Shared-worktree rule + branch reconciliation (v3)
 
 - [x] Create shared card worktree 9router-wt-cards (branch card-work-v3) from v3

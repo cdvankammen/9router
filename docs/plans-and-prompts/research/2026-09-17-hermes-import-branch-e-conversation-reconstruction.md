@@ -116,3 +116,9 @@ Reconstruct multi-turn conversations from imported messages so they can be viewe
 - Should imported conversations be editable (e.g., add notes, tags)?
 - How to handle conversations that span multiple days?
 - Should the system suggest conversation merges automatically?
+
+## Related Implementation Plans
+
+- `9router/impl-plan-import-01-db-schema.md` — `imported_messages` table stores `conversation_id` + `source_session_id`, indexed for grouping
+- `9router/impl-plan-import-15-streaming-realtime.md` — assembles streamed partial messages into conversations via `assembleMessage(partial, completion)`
+- `9router/impl-plan-import-08-messages-page-ui.md` — Messages page views (Timeline/Trace/Board/Inbox) that render reconstructed conversations

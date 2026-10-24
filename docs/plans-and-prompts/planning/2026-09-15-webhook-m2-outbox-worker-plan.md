@@ -9,12 +9,16 @@
 
 ## ⚠️ AGENT REVIEW NOTE (READ FIRST)
 
-> **The code in this plan is a starting point, not a final decision.**
-> Every agent that reads this plan MUST review the code below and make a decision:
-> is there a better way to implement this? If yes, **make those changes happen** —
-> update the code, note the improvement, and proceed. Do not treat this code as
-> sacred. It follows 9router's existing conventions (migrations, repos, instrumentation.js),
-> but the agent is the final arbiter of implementation quality.
+> **⚠️ THIS PLAN IS A RESEARCH DOCUMENT — NOT AN IMPLEMENTATION INSTRUCTION.**
+>
+> **The code in this plan is a SUGGESTION / OPTION for future agents — it is NOT a final decision and NOT an instruction to implement anything.**
+>
+> Every agent that reads this plan MUST understand:
+> - This plan documents **research-grade suggestions** for how a feature *could* be implemented
+> - The code snippets show **possible approaches** (file paths, function signatures, patterns) — they are **options**, not requirements
+> - **Nothing in this plan should be implemented automatically** — a future agent must evaluate each suggestion, decide if there's a better way, and only then proceed
+> - The agent is the final arbiter: if a better approach exists, **make those changes happen** — update the code, note the improvement, and proceed
+> - Do not treat this code as sacred. It follows 9router's existing conventions, but the agent decides what to use.
 
 ---
 
@@ -35,6 +39,39 @@ Implement M2 of the webhook system: the SQLite outbox event store + worker (tran
 - Rule engine + actions (M3) — worker dispatches to a placeholder for now
 - Outbound triggers (M4)
 - Dashboard UI (M5)
+
+## Rationale & Design Decisions
+
+**Purpose:** Persist every accepted webhook event durably and process it reliably, so no event is lost between receipt and rule evaluation — the transactional outbox pattern.
+
+**Research grounding:** R09–R11 (exp-03 event store + worker) — see Related Docs below for the exact experiment documents this plan derives from.
+
+**Key design decisions:**
+- **Transactional outbox** — events are written to SQLite in the same transaction as their source state, then a worker polls and dispatches; this is the standard pattern for reliable event delivery without distributed transactions.
+- **SQLite via existing `src/lib/db/` adapter chain** — no new infrastructure; the migration pattern (001–004) is extended with a new migration.
+- **At-least-once delivery with idempotency keys** — the worker retries failures with backoff; consumers dedupe via event id, matching the Standard Webhooks idempotency model.
+- **Worker lifecycle via `instrumentation.js` settings-gated dynamic import** — follows the existing `quotaAutoPing` pattern so it starts/stops with the app.
+
+**Trade-offs & risks:** Trade-off: at-least-once means consumers must be idempotent (documented in the plan). SQLite polling is fine at local-gateway scale; if volume explodes, swap the poller for the message-queue plan (R32).
+
+---
+## Grounding in 9router
+
+**Auth registration:** — (no new API route; worker only)
+
+Worker starts from `src/instrumentation.js` (settings-gated, `NEXT_RUNTIME === 'nodejs'`) — NOT a layout, which tree-shakes in standalone builds.
+
+**Conventions this plan must follow:**
+- Import `getSettings`/`updateSettings` from `@/lib/localDb` in route handlers (matches `src/app/api/settings/route.js`)
+- Start workers from `src/instrumentation.js` (settings-gated, `NEXT_RUNTIME === "nodejs"`) — layout chunks tree-shake in standalone builds
+- New migrations start at **006** (`src/lib/db/migrations/` currently ends at `005-seen-models.js`)
+- Keep `export const dynamic = "force-dynamic"` on every route
+- Strip secrets from request bodies and never return them in GET responses (CWE-915 pattern from `src/app/api/settings/route.js`)
+- Reuse `src/shared/hookTemplate.js` for `{{field}}` expansion — it already exists
+
+See `2026-10-03-webhook-grounding-in-9router.md` for the full discrepancy list.
+
+---
 
 ## Files
 

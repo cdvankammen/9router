@@ -130,3 +130,13 @@ Design the database schema for storing imported messages, optimized for querying
 - Should imported messages be stored in the same SQLite database as native traffic?
 - How to handle very large request/response JSON (e.g., 1MB+ payloads)?
 - Should the system compress old messages to save space?
+
+## Related Implementation Plans
+
+- `9router/impl-plan-import-01-db-schema.md` — `005-imported-messages.js` migration, `importedMessagesRepo.js` (6 functions), `all_messages` UNION view, `SCHEMA_VERSION` bump
+- `9router/impl-plan-import-10-multi-tenant-import.md` — `008-import-tenants.js` tenant columns + `import_keys` table
+- `9router/impl-plan-import-11-import-scheduler.md` — `009-import-jobs.js` job table + retry/dead-letter columns
+- `9router/impl-plan-import-12-retention-lifecycle.md` — `010-import-archives.js` archive metadata table
+- `9router/impl-plan-import-13-deduplication-idempotency.md` — `011-import-fingerprint.js` + `012-import-idempotency.js`
+- `9router/impl-plan-import-02-provider-matching.md` — `006-unknown-models.js`
+- `9router/impl-plan-import-04-log-file-tail.md` — `007-import-sync-state.js` persistent sync positions

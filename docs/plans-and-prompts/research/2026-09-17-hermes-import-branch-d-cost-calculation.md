@@ -113,3 +113,10 @@ Calculate costs for imported requests using the same pricing data as native 9Rou
 - Should imported costs count toward user quotas/budgets?
 - How to handle models with no pricing data (e.g., local models)?
 - Should the system suggest pricing updates when costs seem wrong?
+
+## Related Implementation Plans
+
+- `9router/impl-plan-import-07-cost-calculation.md` — `costCalculator.js` via `getPricingForModel(provider, model)` ($/1M tokens), `cost_confidence` column, UI display
+- `9router/impl-plan-import-02-provider-matching.md` — provider resolution is a prerequisite for pricing lookup
+- `9router/impl-plan-import-18-model-catalog-sync.md` — catalog pricing as a secondary source when the provider pricing table has no entry
+- `9router/impl-plan-import-16-analytics-insights.md` — cost anomaly detection (`getCostAnomalies`)

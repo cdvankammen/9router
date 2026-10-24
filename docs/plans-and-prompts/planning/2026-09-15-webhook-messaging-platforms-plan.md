@@ -9,12 +9,16 @@
 
 ## ⚠️ AGENT REVIEW NOTE (READ FIRST)
 
-> **The code in this plan is a starting point, not a final decision.**
-> Every agent that reads this plan MUST review the code below and make a decision:
-> is there a better way to implement this? If yes, **make those changes happen** —
-> update the code, note the improvement, and proceed. Do not treat this code as
-> sacred. It follows 9router's existing conventions (proxyAwareFetch), but the
-> agent is the final arbiter of implementation quality.
+> **⚠️ THIS PLAN IS A RESEARCH DOCUMENT — NOT AN IMPLEMENTATION INSTRUCTION.**
+>
+> **The code in this plan is a SUGGESTION / OPTION for future agents — it is NOT a final decision and NOT an instruction to implement anything.**
+>
+> Every agent that reads this plan MUST understand:
+> - This plan documents **research-grade suggestions** for how a feature *could* be implemented
+> - The code snippets show **possible approaches** (file paths, function signatures, patterns) — they are **options**, not requirements
+> - **Nothing in this plan should be implemented automatically** — a future agent must evaluate each suggestion, decide if there's a better way, and only then proceed
+> - The agent is the final arbiter: if a better approach exists, **make those changes happen** — update the code, note the improvement, and proceed
+> - Do not treat this code as sacred. It follows 9router's existing conventions, but the agent decides what to use.
 
 ---
 
@@ -34,6 +38,39 @@ Implement the messaging-platform integration layer: Slack, Discord, and Telegram
 - Socket Mode / WebSocket inbound (Slack model)
 - Discord Ed25519 signature verification (interactions)
 - Telegram bot webhook registration (setWebhook)
+
+## Rationale & Design Decisions
+
+**Purpose:** Deliver webhook-triggered notifications to chat platforms (Slack, Discord, Telegram, ntfy) so users get alerts where they already work.
+
+**Research grounding:** R15–R17 (exp-05 messaging platforms) — see Related Docs below for the exact experiment documents this plan derives from.
+
+**Key design decisions:**
+- **Per-platform adapters behind one interface** — each platform is a small module with `send(payload)`; the action registry picks the adapter by URL scheme.
+- **Webhook-URL-based config** — Slack/Discord/ntfy use incoming webhook URLs; Telegram uses bot token + chat id; all stored in settings, never in code.
+- **Fail-open with logging** — a failed platform send logs and continues; no retry storm (retries belong to the outbox worker).
+- **Payload templating** — a minimal `{{field}}` substitution so users control message shape without code.
+
+**Trade-offs & risks:** Trade-off: each platform has its own rate limits and payload quirks — the adapter interface isolates that. Telegram/ntfy need outbound internet; local-only deployments should use the SSE/WS feed plans instead.
+
+---
+## Grounding in 9router
+
+**Auth registration:** `/api/webhooks/actions` → **`src/dashboardGuard.js` → `PROTECTED_API_PATHS`**
+
+Sending is outbound and HMAC-signed by each platform; only the CRUD surface needs dashboard auth.
+
+**Conventions this plan must follow:**
+- Import `getSettings`/`updateSettings` from `@/lib/localDb` in route handlers (matches `src/app/api/settings/route.js`)
+- Start workers from `src/instrumentation.js` (settings-gated, `NEXT_RUNTIME === "nodejs"`) — layout chunks tree-shake in standalone builds
+- New migrations start at **006** (`src/lib/db/migrations/` currently ends at `005-seen-models.js`)
+- Keep `export const dynamic = "force-dynamic"` on every route
+- Strip secrets from request bodies and never return them in GET responses (CWE-915 pattern from `src/app/api/settings/route.js`)
+- Reuse `src/shared/hookTemplate.js` for `{{field}}` expansion — it already exists
+
+See `2026-10-03-webhook-grounding-in-9router.md` for the full discrepancy list.
+
+---
 
 ## Files
 

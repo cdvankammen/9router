@@ -116,3 +116,9 @@ Reconstruct error records from imported messages so they appear in the error inb
 - Should error reconstruction run on import or on-demand?
 - How to handle errors that don't match any known pattern?
 - Should the system learn from user corrections (e.g., user marks error as "not really a rate limit")?
+
+## Related Implementation Plans
+
+- `9router/impl-plan-import-06-error-reconstruction.md` — `errorReconstructor.js` reusing `categorizeError(status, text)`, SHA-256 fingerprints, `fallbackSuggestions.js` via `getComboModelsFromData`
+- `9router/impl-plan-import-13-deduplication-idempotency.md` — fingerprint column + unique index for error aggregation (C5)
+- `9router/impl-plan-import-16-analytics-insights.md` — error analytics dashboard over the categorized/fingerprinted rows

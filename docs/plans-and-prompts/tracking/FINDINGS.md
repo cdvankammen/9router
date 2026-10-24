@@ -9,6 +9,9 @@ Index of all learnings in `learnings/`, newest first. Update this list when addi
 
 | File | Covers |
 |---|---|
+| `2026-09-20-import-plans-grounded.md` | Grounding pass: all 20 import plans verified against real codebase — adapter API (run/get/all/exec, no `.prepare()`), migration format (`export default {version, name, up(db)}`), versions 5–12, Zod absent, `categorizeError` positional, `getPricingForModel` $/1M, `usageHistory` live vs legacy usage.json, real cursorProtobuf exports, existing models.dev catalog sync |
+| `2026-09-17-chat-log-mining.md` | Chat-log mining: transcript `.jsonl` format, session DB schema, turn-count vs user-message divergence, research-method variants, mining script |
+| `2026-09-17-hermes-import-master-map.md` | Master index: 26 branches (A–Z), 20 implementation plans with code suggestions, build order, design decisions, component map (in `research/`) |
 | `2026-09-16-hermes-message-import-research.md` | Hermes message import: recording external agent traffic in 9Router — provider matching by model name, normalization, error reconstruction, DB schema, integration points (research note in `research/`) |
 | `2026-09-15-message-driven-tools-research-pattern.md` | Message-driven tool-building: the "everything is a dimension" research pattern — verify companion docs, update indexes in same commit, ADR for design decisions, flag unverified dependencies |
 | `2026-08-13-openrouter-refresh-models-serial-import-hang.md` | Serial per-item POST+refetch loop mistaken for a hang; live-curl diagnosis over static review |

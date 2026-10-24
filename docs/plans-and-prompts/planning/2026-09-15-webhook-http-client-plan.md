@@ -9,12 +9,16 @@
 
 ## ⚠️ AGENT REVIEW NOTE (READ FIRST)
 
-> **The code in this plan is a starting point, not a final decision.**
-> Every agent that reads this plan MUST review the code below and make a decision:
-> is there a better way to implement this? If yes, **make those changes happen** —
-> update the code, note the improvement, and proceed. Do not treat this code as
-> sacred. It follows 9router's existing conventions (proxyAwareFetch), but the
-> agent is the final arbiter of implementation quality.
+> **⚠️ THIS PLAN IS A RESEARCH DOCUMENT — NOT AN IMPLEMENTATION INSTRUCTION.**
+>
+> **The code in this plan is a SUGGESTION / OPTION for future agents — it is NOT a final decision and NOT an instruction to implement anything.**
+>
+> Every agent that reads this plan MUST understand:
+> - This plan documents **research-grade suggestions** for how a feature *could* be implemented
+> - The code snippets show **possible approaches** (file paths, function signatures, patterns) — they are **options**, not requirements
+> - **Nothing in this plan should be implemented automatically** — a future agent must evaluate each suggestion, decide if there's a better way, and only then proceed
+> - The agent is the final arbiter: if a better approach exists, **make those changes happen** — update the code, note the improvement, and proceed
+> - Do not treat this code as sacred. It follows 9router's existing conventions, but the agent decides what to use.
 
 ---
 
@@ -34,6 +38,38 @@ Implement the HTTP client stack (R47–R48): a shared outbound HTTP client with 
 **Out of scope (v1):**
 - Circuit breaker (v2)
 - Per-host concurrency limits
+
+## Rationale & Design Decisions
+
+**Purpose:** Provide the outbound HTTP client stack (timeout, retry, backoff, jitter) that every outbound webhook and notification delivery uses — one reliable client instead of ad-hoc fetches.
+
+**Research grounding:** R47–R48 (exp-11 HTTP client architecture) — see Related Docs below for the exact experiment documents this plan derives from.
+
+**Key design decisions:**
+- **`webhookFetch` wrapper around `proxyAwareFetch`** — reuses 9router's existing proxy-aware fetch, adding delivery semantics (timeout, retry, backoff, jitter).
+- **Exponential backoff with jitter** — prevents thundering-herd retries when a target recovers.
+- **Per-call policy** — timeout/retry counts are per-delivery settings, so different targets (chat vs push) get different policies.
+
+**Trade-offs & risks:** Trade-off: retries add latency and duplicate risk — idempotency keys (from M2/standards) are the required companion. This plan is the foundation every outbound plan depends on.
+
+---
+## Grounding in 9router
+
+**Auth registration:** — (internal module)
+
+Wraps `open-sse/utils/proxyFetch.js` — already proxy-aware, so this adds delivery semantics only.
+
+**Conventions this plan must follow:**
+- Import `getSettings`/`updateSettings` from `@/lib/localDb` in route handlers (matches `src/app/api/settings/route.js`)
+- Start workers from `src/instrumentation.js` (settings-gated, `NEXT_RUNTIME === "nodejs"`) — layout chunks tree-shake in standalone builds
+- New migrations start at **006** (`src/lib/db/migrations/` currently ends at `005-seen-models.js`)
+- Keep `export const dynamic = "force-dynamic"` on every route
+- Strip secrets from request bodies and never return them in GET responses (CWE-915 pattern from `src/app/api/settings/route.js`)
+- Reuse `src/shared/hookTemplate.js` for `{{field}}` expansion — it already exists
+
+See `2026-10-03-webhook-grounding-in-9router.md` for the full discrepancy list.
+
+---
 
 ## Files
 

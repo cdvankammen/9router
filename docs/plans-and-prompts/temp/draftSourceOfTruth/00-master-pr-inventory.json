@@ -1,0 +1,6535 @@
+{
+ "total": 653,
+ "items": [
+  {
+   "n": 3163,
+   "t": "fix(usage): make hourly usage chart timezone-aware",
+   "u": "alfiyansys",
+   "c": 0,
+   "d": false,
+   "ca": "2026-08-08T16:34:12Z",
+   "ua": "2026-08-08T16:34:12Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 3161,
+   "t": "feat(cursor): bridge AgentService MCP tools",
+   "u": "ttl0110",
+   "c": 0,
+   "d": true,
+   "ca": "2026-08-08T15:57:02Z",
+   "ua": "2026-08-08T19:38:12Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 3159,
+   "t": "feat: 8 Production Features \u2014 Full Observability + Self-Healing + Cost Optimization + Free Model Discovery",
+   "u": "claytontavaresdan",
+   "c": 1,
+   "d": false,
+   "ca": "2026-08-08T14:26:01Z",
+   "ua": "2026-08-08T14:39:38Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 3149,
+   "t": "fix(kiro): resolve broken MITM interception and stream decoding in Kiro IDE v1.0.228+",
+   "u": "rm1dev",
+   "c": 0,
+   "d": false,
+   "ca": "2026-08-08T13:40:05Z",
+   "ua": "2026-08-08T13:40:05Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 3143,
+   "t": "fix(cli): don't kill config subcommand processes during startup cleanup",
+   "u": "kkunkunya",
+   "c": 0,
+   "d": false,
+   "ca": "2026-08-08T10:15:07Z",
+   "ua": "2026-08-08T10:15:07Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 3137,
+   "t": "fix(vertex): validate RSA-2048 requirement for SA private key before jose RS256 signing",
+   "u": "jayeliu",
+   "c": 0,
+   "d": false,
+   "ca": "2026-08-08T08:02:47Z",
+   "ua": "2026-08-08T08:02:47Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 3132,
+   "t": "feat(elevenlabs): full TTS panel \u2014 v3 audio tags, AI enhance, stability, language override, usage credits",
+   "u": "ntdatt812",
+   "c": 1,
+   "d": false,
+   "ca": "2026-08-08T00:49:28Z",
+   "ua": "2026-08-08T07:29:48Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 3126,
+   "t": "Add local vs hosted deployment mode.",
+   "u": "ojusave",
+   "c": 0,
+   "d": false,
+   "ca": "2026-08-07T21:53:31Z",
+   "ua": "2026-08-07T21:53:31Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 3125,
+   "t": "fix(combos): resolve provider-prefixed combo names to member models",
+   "u": "Jordannst",
+   "c": 0,
+   "d": false,
+   "ca": "2026-08-07T20:54:49Z",
+   "ua": "2026-08-07T20:54:49Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 3124,
+   "t": "feat(providers): add Meta AI (Muse Spark) via the Meta Model API",
+   "u": "dasepmoch",
+   "c": 0,
+   "d": false,
+   "ca": "2026-08-07T16:42:59Z",
+   "ua": "2026-08-07T17:35:19Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 3123,
+   "t": "feat(providers): add per-provider toggle for usage topology canvas",
+   "u": "techysy",
+   "c": 1,
+   "d": false,
+   "ca": "2026-08-07T16:18:28Z",
+   "ua": "2026-08-07T16:45:50Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 3122,
+   "t": "fix(quota): isolate quota row visibility per connection",
+   "u": "techysy",
+   "c": 2,
+   "d": false,
+   "ca": "2026-08-07T16:18:19Z",
+   "ua": "2026-08-08T02:19:56Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 3120,
+   "t": "feat: 50+ community issue fixes \u2014 translator, security, providers, docs, streaming, rate limiting, latency monitoring",
+   "u": "claytontavaresdan",
+   "c": 4,
+   "d": false,
+   "ca": "2026-08-07T09:54:07Z",
+   "ua": "2026-08-08T14:39:43Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 3118,
+   "t": "feat(i18n): usage cost display follows UI locale (\u00a5/NT$/\u20a9/\u20ab) + Regional currency toggle",
+   "u": "techysy",
+   "c": 1,
+   "d": false,
+   "ca": "2026-08-07T09:29:13Z",
+   "ua": "2026-08-07T12:14:15Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 3117,
+   "t": "fix(translator): preserve image blocks when routing Claude -> Antigravity",
+   "u": "FadhliRajwaaRahmana",
+   "c": 0,
+   "d": false,
+   "ca": "2026-08-07T08:41:46Z",
+   "ua": "2026-08-07T08:41:46Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 3116,
+   "t": "fix(nvidia): normalize tool names/IDs & restore original names in response streams",
+   "u": "v01dgrace",
+   "c": 0,
+   "d": false,
+   "ca": "2026-08-07T08:31:38Z",
+   "ua": "2026-08-07T08:31:38Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 3114,
+   "t": "fix(antigravity): preserve schema-keyword property names",
+   "u": "CBOSSX",
+   "c": 0,
+   "d": false,
+   "ca": "2026-08-07T07:43:52Z",
+   "ua": "2026-08-07T07:43:52Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 3113,
+   "t": "fix(kiro): report real output tokens and stop discarding usable turns",
+   "u": "nguyenha935",
+   "c": 0,
+   "d": false,
+   "ca": "2026-08-07T05:02:26Z",
+   "ua": "2026-08-07T09:07:34Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 3111,
+   "t": "feat(telemetry): add model, kiro credits, and session id to the done line",
+   "u": "s3rli",
+   "c": 0,
+   "d": false,
+   "ca": "2026-08-07T03:50:57Z",
+   "ua": "2026-08-07T03:55:43Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 3107,
+   "t": "fix(kiro): restore normalized tool names",
+   "u": "ryanngit",
+   "c": 0,
+   "d": false,
+   "ca": "2026-08-07T02:50:29Z",
+   "ua": "2026-08-07T02:50:29Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 3105,
+   "t": "Tradu\u00e7\u00e3o pt-BR ampliada",
+   "u": "FuryusTK",
+   "c": 0,
+   "d": false,
+   "ca": "2026-08-07T00:03:21Z",
+   "ua": "2026-08-08T11:08:18Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 3089,
+   "t": "fix(gemini): strip stray value key at schema nodes",
+   "u": "thatssoheil",
+   "c": 0,
+   "d": false,
+   "ca": "2026-08-06T13:06:02Z",
+   "ua": "2026-08-06T13:46:08Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 3088,
+   "t": "fix(kimi): route API-key auth to platform endpoint, not Kimi Code",
+   "u": "thatssoheil",
+   "c": 2,
+   "d": false,
+   "ca": "2026-08-06T13:05:59Z",
+   "ua": "2026-08-06T13:42:11Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 3087,
+   "t": "feat(headroom): add lossless mode to proxy start",
+   "u": "thatssoheil",
+   "c": 0,
+   "d": false,
+   "ca": "2026-08-06T13:05:56Z",
+   "ua": "2026-08-06T13:42:07Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 3085,
+   "t": "fix(auth): enforce requireApiKey on GET /v1/models",
+   "u": "thatssoheil",
+   "c": 1,
+   "d": false,
+   "ca": "2026-08-06T13:05:49Z",
+   "ua": "2026-08-07T10:29:38Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 3084,
+   "t": "fix(compat): normalize NVIDIA/vLLM reasoning to reasoning_content",
+   "u": "thatssoheil",
+   "c": 0,
+   "d": false,
+   "ca": "2026-08-06T13:05:46Z",
+   "ua": "2026-08-06T13:41:57Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 3083,
+   "t": "fix(usage): read cached_tokens from nested prompt_tokens_details",
+   "u": "thatssoheil",
+   "c": 1,
+   "d": false,
+   "ca": "2026-08-06T13:05:43Z",
+   "ua": "2026-08-06T18:31:53Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 3082,
+   "t": "fix(gemini): walk schema nodes only in cleanJSONSchemaForAntigravity",
+   "u": "thatssoheil",
+   "c": 0,
+   "d": false,
+   "ca": "2026-08-06T13:05:40Z",
+   "ua": "2026-08-06T13:41:47Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 3081,
+   "t": "fix(stream): inject stream_options.include_usage for OpenAI-compatible streaming",
+   "u": "thatssoheil",
+   "c": 0,
+   "d": false,
+   "ca": "2026-08-06T13:05:37Z",
+   "ua": "2026-08-06T13:41:45Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 3080,
+   "t": "fix(settings): bridge REQUIRE_API_KEY env var to requireApiKey setting",
+   "u": "thatssoheil",
+   "c": 0,
+   "d": false,
+   "ca": "2026-08-06T13:05:34Z",
+   "ua": "2026-08-06T13:24:36Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 3079,
+   "t": "fix(models/test): raise probe max_tokens for reasoning models",
+   "u": "thatssoheil",
+   "c": 0,
+   "d": false,
+   "ca": "2026-08-06T13:05:31Z",
+   "ua": "2026-08-06T13:41:41Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 3078,
+   "t": "fix(security): add /api/pxpipe to LOCAL_ONLY_PATHS \u2014 prevent unauthenticated RCE",
+   "u": "zmf963",
+   "c": 0,
+   "d": false,
+   "ca": "2026-08-06T11:56:38Z",
+   "ua": "2026-08-06T11:56:38Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 3077,
+   "t": "feat(branding): real OpenDesign logo + per-tool integration guide (5 langs)",
+   "u": "Diwak4r",
+   "c": 0,
+   "d": false,
+   "ca": "2026-08-06T11:16:16Z",
+   "ua": "2026-08-06T11:16:22Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 3075,
+   "t": "fix(9router): correct usage accounting and error scope for claude-backed traffic",
+   "u": "nguyenha935",
+   "c": 0,
+   "d": false,
+   "ca": "2026-08-06T10:17:40Z",
+   "ua": "2026-08-06T10:17:40Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 3074,
+   "t": "feat: add Vertex thinking config, tune Kiro",
+   "u": "henry-banana",
+   "c": 0,
+   "d": false,
+   "ca": "2026-08-06T09:07:46Z",
+   "ua": "2026-08-06T09:07:46Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 3069,
+   "t": "fix(open-sse): ESM interop fixes for plain-Node consumers",
+   "u": "vianhanif",
+   "c": 0,
+   "d": false,
+   "ca": "2026-08-06T06:07:16Z",
+   "ua": "2026-08-06T07:14:17Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 3068,
+   "t": "fix(usage): fix React reconciliation bug when switching viewMode",
+   "u": "rusak47",
+   "c": 0,
+   "d": false,
+   "ca": "2026-08-06T04:54:18Z",
+   "ua": "2026-08-06T04:54:18Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 3066,
+   "t": "fix(headroom): skip compress on oversize payloads + disable kompress by default",
+   "u": "vianhanif",
+   "c": 0,
+   "d": false,
+   "ca": "2026-08-06T04:00:03Z",
+   "ua": "2026-08-06T04:00:03Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 3065,
+   "t": "fix(headroom): rewrite dashboard asset/link URLs behind proxy prefix",
+   "u": "vianhanif",
+   "c": 0,
+   "d": false,
+   "ca": "2026-08-06T02:27:25Z",
+   "ua": "2026-08-06T02:33:37Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 3064,
+   "t": "fix(antigravity): rewrite MITM proxy host to daily-cloudcode-pa.sandbox.googleapis.com",
+   "u": "Nautilaceae",
+   "c": 0,
+   "d": false,
+   "ca": "2026-08-06T02:14:20Z",
+   "ua": "2026-08-06T03:22:06Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 3063,
+   "t": "fix(security): SSRF guard on search baseUrl + block default-password remote JWT + redact request details (#3049)",
+   "u": "zmf963",
+   "c": 1,
+   "d": false,
+   "ca": "2026-08-06T01:51:11Z",
+   "ua": "2026-08-07T10:29:11Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 3062,
+   "t": "feat(combos): add import/export with capacity adapter support",
+   "u": "vianhanif",
+   "c": 0,
+   "d": false,
+   "ca": "2026-08-06T01:43:12Z",
+   "ua": "2026-08-06T01:45:42Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 3058,
+   "t": "fix: correct AssemblyAI STT auth header",
+   "u": "igorgomes3",
+   "c": 0,
+   "d": false,
+   "ca": "2026-08-05T18:13:56Z",
+   "ua": "2026-08-05T18:13:56Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 3057,
+   "t": "feat: add OpenCode Zen (PAYG) provider",
+   "u": "cokkyturnip",
+   "c": 0,
+   "d": false,
+   "ca": "2026-08-05T17:30:46Z",
+   "ua": "2026-08-05T17:30:46Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 3056,
+   "t": "fix(antigravity): accurate twin bucket percentage-based quota tracking (v2)",
+   "u": "monkey2jack",
+   "c": 0,
+   "d": false,
+   "ca": "2026-08-05T16:57:38Z",
+   "ua": "2026-08-05T16:57:38Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 3055,
+   "t": "fix(translator): prevent merging Gemini functionResponse with text turns & fix missing tool responses",
+   "u": "phowdecayed",
+   "c": 0,
+   "d": false,
+   "ca": "2026-08-05T16:30:15Z",
+   "ua": "2026-08-06T08:42:34Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 3054,
+   "t": "Akar masalah: saat request di-route ke openai/gpt-5.1, body body clie\u2026",
+   "u": "kelasdev",
+   "c": 0,
+   "d": false,
+   "ca": "2026-08-05T14:14:02Z",
+   "ua": "2026-08-05T14:14:02Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 3051,
+   "t": "fix(stream): an empty stream returns HTTP 200 with an empty body",
+   "u": "omar-nahhas",
+   "c": 0,
+   "d": false,
+   "ca": "2026-08-05T13:17:50Z",
+   "ua": "2026-08-05T13:17:50Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 3048,
+   "t": "Fix/inline thinking translation",
+   "u": "sirwhy",
+   "c": 0,
+   "d": false,
+   "ca": "2026-08-05T12:21:16Z",
+   "ua": "2026-08-05T12:21:16Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 3047,
+   "t": "feat(usage): TokenRouter quota tracker via optional Management Key",
+   "u": "dasepmoch",
+   "c": 0,
+   "d": false,
+   "ca": "2026-08-05T12:18:50Z",
+   "ua": "2026-08-07T17:28:06Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 3042,
+   "t": "feat(combos): add combo test runner and fallback sequence diagnostic",
+   "u": "berthojoris",
+   "c": 0,
+   "d": false,
+   "ca": "2026-08-05T06:13:35Z",
+   "ua": "2026-08-06T06:26:55Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 3039,
+   "t": "fix(kiro): flatten top-level tool schema unions",
+   "u": "ryanngit",
+   "c": 0,
+   "d": false,
+   "ca": "2026-08-05T04:40:29Z",
+   "ua": "2026-08-05T04:40:29Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 3038,
+   "t": "fix(kiro): support API-key model discovery",
+   "u": "ryanngit",
+   "c": 0,
+   "d": false,
+   "ca": "2026-08-05T04:37:18Z",
+   "ua": "2026-08-05T04:37:18Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 3032,
+   "t": "feat(models): provider imports, models.dev metadata, and Models dashboard",
+   "u": "askidmobile",
+   "c": 0,
+   "d": false,
+   "ca": "2026-08-04T19:15:20Z",
+   "ua": "2026-08-07T11:08:19Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 3031,
+   "t": "refactor",
+   "u": "h0c0de",
+   "c": 0,
+   "d": false,
+   "ca": "2026-08-04T17:33:21Z",
+   "ua": "2026-08-04T17:33:21Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 3026,
+   "t": "fix: stabilize Windows lifecycle and provider reliability on v0.5.50",
+   "u": "deanqkhanhcoder",
+   "c": 1,
+   "d": false,
+   "ca": "2026-08-04T10:33:02Z",
+   "ua": "2026-08-06T07:29:07Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 3025,
+   "t": "fix: exempt OPTIONS preflight from auth on /v1/* paths (#1381)",
+   "u": "kevin-ho",
+   "c": 0,
+   "d": false,
+   "ca": "2026-08-04T02:56:22Z",
+   "ua": "2026-08-04T02:56:22Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 3015,
+   "t": "feat(models): add Model Access page to gate what the endpoint serves",
+   "u": "MuhammadUsamaMX",
+   "c": 0,
+   "d": false,
+   "ca": "2026-08-03T14:58:27Z",
+   "ua": "2026-08-03T14:58:27Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 3012,
+   "t": "fix(cooldown): honour provider-reported quota reset times instead of re-probing spent accounts",
+   "u": "Tomauskasz",
+   "c": 1,
+   "d": false,
+   "ca": "2026-08-03T14:10:43Z",
+   "ua": "2026-08-03T14:10:59Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2998,
+   "t": "feat(providers): paginate provider detail connection list",
+   "u": "RobertsXML",
+   "c": 0,
+   "d": false,
+   "ca": "2026-08-02T14:14:57Z",
+   "ua": "2026-08-02T14:14:57Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2997,
+   "t": "fix(proxyFetch): add undici connection pooling to prevent connection exhaustion",
+   "u": "Qrocket-lab",
+   "c": 0,
+   "d": false,
+   "ca": "2026-08-02T13:43:10Z",
+   "ua": "2026-08-02T13:43:10Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2972,
+   "t": "feat(usage-stats): change default view mode from 'costs' to 'tokens'",
+   "u": "teddytkz",
+   "c": 0,
+   "d": false,
+   "ca": "2026-08-01T08:15:15Z",
+   "ua": "2026-08-01T08:15:15Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2960,
+   "t": "docs(i18n): update RTK Token Saver features and 2026 free providers in README.ja-JP.md",
+   "u": "huuanh20",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-31T17:42:58Z",
+   "ua": "2026-07-31T17:42:58Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2959,
+   "t": "test(api): add unit tests for count_tokens CORS preflight, 400 invalid JSON, and payload edge cases",
+   "u": "huuanh20",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-31T17:42:35Z",
+   "ua": "2026-07-31T17:42:35Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2957,
+   "t": "fix(tests): remove hardcoded Unix /tmp/node_modules paths for cross-platform vitest support",
+   "u": "huuanh20",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-31T17:38:44Z",
+   "ua": "2026-07-31T17:38:44Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2956,
+   "t": "docs(i18n): fix typos, prompt artifact, and update RTK features in README.vi.md",
+   "u": "huuanh20",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-31T17:28:40Z",
+   "ua": "2026-07-31T17:28:40Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2955,
+   "t": "chore(registry): deterministic provider-registry index generator",
+   "u": "asuan-dev",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-31T16:00:51Z",
+   "ua": "2026-07-31T16:00:51Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2954,
+   "t": "feat(codebuddy): shared protocol normalization + account profile refresh",
+   "u": "asuan-dev",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-31T15:44:42Z",
+   "ua": "2026-07-31T15:44:42Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2952,
+   "t": "feat(qoder): deep protocol module \u2014 reusable Qoder/QoderWork CN implementation",
+   "u": "asuan-dev",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-31T15:37:00Z",
+   "ua": "2026-07-31T15:37:00Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2948,
+   "t": "feat(media-providers): add support for custom video provider nodes and AddCustomVideoModal",
+   "u": "nhatcoi",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-31T09:59:22Z",
+   "ua": "2026-07-31T10:00:31Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2946,
+   "t": "fix(chat): replay Envoy buffer overflow on same account",
+   "u": "ryanngit",
+   "c": 1,
+   "d": false,
+   "ca": "2026-07-31T08:46:39Z",
+   "ua": "2026-08-03T05:09:31Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2944,
+   "t": "fix(responses): preserve namespace tools across chat translation",
+   "u": "dajinglingpake",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-31T06:36:04Z",
+   "ua": "2026-07-31T06:39:59Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2943,
+   "t": "feat(codex): add transparent native provider transport",
+   "u": "rixzkiye",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-31T05:10:37Z",
+   "ua": "2026-07-31T05:10:37Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2941,
+   "t": "feat(routing): add latency-aware account routing",
+   "u": "berthojoris",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-31T04:30:37Z",
+   "ua": "2026-07-31T04:30:37Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2937,
+   "t": "feat: add one-click model health testing",
+   "u": "eddiekudo",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-30T23:50:17Z",
+   "ua": "2026-07-30T23:54:57Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2928,
+   "t": "fix(codex): strip orphaned tool outputs",
+   "u": "raflyazf",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-30T09:52:51Z",
+   "ua": "2026-07-30T09:52:51Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2927,
+   "t": "fix(thinking): stop claude-adaptive's unlevelled auto intent from 400ing",
+   "u": "yidecode",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-30T09:51:58Z",
+   "ua": "2026-07-30T09:51:58Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2926,
+   "t": "fix(auth): accept valid x-api-key even when an Authorization header is present (Claude Code)",
+   "u": "omar-nahhas",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-30T09:44:48Z",
+   "ua": "2026-07-30T13:49:38Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2925,
+   "t": "fix(claude): preserve signed thinking across Responses tools",
+   "u": "ryanngit",
+   "c": 3,
+   "d": false,
+   "ca": "2026-07-30T09:43:02Z",
+   "ua": "2026-08-03T06:16:03Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2923,
+   "t": "fix(codex): normalize replayed call item IDs",
+   "u": "Jaaay50",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-30T08:47:45Z",
+   "ua": "2026-07-31T06:51:14Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2922,
+   "t": "fix(tunnel): bypass worker self-signed TLS via TUNNEL_WORKER_INSECURE",
+   "u": "linhdmn",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-30T07:25:50Z",
+   "ua": "2026-07-30T07:27:34Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2921,
+   "t": "fix(cli-tools): mark Amp as unsupported",
+   "u": "rixzkiye",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-30T07:04:19Z",
+   "ua": "2026-07-30T07:04:19Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2919,
+   "t": "fix(usage): group API-key statistics by stable key identity",
+   "u": "hiennguyenle",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-30T06:15:26Z",
+   "ua": "2026-07-30T06:15:26Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2911,
+   "t": "fix(kiro): drop top-level systemPrompt for kiro.dev gateway (unblocks -thinking/-agentic)",
+   "u": "jayll1303",
+   "c": 1,
+   "d": false,
+   "ca": "2026-07-30T04:46:08Z",
+   "ua": "2026-08-04T11:26:02Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2909,
+   "t": "fix(qoder): show organization quota with zero total",
+   "u": "Beants",
+   "c": 1,
+   "d": false,
+   "ca": "2026-07-30T03:44:01Z",
+   "ua": "2026-07-30T15:26:17Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2908,
+   "t": "feat(dashboard): interactive model sub-node tree topology with real-time active pulse & display mode controls",
+   "u": "maulinul",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-30T02:57:43Z",
+   "ua": "2026-07-30T02:57:43Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2907,
+   "t": "feat(homebrew): add distribution support",
+   "u": "mythic3011",
+   "c": 0,
+   "d": true,
+   "ca": "2026-07-29T23:36:13Z",
+   "ua": "2026-07-31T11:45:04Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2904,
+   "t": "fix(kiro): convert letter-dot-digit to letter-dash-digit in Claude model IDs before upstream dispatch",
+   "u": "VitzS7",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-29T21:49:18Z",
+   "ua": "2026-07-29T21:49:18Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2900,
+   "t": "fix(auth): allow local auto-import without JWT when requireLogin=false",
+   "u": "AungMyoKyaw",
+   "c": 1,
+   "d": false,
+   "ca": "2026-07-29T18:19:06Z",
+   "ua": "2026-07-29T18:45:27Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2899,
+   "t": "feat: add Error Log dashboard, API, and error logging instrumentation",
+   "u": "berthojoris",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-29T15:42:26Z",
+   "ua": "2026-07-29T15:42:26Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2898,
+   "t": "feat(cli-tools): add Pi (pi.dev) coding agent support",
+   "u": "jellydn",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-29T13:59:50Z",
+   "ua": "2026-07-29T17:40:51Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2895,
+   "t": "feat(fallback): per-provider retry-delay control",
+   "u": "MuhammadUsamaMX",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-29T10:07:20Z",
+   "ua": "2026-07-29T10:07:20Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2893,
+   "t": "feat: add user-defined custom system prompt injector",
+   "u": "berthojoris",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-29T08:46:14Z",
+   "ua": "2026-07-31T03:49:20Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2892,
+   "t": "merge",
+   "u": "t0kyooo",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-29T07:21:45Z",
+   "ua": "2026-07-29T07:21:45Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2891,
+   "t": "fix(kiro): restore v0.5.20 payload and enable all effort levels",
+   "u": "thienpvt",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-29T06:58:09Z",
+   "ua": "2026-07-29T06:58:15Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2887,
+   "t": "fix(openrouter): opt into provider fallback for `openrouter/fusion` e\u2026",
+   "u": "ljluestc",
+   "c": 0,
+   "d": true,
+   "ca": "2026-07-29T05:46:09Z",
+   "ua": "2026-07-29T05:46:09Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2879,
+   "t": "feat(fallback): lock accounts for the provider's real rate-limit reset",
+   "u": "MuhammadUsamaMX",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-28T17:45:26Z",
+   "ua": "2026-07-28T17:45:26Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2871,
+   "t": "feat: add provider-scoped input guard rules",
+   "u": "huahai0202",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-28T06:06:17Z",
+   "ua": "2026-07-28T06:07:42Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2869,
+   "t": "fix(translator): guard against doubled tool-call arguments from openai-compat providers",
+   "u": "inyund",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-28T04:46:27Z",
+   "ua": "2026-08-06T15:49:16Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2857,
+   "t": "fix(docker): remediate trivy HIGH/CRITICAL findings in the Docker image",
+   "u": "ngheocc",
+   "c": 1,
+   "d": false,
+   "ca": "2026-07-27T03:16:16Z",
+   "ua": "2026-07-27T08:39:44Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2853,
+   "t": "fix(codex): preserve quota window duration",
+   "u": "HectorBernstorff",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-27T00:32:27Z",
+   "ua": "2026-07-27T00:32:27Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2851,
+   "t": "feat(frontier-for-all): add provider with OAuth device-code login",
+   "u": "JoddabodScripts",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-26T16:44:49Z",
+   "ua": "2026-07-26T16:45:37Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2850,
+   "t": "fix(claude): guard inactive quota auto-ping",
+   "u": "ryanngit",
+   "c": 1,
+   "d": false,
+   "ca": "2026-07-26T16:22:49Z",
+   "ua": "2026-08-03T06:09:09Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2849,
+   "t": "fix(claude): align CLI fingerprint and session headers",
+   "u": "ryanngit",
+   "c": 1,
+   "d": false,
+   "ca": "2026-07-26T16:04:16Z",
+   "ua": "2026-08-03T08:34:29Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2848,
+   "t": "fix(claude): harden OAuth usage quota polling",
+   "u": "ryanngit",
+   "c": 1,
+   "d": false,
+   "ca": "2026-07-26T15:56:58Z",
+   "ua": "2026-08-03T06:06:02Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2847,
+   "t": "feat(models): expose runtime LLM capabilities in models info",
+   "u": "ryanngit",
+   "c": 1,
+   "d": false,
+   "ca": "2026-07-26T15:38:51Z",
+   "ua": "2026-08-03T08:45:00Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2845,
+   "t": "feat(headroom): add optional Bearer Token auth",
+   "u": "jayeliu",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-26T14:37:14Z",
+   "ua": "2026-07-26T14:37:14Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2837,
+   "t": "docs(readme): replace Roo Code branding with Zoo Code",
+   "u": "taltas",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-26T00:47:48Z",
+   "ua": "2026-07-26T00:49:43Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2833,
+   "t": "feat(api-keys): add expiry, token quotas, and model policies",
+   "u": "Jordannst",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-25T20:32:26Z",
+   "ua": "2026-07-25T21:02:18Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2831,
+   "t": "feat: add reasoning level support for Codex models",
+   "u": "qianze0628",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-25T16:54:54Z",
+   "ua": "2026-07-25T17:20:29Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2829,
+   "t": "feat(docker): comprehensive Docker Compose overhaul with monitoring and CI/CD",
+   "u": "sunba91-su",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-25T13:06:49Z",
+   "ua": "2026-07-25T13:06:49Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2824,
+   "t": "feat(ollama): add embedding provider adapter and endpoint support for Ollama Local",
+   "u": "HaoNgo232",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-25T11:18:02Z",
+   "ua": "2026-07-26T02:07:09Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2823,
+   "t": "feat(zed): add Zed Hosted AI provider support",
+   "u": "AMSeify",
+   "c": 3,
+   "d": false,
+   "ca": "2026-07-25T08:31:36Z",
+   "ua": "2026-08-08T06:02:56Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2822,
+   "t": "fix(logs): stop writing provider tokens to disk in request logs",
+   "u": "yidecode",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-25T08:31:35Z",
+   "ua": "2026-07-25T08:31:35Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2818,
+   "t": "fix(models): sync discovered catalogs with configured models",
+   "u": "DedSecer",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-25T06:24:08Z",
+   "ua": "2026-07-25T07:03:14Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2812,
+   "t": "docs: prioritize English setup video in Video Guides",
+   "u": "MuhammadHamidRaza",
+   "c": 1,
+   "d": false,
+   "ca": "2026-07-24T13:47:01Z",
+   "ua": "2026-07-24T15:06:01Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2811,
+   "t": "Include commandcode cache reads in usage statistics",
+   "u": "Vaults1",
+   "c": 2,
+   "d": false,
+   "ca": "2026-07-24T13:04:22Z",
+   "ua": "2026-08-07T20:41:32Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2809,
+   "t": "fix(azure): normalize GPT-5 chat completion parameters",
+   "u": "royanrosyad85",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-24T04:29:08Z",
+   "ua": "2026-08-04T13:52:05Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2801,
+   "t": "fix(ollama): preserve terminal stream message content",
+   "u": "Jordannst",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-23T11:03:49Z",
+   "ua": "2026-07-23T11:03:49Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2800,
+   "t": "fix(thinking): keep compatible Qwen requests OpenAI-shaped",
+   "u": "Jordannst",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-23T09:52:55Z",
+   "ua": "2026-07-23T09:52:55Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2799,
+   "t": "fix(combo): avoid Anthropic prefill 400 in fusion panel requests",
+   "u": "andidans",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-23T09:12:15Z",
+   "ua": "2026-07-23T09:12:15Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2798,
+   "t": "fix(proxy-pools): increase relay test timeout to 30s and use reliable test endpoint",
+   "u": "erikyao0125",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-23T09:11:02Z",
+   "ua": "2026-07-23T09:11:02Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2796,
+   "t": "fix(codex): normalize additional_tools passthrough items",
+   "u": "SalyyS1",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-23T05:37:51Z",
+   "ua": "2026-07-23T05:37:51Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2793,
+   "t": "feat(combo): expose provider-neutral route attribution",
+   "u": "zierocode",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-23T01:25:10Z",
+   "ua": "2026-07-23T01:25:10Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2787,
+   "t": "fix(codex): preserve GPT-5.6 max reasoning",
+   "u": "ducky-duke",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-22T15:06:54Z",
+   "ua": "2026-07-22T15:07:44Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2786,
+   "t": "feat(v1/models): add OpenCode and OpenAI-compatible provider model resolution",
+   "u": "LavyaTandel",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-22T14:59:51Z",
+   "ua": "2026-08-08T11:09:48Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2784,
+   "t": "feat(providers): add configurable error cooldown policies",
+   "u": "zyizyiz",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-22T13:16:26Z",
+   "ua": "2026-07-23T14:29:16Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2783,
+   "t": "fix(translator): carry Structured Output across the Chat \u21c4 Responses hop",
+   "u": "47vigen",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-22T12:23:10Z",
+   "ua": "2026-07-22T12:23:10Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2780,
+   "t": "fix: support Claude Code Auto Mode through GPT fallback",
+   "u": "AlanSyue",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-22T10:47:47Z",
+   "ua": "2026-07-22T10:49:37Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2777,
+   "t": "feat(dashboard): add bulk enable/disable for provider connections",
+   "u": "fdjrr",
+   "c": 1,
+   "d": false,
+   "ca": "2026-07-22T09:20:05Z",
+   "ua": "2026-07-22T09:24:09Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2776,
+   "t": "fix(db): encrypt provider connection secrets at rest (AES-256-GCM)",
+   "u": "iamrulloh",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-22T09:04:56Z",
+   "ua": "2026-07-22T09:04:56Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2775,
+   "t": "fix(privacy): disable Google Analytics by default, add opt-in toggle",
+   "u": "iamrulloh",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-22T09:04:03Z",
+   "ua": "2026-07-22T09:04:03Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2774,
+   "t": "fix(non-streaming): keep reasoning_content by default, make stripping opt-in",
+   "u": "yidecode",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-22T08:44:23Z",
+   "ua": "2026-07-22T08:44:23Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2770,
+   "t": "feat(usage): surface Claude thinking token counts to clients",
+   "u": "yidecode",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-22T07:13:27Z",
+   "ua": "2026-07-22T07:13:27Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2769,
+   "t": "feat: add multi-reference image generation and quota-aware failover",
+   "u": "yheiakadylan",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-22T07:04:25Z",
+   "ua": "2026-07-25T02:52:18Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2764,
+   "t": "fix(server): initialize runtime services at process startup",
+   "u": "ryanngit",
+   "c": 1,
+   "d": false,
+   "ca": "2026-07-22T04:43:40Z",
+   "ua": "2026-08-03T06:35:19Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2762,
+   "t": "fix(pricing): stop billing reasoning tokens twice",
+   "u": "yidecode",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-22T04:21:06Z",
+   "ua": "2026-07-22T04:21:06Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2761,
+   "t": "fix(github): route Claude models to Copilot's native format via chatCore",
+   "u": "yidecode",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-22T03:29:33Z",
+   "ua": "2026-07-22T03:29:33Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2760,
+   "t": "fix(capabilities): correct thinking format and limits for the 4.6+ Claude generation",
+   "u": "yidecode",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-22T03:29:08Z",
+   "ua": "2026-07-25T07:19:55Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2756,
+   "t": "fix(github): enforce Claude prompt limits",
+   "u": "ryanngit",
+   "c": 1,
+   "d": false,
+   "ca": "2026-07-21T23:21:49Z",
+   "ua": "2026-08-03T06:12:20Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2755,
+   "t": "fix(cursor): implement real PKCE OAuth login",
+   "u": "whale9820",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-21T19:19:10Z",
+   "ua": "2026-07-21T19:19:40Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2753,
+   "t": "feat(antigravity): add gemini-3.6 (low/medium/high) models",
+   "u": "AbdoKnbGit",
+   "c": 2,
+   "d": false,
+   "ca": "2026-07-21T18:19:39Z",
+   "ua": "2026-07-22T11:11:28Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2748,
+   "t": "fix(cli): clean staged Next build before compiling",
+   "u": "ryanngit",
+   "c": 2,
+   "d": false,
+   "ca": "2026-07-21T14:38:00Z",
+   "ua": "2026-08-03T08:59:23Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2747,
+   "t": "fix(responses): keep translated output indexes unique",
+   "u": "ryanngit",
+   "c": 6,
+   "d": false,
+   "ca": "2026-07-21T14:37:29Z",
+   "ua": "2026-08-03T07:04:23Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2746,
+   "t": "feat(i18n): complete Turkish dashboard localization",
+   "u": "emi-ran",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-21T12:01:06Z",
+   "ua": "2026-07-21T12:01:06Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2738,
+   "t": "feat(cli-tools): add remote setup installers",
+   "u": "hungtrinhh",
+   "c": 1,
+   "d": false,
+   "ca": "2026-07-21T05:34:20Z",
+   "ua": "2026-07-21T05:37:26Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2736,
+   "t": "feat(routing): add opt-in cache-affinity account selection",
+   "u": "ryanngit",
+   "c": 2,
+   "d": true,
+   "ca": "2026-07-21T02:39:13Z",
+   "ua": "2026-08-03T08:47:13Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2732,
+   "t": "docs: add Persian YouTube tutorial for connecting 9Router to coding a\u2026",
+   "u": "mostafavi82",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-20T16:42:49Z",
+   "ua": "2026-07-20T16:42:49Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2731,
+   "t": "refactor(kiro): keep terminal integrity transport-only",
+   "u": "SemonCat",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-20T16:02:01Z",
+   "ua": "2026-07-20T16:02:01Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2725,
+   "t": "security: bind dev/start to 127.0.0.1 by default",
+   "u": "legtar",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-20T10:14:56Z",
+   "ua": "2026-07-20T10:14:56Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2724,
+   "t": "feat(grok): show current-day request usage",
+   "u": "imskriaz",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-20T10:11:41Z",
+   "ua": "2026-07-20T10:11:41Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2723,
+   "t": "feat(quota): denser tracker UI, Available filter, 7d-hourly graphs",
+   "u": "imskriaz",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-20T09:59:12Z",
+   "ua": "2026-08-07T11:27:47Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2715,
+   "t": "docs(readme): update free-tier provider status for 2026 (#2661)",
+   "u": "dsitmilis",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-19T13:50:27Z",
+   "ua": "2026-07-19T13:50:27Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2713,
+   "t": "Fix OpenAI Responses stream reconstruction",
+   "u": "SemonCat",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-19T12:38:04Z",
+   "ua": "2026-07-19T12:38:04Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2710,
+   "t": "feat(observability): correlate request attempts",
+   "u": "ryanngit",
+   "c": 2,
+   "d": false,
+   "ca": "2026-07-19T10:07:56Z",
+   "ua": "2026-08-03T07:39:36Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2709,
+   "t": "fix(logging): redact credentials from request logs",
+   "u": "ryanngit",
+   "c": 2,
+   "d": false,
+   "ca": "2026-07-19T09:55:05Z",
+   "ua": "2026-08-03T05:23:48Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2706,
+   "t": "fix(minimax): normalize unsigned thinking block starts",
+   "u": "rixzkiye",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-19T05:45:23Z",
+   "ua": "2026-07-19T05:45:23Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2705,
+   "t": "fix(minimax): align request body with selected transport",
+   "u": "rixzkiye",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-19T04:46:30Z",
+   "ua": "2026-07-19T05:45:35Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2699,
+   "t": "fix(cli): default to IPv4-first DNS resolution to avoid undici IPv6 connect timeouts",
+   "u": "dsitmilis",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-18T14:41:19Z",
+   "ua": "2026-07-18T14:41:19Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2698,
+   "t": "fix: move headroom before translation to cover all output formats (#2\u2026",
+   "u": "hobart9527",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-18T13:50:46Z",
+   "ua": "2026-08-07T14:32:01Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2697,
+   "t": "fix(capabilities): support bare Kimi K3 upstream id",
+   "u": "Jordannst",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-18T13:36:57Z",
+   "ua": "2026-07-18T14:07:18Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2691,
+   "t": "fix(azure): send max_completion_tokens for gpt-5/o-series reasoning deployments",
+   "u": "chy1211",
+   "c": 1,
+   "d": false,
+   "ca": "2026-07-18T08:51:07Z",
+   "ua": "2026-07-18T09:04:04Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2689,
+   "t": "feat(combo): validate empty 200 responses with retry-before-fallback",
+   "u": "berthojoris",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-18T06:06:04Z",
+   "ua": "2026-07-18T06:06:04Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2688,
+   "t": "fix(kiro): retry malformed tool_call wrappers once",
+   "u": "SemonCat",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-18T05:34:47Z",
+   "ua": "2026-07-18T08:59:56Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2686,
+   "t": "fix(combos): show non-media combo kinds",
+   "u": "ryanngit",
+   "c": 3,
+   "d": false,
+   "ca": "2026-07-18T05:08:00Z",
+   "ua": "2026-08-03T09:10:54Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2685,
+   "t": "fix(cursor): HTTP/2 AgentService support + version bump to 3.12.17",
+   "u": "jokot",
+   "c": 1,
+   "d": false,
+   "ca": "2026-07-18T04:06:33Z",
+   "ua": "2026-08-03T04:12:30Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2683,
+   "t": "chore(deps): bump actions/setup-node from 6 to 7",
+   "u": "dependabot[bot]",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-18T01:52:30Z",
+   "ua": "2026-07-18T01:52:31Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2681,
+   "t": "fix(kiro): validate completed nested tool_call payloads",
+   "u": "SemonCat",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-17T16:17:45Z",
+   "ua": "2026-07-18T05:34:26Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2676,
+   "t": "fix: resolve connection leaks, pending request tracking, and infinite combo loops",
+   "u": "pandamoon21",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-17T12:37:59Z",
+   "ua": "2026-07-17T13:12:10Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2672,
+   "t": "feat(xai): track OAuth quotas in dashboard",
+   "u": "fenix007",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-17T10:12:10Z",
+   "ua": "2026-07-17T10:12:10Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2668,
+   "t": "feat: include usage data in database backups",
+   "u": "imagine60hz",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-17T09:45:36Z",
+   "ua": "2026-07-17T09:45:36Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2667,
+   "t": "fix(codex): recover invalid encrypted history",
+   "u": "ryanngit",
+   "c": 1,
+   "d": false,
+   "ca": "2026-07-17T09:12:50Z",
+   "ua": "2026-08-03T06:57:21Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2666,
+   "t": "fix(responses): keep explicit streaming requests alive",
+   "u": "ryanngit",
+   "c": 6,
+   "d": false,
+   "ca": "2026-07-17T08:05:21Z",
+   "ua": "2026-08-03T07:11:16Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2664,
+   "t": "fix(kiro): distinguish confirmed credit exhaustion from ambiguous 402s",
+   "u": "SemonCat",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-17T06:37:32Z",
+   "ua": "2026-07-19T18:15:38Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2663,
+   "t": "fix(claude): reconcile compacted tool results",
+   "u": "ryanngit",
+   "c": 1,
+   "d": false,
+   "ca": "2026-07-17T03:37:36Z",
+   "ua": "2026-08-03T06:27:32Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2658,
+   "t": "fix(usage): include Claude cache tokens in prompt totals",
+   "u": "zierocode",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-17T01:28:50Z",
+   "ua": "2026-07-17T01:28:50Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2657,
+   "t": "fix(rtk): preserve non-message Responses items",
+   "u": "zierocode",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-17T01:09:45Z",
+   "ua": "2026-07-17T01:09:45Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2656,
+   "t": "feat(combo): publish safe metadata and enforce portable context",
+   "u": "zierocode",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-17T00:09:41Z",
+   "ua": "2026-07-26T08:46:28Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2655,
+   "t": "feat(combo): guard pre-action streams",
+   "u": "zierocode",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-17T00:09:41Z",
+   "ua": "2026-07-26T10:15:49Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2652,
+   "t": "fix(github): use adaptive thinking for Claude Fable 5",
+   "u": "ryanngit",
+   "c": 2,
+   "d": false,
+   "ca": "2026-07-16T20:36:13Z",
+   "ua": "2026-08-03T08:48:29Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2650,
+   "t": "feat(providers): allow disabling no-auth providers",
+   "u": "whale9820",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-16T17:53:55Z",
+   "ua": "2026-07-16T17:53:55Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2649,
+   "t": "fix: normalize nested Claude server tool models",
+   "u": "AlanSyue",
+   "c": 4,
+   "d": false,
+   "ca": "2026-07-16T15:41:07Z",
+   "ua": "2026-07-22T02:26:10Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2647,
+   "t": "fix(grok-cli): complete residual Responses codec on v0.5.45",
+   "u": "ryanngit",
+   "c": 3,
+   "d": false,
+   "ca": "2026-07-16T10:03:04Z",
+   "ua": "2026-08-03T08:00:04Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2646,
+   "t": "feat(combo): add per-model timeout for faster combo fallback",
+   "u": "berthojoris",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-16T08:02:17Z",
+   "ua": "2026-07-16T08:02:17Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2645,
+   "t": "fix(models): compatible-provider discovery + strip cc/ prefix from Claude DEFAULT_MODEL (#2626, #2642)",
+   "u": "dsitmilis",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-16T07:32:04Z",
+   "ua": "2026-07-16T07:56:07Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2639,
+   "t": "Keep round-robin accounts sticky by session",
+   "u": "SemonCat",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-15T15:55:28Z",
+   "ua": "2026-07-19T12:38:02Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2634,
+   "t": "fix(translator): flatten multi-block text content parts, preserve multimodal",
+   "u": "dsitmilis",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-15T13:38:37Z",
+   "ua": "2026-07-15T13:38:37Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2622,
+   "t": "fix(translator): stop leaking literal <think>/</think> markers into OpenAI content",
+   "u": "yidecode",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-15T03:06:17Z",
+   "ua": "2026-07-15T03:06:17Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2618,
+   "t": "fix(kiro): preserve credit metering cost",
+   "u": "SemonCat",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-14T17:13:09Z",
+   "ua": "2026-07-15T16:21:00Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2615,
+   "t": "feat(kiro): support native external_idp refresh token import and validation",
+   "u": "apirJS",
+   "c": 3,
+   "d": false,
+   "ca": "2026-07-14T14:55:46Z",
+   "ua": "2026-07-26T13:37:02Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2605,
+   "t": "fix: resolve pre-existing unit failures (DB/OAuth/translator/image/combo/antigravity) + O(1) model lookup",
+   "u": "dsitmilis",
+   "c": 1,
+   "d": false,
+   "ca": "2026-07-14T07:49:09Z",
+   "ua": "2026-07-15T19:31:25Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2600,
+   "t": "fix(huggingface): add sttConfig so HF STT presets are dispatchable",
+   "u": "dsitmilis",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-14T06:31:15Z",
+   "ua": "2026-07-14T06:31:15Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2589,
+   "t": "feat: harden proxy routing and couple MITM lifecycle",
+   "u": "TuyulSpam",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-13T21:11:37Z",
+   "ua": "2026-07-14T05:57:37Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2588,
+   "t": "feat(reliability): add provider skip-error rules and retry policy",
+   "u": "nguyenha935",
+   "c": 1,
+   "d": false,
+   "ca": "2026-07-13T18:29:28Z",
+   "ua": "2026-08-08T11:03:22Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2585,
+   "t": "fix(v1/messages): reverse-translate OpenAI->Claude for all non-Claude providers",
+   "u": "mahdiwafy",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-13T13:39:17Z",
+   "ua": "2026-07-13T23:12:34Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2576,
+   "t": "sync",
+   "u": "ozkancan-apk",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-13T07:22:12Z",
+   "ua": "2026-07-13T07:22:12Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2575,
+   "t": "feat(updater): one-click dashboard update with manual fallback",
+   "u": "rixzkiye",
+   "c": 1,
+   "d": false,
+   "ca": "2026-07-13T04:18:29Z",
+   "ua": "2026-07-13T04:23:18Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2573,
+   "t": "fix(byteplus): use standard ModelArk endpoint, not Coding Plan endpoint",
+   "u": "blazingbunny",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-13T02:33:44Z",
+   "ua": "2026-07-13T02:33:44Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2572,
+   "t": "fix(grok-cli): parse SuperGrok percent-based billing for quota tracker",
+   "u": "rixzkiye",
+   "c": 2,
+   "d": false,
+   "ca": "2026-07-13T02:30:34Z",
+   "ua": "2026-07-27T06:50:01Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2570,
+   "t": "feat(ui): show Codex plan labels in provider and quota views",
+   "u": "CarmeloCampos",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-12T22:59:31Z",
+   "ua": "2026-08-07T01:25:25Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2565,
+   "t": "fix(grok-cli): move PSD refreshToken bridge to generic layer, fix proactive refresh for all providers",
+   "u": "fdjrr",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-12T14:59:32Z",
+   "ua": "2026-07-13T07:05:15Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2562,
+   "t": "feat(token-saver): add aggregate Token Saver dashboard",
+   "u": "KunN-21",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-12T11:47:14Z",
+   "ua": "2026-07-12T11:47:20Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2554,
+   "t": "fix(console-log): fall back when tunnels buffer SSE",
+   "u": "ryanngit",
+   "c": 3,
+   "d": false,
+   "ca": "2026-07-12T06:51:57Z",
+   "ua": "2026-08-03T07:46:26Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2553,
+   "t": "feat(usage): show API key client activity",
+   "u": "ryanngit",
+   "c": 2,
+   "d": true,
+   "ca": "2026-07-12T06:51:57Z",
+   "ua": "2026-08-03T07:47:53Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2550,
+   "t": "fix(combos): disable circular combo selections",
+   "u": "dajinglingpake",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-11T17:51:41Z",
+   "ua": "2026-07-31T03:40:04Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2547,
+   "t": "fix(openai): route GPT-5.6 Sol tools through Responses API",
+   "u": "Jordannst",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-11T14:34:31Z",
+   "ua": "2026-07-11T14:34:31Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2542,
+   "t": "fix(headroom): allow larger prompt compression to finish",
+   "u": "KunN-21",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-11T10:14:31Z",
+   "ua": "2026-07-11T10:14:36Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2541,
+   "t": "fix: allow application/x-ndjson streaming from ollama-local (closes #2386)",
+   "u": "qveys",
+   "c": 1,
+   "d": false,
+   "ca": "2026-07-11T10:03:07Z",
+   "ua": "2026-07-11T10:28:35Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2534,
+   "t": "fix(xai): strip reasoning_effort for grok-composer; dashboard thinking None",
+   "u": "gitcommit90",
+   "c": 4,
+   "d": false,
+   "ca": "2026-07-11T05:11:42Z",
+   "ua": "2026-07-11T22:49:13Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2533,
+   "t": "fix(minimax): route M3 tool calls through standard API",
+   "u": "jacardl",
+   "c": 0,
+   "d": true,
+   "ca": "2026-07-11T04:56:01Z",
+   "ua": "2026-07-11T04:56:01Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2528,
+   "t": "Railway ",
+   "u": "mohammed5150",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-10T21:56:10Z",
+   "ua": "2026-07-10T21:56:10Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2526,
+   "t": "fix(combos): hide disabled provider connections",
+   "u": "attid",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-10T21:04:25Z",
+   "ua": "2026-07-10T21:04:25Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2525,
+   "t": "fix(minimax): OpenAI transport passthrough, reasoning_split, and client stream sanitization",
+   "u": "samir-abis",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-10T19:00:58Z",
+   "ua": "2026-07-10T19:00:58Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2523,
+   "t": "fix(codex): preserve GPT-5.6 effort semantics on Codex wire",
+   "u": "thienpvt",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-10T17:49:35Z",
+   "ua": "2026-07-10T20:27:11Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2511,
+   "t": "fix(codex): support Responses Lite transport",
+   "u": "ryanngit",
+   "c": 1,
+   "d": false,
+   "ca": "2026-07-10T11:04:01Z",
+   "ua": "2026-08-03T06:51:49Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2508,
+   "t": "fix(codex): inject token saver prompts as instructions",
+   "u": "Jordannst",
+   "c": 2,
+   "d": false,
+   "ca": "2026-07-10T10:18:16Z",
+   "ua": "2026-08-08T11:15:02Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2480,
+   "t": "fix(gemini): handle Gemma 4 thinking replay",
+   "u": "chy1211",
+   "c": 1,
+   "d": false,
+   "ca": "2026-07-09T03:04:02Z",
+   "ua": "2026-07-09T03:16:16Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2475,
+   "t": "feat(ollama): claude-format passthrough transport to native /v1/messages",
+   "u": "thienpvt",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-08T16:27:46Z",
+   "ua": "2026-07-08T16:32:36Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2474,
+   "t": "Add Node.js CI workflow",
+   "u": "darkdream123",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-08T15:30:51Z",
+   "ua": "2026-07-08T15:34:30Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2465,
+   "t": "feat(pxpipe): PXPIPE token saver \u2014 multimodal prompt compression (in-process)",
+   "u": "ElioBonfim",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-08T08:14:58Z",
+   "ua": "2026-07-08T08:14:58Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2462,
+   "t": "fix(antigravity): retry empty streams, surface aborted turns, finalize truncated Claude streams",
+   "u": "anhdiepmmk",
+   "c": 3,
+   "d": false,
+   "ca": "2026-07-08T05:00:27Z",
+   "ua": "2026-07-30T18:19:09Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2459,
+   "t": "perf(v1/models): resolve provider catalogs concurrently instead of serially",
+   "u": "whale9820",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-08T03:50:37Z",
+   "ua": "2026-07-08T04:25:49Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2454,
+   "t": "feat(keys): add daily token limits",
+   "u": "ryanngit",
+   "c": 3,
+   "d": true,
+   "ca": "2026-07-08T02:15:50Z",
+   "ua": "2026-08-03T07:48:41Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2453,
+   "t": "fix(usage): preserve nonnegative provider-reported exact cost",
+   "u": "ryanngit",
+   "c": 3,
+   "d": false,
+   "ca": "2026-07-08T02:15:47Z",
+   "ua": "2026-08-03T08:11:41Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2452,
+   "t": "fix(codex): preserve GPT-5.6 max reasoning",
+   "u": "ryanngit",
+   "c": 4,
+   "d": false,
+   "ca": "2026-07-08T02:15:44Z",
+   "ua": "2026-08-03T09:19:50Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2443,
+   "t": "fix: prevent duplicate system prompt injection in multi-turn conversations",
+   "u": "whale9820",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-07T11:17:42Z",
+   "ua": "2026-07-07T11:17:42Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2439,
+   "t": "feat(xai): expose current Grok models and bare routing",
+   "u": "ryanngit",
+   "c": 4,
+   "d": false,
+   "ca": "2026-07-07T07:44:18Z",
+   "ua": "2026-08-03T08:20:42Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2437,
+   "t": "feat: add Chenzk API provider",
+   "u": "CahyokPutraDev99",
+   "c": 1,
+   "d": false,
+   "ca": "2026-07-07T07:24:47Z",
+   "ua": "2026-07-16T12:55:55Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2422,
+   "t": "fix: keep usage api key groups distinct",
+   "u": "dajinglingpake",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-06T11:32:14Z",
+   "ua": "2026-07-06T11:32:14Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2415,
+   "t": "feat(usage): add all time period",
+   "u": "Jordannst",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-06T06:29:39Z",
+   "ua": "2026-07-06T06:43:15Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2414,
+   "t": "fix(cli): fast-path help and version flags",
+   "u": "Jordannst",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-06T06:08:26Z",
+   "ua": "2026-07-06T06:15:45Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2404,
+   "t": "feat(ponytail): add command bridge and shared bypass responses",
+   "u": "KunN-21",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-05T18:00:10Z",
+   "ua": "2026-07-05T18:30:15Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2402,
+   "t": "fix(build): isolate Windows HOME/AppData during next build",
+   "u": "KunN-21",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-05T17:56:35Z",
+   "ua": "2026-07-05T18:30:05Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2401,
+   "t": "fix(translator): preserve reasoning/thinking history across the OpenAI request bridge",
+   "u": "warelik",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-05T17:04:40Z",
+   "ua": "2026-07-13T08:14:16Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2399,
+   "t": "fix(translator): register openai response projection for gemini-family clients",
+   "u": "warelik",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-05T16:48:22Z",
+   "ua": "2026-07-13T08:14:09Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2396,
+   "t": "fix(translator): make commandcode ensureState idempotent regardless of pre-set responseId",
+   "u": "warelik",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-05T16:44:10Z",
+   "ua": "2026-07-13T08:14:03Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2394,
+   "t": "fix(translator): preserve functionCall/text co-located with functionResponse in gemini\u2192openai",
+   "u": "warelik",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-05T16:39:11Z",
+   "ua": "2026-07-13T08:13:58Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2392,
+   "t": "fix(stream): decloak tool names in claude\u2192claude streaming passthrough",
+   "u": "warelik",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-05T16:33:48Z",
+   "ua": "2026-07-13T08:13:49Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2390,
+   "t": "feat(api-keys): per-key model allowlist + token/cost limits",
+   "u": "ardiannurcahya",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-05T16:29:38Z",
+   "ua": "2026-07-05T16:29:38Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2378,
+   "t": "feat: add hcnsec provider and fix build-cli standalone directory resolution",
+   "u": "UnrealAryan",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-04T22:59:08Z",
+   "ua": "2026-07-04T22:59:08Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2373,
+   "t": "fix(nvidia): expand NIM chat model catalog",
+   "u": "spacesky-cell",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-04T17:13:28Z",
+   "ua": "2026-07-04T17:13:28Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2369,
+   "t": "fix(kiro): nest thinking/output_config/max_tokens in additionalModelRequestFields",
+   "u": "thienpvt",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-04T15:47:26Z",
+   "ua": "2026-07-05T03:05:15Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2364,
+   "t": "fix(usage): keep API key stats distinct",
+   "u": "ryanngit",
+   "c": 3,
+   "d": false,
+   "ca": "2026-07-04T08:21:09Z",
+   "ua": "2026-08-03T06:02:26Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2361,
+   "t": "feat(usage): add 90d, 180d, 365d, and all-time analytics periods",
+   "u": "SeaXen",
+   "c": 1,
+   "d": false,
+   "ca": "2026-07-04T06:50:05Z",
+   "ua": "2026-07-30T13:44:59Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2355,
+   "t": "fix(kiro): support IDC/Org tokens when the Q Developer profile region differs from the Identity Center region",
+   "u": "enjoyer-hub",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-03T23:40:58Z",
+   "ua": "2026-07-03T23:40:58Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2352,
+   "t": "feat(api-keys): add expiry support",
+   "u": "emi-ran",
+   "c": 1,
+   "d": false,
+   "ca": "2026-07-03T22:32:46Z",
+   "ua": "2026-07-07T14:14:56Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2350,
+   "t": "feat(cli): add auto-ping toggle to TUI",
+   "u": "emi-ran",
+   "c": 1,
+   "d": false,
+   "ca": "2026-07-03T21:13:14Z",
+   "ua": "2026-07-07T14:15:01Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2348,
+   "t": "fix(response): unify JSON response projection across non-streaming and SSE\u2192JSON paths",
+   "u": "warelik",
+   "c": 2,
+   "d": false,
+   "ca": "2026-07-03T20:46:29Z",
+   "ua": "2026-07-23T01:41:38Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2345,
+   "t": "fix(codex): normalize available reset credit expiry",
+   "u": "ryanngit",
+   "c": 3,
+   "d": false,
+   "ca": "2026-07-03T20:28:12Z",
+   "ua": "2026-08-03T06:02:24Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2343,
+   "t": "fix(oauth): honor proxy selection during OAuth login",
+   "u": "ryanngit",
+   "c": 3,
+   "d": true,
+   "ca": "2026-07-03T20:27:41Z",
+   "ua": "2026-08-03T08:22:19Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2340,
+   "t": "fix(kimchi): implement dynamic User-Agent version detection",
+   "u": "Ansh7473",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-03T17:01:28Z",
+   "ua": "2026-07-04T14:01:18Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2331,
+   "t": "fix(providers): allow multiple API-key connections per compatible node",
+   "u": "anki1kr",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-03T13:11:53Z",
+   "ua": "2026-07-03T13:11:58Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2329,
+   "t": "fix(i18n): wrap hardcoded UI strings in Combos page, Header, and embedding modal",
+   "u": "anki1kr",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-03T12:59:45Z",
+   "ua": "2026-07-03T12:59:52Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2325,
+   "t": "fix(github): use goldeneye-free-auto as default model for Copilot free tier (#2276)",
+   "u": "anki1kr",
+   "c": 2,
+   "d": false,
+   "ca": "2026-07-03T10:57:09Z",
+   "ua": "2026-07-23T13:49:04Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2324,
+   "t": "fix(cli): stop Headroom proxy on shutdown and before npm upgrade (EBUSY #2265)",
+   "u": "anki1kr",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-03T10:56:02Z",
+   "ua": "2026-07-03T10:56:08Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2323,
+   "t": "fix(nvidia): disable thinking for minimaxai/minimax-m2.7 on NVIDIA NIM",
+   "u": "anki1kr",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-03T10:43:16Z",
+   "ua": "2026-07-03T10:43:23Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2322,
+   "t": "feat(models): add claude-sonnet-5 to Claude Code and Antigravity registries",
+   "u": "anki1kr",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-03T10:25:43Z",
+   "ua": "2026-07-03T10:25:48Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2321,
+   "t": "fix(antigravity): strip trailing assistant prefill for Vertex Claude models",
+   "u": "anki1kr",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-03T10:23:13Z",
+   "ua": "2026-07-03T10:23:20Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2320,
+   "t": "fix(tts): chunk long text for google-tts and replace fragile line-index parser",
+   "u": "anki1kr",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-03T10:10:06Z",
+   "ua": "2026-07-03T10:10:13Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2319,
+   "t": "fix(kiro): wrap system messages in <system-reminder> before role\u2192user conversion",
+   "u": "anki1kr",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-03T10:07:17Z",
+   "ua": "2026-07-03T10:07:24Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2318,
+   "t": "fix(translator): strip client_metadata and other Responses-API-only fields before forwarding",
+   "u": "anki1kr",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-03T10:05:14Z",
+   "ua": "2026-07-03T10:05:20Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2317,
+   "t": "fix(antigravity): strip multipleOf from Gemini tool declaration schemas",
+   "u": "anki1kr",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-03T09:47:18Z",
+   "ua": "2026-07-03T09:47:24Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2316,
+   "t": "fix(mitm): add in-process guard to prevent concurrent startServer() calls",
+   "u": "anki1kr",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-03T09:45:27Z",
+   "ua": "2026-07-03T09:45:33Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2315,
+   "t": "fix(kiro): convert Claude model ID dots to dashes before upstream dispatch",
+   "u": "anki1kr",
+   "c": 1,
+   "d": false,
+   "ca": "2026-07-03T09:44:54Z",
+   "ua": "2026-07-03T10:58:00Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2314,
+   "t": "fix(kiro): preserve IDC region across ARN discovery",
+   "u": "lukmanc405",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-03T08:18:26Z",
+   "ua": "2026-07-03T08:18:26Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2313,
+   "t": "feat(kenari): add Kenari OpenAI-compatible gateway provider",
+   "u": "doedja",
+   "c": 1,
+   "d": false,
+   "ca": "2026-07-03T07:52:22Z",
+   "ua": "2026-08-08T19:09:28Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2312,
+   "t": "fix(translator): preserve Z.ai reasoning effort",
+   "u": "luweiCN",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-03T06:58:00Z",
+   "ua": "2026-07-03T07:17:34Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2301,
+   "t": "fix: Kiro non-us-east-1 (IDC/Organization) support + token import \u2014 centralized region topology",
+   "u": "enjoyer-hub",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-02T12:20:19Z",
+   "ua": "2026-07-02T13:54:06Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2300,
+   "t": "fix(mitm): auto-generate Root CA on first run instead of exiting (#2224)",
+   "u": "anki1kr",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-02T12:03:02Z",
+   "ua": "2026-07-02T12:06:08Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2299,
+   "t": "fix(sse): strip ANSI/VT100 codes from gc/ stream frames (#2273)",
+   "u": "anki1kr",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-02T12:00:08Z",
+   "ua": "2026-07-02T12:04:56Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2298,
+   "t": "fix(chat): strip orphaned tool results before dispatch (#2236)",
+   "u": "anki1kr",
+   "c": 1,
+   "d": false,
+   "ca": "2026-07-02T11:30:22Z",
+   "ua": "2026-07-03T18:22:29Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2295,
+   "t": "fix(claude): return summarized adaptive thinking",
+   "u": "vangie",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-02T10:03:45Z",
+   "ua": "2026-07-02T10:11:49Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2294,
+   "t": "Add Nube.sh OpenAI-compatible provider",
+   "u": "whale9820",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-02T07:37:47Z",
+   "ua": "2026-07-02T07:37:47Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2292,
+   "t": "fix(cli): rename next-server process to a unique name",
+   "u": "hamsa0x7",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-02T06:30:15Z",
+   "ua": "2026-07-02T06:30:15Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2291,
+   "t": "fix(mitm): replace net session with fltmc for Windows admin check",
+   "u": "hamsa0x7",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-02T05:46:22Z",
+   "ua": "2026-07-02T05:46:22Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2285,
+   "t": "Add bulk on/off actions for provider connections",
+   "u": "JkarVN",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-01T15:05:43Z",
+   "ua": "2026-07-01T15:05:43Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2284,
+   "t": "feat(combo): added strategy combo named Smart Scoring",
+   "u": "ddevsr",
+   "c": 1,
+   "d": false,
+   "ca": "2026-07-01T14:52:54Z",
+   "ua": "2026-07-01T15:24:39Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2281,
+   "t": "feat(usage): Request Details: collapsible JSON viewer, cache token stats, and a refresh button",
+   "u": "noir017",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-01T11:55:29Z",
+   "ua": "2026-07-28T13:07:40Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2272,
+   "t": "Feat/add reset usage",
+   "u": "teddytkz",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-01T07:43:42Z",
+   "ua": "2026-07-01T07:43:42Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2266,
+   "t": "Feat/autoclaw bulk automation",
+   "u": "yudhaharsanto",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-01T03:39:12Z",
+   "ua": "2026-07-01T03:55:10Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2262,
+   "t": "ci: add test workflow + fix regressions so the no-regression gate is green",
+   "u": "vuongtlt13",
+   "c": 0,
+   "d": false,
+   "ca": "2026-07-01T02:32:10Z",
+   "ua": "2026-07-01T02:51:06Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2255,
+   "t": "Add compatible provider client identity profiles",
+   "u": "nguyenha935",
+   "c": 0,
+   "d": false,
+   "ca": "2026-06-30T16:23:31Z",
+   "ua": "2026-07-17T07:30:41Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2254,
+   "t": "fix: Claude Code auto-mode classifier compat mode",
+   "u": "DevEstacion",
+   "c": 0,
+   "d": false,
+   "ca": "2026-06-30T16:03:07Z",
+   "ua": "2026-06-30T16:08:02Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2253,
+   "t": "feat: add self-hosted FireCrawl provider",
+   "u": "bloodf",
+   "c": 0,
+   "d": false,
+   "ca": "2026-06-30T15:41:03Z",
+   "ua": "2026-07-02T03:01:28Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2247,
+   "t": "fix: guard against null modelAliases values causing startsWith crash",
+   "u": "wahyuzero",
+   "c": 0,
+   "d": false,
+   "ca": "2026-06-30T12:33:34Z",
+   "ua": "2026-06-30T12:33:34Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2245,
+   "t": "fix: add error boundary for combos page",
+   "u": "wahyuzero",
+   "c": 0,
+   "d": false,
+   "ca": "2026-06-30T11:53:14Z",
+   "ua": "2026-06-30T11:53:14Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2242,
+   "t": "feat(capabilities): model capability metadata on `/v1/models`, combo aggregation, pattern fixes",
+   "u": "mihado",
+   "c": 2,
+   "d": false,
+   "ca": "2026-06-30T08:51:29Z",
+   "ua": "2026-08-07T00:49:27Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2237,
+   "t": "fix(translator): salvage orphaned tool results across request formats",
+   "u": "warelik",
+   "c": 6,
+   "d": false,
+   "ca": "2026-06-30T04:35:33Z",
+   "ua": "2026-07-13T08:13:38Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2235,
+   "t": "feat: OpenAI and Anthropic API parity",
+   "u": "bloodf",
+   "c": 1,
+   "d": false,
+   "ca": "2026-06-30T04:28:35Z",
+   "ua": "2026-06-30T04:35:06Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2234,
+   "t": "feat: MCP Gateway",
+   "u": "bloodf",
+   "c": 2,
+   "d": false,
+   "ca": "2026-06-30T04:06:26Z",
+   "ua": "2026-07-03T20:26:00Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2222,
+   "t": "fix(antigravity): fix 400 Bad Request caused by invalid type injection in nested schema",
+   "u": "ibanunmangun",
+   "c": 0,
+   "d": false,
+   "ca": "2026-06-29T16:13:07Z",
+   "ua": "2026-07-22T01:45:58Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2216,
+   "t": "fix: cleanup MITM hosts on exit",
+   "u": "manhdzzz",
+   "c": 0,
+   "d": false,
+   "ca": "2026-06-29T12:52:51Z",
+   "ua": "2026-06-29T12:59:37Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2210,
+   "t": "fix(usage): avoid API key stats collisions",
+   "u": "codeasier",
+   "c": 0,
+   "d": false,
+   "ca": "2026-06-29T09:24:15Z",
+   "ua": "2026-06-29T13:00:34Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2203,
+   "t": "feat: Per-Key Combo Access Control",
+   "u": "Fadliirjiyansy",
+   "c": 0,
+   "d": false,
+   "ca": "2026-06-29T04:44:38Z",
+   "ua": "2026-06-29T04:44:38Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2190,
+   "t": "fix(claude): keep thinking out of visible content",
+   "u": "Jordannst",
+   "c": 0,
+   "d": false,
+   "ca": "2026-06-28T18:03:59Z",
+   "ua": "2026-06-28T18:03:59Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2185,
+   "t": "fix: resolve provider bugs, add combo UX enhancements, improve CLI, and update models (#2151, #2158, #2138, #2114, #2117, #2167, #2077, #2180)",
+   "u": "suryacagur",
+   "c": 2,
+   "d": false,
+   "ca": "2026-06-28T11:13:15Z",
+   "ua": "2026-06-29T09:29:13Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2183,
+   "t": "fix(kiro): stop injecting fake 'continue' user turn on tool-result turns",
+   "u": "jetmiky",
+   "c": 0,
+   "d": false,
+   "ca": "2026-06-28T09:05:59Z",
+   "ua": "2026-06-28T09:05:59Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2178,
+   "t": "fix(embeddings): forward input_type to provider request body",
+   "u": "gio0z",
+   "c": 1,
+   "d": false,
+   "ca": "2026-06-28T02:46:35Z",
+   "ua": "2026-07-08T07:03:28Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2177,
+   "t": "Remove Deno Deploy relay option",
+   "u": "piscisaureus",
+   "c": 0,
+   "d": false,
+   "ca": "2026-06-28T01:18:51Z",
+   "ua": "2026-06-28T01:18:51Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2172,
+   "t": "feat(deployment): add Cloudflare Pages/Workers deployment support + p\u2026",
+   "u": "toolsmlai-web",
+   "c": 0,
+   "d": false,
+   "ca": "2026-06-28T00:18:55Z",
+   "ua": "2026-06-28T00:18:55Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2171,
+   "t": "feat(providers): add Featherless free tier provider",
+   "u": "gitcommit90",
+   "c": 0,
+   "d": false,
+   "ca": "2026-06-27T18:41:00Z",
+   "ua": "2026-06-27T18:41:00Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2166,
+   "t": "feat(providers): custom icon URL for compatible providers",
+   "u": "whale9820",
+   "c": 0,
+   "d": false,
+   "ca": "2026-06-27T14:11:34Z",
+   "ua": "2026-06-27T14:11:34Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2156,
+   "t": "CASOL-2: Move combo capabilities to shared module + add branch tests",
+   "u": "alt-coder",
+   "c": 0,
+   "d": false,
+   "ca": "2026-06-27T08:00:46Z",
+   "ua": "2026-06-27T08:01:42Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2154,
+   "t": "fix(stt): forward all client form fields to OpenAI/Groq STT",
+   "u": "kieuminhcanh",
+   "c": 0,
+   "d": false,
+   "ca": "2026-06-27T06:46:25Z",
+   "ua": "2026-06-27T06:46:25Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2153,
+   "t": "feat(quota): add opencode and opencode-go to quota tracking via local usageHistory aggregation",
+   "u": "DevEstacion",
+   "c": 0,
+   "d": false,
+   "ca": "2026-06-27T06:19:15Z",
+   "ua": "2026-06-27T06:19:15Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2152,
+   "t": "update add multiple apikey at providers",
+   "u": "AdrianSA2009",
+   "c": 0,
+   "d": false,
+   "ca": "2026-06-27T06:10:00Z",
+   "ua": "2026-06-27T06:10:00Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2150,
+   "t": "feat(xai): surface Grok usage on quota dashboard via local usageHistory aggregation",
+   "u": "DevEstacion",
+   "c": 0,
+   "d": false,
+   "ca": "2026-06-27T06:01:11Z",
+   "ua": "2026-06-27T06:01:11Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2149,
+   "t": "fix(cursor): enable OpenAI/OpenCode tool calling on Cursor route",
+   "u": "DevEstacion",
+   "c": 0,
+   "d": false,
+   "ca": "2026-06-27T05:57:19Z",
+   "ua": "2026-06-27T05:57:19Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2148,
+   "t": "feat(cursor): add Cursor identity backfill, usage tracking, and OAuth executor fixes",
+   "u": "DevEstacion",
+   "c": 0,
+   "d": false,
+   "ca": "2026-06-27T05:55:33Z",
+   "ua": "2026-06-27T05:55:33Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2147,
+   "t": "feat(xai): register XaiExecutor with reasoning-effort suffix parsing and allow/deny list",
+   "u": "DevEstacion",
+   "c": 0,
+   "d": false,
+   "ca": "2026-06-27T05:43:36Z",
+   "ua": "2026-06-27T05:47:06Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2146,
+   "t": "fix(claude): translate non-streaming OpenAI responses back to Anthropic format",
+   "u": "DevEstacion",
+   "c": 0,
+   "d": false,
+   "ca": "2026-06-27T05:40:02Z",
+   "ua": "2026-06-27T05:40:02Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2143,
+   "t": "fix(github): drop trailing assistant prefill for Copilot chat",
+   "u": "baslr",
+   "c": 1,
+   "d": false,
+   "ca": "2026-06-27T01:11:39Z",
+   "ua": "2026-07-07T16:20:34Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2140,
+   "t": "feat(fireworks): replace deprecated models with 16 new LLMs, provider pricing/capabilities, and logo",
+   "u": "shzdehmd",
+   "c": 0,
+   "d": false,
+   "ca": "2026-06-26T22:03:23Z",
+   "ua": "2026-06-26T22:04:07Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2137,
+   "t": "fix: persist quota filter state",
+   "u": "SingCJ",
+   "c": 0,
+   "d": false,
+   "ca": "2026-06-26T21:45:02Z",
+   "ua": "2026-06-26T21:45:02Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2136,
+   "t": "fix: show custom provider nodes in provider dropdown (#2013)",
+   "u": "waguriagentic",
+   "c": 0,
+   "d": false,
+   "ca": "2026-06-26T20:51:51Z",
+   "ua": "2026-06-26T20:51:51Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2135,
+   "t": "fix: replace \"continue\" followup with \"...\" to prevent unintended agent actions",
+   "u": "Vann-Dev",
+   "c": 1,
+   "d": false,
+   "ca": "2026-06-26T20:25:11Z",
+   "ua": "2026-07-07T14:13:50Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2134,
+   "t": "fix: convert max_tokens to max_completion_tokens for gpt-5+ models (#1745)",
+   "u": "waguriagentic",
+   "c": 1,
+   "d": false,
+   "ca": "2026-06-26T20:18:22Z",
+   "ua": "2026-08-07T12:16:10Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2133,
+   "t": "fix: rename next-server process to 9router (#2117)",
+   "u": "waguriagentic",
+   "c": 0,
+   "d": false,
+   "ca": "2026-06-26T20:18:05Z",
+   "ua": "2026-06-26T20:18:05Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2130,
+   "t": "feat: click-to-edit model alias in provider page",
+   "u": "waguriagentic",
+   "c": 0,
+   "d": false,
+   "ca": "2026-06-26T19:15:48Z",
+   "ua": "2026-06-26T19:19:44Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2129,
+   "t": "fix: add prefix=true to last assistant message for Mistral compatibility",
+   "u": "waguriagentic",
+   "c": 0,
+   "d": false,
+   "ca": "2026-06-26T18:47:09Z",
+   "ua": "2026-06-26T19:19:42Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2128,
+   "t": "fix(usage): honor provider remaining percentages in quota cards",
+   "u": "Jordannst",
+   "c": 0,
+   "d": false,
+   "ca": "2026-06-26T18:44:13Z",
+   "ua": "2026-06-26T18:44:13Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2127,
+   "t": "Update provider icons",
+   "u": "whale9820",
+   "c": 1,
+   "d": false,
+   "ca": "2026-06-26T18:34:24Z",
+   "ua": "2026-06-26T18:49:52Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2124,
+   "t": "feat: add ZenMux Free provider (session-cookie based free-tier LLM)",
+   "u": "mrnasil",
+   "c": 0,
+   "d": false,
+   "ca": "2026-06-26T16:15:20Z",
+   "ua": "2026-06-26T18:40:46Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2123,
+   "t": "claude-to-openai: forward image tool_result blocks as image_url instead of stringifying base64",
+   "u": "alican532",
+   "c": 0,
+   "d": false,
+   "ca": "2026-06-26T15:56:26Z",
+   "ua": "2026-06-26T15:56:26Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2115,
+   "t": "fix(openai-compatible): honor API type override and cache key opt-in",
+   "u": "hodtien",
+   "c": 0,
+   "d": false,
+   "ca": "2026-06-26T06:15:36Z",
+   "ua": "2026-06-26T07:04:44Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2112,
+   "t": "fix(responses): default text.format for openai-compatible responses providers (#2093)",
+   "u": "StevanusPangau",
+   "c": 0,
+   "d": false,
+   "ca": "2026-06-26T02:24:12Z",
+   "ua": "2026-06-26T02:24:12Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2111,
+   "t": "fix(mitm): bypass legacy antigravity interceptor for Antigravity",
+   "u": "dendyadinirwana",
+   "c": 0,
+   "d": false,
+   "ca": "2026-06-26T02:18:41Z",
+   "ua": "2026-06-26T02:18:41Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2091,
+   "t": "fix(mistral): strip assistant reasoning_content via paramSupport rule (#1649)",
+   "u": "najih422",
+   "c": 0,
+   "d": false,
+   "ca": "2026-06-25T13:09:40Z",
+   "ua": "2026-06-26T13:14:45Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2090,
+   "t": "fix: strip reasoning_content from assistant messages before forwarding",
+   "u": "waguriagentic",
+   "c": 0,
+   "d": false,
+   "ca": "2026-06-25T12:23:35Z",
+   "ua": "2026-06-26T19:58:22Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2081,
+   "t": "fix(chat): keep streaming for forceStream providers when client requests JSON (#2031)",
+   "u": "anki1kr",
+   "c": 0,
+   "d": false,
+   "ca": "2026-06-25T07:07:04Z",
+   "ua": "2026-06-25T07:07:44Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2068,
+   "t": "fix: compatible live model catalogs",
+   "u": "punal100",
+   "c": 0,
+   "d": false,
+   "ca": "2026-06-24T16:03:37Z",
+   "ua": "2026-06-27T07:29:32Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2064,
+   "t": "feat: add Mistral OCR and Moderation endpoint support",
+   "u": "waguriagentic",
+   "c": 0,
+   "d": false,
+   "ca": "2026-06-24T14:07:38Z",
+   "ua": "2026-06-24T14:07:38Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2063,
+   "t": "feat: custom system prompt injection",
+   "u": "whale9820",
+   "c": 0,
+   "d": false,
+   "ca": "2026-06-24T14:01:59Z",
+   "ua": "2026-06-24T14:01:59Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2053,
+   "t": "feat: SOCKS proxy support, auth-less batch import, and proxy pool fixes",
+   "u": "dimaslanjaka",
+   "c": 0,
+   "d": false,
+   "ca": "2026-06-24T11:27:39Z",
+   "ua": "2026-06-24T11:43:36Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2045,
+   "t": "Add task-aware combo routing",
+   "u": "nguyenxvotanminh3",
+   "c": 0,
+   "d": false,
+   "ca": "2026-06-24T07:18:23Z",
+   "ua": "2026-06-24T07:53:40Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2030,
+   "t": "feat: add admin api key management",
+   "u": "trinknx",
+   "c": 0,
+   "d": false,
+   "ca": "2026-06-23T15:03:35Z",
+   "ua": "2026-06-23T15:03:35Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2020,
+   "t": "fix(provider): cascade delete aliases on provider removal; persist token limits for custom models",
+   "u": "hamsa0x7",
+   "c": 0,
+   "d": false,
+   "ca": "2026-06-23T07:24:35Z",
+   "ua": "2026-06-25T14:40:19Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2018,
+   "t": "fix(combo): fetch models dynamically from custom provider endpoints",
+   "u": "hamsa0x7",
+   "c": 3,
+   "d": false,
+   "ca": "2026-06-23T06:33:16Z",
+   "ua": "2026-06-27T10:52:11Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2009,
+   "t": "fix(kiro): support IAM Identity Center accounts outside us-east-1",
+   "u": "dm0x13",
+   "c": 0,
+   "d": false,
+   "ca": "2026-06-23T01:05:34Z",
+   "ua": "2026-06-23T01:07:28Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 2006,
+   "t": "Add Charm Hyper provider",
+   "u": "whale9820",
+   "c": 0,
+   "d": false,
+   "ca": "2026-06-22T18:30:29Z",
+   "ua": "2026-06-22T18:30:29Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 2001,
+   "t": "fix(antigravity): sanitize thinking level and map Claude models under antigravity to gemini-level",
+   "u": "fuko2935",
+   "c": 0,
+   "d": false,
+   "ca": "2026-06-22T12:45:37Z",
+   "ua": "2026-06-22T12:45:37Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1999,
+   "t": "Remove deprecated Gemini CLI provider",
+   "u": "whale9820",
+   "c": 0,
+   "d": false,
+   "ca": "2026-06-22T10:34:58Z",
+   "ua": "2026-06-22T15:17:37Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 1991,
+   "t": "feat: add Xunfei (iFlytek Spark) provider",
+   "u": "whale9820",
+   "c": 0,
+   "d": false,
+   "ca": "2026-06-22T07:19:09Z",
+   "ua": "2026-06-22T07:22:33Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 1987,
+   "t": "fix(tts): expose minimax/minimax-cn voices in public audio API",
+   "u": "kieuminhcanh",
+   "c": 0,
+   "d": false,
+   "ca": "2026-06-22T05:51:51Z",
+   "ua": "2026-06-22T05:51:51Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1977,
+   "t": "chore(ark): refresh Volcengine Ark model list",
+   "u": "whale9820",
+   "c": 0,
+   "d": false,
+   "ca": "2026-06-21T20:45:51Z",
+   "ua": "2026-06-21T20:45:51Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 1976,
+   "t": "feat(provider): add SenseNova free tier provider",
+   "u": "whale9820",
+   "c": 0,
+   "d": false,
+   "ca": "2026-06-21T20:44:00Z",
+   "ua": "2026-06-21T20:44:58Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 1959,
+   "t": "improve(antigravity): harden client fingerprint to match real Antigravity/Electron",
+   "u": "Nautilaceae",
+   "c": 0,
+   "d": false,
+   "ca": "2026-06-21T14:50:34Z",
+   "ua": "2026-06-21T14:50:34Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 1958,
+   "t": "fix(antigravity): preserve inlineData parts for image-to-image editing",
+   "u": "Nautilaceae",
+   "c": 0,
+   "d": false,
+   "ca": "2026-06-21T13:36:08Z",
+   "ua": "2026-06-21T13:36:08Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 1938,
+   "t": "feat: Support MCP Gateway with SSE Stream and Combos Management",
+   "u": "Ansh7473",
+   "c": 9,
+   "d": false,
+   "ca": "2026-06-20T15:10:13Z",
+   "ua": "2026-07-29T16:01:19Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 1936,
+   "t": "feat: OpenCode context window and reasoning controls",
+   "u": "Zireael",
+   "c": 0,
+   "d": false,
+   "ca": "2026-06-20T11:41:41Z",
+   "ua": "2026-06-20T12:10:36Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 1925,
+   "t": "chore(deps): bump actions/checkout from 4 to 7",
+   "u": "dependabot[bot]",
+   "c": 0,
+   "d": false,
+   "ca": "2026-06-20T01:52:18Z",
+   "ua": "2026-06-20T01:52:18Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 1921,
+   "t": "feat(providers): model filter, bulk actions, and disabled-model selection",
+   "u": "Zireael",
+   "c": 1,
+   "d": false,
+   "ca": "2026-06-19T18:52:51Z",
+   "ua": "2026-06-19T19:34:22Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 1919,
+   "t": "fix(quota): collapse quota rows, sort by remaining desc",
+   "u": "j2-cuong",
+   "c": 0,
+   "d": false,
+   "ca": "2026-06-19T17:06:56Z",
+   "ua": "2026-06-24T18:58:12Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1902,
+   "t": "Initialize params in transformRequest method",
+   "u": "evan00144",
+   "c": 1,
+   "d": false,
+   "ca": "2026-06-19T02:31:55Z",
+   "ua": "2026-06-22T03:08:10Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1900,
+   "t": "feat(usage): add cached tokens and cache hit % metrics",
+   "u": "Zireael",
+   "c": 2,
+   "d": false,
+   "ca": "2026-06-18T23:01:08Z",
+   "ua": "2026-07-04T12:22:52Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 1898,
+   "t": "fix(usage): eliminate zero-token duplicate entries in streaming usage",
+   "u": "Zireael",
+   "c": 1,
+   "d": false,
+   "ca": "2026-06-18T21:59:30Z",
+   "ua": "2026-06-19T19:54:04Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 1893,
+   "t": "fix(auth): preserve client IP behind local reverse proxy",
+   "u": "Jordannst",
+   "c": 0,
+   "d": false,
+   "ca": "2026-06-18T17:05:31Z",
+   "ua": "2026-06-18T17:08:07Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 1883,
+   "t": "feat(cli): add and document headless command mode and API key/provider management",
+   "u": "wauputr4",
+   "c": 0,
+   "d": false,
+   "ca": "2026-06-18T09:37:11Z",
+   "ua": "2026-06-18T09:40:07Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1875,
+   "t": "fix(kiro): inject agentic chunked-write prompt only on first turn (not every turn)",
+   "u": "DKeken",
+   "c": 0,
+   "d": false,
+   "ca": "2026-06-18T05:28:41Z",
+   "ua": "2026-06-18T05:28:41Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 1854,
+   "t": "feat(quota): persist per-account quota and skip out-of-quota Kiro accounts during routing",
+   "u": "vuongtlt13",
+   "c": 0,
+   "d": false,
+   "ca": "2026-06-17T04:11:44Z",
+   "ua": "2026-06-17T04:11:44Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1848,
+   "t": "feat(glm): add Z.AI OAuth Coding Plan with captcha and API key parity",
+   "u": "teededung",
+   "c": 0,
+   "d": false,
+   "ca": "2026-06-16T09:30:16Z",
+   "ua": "2026-06-16T09:55:15Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1843,
+   "t": "fix(commandcode): force params.stream=true for non-streaming requests",
+   "u": "0xSkybreaker",
+   "c": 0,
+   "d": false,
+   "ca": "2026-06-16T07:44:14Z",
+   "ua": "2026-06-16T07:44:14Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1833,
+   "t": "chore: remove stale file, dead config entry, and fix README typo",
+   "u": "0xSkybreaker",
+   "c": 0,
+   "d": false,
+   "ca": "2026-06-15T07:50:03Z",
+   "ua": "2026-06-15T07:50:03Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1829,
+   "t": "fix(dashboard): unify custom provider icon fallbacks",
+   "u": "ricatix",
+   "c": 0,
+   "d": false,
+   "ca": "2026-06-15T07:31:54Z",
+   "ua": "2026-06-15T07:37:56Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1828,
+   "t": "fix: rename max_tokens to max_completion_tokens for newer OpenAI models",
+   "u": "0xSkybreaker",
+   "c": 0,
+   "d": false,
+   "ca": "2026-06-15T07:31:08Z",
+   "ua": "2026-06-15T07:31:08Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1827,
+   "t": "fix: bump better-sqlite3 to 12.10.1 for Node 26 compatibility",
+   "u": "0xSkybreaker",
+   "c": 0,
+   "d": false,
+   "ca": "2026-06-15T07:19:00Z",
+   "ua": "2026-06-15T07:19:00Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1825,
+   "t": "feat: add toggleable tool source diagnostics",
+   "u": "DuyPrX",
+   "c": 0,
+   "d": true,
+   "ca": "2026-06-15T03:07:41Z",
+   "ua": "2026-06-15T03:07:41Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1824,
+   "t": "fix: stabilize MiMo Free Claude streams",
+   "u": "DuyPrX",
+   "c": 0,
+   "d": true,
+   "ca": "2026-06-15T03:04:29Z",
+   "ua": "2026-06-15T03:04:29Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1823,
+   "t": "fix: refresh Kiro model discovery on invalid bearer token",
+   "u": "DuyPrX",
+   "c": 0,
+   "d": true,
+   "ca": "2026-06-15T02:58:57Z",
+   "ua": "2026-06-15T02:58:57Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1821,
+   "t": "fix(codex): treat OpenAI 401/token_expired as permanent refresh failure (re-auth, not retry)",
+   "u": "sacwooky",
+   "c": 0,
+   "d": false,
+   "ca": "2026-06-15T01:10:56Z",
+   "ua": "2026-06-15T01:10:56Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1819,
+   "t": "fix(codex): bind usage and quota calls to ChatGPT account",
+   "u": "ryanngit",
+   "c": 4,
+   "d": false,
+   "ca": "2026-06-15T00:15:31Z",
+   "ua": "2026-08-03T06:02:23Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 1816,
+   "t": "fix: add error boundaries for provider detail and MITM pages (Docker hydration crash)",
+   "u": "wahyuzero",
+   "c": 0,
+   "d": false,
+   "ca": "2026-06-14T23:12:30Z",
+   "ua": "2026-06-15T02:13:32Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1813,
+   "t": "Fix Xiaomi Token Plan Claude-native routing",
+   "u": "tiagotalbuquerque",
+   "c": 2,
+   "d": false,
+   "ca": "2026-06-14T14:01:00Z",
+   "ua": "2026-06-18T15:38:54Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1810,
+   "t": "fix: reverse proxy basePath + auth redirects for Next.js 16",
+   "u": "SillyHippy",
+   "c": 0,
+   "d": false,
+   "ca": "2026-06-13T18:20:44Z",
+   "ua": "2026-06-13T18:20:44Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1805,
+   "t": "fix(qoder): propagate upstream error status via HTTP status instead of SSE text, enabling combo/account fallback",
+   "u": "vianlearns",
+   "c": 0,
+   "d": false,
+   "ca": "2026-06-13T14:53:43Z",
+   "ua": "2026-06-13T14:53:43Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1803,
+   "t": "feat(provider): integrate MiMo Free provider with signature-gated auth",
+   "u": "Ansh7473",
+   "c": 1,
+   "d": false,
+   "ca": "2026-06-13T08:19:18Z",
+   "ua": "2026-06-13T08:53:53Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 1802,
+   "t": "feat: implement Mux agent integration with server-side management and client-side monitoring UI",
+   "u": "Ansh7473",
+   "c": 0,
+   "d": false,
+   "ca": "2026-06-13T08:04:24Z",
+   "ua": "2026-06-13T08:07:57Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 1801,
+   "t": "feat: add Netlify Proxy Deployer support and Speedtest Latency & TPS checks",
+   "u": "Ansh7473",
+   "c": 0,
+   "d": false,
+   "ca": "2026-06-13T08:04:08Z",
+   "ua": "2026-06-13T08:05:53Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 1797,
+   "t": "fix(openai): fallback to responses for gpt-5/codex",
+   "u": "kacipbuah",
+   "c": 3,
+   "d": false,
+   "ca": "2026-06-12T21:39:57Z",
+   "ua": "2026-06-12T21:53:57Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1794,
+   "t": "fix: avoid exposing api keys in logs and usage history",
+   "u": "sacwooky",
+   "c": 0,
+   "d": false,
+   "ca": "2026-06-12T16:35:48Z",
+   "ua": "2026-06-12T16:35:48Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1793,
+   "t": "fix: middleware detection + basePath-aware auth redirects",
+   "u": "SillyHippy",
+   "c": 2,
+   "d": false,
+   "ca": "2026-06-12T14:18:38Z",
+   "ua": "2026-06-13T02:59:18Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1792,
+   "t": "fix: remove --webpack flag and make auth redirects basePath-aware",
+   "u": "SillyHippy",
+   "c": 0,
+   "d": false,
+   "ca": "2026-06-12T13:51:37Z",
+   "ua": "2026-06-12T13:51:37Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1784,
+   "t": "fix: resolve ReferenceError for allProviders in ModelSelectModal",
+   "u": "mustafabozkaya",
+   "c": 1,
+   "d": false,
+   "ca": "2026-06-11T13:31:30Z",
+   "ua": "2026-06-12T21:56:04Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 1781,
+   "t": "Improve compatible provider model imports",
+   "u": "ruddypp",
+   "c": 0,
+   "d": false,
+   "ca": "2026-06-11T08:10:19Z",
+   "ua": "2026-06-12T13:22:06Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1775,
+   "t": "fix: allow multiple API keys for OpenAI/Anthropic compatible providers",
+   "u": "hodtien",
+   "c": 0,
+   "d": false,
+   "ca": "2026-06-11T02:44:27Z",
+   "ua": "2026-06-23T05:51:48Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1774,
+   "t": "fix: remove single-connection restriction for compatible provider nodes",
+   "u": "mrnasil",
+   "c": 1,
+   "d": false,
+   "ca": "2026-06-10T19:20:51Z",
+   "ua": "2026-06-26T19:51:26Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 1773,
+   "t": "fix: include noAuth providers (opencode) in GET /v1/models",
+   "u": "omartuhintvs",
+   "c": 3,
+   "d": false,
+   "ca": "2026-06-10T18:20:07Z",
+   "ua": "2026-07-03T16:08:35Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1764,
+   "t": "feat(provider): add ModelScope as a free-tier provider",
+   "u": "tn5052",
+   "c": 0,
+   "d": false,
+   "ca": "2026-06-10T09:29:43Z",
+   "ua": "2026-06-10T09:30:34Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1761,
+   "t": "feat(cli-tools): replace DeepSeek TUI with CodeWhale & fix: duplicate anthropic-version header for Anthropic provider",
+   "u": "aristorinjuang",
+   "c": 1,
+   "d": false,
+   "ca": "2026-06-10T03:56:21Z",
+   "ua": "2026-06-15T17:08:39Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1760,
+   "t": "fix(siliconflow): update baseUrl .cn -> .com + sync full model list from API",
+   "u": "letanphuc",
+   "c": 0,
+   "d": false,
+   "ca": "2026-06-10T03:50:34Z",
+   "ua": "2026-06-14T13:40:47Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 1740,
+   "t": "feat(providers): Add bulk disable for failed provider models",
+   "u": "muhakbarcom",
+   "c": 0,
+   "d": false,
+   "ca": "2026-06-08T11:54:51Z",
+   "ua": "2026-06-08T11:54:51Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1738,
+   "t": "fix: count alternate usage token fields",
+   "u": "Jordannst",
+   "c": 1,
+   "d": false,
+   "ca": "2026-06-08T10:17:22Z",
+   "ua": "2026-06-13T13:58:19Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 1724,
+   "t": "feat: password reset API + cross-provider model fallback",
+   "u": "stevie86",
+   "c": 1,
+   "d": false,
+   "ca": "2026-06-07T13:47:39Z",
+   "ua": "2026-06-07T15:25:34Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 1717,
+   "t": "fix(open-sse): codex api compatibility and sse translation fixes",
+   "u": "thotam",
+   "c": 2,
+   "d": false,
+   "ca": "2026-06-07T03:12:01Z",
+   "ua": "2026-08-03T08:59:46Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1716,
+   "t": "Enhance error handling and implement group lock for quota management",
+   "u": "muku911",
+   "c": 0,
+   "d": false,
+   "ca": "2026-06-07T02:40:59Z",
+   "ua": "2026-07-20T22:54:07Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1711,
+   "t": "feat: auth session persistence + antigravity fallbacks + codex OAuth refresh + models envelope",
+   "u": "zuhabul",
+   "c": 2,
+   "d": false,
+   "ca": "2026-06-06T17:49:17Z",
+   "ua": "2026-06-12T22:02:31Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1701,
+   "t": "fix: forward connection-level proxy to Gemini/OpenAI embedding requests",
+   "u": "nic562",
+   "c": 0,
+   "d": false,
+   "ca": "2026-06-06T10:46:06Z",
+   "ua": "2026-06-07T15:22:46Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1694,
+   "t": "feat(bedrock): add Amazon Bedrock provider with SigV4 and Converse API",
+   "u": "Jorge-Domingues",
+   "c": 0,
+   "d": false,
+   "ca": "2026-06-05T23:09:13Z",
+   "ua": "2026-06-06T03:09:39Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1686,
+   "t": "in-app release updater and harden dashboard security",
+   "u": "vzwjustin",
+   "c": 0,
+   "d": false,
+   "ca": "2026-06-05T13:15:34Z",
+   "ua": "2026-06-20T02:16:04Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1685,
+   "t": "fix: resolve nested standalone build path",
+   "u": "Jordannst",
+   "c": 0,
+   "d": false,
+   "ca": "2026-06-05T10:57:27Z",
+   "ua": "2026-06-05T11:03:25Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 1683,
+   "t": "Add per-account model whitelist",
+   "u": "hodtien",
+   "c": 0,
+   "d": false,
+   "ca": "2026-06-05T09:46:15Z",
+   "ua": "2026-06-07T13:18:13Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1681,
+   "t": "feat: per-key cost quota + request attribution for shared gateways",
+   "u": "vanminhph",
+   "c": 0,
+   "d": false,
+   "ca": "2026-06-05T09:04:49Z",
+   "ua": "2026-06-05T14:11:35Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1672,
+   "t": "fix(validate): increase validation max_tokens to 10 to satisfy strict provider requirements",
+   "u": "rifuki",
+   "c": 0,
+   "d": false,
+   "ca": "2026-06-04T13:36:18Z",
+   "ua": "2026-06-05T10:13:03Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 1670,
+   "t": "feat(provider): add Command Code CLI provider",
+   "u": "Spidy092",
+   "c": 15,
+   "d": false,
+   "ca": "2026-06-04T13:21:26Z",
+   "ua": "2026-06-15T01:56:46Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1668,
+   "t": "fix(runtime): stop pruning better-sqlite3 when installing systray2 (#1605)",
+   "u": "hodtien",
+   "c": 0,
+   "d": false,
+   "ca": "2026-06-04T09:33:36Z",
+   "ua": "2026-06-06T11:24:50Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1666,
+   "t": "fix: mask request debug logs",
+   "u": "Delcado19",
+   "c": 0,
+   "d": false,
+   "ca": "2026-06-04T07:56:08Z",
+   "ua": "2026-06-06T02:09:07Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 1665,
+   "t": "feat: add capability catalog and auto model routing",
+   "u": "jackssybin",
+   "c": 1,
+   "d": false,
+   "ca": "2026-06-04T07:17:54Z",
+   "ua": "2026-06-10T07:41:22Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1658,
+   "t": "feat: add 15 new commandcode provider models",
+   "u": "vfh-tech",
+   "c": 1,
+   "d": false,
+   "ca": "2026-06-04T03:58:00Z",
+   "ua": "2026-06-05T01:38:27Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1655,
+   "t": "feat: update antigravity 3.5 flash models",
+   "u": "AbdoKnbGit",
+   "c": 1,
+   "d": false,
+   "ca": "2026-06-03T19:27:47Z",
+   "ua": "2026-06-04T07:41:43Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 1652,
+   "t": "fix(kiro): add mappable \"auto\" model slot for Kiro agent mode",
+   "u": "Delcado19",
+   "c": 0,
+   "d": false,
+   "ca": "2026-06-03T19:20:44Z",
+   "ua": "2026-06-14T12:04:48Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 1643,
+   "t": "feat: add Claude-native Xiaomi TokenPlan model alias",
+   "u": "DuyPrX",
+   "c": 1,
+   "d": false,
+   "ca": "2026-06-03T05:52:06Z",
+   "ua": "2026-06-15T05:15:50Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1636,
+   "t": "Codex/claude code tool sanitizers",
+   "u": "klong-dev",
+   "c": 1,
+   "d": false,
+   "ca": "2026-06-02T22:32:44Z",
+   "ua": "2026-06-30T21:30:50Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1633,
+   "t": "feat(huggingface): suggest Hub media models in the dashboard",
+   "u": "yicone",
+   "c": 4,
+   "d": false,
+   "ca": "2026-06-02T17:18:42Z",
+   "ua": "2026-08-08T03:53:16Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 1626,
+   "t": "Fix OpenAI-compatible token parameter handling",
+   "u": "I3eka",
+   "c": 2,
+   "d": false,
+   "ca": "2026-06-02T13:22:16Z",
+   "ua": "2026-06-12T21:54:39Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 1615,
+   "t": "fix(antigravity): protocol fidelity \u2014 correct ideVersion, User-Agent, production host, remove internal header leak",
+   "u": "arden1601",
+   "c": 0,
+   "d": false,
+   "ca": "2026-06-02T03:02:17Z",
+   "ua": "2026-06-04T05:35:25Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 1614,
+   "t": "feat: upgrade MiniMax default model to M3",
+   "u": "octo-patch",
+   "c": 0,
+   "d": false,
+   "ca": "2026-06-02T02:58:43Z",
+   "ua": "2026-06-04T00:06:32Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1606,
+   "t": "fix(runtime): save runtime deps so sibling install can't prune them",
+   "u": "omartuhintvs",
+   "c": 0,
+   "d": false,
+   "ca": "2026-06-01T09:08:17Z",
+   "ua": "2026-06-04T00:06:04Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1600,
+   "t": "fix: resolve 6 high-impact agentic workflow issues (body limit, timeouts, tool_choice, system role, schema)",
+   "u": "GodrezJr2",
+   "c": 2,
+   "d": false,
+   "ca": "2026-06-01T06:00:03Z",
+   "ua": "2026-06-08T17:48:44Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 1599,
+   "t": "fix: strip reasoning blobs from agentic context to prevent O(n\u00b2) token growth",
+   "u": "GodrezJr2",
+   "c": 2,
+   "d": false,
+   "ca": "2026-06-01T05:40:57Z",
+   "ua": "2026-06-08T17:48:41Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 1585,
+   "t": "fix: sanitize system role in passthrough mode for Claude provider",
+   "u": "adamyordan01",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-31T15:14:24Z",
+   "ua": "2026-06-04T06:20:25Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1574,
+   "t": "refactor: implement generic dynamic model fetching (fixes Kilocode and restores missing models)",
+   "u": "mustafabozkaya",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-31T00:20:38Z",
+   "ua": "2026-06-04T06:20:21Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 1573,
+   "t": "fix(kiro): emit valid concatenable tool_calls.arguments deltas",
+   "u": "wahyuzero",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-30T20:41:37Z",
+   "ua": "2026-06-04T06:20:19Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1570,
+   "t": "fix(proxy): configure proxy agent timeouts",
+   "u": "ryanngit",
+   "c": 3,
+   "d": false,
+   "ca": "2026-05-30T18:12:00Z",
+   "ua": "2026-08-03T05:49:31Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 1568,
+   "t": "fix(sse): prevent false stall aborts on large-context reasoning streams",
+   "u": "thomasvan",
+   "c": 1,
+   "d": false,
+   "ca": "2026-05-30T15:07:22Z",
+   "ua": "2026-06-04T06:20:15Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1561,
+   "t": "feat(dashboard): show which API key was used per recent request (#1258)",
+   "u": "Delcado19",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-30T08:57:00Z",
+   "ua": "2026-06-04T06:20:13Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 1560,
+   "t": "Add Crof AI provider support",
+   "u": "anandghegde",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-30T06:08:22Z",
+   "ua": "2026-06-04T06:20:11Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1559,
+   "t": "feat: add xiaomi-tokenplan support Anthropic (Claude-format)",
+   "u": "tk1cntt",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-30T03:12:24Z",
+   "ua": "2026-06-04T06:20:09Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1558,
+   "t": "fix(docker): include MITM runtime files missing from Next standalone output + document /etc/hosts mount modes",
+   "u": "vde-dis",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-29T23:22:19Z",
+   "ua": "2026-07-11T11:39:55Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1530,
+   "t": "feat(embeddings): Combo support for /v1/embeddings endpoint",
+   "u": "wenzetan",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-29T02:39:01Z",
+   "ua": "2026-06-04T06:20:00Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1522,
+   "t": "feat: auto-skip disabled provider models in combo routing (closes #1521)",
+   "u": "josevictorferreira",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-28T15:42:41Z",
+   "ua": "2026-06-04T06:19:58Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1510,
+   "t": "Feat/key groups",
+   "u": "khapu2906",
+   "c": 2,
+   "d": false,
+   "ca": "2026-05-28T03:21:28Z",
+   "ua": "2026-06-16T08:03:32Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1509,
+   "t": "B\u1ed5 xung c\u00f3 th\u1ec3 t\u1ef1 \u0111i\u1ec1n URL proxy \u0111\u1ec3 test",
+   "u": "MinhtienBil",
+   "c": 1,
+   "d": false,
+   "ca": "2026-05-28T03:20:52Z",
+   "ua": "2026-07-30T04:39:54Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1508,
+   "t": "feat: add Basic Chat page for testing models",
+   "u": "kenlin8827",
+   "c": 1,
+   "d": false,
+   "ca": "2026-05-27T18:22:40Z",
+   "ua": "2026-07-06T06:57:31Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 1506,
+   "t": "fix: reject unsupported Kiro 1m context suffix",
+   "u": "Delcado19",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-27T18:04:42Z",
+   "ua": "2026-06-04T06:19:52Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 1505,
+   "t": "fix: dedupe Anthropic version headers",
+   "u": "Delcado19",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-27T17:40:25Z",
+   "ua": "2026-06-08T04:49:26Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 1504,
+   "t": "fix: keep dashboard sidebar visible on desktop",
+   "u": "Delcado19",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-27T17:31:18Z",
+   "ua": "2026-06-08T05:21:01Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 1502,
+   "t": "fix: stop MITM restart loop when already running",
+   "u": "Delcado19",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-27T17:19:56Z",
+   "ua": "2026-06-08T05:20:19Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 1500,
+   "t": "fix: strip Claude context management for compatible providers",
+   "u": "Delcado19",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-27T16:52:05Z",
+   "ua": "2026-06-08T05:20:16Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 1498,
+   "t": "fix: reset CLI password against SQLite settings",
+   "u": "Delcado19",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-27T16:35:39Z",
+   "ua": "2026-06-08T05:20:40Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 1497,
+   "t": "feat(combo): Smart Combo + Vision Auto-Routing + RU Mode \u2014 Russian fork enhancements",
+   "u": "mdn77",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-27T12:05:21Z",
+   "ua": "2026-07-25T04:23:46Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1488,
+   "t": "fix responses max_tokens mapping",
+   "u": "dangzitou",
+   "c": 2,
+   "d": false,
+   "ca": "2026-05-27T08:19:03Z",
+   "ua": "2026-07-21T03:18:19Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1478,
+   "t": "fix: harden Node.js built-in imports (Readable, Buffer) using node: prefix (#1469)",
+   "u": "mustafabozkaya",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-26T22:45:18Z",
+   "ua": "2026-05-26T22:45:18Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 1463,
+   "t": "fix(cursor): resolve cu/default empty responses",
+   "u": "Duycan17",
+   "c": 1,
+   "d": false,
+   "ca": "2026-05-26T14:06:20Z",
+   "ua": "2026-07-29T18:36:02Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1460,
+   "t": "Preserve reasoning effort for Codex translations",
+   "u": "ntdung6868",
+   "c": 1,
+   "d": false,
+   "ca": "2026-05-26T13:41:36Z",
+   "ua": "2026-06-25T19:10:06Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 1458,
+   "t": "fix: validate HuggingFace tokens via whoami",
+   "u": "Delcado19",
+   "c": 1,
+   "d": false,
+   "ca": "2026-05-26T12:34:12Z",
+   "ua": "2026-06-02T17:44:30Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 1455,
+   "t": "fix: add Codex subagent description",
+   "u": "ntdung6868",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-26T10:40:00Z",
+   "ua": "2026-05-26T10:40:00Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 1450,
+   "t": "fix: bound provider connection tests",
+   "u": "ntdung6868",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-26T09:48:13Z",
+   "ua": "2026-05-26T09:48:13Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 1448,
+   "t": "fix: show disabled connection errors",
+   "u": "ntdung6868",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-26T09:31:25Z",
+   "ua": "2026-05-26T09:31:25Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 1445,
+   "t": "fix(test): distinguish API-banned account from invalid token; preserve refreshed RT",
+   "u": "ntdung6868",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-26T08:15:04Z",
+   "ua": "2026-05-26T08:37:21Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 1436,
+   "t": "Merge pull request #1 from decolua/master",
+   "u": "laivannha0202",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-26T00:41:25Z",
+   "ua": "2026-05-26T00:42:21Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1434,
+   "t": "fix: prevent circular dependencies in model combos (#1235)",
+   "u": "mustafabozkaya",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-25T19:55:54Z",
+   "ua": "2026-05-25T20:00:46Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 1427,
+   "t": "Keep quota accounts active until all pools empty",
+   "u": "Delcado19",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-25T13:48:50Z",
+   "ua": "2026-06-08T05:20:12Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 1426,
+   "t": "Send account context for Codex usage",
+   "u": "Delcado19",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-25T13:41:27Z",
+   "ua": "2026-06-08T05:20:55Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 1425,
+   "t": "Default Codex reasoning to medium",
+   "u": "Delcado19",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-25T13:36:12Z",
+   "ua": "2026-06-08T05:21:05Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 1423,
+   "t": "Prevent combo circular dependencies",
+   "u": "Delcado19",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-25T13:18:17Z",
+   "ua": "2026-06-08T05:20:51Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 1421,
+   "t": "Clean up provider model aliases on delete",
+   "u": "Delcado19",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-25T13:12:03Z",
+   "ua": "2026-06-08T05:21:59Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 1418,
+   "t": "fix(codex): abort stalled initial upstream responses",
+   "u": "rama1933",
+   "c": 3,
+   "d": false,
+   "ca": "2026-05-25T11:09:57Z",
+   "ua": "2026-05-26T04:19:19Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1416,
+   "t": "fix: add Codex subagent role description",
+   "u": "nguyenha935",
+   "c": 1,
+   "d": false,
+   "ca": "2026-05-25T10:54:21Z",
+   "ua": "2026-07-17T07:36:28Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 1415,
+   "t": "i18n: add zh-CN password hint translations",
+   "u": "dajinglingpake",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-25T09:44:41Z",
+   "ua": "2026-05-25T09:44:41Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 1412,
+   "t": "fix: replay reasoning content for thinking tool calls",
+   "u": "dajinglingpake",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-25T08:33:50Z",
+   "ua": "2026-05-25T08:33:50Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 1410,
+   "t": "Ensure correct setting of anthropic-version header for variations",
+   "u": "zakirkun",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-25T04:15:33Z",
+   "ua": "2026-05-25T04:16:47Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 1405,
+   "t": "feat: add Nix flake source-build support with home-manager module and devbox",
+   "u": "levonk",
+   "c": 2,
+   "d": false,
+   "ca": "2026-05-24T20:15:52Z",
+   "ua": "2026-08-03T17:43:36Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1402,
+   "t": "Route Codex auto-review to Codex provider",
+   "u": "Delcado19",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-24T18:05:22Z",
+   "ua": "2026-06-08T05:23:01Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 1401,
+   "t": "Fix /v1/messages non-streaming JSON mode",
+   "u": "Delcado19",
+   "c": 3,
+   "d": false,
+   "ca": "2026-05-24T18:01:27Z",
+   "ua": "2026-06-16T17:22:49Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 1399,
+   "t": "fix(db,sse): bound usageHistory growth and clean up usage SSE listeners (#1245)",
+   "u": "andrew05060414",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-24T16:49:43Z",
+   "ua": "2026-05-24T16:49:43Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1397,
+   "t": "fix(responses): preserve Codex custom_tool_call shape through translator (#1371)",
+   "u": "andrew05060414",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-24T16:00:11Z",
+   "ua": "2026-05-24T16:00:11Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1395,
+   "t": "Fallback on empty tool-heavy combo streams",
+   "u": "Delcado19",
+   "c": 1,
+   "d": false,
+   "ca": "2026-05-24T15:25:20Z",
+   "ua": "2026-07-23T01:15:32Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 1392,
+   "t": "Preserve Codex custom tool calls",
+   "u": "Delcado19",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-24T14:58:44Z",
+   "ua": "2026-06-08T05:20:22Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 1391,
+   "t": "Fix sql.js WASM in standalone builds",
+   "u": "Delcado19",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-24T14:05:37Z",
+   "ua": "2026-06-08T05:20:58Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 1388,
+   "t": "fix: kiro validateImportToken uses social refresh endpoint to fix Unauthorized (closes #1363)",
+   "u": "anuragg-saxenaa",
+   "c": 2,
+   "d": false,
+   "ca": "2026-05-24T07:28:44Z",
+   "ua": "2026-06-12T21:54:39Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 1387,
+   "t": "fix: inject json_schema into system prompt for openai-compatible providers (closes #1343)",
+   "u": "anuragg-saxenaa",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-24T07:26:52Z",
+   "ua": "2026-05-24T07:26:52Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 1385,
+   "t": "fix: CORS preflight improvements for browser/WebView clients (closes #1381)",
+   "u": "anuragg-saxenaa",
+   "c": 3,
+   "d": false,
+   "ca": "2026-05-24T06:39:27Z",
+   "ua": "2026-06-08T19:27:52Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 1384,
+   "t": "fix(embeddings): add input_type param for nvidia nv-embedqa-e5-v5 model (closes #1378)",
+   "u": "anuragg-saxenaa",
+   "c": 1,
+   "d": false,
+   "ca": "2026-05-24T06:36:02Z",
+   "ua": "2026-06-09T00:09:53Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 1383,
+   "t": "fix(antigravity-to-openai): preserve required fields in tool schemas (closes #1368)",
+   "u": "anuragg-saxenaa",
+   "c": 1,
+   "d": false,
+   "ca": "2026-05-24T06:18:44Z",
+   "ua": "2026-06-09T00:09:53Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 1375,
+   "t": "Fix Provider Kiro erro: Improperly formed request",
+   "u": "smarthomeblack",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-23T10:05:05Z",
+   "ua": "2026-05-27T19:20:23Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 1374,
+   "t": "chore: remove AI-generated intro",
+   "u": "nhat251",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-23T09:49:01Z",
+   "ua": "2026-05-23T09:49:01Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1367,
+   "t": "Codex import",
+   "u": "datngo68",
+   "c": 1,
+   "d": false,
+   "ca": "2026-05-22T19:17:42Z",
+   "ua": "2026-05-28T15:35:36Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1349,
+   "t": "fix(claude): normalize anthropic-version header",
+   "u": "EtienneLescot",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-21T20:24:45Z",
+   "ua": "2026-05-21T20:24:45Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1348,
+   "t": "fix(tailscale): honor TAILSCALE_AUTHKEY login",
+   "u": "EtienneLescot",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-21T20:22:42Z",
+   "ua": "2026-05-21T20:22:42Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1347,
+   "t": "fix(models): persist custom model token limits",
+   "u": "EtienneLescot",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-21T20:20:47Z",
+   "ua": "2026-05-21T20:20:47Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1346,
+   "t": "fix(codex): migrate deprecated hooks config",
+   "u": "EtienneLescot",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-21T19:16:35Z",
+   "ua": "2026-05-21T19:16:35Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1344,
+   "t": "fix: downgrade json_schema response_format to json_object for non-OpenAI providers",
+   "u": "Xpos587",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-21T17:05:16Z",
+   "ua": "2026-06-23T10:00:07Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1340,
+   "t": "Handle non-JSON OAuth errors",
+   "u": "Delcado19",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-21T16:24:40Z",
+   "ua": "2026-05-21T16:24:40Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 1339,
+   "t": "Allow Windows MITM elevation on startup",
+   "u": "Delcado19",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-21T16:24:38Z",
+   "ua": "2026-05-21T16:24:38Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 1338,
+   "t": "Fix provider client priority sorting",
+   "u": "Delcado19",
+   "c": 3,
+   "d": false,
+   "ca": "2026-05-21T16:24:26Z",
+   "ua": "2026-05-25T08:07:42Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 1337,
+   "t": "Fix Xiaomi reasoning content echo",
+   "u": "Delcado19",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-21T16:24:23Z",
+   "ua": "2026-06-08T04:49:18Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 1335,
+   "t": "feat(cursor): parse Composer DeepSeek tool calls + forward custom tools via MCP enum 19",
+   "u": "noestelar",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-21T14:04:57Z",
+   "ua": "2026-05-25T20:30:04Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 1334,
+   "t": "feat(providers): add Pioneer AI provider with fine-tuning support",
+   "u": "HikiNarou",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-21T13:24:24Z",
+   "ua": "2026-05-21T13:29:33Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1332,
+   "t": "Add API key scoped provider connections and dashboard controls",
+   "u": "hoangphat202",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-21T10:13:39Z",
+   "ua": "2026-07-30T07:37:56Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1331,
+   "t": "fix(translators): support AI SDK image parts",
+   "u": "mugnimaestra",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-21T10:09:21Z",
+   "ua": "2026-05-21T12:45:07Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 1324,
+   "t": "feat(i18n): auto-detect browser language on first visit",
+   "u": "ayanmw",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-21T07:51:12Z",
+   "ua": "2026-05-21T10:18:51Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1317,
+   "t": "feat: add KimiCLI support to provider's list",
+   "u": "Angel2mp3",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-21T04:02:50Z",
+   "ua": "2026-05-21T06:01:23Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1316,
+   "t": "fix(cursor): strip Composer <\uff5cfinal\uff5c> sentinel markers leaking after #1310",
+   "u": "noestelar",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-21T03:25:35Z",
+   "ua": "2026-05-21T03:25:35Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 1313,
+   "t": "Add CAS dashboard login",
+   "u": "v1xingyue",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-21T01:21:03Z",
+   "ua": "2026-05-21T06:08:33Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1301,
+   "t": "feat: support Antigravity 3.5 Flash variants",
+   "u": "AbdoKnbGit",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-20T09:15:04Z",
+   "ua": "2026-05-20T11:16:40Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 1297,
+   "t": "Update Antigravity Gemini Flash model",
+   "u": "mugnimaestra",
+   "c": 3,
+   "d": true,
+   "ca": "2026-05-20T07:41:07Z",
+   "ua": "2026-05-20T15:36:31Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 1296,
+   "t": "feat(usage): add custom usage script support for providers",
+   "u": "HoaPham98",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-20T03:24:28Z",
+   "ua": "2026-06-02T03:31:04Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1288,
+   "t": "feat(providers): add SumoPod and X5Lab as API key providers",
+   "u": "rigelra15",
+   "c": 1,
+   "d": false,
+   "ca": "2026-05-19T15:33:41Z",
+   "ua": "2026-05-20T01:27:04Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 1287,
+   "t": "feat: provider icon UI improvements, grouped models in CLI tools, and model select UX enhancements",
+   "u": "rigelra15",
+   "c": 1,
+   "d": false,
+   "ca": "2026-05-19T15:33:25Z",
+   "ua": "2026-05-20T01:40:48Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 1286,
+   "t": "feat(xai): add xAI Grok provider with OAuth + API key auth",
+   "u": "mugnimaestra",
+   "c": 3,
+   "d": false,
+   "ca": "2026-05-19T14:45:50Z",
+   "ua": "2026-05-22T10:31:19Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 1273,
+   "t": "feat(kiro): bulk refresh-token import + thinking/agentic variants",
+   "u": "aminfathullah",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-19T06:43:24Z",
+   "ua": "2026-05-19T06:46:30Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1272,
+   "t": "fix(chatCore): default stream to false per OpenAI spec (#1260)",
+   "u": "Ptah-CT",
+   "c": 5,
+   "d": false,
+   "ca": "2026-05-19T05:57:49Z",
+   "ua": "2026-07-31T12:05:31Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1267,
+   "t": "feat(providers): add bulk connection actions",
+   "u": "beaaan",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-19T02:40:48Z",
+   "ua": "2026-05-19T02:40:48Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1264,
+   "t": "fix(translator): strip temperature for Claude models with extended thinking",
+   "u": "noestelar",
+   "c": 1,
+   "d": false,
+   "ca": "2026-05-19T00:18:04Z",
+   "ua": "2026-07-05T01:24:26Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 1262,
+   "t": "feat(dashboard-guard): allow remote same-origin access for tunnel enable authenticated sessions",
+   "u": "anhdh-3010",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-18T16:11:07Z",
+   "ua": "2026-05-18T16:14:31Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1257,
+   "t": "feat(codex): bulk-import accounts from JSON files",
+   "u": "beaaan",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-18T13:14:21Z",
+   "ua": "2026-05-19T02:38:05Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1249,
+   "t": "Fix OAuth redirect URI handling for remote deployments",
+   "u": "Kenfinn",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-18T06:40:32Z",
+   "ua": "2026-05-18T06:40:32Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1247,
+   "t": "fix(security): harden public API and local-only access gates",
+   "u": "blu1606",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-18T05:56:17Z",
+   "ua": "2026-05-18T05:56:17Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 1239,
+   "t": "feat: promote successful combo model to first position",
+   "u": "arssnndr",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-18T03:03:33Z",
+   "ua": "2026-05-18T05:22:41Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1238,
+   "t": "fix: enable Happy Eyeballs (autoSelectFamily) in proxyAwareFetch",
+   "u": "adentdk",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-17T22:30:01Z",
+   "ua": "2026-05-18T05:13:54Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1233,
+   "t": "feat(cli-tools): add Crush CLI tool with one-click Apply/Reset + multi-model config",
+   "u": "dopaemon",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-17T17:37:40Z",
+   "ua": "2026-05-17T17:37:40Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1232,
+   "t": "fix: usage screen not update information with stream",
+   "u": "tachibana-shin",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-17T17:15:18Z",
+   "ua": "2026-05-17T17:15:18Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 1209,
+   "t": "fix(kiro): resolve Improperly formed request when tool_calls in history (#1184)",
+   "u": "DuongStark",
+   "c": 1,
+   "d": false,
+   "ca": "2026-05-17T00:44:04Z",
+   "ua": "2026-05-19T15:35:03Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1207,
+   "t": "Security: Server-Side Request Forgery (SSRF) in suggested-models endpoint",
+   "u": "Nam0101",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-16T20:22:15Z",
+   "ua": "2026-05-16T20:48:21Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1200,
+   "t": "feat(provider): add Augment Code (Auggie CLI) as a provider",
+   "u": "chamdanilukman",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-16T14:24:26Z",
+   "ua": "2026-05-16T14:24:26Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1198,
+   "t": "fix(cli): stop tryRestart orphan race breaking Hide to Tray",
+   "u": "ntdung6868",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-16T13:39:58Z",
+   "ua": "2026-05-16T13:39:58Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 1195,
+   "t": "Add NVIDIA NIM image generation support",
+   "u": "eng2007",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-16T12:51:38Z",
+   "ua": "2026-05-17T17:55:18Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 1193,
+   "t": "fix: Responses API MCP namespace \u5f80\u8fd4 + deepseek \u601d\u8003\u540e\u7f00\u652f\u6301",
+   "u": "Nicolas-One",
+   "c": 2,
+   "d": false,
+   "ca": "2026-05-16T12:03:31Z",
+   "ua": "2026-05-25T01:52:47Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1185,
+   "t": "feat(providers): add Gitlawb Opengateway as no-auth free provider",
+   "u": "teremernungguys",
+   "c": 1,
+   "d": false,
+   "ca": "2026-05-16T07:50:07Z",
+   "ua": "2026-05-29T06:24:28Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1176,
+   "t": "Add Webshare proxy pool import and sync",
+   "u": "ricatix",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-16T02:28:12Z",
+   "ua": "2026-05-16T02:28:12Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1170,
+   "t": "fix: rescue Kiro compaction requests missing toolConfig",
+   "u": "cedrugs",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-15T18:39:15Z",
+   "ua": "2026-05-15T18:39:15Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1165,
+   "t": "feat(cli-tools): add Pi auto configuration",
+   "u": "davidyusaku-13",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-15T16:54:31Z",
+   "ua": "2026-05-15T16:54:31Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1164,
+   "t": "fix: migrate Cohere provider to v2 API (fixes HTTP 405)",
+   "u": "me-ashu-singh",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-15T16:26:34Z",
+   "ua": "2026-05-15T16:26:34Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1161,
+   "t": "My master",
+   "u": "vdhung204",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-15T13:47:51Z",
+   "ua": "2026-06-29T15:37:54Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1158,
+   "t": "feat(api-keys): enhance API key management with daily token limits, e\u2026",
+   "u": "datngo68",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-15T10:26:38Z",
+   "ua": "2026-05-15T11:33:44Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1149,
+   "t": "fix(update): preserve tray mode through manual Copy & Shutdown",
+   "u": "ntdung6868",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-15T08:21:57Z",
+   "ua": "2026-05-15T08:21:57Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 1148,
+   "t": "fix(sse): drop empty data: null event between chunks",
+   "u": "ntdung6868",
+   "c": 4,
+   "d": false,
+   "ca": "2026-05-15T08:05:58Z",
+   "ua": "2026-07-26T17:34:24Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 1147,
+   "t": "fix(ui): make Pagination responsive on mobile",
+   "u": "ridwanramadhan",
+   "c": 1,
+   "d": false,
+   "ca": "2026-05-15T06:00:23Z",
+   "ua": "2026-05-15T07:17:28Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 1140,
+   "t": "Support PostgreSQL/MySQL databases",
+   "u": "hyoretsu",
+   "c": 1,
+   "d": false,
+   "ca": "2026-05-15T00:18:35Z",
+   "ua": "2026-06-07T12:23:13Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1129,
+   "t": "Fix Cowork model selection and Windows CLI packaging",
+   "u": "uwence",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-14T12:11:23Z",
+   "ua": "2026-05-16T02:10:46Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1127,
+   "t": "feat: add Astraflow provider support",
+   "u": "ucloudnb666",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-14T10:31:46Z",
+   "ua": "2026-05-14T10:31:46Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1121,
+   "t": "fix(update): restore automatic Update Now relaunch",
+   "u": "ntdung6868",
+   "c": 1,
+   "d": false,
+   "ca": "2026-05-14T07:24:43Z",
+   "ua": "2026-05-15T01:57:01Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 1115,
+   "t": "fix: prevent reasoning_content from being deleted unconditionally",
+   "u": "xinkai-yang",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-14T05:25:08Z",
+   "ua": "2026-05-14T05:25:40Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1107,
+   "t": "feat: api key token control + qol",
+   "u": "AntiTamper",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-13T20:56:53Z",
+   "ua": "2026-06-25T04:06:28Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1103,
+   "t": "feat(codex): allow multiple workspaces within the same OpenAI account",
+   "u": "pi9x",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-13T16:41:53Z",
+   "ua": "2026-05-15T18:56:47Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1100,
+   "t": "Fix droid settings and streaming passthrough",
+   "u": "QuangThai",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-13T16:10:54Z",
+   "ua": "2026-05-14T16:52:41Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1084,
+   "t": "fix(antigravity): drop literal <think>/</think> markers from Claude\u2192OpenAI stream",
+   "u": "abdofallah",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-13T09:05:20Z",
+   "ua": "2026-05-18T23:51:06Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1074,
+   "t": "Change export syntax from default to module.exports",
+   "u": "chitkarauniversity436-hub",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-13T04:53:25Z",
+   "ua": "2026-05-13T04:53:25Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 1054,
+   "t": "Fix: support OpenAI's max_completion_tokens parameter (OpenAI API model testing)",
+   "u": "blestafist",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-12T13:37:44Z",
+   "ua": "2026-05-12T15:17:07Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1047,
+   "t": "feat(CLI Tools): add jcode integration with auto-configuration",
+   "u": "vthnhtng",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-12T10:17:02Z",
+   "ua": "2026-05-12T10:17:02Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1044,
+   "t": "Add upstream model sync for providers",
+   "u": "xiaoge1688",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-12T08:22:31Z",
+   "ua": "2026-05-15T06:33:03Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1041,
+   "t": "fix: Next standalone Docker start path",
+   "u": "aldinokemal",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-12T07:16:18Z",
+   "ua": "2026-05-12T07:17:51Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1039,
+   "t": "Fix Docker Node.js runtime error caused by outputFileTracingRoot change",
+   "u": "rubby1228",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-12T05:49:45Z",
+   "ua": "2026-05-12T05:49:45Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1007,
+   "t": "fix: normalize Codex custom tools (apply_patch) to { input: string } schema",
+   "u": "nstung463",
+   "c": 2,
+   "d": false,
+   "ca": "2026-05-10T12:57:29Z",
+   "ua": "2026-05-29T02:16:32Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1004,
+   "t": "fix(cx): stabilize Codex continue sessions",
+   "u": "josephvoxone",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-10T10:16:28Z",
+   "ua": "2026-05-10T10:16:28Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 1001,
+   "t": "fix: add missing .unref() to Codex cleanup interval and response.body null guard for Cursor",
+   "u": "KeloYuan",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-10T08:42:41Z",
+   "ua": "2026-05-10T08:45:14Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 995,
+   "t": "add response headers for model tracking and observability",
+   "u": "smtdfc",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-09T18:17:48Z",
+   "ua": "2026-05-12T22:26:45Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 984,
+   "t": "Auto-load Chutes model catalog",
+   "u": "mugnimaestra",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-09T08:25:09Z",
+   "ua": "2026-05-09T08:25:09Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 980,
+   "t": "fix(claude): stop leaking think tags in OpenAI streams",
+   "u": "Gioxaa",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-09T06:04:56Z",
+   "ua": "2026-05-09T07:05:11Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 976,
+   "t": "fix(codex): preserve reasoning summary deltas",
+   "u": "Gioxaa",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-09T03:15:40Z",
+   "ua": "2026-05-09T07:04:47Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 963,
+   "t": "Add static provider integrations",
+   "u": "DEYLNN",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-08T04:25:16Z",
+   "ua": "2026-05-08T04:33:21Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 960,
+   "t": "Polish provider breadcrumbs and custom provider actions",
+   "u": "DEYLNN",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-08T02:34:52Z",
+   "ua": "2026-05-08T02:34:52Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 947,
+   "t": "fix: advance round-robin pointer past fallback-served model",
+   "u": "binsarjr",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-07T19:23:39Z",
+   "ua": "2026-05-07T19:23:39Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 944,
+   "t": "Harden exposed router management surfaces",
+   "u": "VIVEHACKER",
+   "c": 0,
+   "d": true,
+   "ca": "2026-05-07T18:27:53Z",
+   "ua": "2026-05-07T18:27:53Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 941,
+   "t": " fix: keep Codex workspaces as separate connections",
+   "u": "ilhambalebat",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-07T17:39:07Z",
+   "ua": "2026-05-07T17:39:07Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 931,
+   "t": "feat: add per-API-key device/connection tracking",
+   "u": "mugnimaestra",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-07T09:22:23Z",
+   "ua": "2026-05-08T02:43:10Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 923,
+   "t": "feat: add per-account proxy pool selection in EditConnectionModal",
+   "u": "vvduong",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-07T02:56:29Z",
+   "ua": "2026-05-07T02:56:29Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 918,
+   "t": "feat: enhance Cursor integration with new modes and tool handling",
+   "u": "triadmoko",
+   "c": 2,
+   "d": false,
+   "ca": "2026-05-06T18:57:46Z",
+   "ua": "2026-05-07T05:04:36Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 909,
+   "t": "Fix BytePlus endpoint and hide disabled models",
+   "u": "hbui290",
+   "c": 2,
+   "d": false,
+   "ca": "2026-05-06T05:24:31Z",
+   "ua": "2026-06-11T07:32:48Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 900,
+   "t": "Harden Antigravity OAuth, quota handling, and compatibility tests",
+   "u": "mugnimaestra",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-05T23:07:46Z",
+   "ua": "2026-05-05T23:07:46Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 891,
+   "t": "feat(cx): add GPT-5.5 Pro and GPT-5.4 Pro models with pricing",
+   "u": "mugnimaestra",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-05T12:47:46Z",
+   "ua": "2026-05-05T12:47:46Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 884,
+   "t": "fix: connection proxy not applied \u2014 preserve proxyPoolId on token refresh, use proxyAwareFetch in models sync",
+   "u": "H1d3rOne",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-05T03:19:39Z",
+   "ua": "2026-05-05T03:19:39Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 882,
+   "t": "fix(open-sse): decloak Claude tool names on every client-bound path",
+   "u": "TechNickAI",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-04T23:34:26Z",
+   "ua": "2026-05-27T05:19:08Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 879,
+   "t": "fix(executors): parse retryAfter timestamp for precise backoff on 429",
+   "u": "anuragg-saxenaa",
+   "c": 1,
+   "d": false,
+   "ca": "2026-05-04T16:33:45Z",
+   "ua": "2026-06-09T00:09:53Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 875,
+   "t": "Fix empty Anthropic thinking blocks",
+   "u": "josephvoxone",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-04T12:55:44Z",
+   "ua": "2026-05-05T12:05:38Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 873,
+   "t": "fix(codex): strip unsupported n8n Responses API params",
+   "u": "hiepau1231",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-04T08:46:47Z",
+   "ua": "2026-05-04T08:46:47Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 871,
+   "t": "Improve provider management and custom provider support",
+   "u": "DEYLNN",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-04T08:07:44Z",
+   "ua": "2026-05-04T08:19:48Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 865,
+   "t": "feat(cx): add reasoning effort variants for GPT-5.5 and GPT-5.4",
+   "u": "mugnimaestra",
+   "c": 4,
+   "d": false,
+   "ca": "2026-05-04T04:42:26Z",
+   "ua": "2026-07-15T17:11:32Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 864,
+   "t": "New version available: v0.4.15",
+   "u": "binh247",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-04T01:10:34Z",
+   "ua": "2026-08-03T06:20:03Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 854,
+   "t": "Add provider pool scoping for API keys",
+   "u": "linhvo229",
+   "c": 0,
+   "d": false,
+   "ca": "2026-05-03T11:11:40Z",
+   "ua": "2026-05-03T11:19:00Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 815,
+   "t": "feat: add Kiro MITM translation with AWS EventStream binary encoding",
+   "u": "HoaPham98",
+   "c": 0,
+   "d": false,
+   "ca": "2026-04-29T13:28:02Z",
+   "ua": "2026-04-29T14:10:23Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 811,
+   "t": "Proper fixes for \"I can't use the tool 'exec_ide' here\"",
+   "u": "TechNickAI",
+   "c": 0,
+   "d": false,
+   "ca": "2026-04-29T07:11:56Z",
+   "ua": "2026-04-29T07:11:56Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 794,
+   "t": "Perf/high concurrency",
+   "u": "kenzouno1",
+   "c": 0,
+   "d": false,
+   "ca": "2026-04-27T12:21:03Z",
+   "ua": "2026-04-27T12:21:03Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 758,
+   "t": "feat: add Antigravity auto-login with Puppeteer Stealth & Token Scheduler",
+   "u": "idbara",
+   "c": 0,
+   "d": false,
+   "ca": "2026-04-24T09:36:00Z",
+   "ua": "2026-04-24T09:36:00Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 721,
+   "t": "fix: suppress null Responses SSE frames and preserve completed output",
+   "u": "Marco9113",
+   "c": 2,
+   "d": false,
+   "ca": "2026-04-21T18:16:31Z",
+   "ua": "2026-05-04T10:28:40Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 717,
+   "t": "fix: align codex oauth models and request contract",
+   "u": "tuanminhhole",
+   "c": 1,
+   "d": false,
+   "ca": "2026-04-21T09:24:46Z",
+   "ua": "2026-05-01T17:01:50Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 702,
+   "t": "fix #681: separate usage tracking for Ollama Cloud vs local instances",
+   "u": "anuragg-saxenaa",
+   "c": 0,
+   "d": false,
+   "ca": "2026-04-19T14:44:58Z",
+   "ua": "2026-05-27T13:21:37Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 695,
+   "t": "fix: detect server OS instead of browser OS for MITM sudo modal (closes #694)",
+   "u": "anuragg-saxenaa",
+   "c": 1,
+   "d": false,
+   "ca": "2026-04-19T05:38:46Z",
+   "ua": "2026-04-27T08:09:49Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 693,
+   "t": "fix: mark ollama provider as noAuth to allow unauthenticated access",
+   "u": "anuragg-saxenaa",
+   "c": 1,
+   "d": false,
+   "ca": "2026-04-19T03:25:41Z",
+   "ua": "2026-04-27T08:09:49Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 665,
+   "t": "fix: add API key support for OpenCode Go provider (closes #662)",
+   "u": "anuragg-saxenaa",
+   "c": 3,
+   "d": false,
+   "ca": "2026-04-18T03:51:24Z",
+   "ua": "2026-05-06T21:13:06Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 664,
+   "t": "fix: translate max_tokens to max_completion_tokens for openai-compatible providers (closes #560)",
+   "u": "anuragg-saxenaa",
+   "c": 1,
+   "d": false,
+   "ca": "2026-04-18T02:35:59Z",
+   "ua": "2026-05-03T09:03:17Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 657,
+   "t": "fix: strip provider prefixes from remote /models IDs to avoid double-prefixing (closes #449)",
+   "u": "anuragg-saxenaa",
+   "c": 0,
+   "d": false,
+   "ca": "2026-04-18T00:39:30Z",
+   "ua": "2026-04-18T00:39:30Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 656,
+   "t": "fix: strip X-Stainless headers and normalize SDK User-Agent (closes #597)",
+   "u": "anuragg-saxenaa",
+   "c": 0,
+   "d": false,
+   "ca": "2026-04-18T00:28:02Z",
+   "ua": "2026-04-18T00:28:02Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 655,
+   "t": "fix: strip enumDescriptions from VSCode Copilot tool schemas for Antigravity (closes #549)",
+   "u": "anuragg-saxenaa",
+   "c": 0,
+   "d": false,
+   "ca": "2026-04-18T00:09:44Z",
+   "ua": "2026-04-18T00:09:44Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 653,
+   "t": "fix: catch ENOENT when sh is missing in minimal Docker images (closes #460)",
+   "u": "anuragg-saxenaa",
+   "c": 0,
+   "d": false,
+   "ca": "2026-04-17T20:47:59Z",
+   "ua": "2026-04-17T20:47:59Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 652,
+   "t": "fix: guard against corrupt JSON in request-details.json DB (closes #506)",
+   "u": "anuragg-saxenaa",
+   "c": 0,
+   "d": false,
+   "ca": "2026-04-17T20:17:26Z",
+   "ua": "2026-04-17T20:17:26Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 651,
+   "t": "fix: translate non-streaming Ollama tool_calls for OpenAI SDK stream=false (closes #302)",
+   "u": "anuragg-saxenaa",
+   "c": 0,
+   "d": false,
+   "ca": "2026-04-17T19:59:16Z",
+   "ua": "2026-04-17T19:59:16Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 650,
+   "t": "fix: remove false fs dependency from package.json (closes #528)",
+   "u": "anuragg-saxenaa",
+   "c": 0,
+   "d": false,
+   "ca": "2026-04-17T19:41:36Z",
+   "ua": "2026-04-27T06:52:54Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 649,
+   "t": "fix: allow per-connection refresh lead time override via providerSpecificData.refreshLeadMs (closes #593)",
+   "u": "anuragg-saxenaa",
+   "c": 0,
+   "d": false,
+   "ca": "2026-04-17T18:56:33Z",
+   "ua": "2026-04-17T18:56:33Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 648,
+   "t": "fix: reset models state on combo prop change to fix stale state (closes #531)",
+   "u": "anuragg-saxenaa",
+   "c": 0,
+   "d": false,
+   "ca": "2026-04-17T18:51:31Z",
+   "ua": "2026-04-17T18:51:31Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 647,
+   "t": "fix: guard against null/undefined combo.models on combos page (closes #526)",
+   "u": "anuragg-saxenaa",
+   "c": 0,
+   "d": false,
+   "ca": "2026-04-17T18:50:37Z",
+   "ua": "2026-04-17T18:50:37Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 646,
+   "t": "fix: enable Apply button for Codex CLI card when no API key dropdown (closes #591)",
+   "u": "anuragg-saxenaa",
+   "c": 0,
+   "d": false,
+   "ca": "2026-04-17T18:42:36Z",
+   "ua": "2026-04-17T18:42:36Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 645,
+   "t": "fix: force Agent mode when Claude CLI routes through Cursor provider",
+   "u": "anuragg-saxenaa",
+   "c": 2,
+   "d": false,
+   "ca": "2026-04-17T17:48:11Z",
+   "ua": "2026-05-06T21:13:07Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 644,
+   "t": "fix: make version update banner clickable to copy install command",
+   "u": "anuragg-saxenaa",
+   "c": 0,
+   "d": false,
+   "ca": "2026-04-17T16:16:38Z",
+   "ua": "2026-04-17T18:55:20Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 642,
+   "t": "fix: detect localhost Docker networking and suggest host IP in error messages",
+   "u": "anuragg-saxenaa",
+   "c": 0,
+   "d": false,
+   "ca": "2026-04-17T15:07:51Z",
+   "ua": "2026-04-17T15:07:51Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 641,
+   "t": "fix: add qwen-code provider for Qwen OAuth with user_code (closes #626)",
+   "u": "anuragg-saxenaa",
+   "c": 0,
+   "d": false,
+   "ca": "2026-04-17T11:46:11Z",
+   "ua": "2026-04-17T11:46:11Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 640,
+   "t": "fix: prevent infinite retry loop when account errors (closes #515)",
+   "u": "anuragg-saxenaa",
+   "c": 0,
+   "d": false,
+   "ca": "2026-04-17T11:21:01Z",
+   "ua": "2026-04-17T11:21:01Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 639,
+   "t": "fix: show actual computed cost in usage dashboard (closes #530)",
+   "u": "anuragg-saxenaa",
+   "c": 0,
+   "d": false,
+   "ca": "2026-04-17T09:21:28Z",
+   "ua": "2026-04-17T09:21:28Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 638,
+   "t": "fix: add batch multi-select for proxy pools (closes #527)",
+   "u": "anuragg-saxenaa",
+   "c": 0,
+   "d": false,
+   "ca": "2026-04-17T09:18:04Z",
+   "ua": "2026-04-17T09:18:04Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 637,
+   "t": "fix: fetch openrouter embedding/tts models dynamically via passthrough endpoint",
+   "u": "anuragg-saxenaa",
+   "c": 0,
+   "d": false,
+   "ca": "2026-04-17T06:37:23Z",
+   "ua": "2026-04-17T06:37:23Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 629,
+   "t": "fix: guard against null content parts to prevent NoneType error (closes #596)",
+   "u": "anuragg-saxenaa",
+   "c": 0,
+   "d": false,
+   "ca": "2026-04-17T01:08:57Z",
+   "ua": "2026-04-17T01:08:57Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 628,
+   "t": "fix: strip default values from tool schema in antigravity-to-openai (closes #561)",
+   "u": "anuragg-saxenaa",
+   "c": 0,
+   "d": false,
+   "ca": "2026-04-17T00:44:07Z",
+   "ua": "2026-04-17T00:44:07Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 621,
+   "t": "fix: try multiple Linux cert dirs and mkdir -p before installing Root CA (closes #558)",
+   "u": "anuragg-saxenaa",
+   "c": 0,
+   "d": false,
+   "ca": "2026-04-16T15:27:03Z",
+   "ua": "2026-04-16T15:27:03Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 601,
+   "t": "feat: add direct Claude translators + fix 400 error",
+   "u": "aerab243",
+   "c": 0,
+   "d": false,
+   "ca": "2026-04-15T20:54:42Z",
+   "ua": "2026-04-15T20:54:42Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 600,
+   "t": "feat: allow api key restriction by quota, models",
+   "u": "dangdinhquan",
+   "c": 0,
+   "d": false,
+   "ca": "2026-04-15T11:03:37Z",
+   "ua": "2026-04-24T01:06:57Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 586,
+   "t": "fix: forward client headers in native passthrough mode",
+   "u": "zerray",
+   "c": 0,
+   "d": false,
+   "ca": "2026-04-14T02:07:37Z",
+   "ua": "2026-04-14T02:07:37Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 584,
+   "t": "feat: add minimum quota reserve and account cooldown",
+   "u": "steel-code-agent",
+   "c": 1,
+   "d": false,
+   "ca": "2026-04-13T18:42:33Z",
+   "ua": "2026-04-29T07:37:13Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 577,
+   "t": "feat: add provider-wide model disable flow",
+   "u": "NaNomicon",
+   "c": 1,
+   "d": false,
+   "ca": "2026-04-13T06:59:55Z",
+   "ua": "2026-04-13T07:20:20Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 576,
+   "t": "feat: add configurable TTFT timeout fallback",
+   "u": "NaNomicon",
+   "c": 1,
+   "d": false,
+   "ca": "2026-04-13T06:59:55Z",
+   "ua": "2026-04-13T07:07:58Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 568,
+   "t": "[codex] Improve proxy pool UX/UI",
+   "u": "OziNetworkVN",
+   "c": 0,
+   "d": false,
+   "ca": "2026-04-12T09:46:01Z",
+   "ua": "2026-04-12T09:49:17Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 534,
+   "t": "feat: add Nous Research as built-in OAuth provider",
+   "u": "oxkage",
+   "c": 0,
+   "d": false,
+   "ca": "2026-04-09T02:53:23Z",
+   "ua": "2026-04-09T03:32:11Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 520,
+   "t": "Security: Dangerous unauthenticated global package installation endpoint",
+   "u": "tuanaiseo",
+   "c": 0,
+   "d": false,
+   "ca": "2026-04-07T11:22:50Z",
+   "ua": "2026-04-07T11:22:50Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 518,
+   "t": "fix: fetch API Key Compatible provider models for /v1/models endpoint",
+   "u": "anuragg-saxenaa",
+   "c": 0,
+   "d": false,
+   "ca": "2026-04-07T00:17:31Z",
+   "ua": "2026-04-07T00:17:31Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 513,
+   "t": "feat: add webhook notifications and error history for provider errors",
+   "u": "toanalien",
+   "c": 0,
+   "d": false,
+   "ca": "2026-04-06T10:48:37Z",
+   "ua": "2026-04-06T10:50:34Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 501,
+   "t": "fix: ensure dashboard binds to provided host (Next.js --hostname) (cl\u2026",
+   "u": "anuragg-saxenaa",
+   "c": 0,
+   "d": false,
+   "ca": "2026-04-05T05:17:41Z",
+   "ua": "2026-04-05T05:17:41Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 485,
+   "t": "fix: use providerId for passthrough model alias lookup (closes #483)",
+   "u": "anuragg-saxenaa",
+   "c": 0,
+   "d": false,
+   "ca": "2026-04-03T04:23:09Z",
+   "ua": "2026-04-03T04:23:09Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 474,
+   "t": "fix: resolve bare model names to connection defaultModel before upstream calls",
+   "u": "anuragg-saxenaa",
+   "c": 0,
+   "d": false,
+   "ca": "2026-04-02T03:33:41Z",
+   "ua": "2026-05-04T16:31:57Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 469,
+   "t": "Disable 9remote by default",
+   "u": "TonisOrmisson",
+   "c": 0,
+   "d": false,
+   "ca": "2026-04-01T11:52:32Z",
+   "ua": "2026-04-01T11:52:32Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 468,
+   "t": "skip all modifications for same-format requests (lossless passthrough)",
+   "u": "kwanLeeFrmVi",
+   "c": 1,
+   "d": true,
+   "ca": "2026-04-01T10:46:47Z",
+   "ua": "2026-04-04T16:49:36Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 467,
+   "t": "Add global IP allowlist middleware",
+   "u": "TonisOrmisson",
+   "c": 0,
+   "d": false,
+   "ca": "2026-04-01T10:10:43Z",
+   "ua": "2026-04-15T08:59:28Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 466,
+   "t": " Fix responses transformer to properly close reasoning before message content",
+   "u": "kwanLeeFrmVi",
+   "c": 1,
+   "d": false,
+   "ca": "2026-04-01T07:38:04Z",
+   "ua": "2026-04-01T10:58:16Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 448,
+   "t": "feat(api-keys): per-key model and account restrictions",
+   "u": "steel-code-agent",
+   "c": 2,
+   "d": false,
+   "ca": "2026-03-29T20:50:21Z",
+   "ua": "2026-04-29T07:37:13Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 447,
+   "t": "fix(db/docker): bootstrap db.json on first run & set DATA_DIR in Docker",
+   "u": "steel-code-agent",
+   "c": 1,
+   "d": false,
+   "ca": "2026-03-29T18:37:35Z",
+   "ua": "2026-04-29T07:37:13Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 437,
+   "t": "feat: tool capability awareness for built-in tools",
+   "u": "East-rayyy",
+   "c": 0,
+   "d": false,
+   "ca": "2026-03-27T14:48:13Z",
+   "ua": "2026-03-27T15:08:01Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 424,
+   "t": "fix(usage): correct stats truncation at 10k requests and make history cap configurable",
+   "u": "toniim",
+   "c": 0,
+   "d": false,
+   "ca": "2026-03-25T03:06:36Z",
+   "ua": "2026-04-05T03:21:02Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 422,
+   "t": "fix: coerce string numeric JSON Schema constraints to integers in tool translation",
+   "u": "anuragg-saxenaa",
+   "c": 0,
+   "d": false,
+   "ca": "2026-03-24T19:24:47Z",
+   "ua": "2026-03-24T19:24:47Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 421,
+   "t": "fix: coerce tool description to string in all translation paths",
+   "u": "anuragg-saxenaa",
+   "c": 0,
+   "d": false,
+   "ca": "2026-03-24T19:20:59Z",
+   "ua": "2026-03-24T19:20:59Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 420,
+   "t": "fix: convert Gemini body to OpenAI format in antigravity MITM handler",
+   "u": "anuragg-saxenaa",
+   "c": 0,
+   "d": false,
+   "ca": "2026-03-24T19:13:30Z",
+   "ua": "2026-03-24T19:13:30Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 412,
+   "t": "perf(chat): cache request-scoped DB lookups + fix translator normalization & cursor auto-import",
+   "u": "FRBIE",
+   "c": 2,
+   "d": false,
+   "ca": "2026-03-24T11:25:55Z",
+   "ua": "2026-03-30T15:28:14Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 410,
+   "t": "fix: skip quota-exhausted combo models across requests",
+   "u": "anuragg-saxenaa",
+   "c": 6,
+   "d": false,
+   "ca": "2026-03-24T04:08:57Z",
+   "ua": "2026-04-15T14:04:18Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 407,
+   "t": "feat: add Windsurf IDE support",
+   "u": "anuragg-saxenaa",
+   "c": 7,
+   "d": false,
+   "ca": "2026-03-24T00:00:19Z",
+   "ua": "2026-06-29T03:43:52Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 400,
+   "t": "feat: add test suite (96 tests) and GitHub Actions CI workflow",
+   "u": "East-rayyy",
+   "c": 0,
+   "d": false,
+   "ca": "2026-03-23T20:23:33Z",
+   "ua": "2026-03-24T13:45:12Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 399,
+   "t": "fix: respect DATA_DIR and XDG_CONFIG_HOME in all data paths",
+   "u": "East-rayyy",
+   "c": 0,
+   "d": false,
+   "ca": "2026-03-23T20:23:07Z",
+   "ua": "2026-03-23T20:23:07Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 392,
+   "t": "feat: bypass agent tool-call loops to save GitHub Copilot quota",
+   "u": "bitgineer",
+   "c": 7,
+   "d": false,
+   "ca": "2026-03-23T04:46:51Z",
+   "ua": "2026-03-30T07:41:49Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 361,
+   "t": "feat: Add Amp CLI support as a CLI tool destination",
+   "u": "longptal",
+   "c": 0,
+   "d": false,
+   "ca": "2026-03-19T18:38:51Z",
+   "ua": "2026-03-19T18:38:51Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 360,
+   "t": "Updated non-streaming responses for OpenAI compatible clients having agentic use-cases",
+   "u": "copsys",
+   "c": 1,
+   "d": false,
+   "ca": "2026-03-19T16:20:30Z",
+   "ua": "2026-03-23T20:52:07Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 349,
+   "t": "fix: sanitize OpenAI tool schemas for strict Codex validation",
+   "u": "allenyoung25",
+   "c": 2,
+   "d": false,
+   "ca": "2026-03-18T13:57:29Z",
+   "ua": "2026-03-23T20:38:32Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 345,
+   "t": "fix: preserve tool_calls during SSE-to-JSON reassembly",
+   "u": "East-rayyy",
+   "c": 0,
+   "d": false,
+   "ca": "2026-03-18T11:57:39Z",
+   "ua": "2026-03-18T11:57:39Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 339,
+   "t": "fix: show model name instead of raw ID in combo list",
+   "u": "East-rayyy",
+   "c": 0,
+   "d": false,
+   "ca": "2026-03-18T09:08:31Z",
+   "ua": "2026-03-18T09:08:31Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 337,
+   "t": "fix: retry transient errors before falling through combo chain",
+   "u": "East-rayyy",
+   "c": 0,
+   "d": false,
+   "ca": "2026-03-18T07:26:05Z",
+   "ua": "2026-03-18T07:35:07Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 297,
+   "t": "feat: add manual token refresh, time-based filters, and fix provider auth issues",
+   "u": "fgogolli",
+   "c": 3,
+   "d": false,
+   "ca": "2026-03-13T10:09:10Z",
+   "ua": "2026-04-29T10:16:54Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 290,
+   "t": "feat: respect Accept header for response format negotiation",
+   "u": "rothnic",
+   "c": 1,
+   "d": false,
+   "ca": "2026-03-12T18:43:52Z",
+   "ua": "2026-04-10T12:49:48Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 286,
+   "t": "Fix: SSE data: [DONE] sentinel for non-streaming requests (complements PR #285)",
+   "u": "rothnic",
+   "c": 3,
+   "d": false,
+   "ca": "2026-03-12T15:12:37Z",
+   "ua": "2026-04-10T12:51:13Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 259,
+   "t": "feat: Add comprehensive Playground UI for model testing",
+   "u": "fdkgenie",
+   "c": 2,
+   "d": false,
+   "ca": "2026-03-07T06:54:13Z",
+   "ua": "2026-06-12T21:56:48Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 257,
+   "t": "(feat) Add Ramclouds provider and integrate Amp CLI support",
+   "u": "fdkgenie",
+   "c": 2,
+   "d": false,
+   "ca": "2026-03-06T21:37:34Z",
+   "ua": "2026-03-23T20:52:39Z",
+   "aa": "NONE"
+  },
+  {
+   "n": 224,
+   "t": "feat(api-keys): add per-API-key model allowlist filtering",
+   "u": "toanalien",
+   "c": 3,
+   "d": false,
+   "ca": "2026-03-01T02:10:01Z",
+   "ua": "2026-03-24T13:19:47Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 189,
+   "t": "Implement per-provider proxy configuration",
+   "u": "toanalien",
+   "c": 1,
+   "d": false,
+   "ca": "2026-02-24T08:04:37Z",
+   "ua": "2026-03-24T03:28:58Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 141,
+   "t": "feat(antigravity): initial steps for Antigravity anti-ban alignment",
+   "u": "LinearSakana",
+   "c": 10,
+   "d": false,
+   "ca": "2026-02-17T03:15:15Z",
+   "ua": "2026-06-12T21:56:48Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 137,
+   "t": "feat: implement TLS fingerprint spoofing via wreq-js",
+   "u": "LinearSakana",
+   "c": 2,
+   "d": false,
+   "ca": "2026-02-16T07:51:09Z",
+   "ua": "2026-06-12T21:56:32Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 130,
+   "t": "feat: implement \"force fallback\" strategy for unavailable providers",
+   "u": "LinearSakana",
+   "c": 2,
+   "d": false,
+   "ca": "2026-02-15T14:43:27Z",
+   "ua": "2026-06-12T21:56:32Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 112,
+   "t": "feat: implement comprehensive duplicate provider connection handling",
+   "u": "toanalien",
+   "c": 2,
+   "d": false,
+   "ca": "2026-02-12T03:30:20Z",
+   "ua": "2026-06-12T21:56:32Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 111,
+   "t": "feat: Add GitHub username sync feature",
+   "u": "toanalien",
+   "c": 3,
+   "d": false,
+   "ca": "2026-02-12T02:05:33Z",
+   "ua": "2026-06-12T21:56:32Z",
+   "aa": "CONTRIBUTOR"
+  },
+  {
+   "n": 1,
+   "t": "Usage tab + Sticky round-robin + Auth + Logger +small fixes",
+   "u": "catalinstanciu92",
+   "c": 2,
+   "d": false,
+   "ca": "2026-01-06T22:22:47Z",
+   "ua": "2026-02-13T08:35:31Z",
+   "aa": "NONE"
+  }
+ ]
+}

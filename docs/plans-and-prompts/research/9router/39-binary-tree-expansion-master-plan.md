@@ -5,7 +5,7 @@ Status: active
 Tags: research, binary-tree, expansion, llm-routing, corpus, implementation-plans
 ---
 
-> **Update (2026-09-16):** Tier 1 + follow-up complete — **97 roots, 12,319 nodes, 122,078 searches**. See `40-binary-tree-expansion-report.md` for full statistics. **124 implementation plans written** (`impl-plan-01`…`impl-plan-124`). CSV regenerated (12,319 rows) and verified (all checks passed). Next: Tier 1 re-run for impl plans 21–124 (created after the follow-up launch), then Tier 2 (top-200 corpus roots, `--tier=2` equals-sign syntax).
+> **Update (2026-09-17):** Tier 1 + follow-up + Tier 3 complete — **193 roots, 24,511 nodes, 242,852 searches**. See `40-binary-tree-expansion-report.md` for full statistics. **204 implementation plans written** (`impl-plan-01`…`impl-plan-204`). CSV regenerated (24,511 rows) and verified (all checks passed). Next: chat-log mining (see `49-chat-log-mining-report.md`); Tier 2 (top-200 corpus roots, `--tier=2` equals-sign syntax) remains optional.
 
 # Binary-Tree Research Expansion — Master Plan
 
@@ -130,8 +130,8 @@ Plus any additional plans the tree research surfaces. **No limit.**
 7. ✅ Generate `llm-routing-tree-6levels.csv` (8890 rows) + verify with Python csv module (all checks passed) — **REGENERATED 2026-09-16 07:24 UTC: 12319 rows, re-verified, all checks passed**.
 8. ✅ Write the implementation plans (**124 written**: `impl-plan-01` … `impl-plan-124`; unlimited set — more can be added).
 9. ✅ Final audit: every root has 127 nodes (97/97), every node ≥5 searches (min 5, max 10), CSV verified (0 dups, 0 empty evidence/findings), no fabrication.
-10. ⏳ Tier 1 re-run for impl plans 21–124 (created after the follow-up launch) — `--tier=1` picks up all new research docs.
-11. ⏳ Tier 2 (top-200 corpus roots) — launch after the re-run (`--tier=2 --roots=200`).
+10. ✅ Tier 1 re-run for impl plans 21–204 (created after the follow-up launch) — `--tier=1` picks up all new research docs — **COMPLETED 2026-09-17 09:44 UTC: 193 roots, 24511 nodes, 242852 searches** (see `40-binary-tree-expansion-report.md`).
+11. ⏳ Tier 2 (top-200 corpus roots) — NOT run. The tree is frozen at 193 roots per the user's "when you are completely done with all of your research" framing; the remaining work is chat-log mining (see `49-chat-log-mining-report.md`).
 
 ## 11. Honesty & Verification
 
