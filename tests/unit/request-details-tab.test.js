@@ -14,8 +14,6 @@ let adapter;
 async function saveDetail(detail) {
   await db.saveRequestDetail(detail);
   await new Promise((r) => setTimeout(r, 120));
-  // Force the buffered writer to flush so the row is on disk before reading
-  await db.flushRequestDetails();
 }
 
 beforeAll(async () => {
@@ -24,6 +22,8 @@ beforeAll(async () => {
   vi.resetModules();
   db = await import("@/lib/db/index.js");
   await db.initDb();
+  // 3fab15ae moved the switch back to enableObservability (default false); the old
+  // enableObservability2 key is ignored, which left request details disabled here.
   await db.updateSettings({ enableObservability: true, observabilityBatchSize: 1 });
 
   const { getAdapter } = await import("@/lib/db/driver.js");
@@ -134,13 +134,13 @@ describe("backupDbLite — excludes requestDetails, keeps critical data", () => 
     const dest = backupDbLite(adapter, backupDir);
     expect(fs.existsSync(dest)).toBe(true);
 
-    // Open backup and assert requestDetails is absent, settings present
+    // Open backup and assert requestDetails is empty, settings present
     const Database = (await import("better-sqlite3")).default;
     const bak = new Database(dest);
     try {
       // requestDetails is fully excluded — table must not exist in the backup
-      const tables = bak.prepare("SELECT name FROM sqlite_master WHERE type='table'").all().map((r) => r.name);
-      expect(tables).not.toContain("requestDetails");
+      const rdTable = bak.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='requestDetails'").get();
+      expect(rdTable).toBeUndefined();
       // Critical data preserved
       const st = bak.prepare("SELECT COUNT(*) c FROM settings").get();
       expect(st.c).toBeGreaterThanOrEqual(1);

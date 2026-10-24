@@ -5,8 +5,73 @@
 import { checkFallbackError, formatRetryAfter } from "./accountFallback.js";
 import { unavailableResponse } from "../utils/error.js";
 import { getCapabilitiesForModel } from "../providers/capabilities.js";
+import { parseModel } from "./model.js";
 import { extractTextContent } from "../translator/formats/gemini.js";
 import { estimatePromptTokens } from "../utils/tokenEstimate.js";
+import { peekStreamForContent, reconstructStream, isNoRetryFinish } from "./emptyFailover.js";
+import {
+  getStickyComboModel,
+  setStickyComboModel,
+  clearStickyComboSession,
+  orderModelsByChoice,
+} from "./systemoneRouter.js";
+
+// Peek a 2xx combo response for real content. Returns null for non-SSE responses (leave
+// them untouched). For SSE, returns { outcome: "content"|"empty", finishReason, response }
+// where `response` is a faithful replay of the original stream (head buffer + live reader).
+async function peekComboResponse(result, log) {
+  const ct = (result.headers.get("content-type") || "").toLowerCase();
+  if (!result.body || !ct.includes("text/event-stream")) return null;
+  const peeked = await peekStreamForContent(result.body);
+  const response = new Response(reconstructStream(peeked.head, peeked.reader, peeked.pendingRead), {
+    status: result.status,
+    statusText: result.statusText,
+    headers: result.headers,
+  });
+  return { outcome: peeked.outcome, finishReason: peeked.finishReason, timedOut: peeked.timedOut, response };
+}
+
+// Context-aware routing: if the estimated prompt exceeds a threshold, float the
+// overflow target to the front of the attempt list so large prompts land on a
+// high-context model instead of being round-robined onto a small-context one.
+function applyContextAwareRouting({ body, models, config, log }) {
+  if (!config?.enabled) return { rerouted: false, models };
+  const messages = body?.messages;
+  if (!Array.isArray(messages) || messages.length === 0) return { rerouted: false, models };
+
+  let estimated = 0;
+  try {
+    estimated = estimatePromptTokens(messages);
+  } catch {
+    return { rerouted: false, models };
+  }
+
+  const threshold = typeof config.thresholdTokens === "number" ? config.thresholdTokens : 100000;
+  if (estimated < threshold) return { rerouted: false, models };
+
+  const target = config.overflowTarget;
+  if (!target || !models.includes(target)) return { rerouted: false, models };
+
+  const reordered = [target, ...models.filter((m) => m !== target)];
+  return { rerouted: true, models: reordered, promptTokens: estimated };
+}
+
+// Detect zero-content responses: HTTP 200 with empty choices/content.
+// Used to trigger failover when a model returns success but no usable output.
+function isZeroContentResponse(body) {
+  if (!body || typeof body !== "object") return false;
+  if (Array.isArray(body.choices)) {
+    const first = body.choices[0];
+    if (!first) return true;
+    const msg = first.message || first.delta || {};
+    const content = msg.content;
+    if (content === "" || content === null || content === undefined) {
+      if (Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0) return false;
+      return true;
+    }
+  }
+  return false;
+}
 
 // Hard capabilities = input modalities; missing one drops request data (e.g. image
 // stripped). Must be prioritized. Soft (e.g. search) only degrades a feature.
@@ -76,18 +141,10 @@ export function reorderByCapabilities(models, required) {
   };
 
   // Stable sort by tier (Array.prototype.sort is stable in modern engines).
-  const ranked = models.map((m, i) => ({ m, i, t: tierOf(m) }));
-  const sorted = ranked
-    .slice()
-    .sort((a, b) => a.t - b.t || a.i - b.i);
-  // If the sort produced the same element order, return the original array
-  // reference to preserve caller identity checks (toBe).
-  let sameOrder = true;
-  for (let k = 0; k < sorted.length; k++) {
-    if (sorted[k].i !== k) { sameOrder = false; break; }
-  }
-  if (sameOrder) return models;
-  return sorted.map((x) => x.m);
+  return models
+    .map((m, i) => ({ m, i, t: tierOf(m) }))
+    .sort((a, b) => a.t - b.t || a.i - b.i)
+    .map((x) => x.m);
 }
 
 /**
@@ -187,18 +244,7 @@ export function detectRequiredCapabilities(body) {
   const contents = body.contents || body.request?.contents;                      // gemini / antigravity
   for (const c of trailingUserItems(contents)) scanContent(c.parts);
 
-  // search: request-wide — scan tools for web_search / server-tool search variants.
-  if (Array.isArray(body.tools)) {
-    for (const tool of body.tools) {
-      if (!tool || typeof tool !== "object") continue;
-      const t = tool.type || tool.function?.name || tool.name;
-      if (typeof t !== "string") continue;
-      if (t === "web_search" || t.startsWith("web_search_") || t === "search" || t.includes("web_search")) {
-        required.add("search");
-        break;
-      }
-    }
-  }
+  // search: temporarily disabled in auto-switch (feature not wired yet).
 
   return required;
 }
@@ -261,66 +307,13 @@ export function getRotatedModels(models, comboName, strategy, stickyLimit = 1) {
  * @param {string} [comboName] - Combo name to reset; omit to clear all
  */
 export function resetComboRotation(comboName) {
-  if (comboName) comboRotationState.delete(comboName);
-  else comboRotationState.clear();
-}
-
-const CONTEXT_AWARE_DEFAULTS = {
-  enabled: false,
-  overflowTarget: null,   // model id to reroute to when prompt exceeds threshold
-  thresholdTokens: 200000, // prompts at/over this many estimated tokens reroute
-};
-
-/**
- * Context-aware routing ("overflowTarget"): when a request's estimated prompt
- * size exceeds the combo's configured threshold, float the overflowTarget to
- * the FRONT of the attempt list so the big prompt goes to a large-context
- * model (e.g. qwen) instead of failing against a 200K-context model.
- *
- * Usually called AFTER rotation/capability reordering so it is the final
- * adjustment — a deliberately huge prompt should not be round-robined onto a
- * small-context model first. Fallback is preserved: if the target fails, the
- * rest of the combo list still runs.
- *
- * Returns { models, rerouted, promptTokens } so callers can log/observe.
- * Never throws — routing must not break on a counting edge case.
- */
-export function applyContextAwareRouting({ body, models, config, log }) {
-  const cfg = {
-    ...CONTEXT_AWARE_DEFAULTS,
-    ...(config && typeof config === "object" ? config : {}),
-  };
-  if (!cfg.enabled || !cfg.overflowTarget || !Array.isArray(models) || models.length === 0) {
-    return { models, rerouted: false, promptTokens: 0 };
+  if (comboName) {
+    comboRotationState.delete(comboName);
+    clearStickyComboSession(comboName);
+  } else {
+    comboRotationState.clear();
+    clearStickyComboSession();
   }
-
-  let promptTokens = 0;
-  try {
-    promptTokens = estimatePromptTokens(body);
-  } catch (e) {
-    if (log?.warn) log.warn("COMBO", "context-aware routing: token estimate failed, skipping", { error: e?.message || String(e) });
-    return { models, rerouted: false, promptTokens: 0 };
-  }
-
-  if (promptTokens < cfg.thresholdTokens) {
-    return { models, rerouted: false, promptTokens };
-  }
-
-  // Target already first (or already in the list) — nothing to reorder.
-  if (models[0] === cfg.overflowTarget) {
-    return { models, rerouted: true, promptTokens };
-  }
-
-  const targetIndex = models.indexOf(cfg.overflowTarget);
-  if (targetIndex === -1) {
-    // Target not in the combo — prepend it; it becomes the ONLY attempt for
-    // this request, which is the point of an overflow sink.
-    return { models: [cfg.overflowTarget, ...models], rerouted: true, promptTokens };
-  }
-
-  // Move the target to the front, keep the rest in original order.
-  const next = [cfg.overflowTarget, ...models.slice(0, targetIndex), ...models.slice(targetIndex + 1)];
-  return { models: next, rerouted: true, promptTokens };
 }
 
 /**
@@ -344,6 +337,46 @@ export function getComboModelsFromData(modelStr, combosData) {
 }
 
 /**
+ * Detect whether a 2xx JSON response contains zero usable content
+ * (e.g. empty assistant message with in_progress/incomplete)
+ * so combo fallback can continue to the next model.
+ */
+export function isZeroContentResponse(data) {
+  if (!data || typeof data !== "object") return false;
+
+  // OpenAI chat format
+  if (Array.isArray(data.choices)) {
+    if (data.choices.length === 0) return true;
+    const choice = data.choices[0];
+    if (!choice) return true;
+
+    const msg = choice.message || choice.delta;
+    const content = msg?.content;
+    const hasContent = typeof content === "string" ? content.trim().length > 0 : (Array.isArray(content) && content.length > 0);
+    const hasToolCalls = (Array.isArray(msg?.tool_calls) && msg.tool_calls.length > 0) || Boolean(msg?.function_call);
+    const hasReasoning = typeof msg?.reasoning_content === "string" ? msg.reasoning_content.trim().length > 0 : false;
+
+    const finish = choice.finish_reason;
+    const isNormalFinish = finish === "stop" || finish === "length" || finish === "tool_calls" || finish === "function_call";
+
+    if (!hasContent && !hasToolCalls && !hasReasoning && (!isNormalFinish || finish === "in_progress" || finish === "incomplete")) {
+      return true;
+    }
+  }
+
+  // Anthropic messages format
+  if (Array.isArray(data.content)) {
+    const hasContent = data.content.some((c) => (c.type === "text" && c.text?.trim().length > 0) || c.type === "tool_use");
+    const stopReason = data.stop_reason;
+    if (!hasContent && (!stopReason || stopReason === "in_progress" || stopReason === "incomplete")) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/**
  * Handle combo chat with fallback
  * @param {Object} options
  * @param {Object} options.body - Request body
@@ -351,40 +384,123 @@ export function getComboModelsFromData(modelStr, combosData) {
  * @param {Function} options.handleSingleModel - Function to handle single model: (body, modelStr) => Promise<Response>
  * @param {Object} options.log - Logger object
  * @param {string} [options.comboName] - Name of the combo (for round-robin tracking)
- * @param {string} [options.comboStrategy] - Strategy: "fallback" or "round-robin"
+ * @param {string} [options.comboStrategy] - Strategy: "fallback", "round-robin", or "smart"
  * @param {number|string} [options.comboStickyLimit=1] - Requests per combo model before switching
- * @param {boolean} [options.autoSwitch=true] - Reorder models by required capabilities
+ * @param {boolean} [options.autoSwitch=true] - Capability auto-switching
+ * @param {string|null} [options.sessionId=null] - Client session identifier for prompt cache retention
+ * @param {string} [options.smartPolicy="smart"] - Policy: "smart" (adaptive ≥80%), "strict" (lock 1st model), "per-turn", or "custom"
+ * @param {boolean} [options.sessionSticky=true] - Keep chosen model across session requests to retain prompt cache
+ * @param {number} [options.confidenceThreshold=0.8] - Minimum confidence required for model switch (0-1)
+ * @param {Function|null} [options.resolveSmartChoice=null] - Smart router resolver callback: (body, models) => Promise<{ choice, probabilities, confidence } | null>
  * @param {Function} [options.onFallbackEvent] - Per-attempt callback (attempt) => void for observability
- * @param {number} [options.retriesPerModel=1] - How many times to retry a model on retryable errors before moving to the next. 1 = current behavior (try once).
+ * @param {number} [options.retriesPerModel=1] - How many times to retry a model on retryable errors before moving to the next
  * @param {Object} [options.perModelRetries=null] - Optional per-model override map: { "provider/model": retries }
- * @param {Object} [options.contextAwareRouting=null] - Optional per-combo config: { enabled, overflowTarget, thresholdTokens }. When enabled and the estimated prompt exceeds thresholdTokens, the overflowTarget floats to the front of the attempt list (see applyContextAwareRouting).
+ * @param {Object} [options.contextAwareRouting=null] - Optional per-combo config: { enabled, overflowTarget, thresholdTokens }
  * @returns {Promise<Response>}
  */
-export async function handleComboChat({ body, models, handleSingleModel, log, comboName, comboStrategy, comboStickyLimit = 1, autoSwitch = true, onFallbackEvent = null, retriesPerModel = 1, perModelRetries = null, contextAwareRouting = null }) {
-  // Per-request circuit breaker: cache failed providers to avoid retrying dead endpoints
-  const failedProviders = new Set();
+export async function handleComboChat({
+  body,
+  models,
+  handleSingleModel,
+  log,
+  comboName,
+  comboStrategy,
+  comboStickyLimit = 1,
+  autoSwitch = true,
+  sessionId = null,
+  smartPolicy = "smart",
+  sessionSticky = true,
+  confidenceThreshold = 0.8,
+  resolveSmartChoice = null,
+  onFallbackEvent = null,
+  retriesPerModel = 1,
+  perModelRetries = null,
+  contextAwareRouting = null,
+}) {
+  let rotatedModels = models;
+  let activeStickyModel = null;
 
-  // Extract provider from model string (e.g., "dialagram/qwen-3.8-max" -> "dialagram")
-  const getProvider = (modelStr) => {
-    const slash = modelStr.indexOf("/");
-    return slash > 0 ? modelStr.slice(0, slash) : "";
-  };
+  if (comboStrategy === "smart") {
+    const policy = (typeof smartPolicy === "string" ? smartPolicy : "smart").toLowerCase();
+    const isPerTurn = policy === "per-turn" || sessionSticky === false;
+    const isStrict = policy === "strict";
 
-  // Classify error as provider-level (skip remaining models) vs model-level (continue)
-  const isProviderLevelError = (status, errorText) => {
-    const text = (errorText || "").toLowerCase();
-    // Provider-level: auth failures, gateway errors, network issues
-    if ([401, 403, 502, 503].includes(status)) return true;
-    if (text.includes("no credentials") || text.includes("account disabled") || text.includes("service unavailable")) return true;
-    if (text.includes("econnrefused") || text.includes("etimedout") || text.includes("dns")) return true;
-    return false;
-  };
+    let switchThreshold = 0.8;
+    if (policy === "custom") {
+      const custom = Number(confidenceThreshold);
+      if (Number.isFinite(custom) && custom > 0) switchThreshold = custom;
+    } else if (policy === "smart-switch-70") switchThreshold = 0.7;
+    else if (policy === "smart-switch-90") switchThreshold = 0.9;
+    else if (policy.startsWith("smart-switch") || policy === "smart") {
+      const custom = Number(confidenceThreshold);
+      if (Number.isFinite(custom) && custom > 0) switchThreshold = custom;
+    }
 
-  // Fallback chain observability: one entry per attempted model, oldest first.
-  const fallbackChain = [];
+    if (!isPerTurn && sessionId) {
+      activeStickyModel = getStickyComboModel(comboName, sessionId, models);
+    }
 
-  // Apply rotation strategy if enabled
-  let rotatedModels = getRotatedModels(models, comboName, comboStrategy, comboStickyLimit);
+    if (activeStickyModel) {
+      if (isStrict) {
+        // Strict Lock: re-use sticky model without invoking System One (0ms, 0 extra tokens)
+        rotatedModels = [activeStickyModel, ...models.filter((m) => m !== activeStickyModel)];
+        log.info("COMBO", `smart-router [strict] locked session "${sessionId}" → ${activeStickyModel}`);
+      } else if (typeof resolveSmartChoice === "function") {
+        // Smart Switch (Adaptive): check if the user's task drastically shifted
+        try {
+          const smartResult = await resolveSmartChoice(body, models);
+          const newChoice = smartResult?.choice;
+          const conf = typeof smartResult?.confidence === "number" ? smartResult.confidence : null;
+
+          if (newChoice && newChoice !== activeStickyModel && models.includes(newChoice) && conf !== null && conf >= switchThreshold) {
+            // Task changed with high confidence: switch model and update session
+            rotatedModels = orderModelsByChoice(models, smartResult);
+            log.info("COMBO", `smart-router [smart-switch] task changed → switched from ${activeStickyModel} to ${newChoice} (confidence: ${conf} >= ${switchThreshold})`);
+            if (sessionId) {
+              setStickyComboModel(comboName, sessionId, newChoice);
+              activeStickyModel = newChoice;
+            }
+          } else {
+            // Stay on current model to preserve warm prompt cache
+            rotatedModels = [activeStickyModel, ...models.filter((m) => m !== activeStickyModel)];
+            log.info("COMBO", `smart-router [smart-switch] retained prompt cache model "${activeStickyModel}"`);
+          }
+        } catch (err) {
+          // Fail open to active sticky model
+          rotatedModels = [activeStickyModel, ...models.filter((m) => m !== activeStickyModel)];
+          log.warn("COMBO", `smart-router error, retained model "${activeStickyModel}"`, { error: err?.message || String(err) });
+        }
+      } else {
+        rotatedModels = [activeStickyModel, ...models.filter((m) => m !== activeStickyModel)];
+      }
+    } else if (typeof resolveSmartChoice === "function") {
+      // Turn 1 or per-turn: evaluate System One to select initial model
+      try {
+        const smartResult = await resolveSmartChoice(body, models);
+        const conf = typeof smartResult?.confidence === "number" ? smartResult.confidence : null;
+
+        if (smartResult?.choice && models.includes(smartResult.choice)) {
+          if (switchThreshold > 0 && conf !== null && conf < switchThreshold) {
+            log.info("COMBO", `smart-router confidence (${conf}) below threshold (${switchThreshold}), fallback to order: [${models.join(", ")}]`);
+          } else {
+            rotatedModels = orderModelsByChoice(models, smartResult);
+            log.info("COMBO", `smart-router selected ${smartResult.choice} (confidence: ${conf ?? "N/A"})`);
+            if (!isPerTurn && sessionId) {
+              setStickyComboModel(comboName, sessionId, smartResult.choice);
+              activeStickyModel = smartResult.choice;
+            }
+          }
+        } else {
+          log.info("COMBO", `smart-router no decision, fallback to order: [${models.join(", ")}]`);
+        }
+      } catch (err) {
+        log.warn("COMBO", `smart-router error, fallback to order: [${models.join(", ")}]`, { error: err?.message || String(err) });
+      }
+    }
+  } else {
+    // Apply rotation strategy if enabled
+    rotatedModels = getRotatedModels(models, comboName, comboStrategy, comboStickyLimit);
+  }
 
   // Auto-switch: float models that satisfy the request's required capabilities to the front.
   if (autoSwitch) {
@@ -397,69 +513,67 @@ export async function handleComboChat({ body, models, handleSingleModel, log, co
       rotatedModels = reordered;
     }
   }
-
-  // Context-aware routing: if the prompt is huge, send it to the overflow
-  // target instead of the normal rotation order (final adjustment — runs
-  // after rotation + capability reordering so a big prompt is never
-  // round-robined onto a small-context model first).
-  let contextRerouted = false;
-  if (contextAwareRouting) {
-    const routed = applyContextAwareRouting({ body, models: rotatedModels, config: contextAwareRouting, log });
-    if (routed.rerouted) {
-      contextRerouted = true;
-      const target = contextAwareRouting.overflowTarget;
-      log.warn(
-        "COMBO",
-        `context-overflow reroute: est ${routed.promptTokens} tokens ≥ ${contextAwareRouting.thresholdTokens} → ${target} (was ${rotatedModels[0]})`
-      );
-    }
-    rotatedModels = routed.models;
-  }
   
   let lastError = null;
   let earliestRetryAfter = null;
   let lastStatus = null;
+  let requestScopedResult = null;
 
   for (let i = 0; i < rotatedModels.length; i++) {
     const modelStr = rotatedModels[i];
+    log.info("COMBO", `Trying model ${i + 1}/${rotatedModels.length}: ${modelStr}`);
 
-    // Circuit breaker: skip models on providers that already failed this request
-    const provider = getProvider(modelStr);
-    if (provider && failedProviders.has(provider)) {
-      const latencyMs = 0;
-      const attempt = { model: modelStr, ok: false, status: 0, skipped: true, skipReason: "provider-failed", provider, latencyMs, attempt: 1 };
-      fallbackChain.push(attempt);
-      if (onFallbackEvent) {
-        try { onFallbackEvent(attempt); } catch { /* observability must never break routing */ }
-      }
-      log.info("COMBO", `Skipping ${modelStr}: provider ${provider} failed earlier in this request`);
-      continue;
-    }
-
-    // Retry count for this model: per-model override wins, else universal default
-    const modelRetries = (perModelRetries && typeof perModelRetries[modelStr] === "number")
-      ? Math.max(1, perModelRetries[modelStr])
-      : Math.max(1, retriesPerModel || 1);
-
-    for (let attemptNum = 0; attemptNum < modelRetries; attemptNum++) {
-      const attemptStart = Date.now();
-      const attemptLabel = modelRetries > 1 ? ` (attempt ${attemptNum + 1}/${modelRetries})` : "";
-      log.info("COMBO", `Trying model ${i + 1}/${rotatedModels.length}: ${modelStr}${attemptLabel}`);
-
-      try {
-        const result = await handleSingleModel(body, modelStr);
-        const latencyMs = Date.now() - attemptStart;
-
-        // Record attempt for the fallback chain (success or failure)
-        const attempt = { model: modelStr, ok: !!result.ok, status: result.status, latencyMs, attempt: attemptNum + 1 };
-        fallbackChain.push(attempt);
-        if (onFallbackEvent) {
-          try { onFallbackEvent(attempt); } catch { /* observability must never break routing */ }
+    try {
+      const result = await handleSingleModel(body, modelStr);
+      
+      // Success (2xx). A 2xx is necessary but NOT sufficient: Gemini aborts (e.g.
+      // MALFORMED_FUNCTION_CALL) still return 200 and stream empty content, which would
+      // otherwise be delivered as a successful empty answer with no failover.
+      // Peek the stream for real content before committing to this candidate.
+      if (result.ok) {
+        let peeked = null;
+        try {
+          peeked = await peekComboResponse(result, log);
+        } catch (peekErr) {
+          // peekStreamForContent is written not to throw; if reconstruction/Response
+          // construction ever does, result.body is already locked by getReader() and can no
+          // longer be streamed. Returning `result` would hand the client a locked, unreadable
+          // body. Degrade to a clean, valid (empty) SSE stream instead.
+          log.warn("COMBO", `empty-peek error on ${modelStr}, returning empty SSE: ${peekErr?.message || peekErr}`);
+          return new Response("data: [DONE]\n\n", {
+            status: 200,
+            headers: { "Content-Type": "text/event-stream" },
+          });
         }
 
-        // Success (2xx) - return response
-        if (result.ok) {
+        if (!peeked) {
+          // Non-streaming (or non-SSE) response — not this peek's job. The zero-content
+          // JSON check still applies on a non-final seat.
+          const isLastModel = i === rotatedModels.length - 1;
+          if (!isLastModel) {
+            const contentType = result.headers?.get?.("content-type") || "";
+            if (contentType.includes("application/json")) {
+              try {
+                const peekBody = await result.clone().json();
+                if (isZeroContentResponse(peekBody)) {
+                  log.warn("COMBO", `Model ${modelStr} returned HTTP 200 with zero usable content, falling back to next model`);
+                  if (comboStrategy === "smart" && sessionId && modelStr === activeStickyModel) {
+                    clearStickyComboSession(comboName, sessionId);
+                  }
+                  lastError = "Zero usable content";
+                  lastStatus = 200;
+                  continue;
+                }
+              } catch {
+                // Ignore JSON parse errors
+              }
+            }
+          }
+
           log.info("COMBO", `Model ${modelStr} succeeded`);
+          const successAttempt = { model: modelStr, ok: true, status: result.status, latencyMs, attempt: attemptNum + 1 };
+          fallbackChain.push(successAttempt);
+          if (onFallbackEvent) { try { onFallbackEvent(successAttempt); } catch { /* observability must never break routing */ } }
           if (contextRerouted && result.headers && typeof result.headers.append === "function") {
             try { result.headers.append("x-9r-context-reroute", String(contextAwareRouting.overflowTarget)); } catch { /* ignore */ }
           }
@@ -469,84 +583,123 @@ export async function handleComboChat({ body, models, handleSingleModel, log, co
           return result;
         }
 
-        // Extract error info from response
-        let errorText = result.statusText || "";
-        let retryAfter = null;
-        try {
-          const errorBody = await result.clone().json();
-          errorText = errorBody?.error?.message || errorBody?.error || errorBody?.message || errorText;
-          retryAfter = errorBody?.retryAfter || null;
-        } catch {
-          // Ignore JSON parse errors
+        if (peeked.outcome === "content") {
+          log.info("COMBO", `Model ${modelStr} succeeded${peeked.timedOut ? " (peek deadline; committed)" : ""}`);
+          const successAttempt = { model: modelStr, ok: true, status: result.status, latencyMs, attempt: attemptNum + 1 };
+          fallbackChain.push(successAttempt);
+          if (onFallbackEvent) { try { onFallbackEvent(successAttempt); } catch { /* observability must never break routing */ } }
+          if (contextRerouted && peeked.response.headers && typeof peeked.response.headers.append === "function") {
+            try { peeked.response.headers.append("x-9r-context-reroute", String(contextAwareRouting.overflowTarget)); } catch { /* ignore */ }
+          }
+          if (fallbackChain.length > 1 && peeked.response.headers && typeof peeked.response.headers.append === "function") {
+            try { peeked.response.headers.append("x-9r-fallback-chain", JSON.stringify(fallbackChain)); } catch { /* ignore */ }
+          }
+          return peeked.response;
         }
 
-        // Track earliest retryAfter across all combo models
-        if (retryAfter && (!earliestRetryAfter || new Date(retryAfter) < new Date(earliestRetryAfter))) {
-          earliestRetryAfter = retryAfter;
+        // Empty generation. Fall through to the next candidate unless this is a legitimately
+        // empty class (content filter) or the last candidate — in which case return the
+        // (empty) response as-is, preserving prior behaviour rather than manufacturing a 5xx.
+        const reasonLabel = peeked.finishReason || "no-content";
+        const isLast = i === rotatedModels.length - 1;
+        if (isNoRetryFinish(peeked.finishReason) || isLast) {
+          log.warn("COMBO", `Model ${modelStr} returned empty (${reasonLabel}) — ${isNoRetryFinish(peeked.finishReason) ? "no-retry class" : "last candidate"}, returning as-is`);
+          return peeked.response;
         }
 
-        // Normalize error text to string (Worker-safe)
-        if (typeof errorText !== "string") {
-          try { errorText = JSON.stringify(errorText); } catch { errorText = String(errorText); }
+        log.warn("COMBO", `Model ${modelStr} returned empty (${reasonLabel}) — falling through to next candidate`);
+        if (comboStrategy === "smart" && sessionId && modelStr === activeStickyModel) {
+          clearStickyComboSession(comboName, sessionId);
         }
+        // Drain/close the discarded stream in the background so its usage logging still runs.
+        peeked.response.body?.cancel?.().catch(() => {});
+        lastError = `empty generation (${reasonLabel})`;
+        if (!lastStatus) lastStatus = 502;
+        continue;
+      }
 
-        // Check if should fallback to next model
-        const { shouldFallback, cooldownMs } = checkFallbackError(result.status, errorText);
+      // If the model that failed was the session-sticky model, clear it so next turns re-evaluate
+      if (comboStrategy === "smart" && sessionId && modelStr === activeStickyModel) {
+        clearStickyComboSession(comboName, sessionId);
+      }
 
-        if (!shouldFallback) {
-          log.warn("COMBO", `Model ${modelStr} failed (no fallback)`, { status: result.status });
-          return result;
-        }
+      // Extract error info from response
+      let errorText = result.statusText || "";
+      let retryAfter = null;
+      try {
+        const errorBody = await result.clone().json();
+        errorText = errorBody?.error?.message || errorBody?.error || errorBody?.message || errorText;
+        retryAfter = errorBody?.retryAfter || null;
+      } catch {
+        // Ignore JSON parse errors
+      }
 
-        // For transient errors (503/502/504), wait for cooldown before retrying
-        // so a briefly-overloaded provider gets a chance to recover
-        if (cooldownMs && cooldownMs > 0 && cooldownMs <= 5000 &&
-            (result.status === 503 || result.status === 502 || result.status === 504)) {
-          log.info("COMBO", `Model ${modelStr} transient ${result.status}, waiting ${cooldownMs}ms before retry`);
-          await new Promise(r => setTimeout(r, cooldownMs));
-        }
+      // Track earliest retryAfter across all combo models
+      if (retryAfter && (!earliestRetryAfter || new Date(retryAfter) < new Date(earliestRetryAfter))) {
+        earliestRetryAfter = retryAfter;
+      }
 
-        // If we have retry attempts left, retry the SAME model
-        if (attemptNum < modelRetries - 1) {
-          log.warn("COMBO", `Model ${modelStr} failed (${result.status}), retrying ${attemptNum + 2}/${modelRetries}`);
-          continue;
-        }
+      // Normalize error text to string (Worker-safe)
+      if (typeof errorText !== "string") {
+        try { errorText = JSON.stringify(errorText); } catch { errorText = String(errorText); }
+      }
 
-        // Fallback to next model after all retries exhausted
+      // Check if should fallback to next model
+      const { provider } = parseModel(modelStr);
+      const { shouldFallback, cooldownMs, requestScoped } = checkFallbackError(result.status, errorText, 0, provider);
+
+      if (!shouldFallback && !requestScoped) {
+        log.warn("COMBO", `Model ${modelStr} failed (no fallback)`, { status: result.status });
+        return result;
+      }
+
+      // A request-scoped 4xx (validation failure, unsupported parameter, context
+      // overflow) says this member cannot serve THIS request — not that the
+      // credential is unhealthy. Members run on different providers with
+      // different validation, so the next member may well serve it. Advance
+      // without a cooldown, and without waiting: there is nothing to recover.
+      // checkFallbackError() reports no account fallback here on purpose (a
+      // request-scoped fault must not evict a healthy account from rotation).
+      if (requestScoped) {
+        log.warn("COMBO", `Model ${modelStr} rejected the request (${result.status}), trying next`, { status: result.status });
         lastError = errorText || String(result.status);
         if (!lastStatus) lastStatus = result.status;
-
-        // Circuit breaker: cache provider-level failures so subsequent models
-        // on the same provider are skipped (avoids N retries against a dead endpoint)
-        if (provider && isProviderLevelError(result.status, errorText)) {
-          failedProviders.add(provider);
-          log.warn("COMBO", `Provider ${provider} marked failed for this request (${result.status})`);
-        }
-
-        log.warn("COMBO", `Model ${modelStr} failed after ${modelRetries} attempts, trying next`, { status: result.status });
-      } catch (error) {
-        // Catch unexpected exceptions to fallback continues
-        const latencyMs = Date.now() - attemptStart;
-        const provider = getProvider(modelStr);
-        const errorText = error.message || String(error);
-
-        // Network-level exceptions (ECONNREFUSED, ETIMEDOUT, DNS) are provider-level
-        if (provider && isProviderLevelError(500, errorText)) {
-          failedProviders.add(provider);
-          log.warn("COMBO", `Provider ${provider} marked failed for this request (exception: ${errorText})`);
-        }
-
-        const attempt = { model: modelStr, ok: false, status: 500, error: errorText, latencyMs, attempt: attemptNum + 1 };
-        fallbackChain.push(attempt);
-        if (onFallbackEvent) {
-          try { onFallbackEvent(attempt); } catch { /* observability must never break routing */ }
-        }
-        lastError = errorText;
-        if (!lastStatus) lastStatus = 500;
-        log.warn("COMBO", `Model ${modelStr} threw error, trying next`, { error: lastError });
-        break; // Exceptions don't retry — move to next model
+        if (!requestScopedResult) requestScopedResult = result;
+        continue;
       }
+
+      // For transient errors (503/502/504), wait for cooldown before falling through
+      // so a briefly-overloaded provider gets a chance to recover rather than being
+      // skipped immediately (fixes: combo falls through on transient 503)
+      if (cooldownMs && cooldownMs > 0 && cooldownMs <= 5000 &&
+          (result.status === 503 || result.status === 502 || result.status === 504)) {
+        log.info("COMBO", `Model ${modelStr} transient ${result.status}, waiting ${cooldownMs}ms before next`);
+        await new Promise(r => setTimeout(r, cooldownMs));
+      }
+
+      // Fallback to next model
+      lastError = errorText || String(result.status);
+      if (!lastStatus) lastStatus = result.status;
+      log.warn("COMBO", `Model ${modelStr} failed, trying next`, { status: result.status });
+    } catch (error) {
+      // Catch unexpected exceptions to ensure fallback continues
+      if (comboStrategy === "smart" && sessionId && modelStr === activeStickyModel) {
+        clearStickyComboSession(comboName, sessionId);
+      }
+      lastError = error.message || String(error);
+      if (!lastStatus) lastStatus = 500;
+      log.warn("COMBO", `Model ${modelStr} threw error, trying next`, { error: lastError });
     }
+  }
+
+  // At least one member rejected the request itself. Hand back that member's own
+  // response — status and body — rather than the synthesized envelope below: the
+  // synthesized one reaches the client as a 200 carrying an error object, which
+  // reads as an empty success, and it buries the member that named the real cause.
+  // This is also what the caller saw before combos advanced on these errors.
+  if (requestScopedResult) {
+    log.warn("COMBO", `No model served the request; returning the first request-scoped failure (${requestScopedResult.status})`);
+    return requestScopedResult;
   }
 
   // All models failed
@@ -565,7 +718,7 @@ export async function handleComboChat({ body, models, handleSingleModel, log, co
 
   log.warn("COMBO", `All models failed | ${msg}`);
   return new Response(
-    JSON.stringify({ error: { message: msg }, fallbackChain }),
+    JSON.stringify({ error: { message: msg } }),
     { status, headers: { "Content-Type": "application/json" } }
   );
 }
@@ -812,3 +965,10 @@ export async function handleFusionChat({ body, models, handleSingleModel, log, c
   log.info("FUSION", `Judging ${answers.length} answers with ${judge}`);
   return handleSingleModel(judgeBody, judge);
 }
+
+export {
+  getStickyComboModel,
+  setStickyComboModel,
+  clearStickyComboSession,
+  orderModelsByChoice,
+} from "./systemoneRouter.js";
