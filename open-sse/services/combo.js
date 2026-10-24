@@ -31,46 +31,59 @@ async function peekComboResponse(result, log) {
   return { outcome: peeked.outcome, finishReason: peeked.finishReason, timedOut: peeked.timedOut, response };
 }
 
-// Context-aware routing: if the estimated prompt exceeds a threshold, float the
-// overflow target to the front of the attempt list so large prompts land on a
-// high-context model instead of being round-robined onto a small-context one.
-function applyContextAwareRouting({ body, models, config, log }) {
-  if (!config?.enabled) return { rerouted: false, models };
-  const messages = body?.messages;
-  if (!Array.isArray(messages) || messages.length === 0) return { rerouted: false, models };
+const CONTEXT_AWARE_DEFAULTS = {
+  enabled: false,
+  overflowTarget: null,   // model id to reroute to when prompt exceeds threshold
+  thresholdTokens: 200000, // prompts at/over this many estimated tokens reroute
+};
 
-  let estimated = 0;
+/**
+ * Context-aware routing ("overflowTarget"): when a request's estimated prompt
+ * size exceeds the combo's configured threshold, float the overflowTarget to
+ * the FRONT of the attempt list so the big prompt goes to a large-context
+ * model (e.g. qwen) instead of failing against a 200K-context model.
+ *
+ * If the target isn't already in the combo list, it is prepended as the
+ * overflow sink (becomes the ONLY attempt — that's the point of a sink).
+ *
+ * Returns { models, rerouted, promptTokens }. Never throws.
+ */
+export function applyContextAwareRouting({ body, models, config, log }) {
+  const cfg = {
+    ...CONTEXT_AWARE_DEFAULTS,
+    ...(config && typeof config === "object" ? config : {}),
+  };
+  if (!cfg.enabled || !cfg.overflowTarget || !Array.isArray(models) || models.length === 0) {
+    return { models, rerouted: false, promptTokens: 0 };
+  }
+
+  let promptTokens = 0;
   try {
-    estimated = estimatePromptTokens(messages);
-  } catch {
-    return { rerouted: false, models };
+    promptTokens = estimatePromptTokens(body);
+  } catch (e) {
+    if (log?.warn) log.warn("COMBO", "context-aware routing: token estimate failed, skipping", { error: e?.message || String(e) });
+    return { models, rerouted: false, promptTokens: 0 };
   }
 
-  const threshold = typeof config.thresholdTokens === "number" ? config.thresholdTokens : 100000;
-  if (estimated < threshold) return { rerouted: false, models };
-
-  const target = config.overflowTarget;
-  if (!target || !models.includes(target)) return { rerouted: false, models };
-
-  const reordered = [target, ...models.filter((m) => m !== target)];
-  return { rerouted: true, models: reordered, promptTokens: estimated };
-}
-
-// Detect zero-content responses: HTTP 200 with empty choices/content.
-// Used to trigger failover when a model returns success but no usable output.
-function isZeroContentResponse(body) {
-  if (!body || typeof body !== "object") return false;
-  if (Array.isArray(body.choices)) {
-    const first = body.choices[0];
-    if (!first) return true;
-    const msg = first.message || first.delta || {};
-    const content = msg.content;
-    if (content === "" || content === null || content === undefined) {
-      if (Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0) return false;
-      return true;
-    }
+  if (promptTokens < cfg.thresholdTokens) {
+    return { models, rerouted: false, promptTokens };
   }
-  return false;
+
+  // Target already first — nothing to reorder.
+  if (models[0] === cfg.overflowTarget) {
+    return { models, rerouted: true, promptTokens };
+  }
+
+  const targetIndex = models.indexOf(cfg.overflowTarget);
+  if (targetIndex === -1) {
+    // Target not in the combo — prepend it; it becomes the ONLY attempt for
+    // this request, which is the point of an overflow sink.
+    return { models: [cfg.overflowTarget, ...models], rerouted: true, promptTokens };
+  }
+
+  // Move the target to the front, keep the rest in original order.
+  const next = [cfg.overflowTarget, ...models.slice(0, targetIndex), ...models.slice(targetIndex + 1)];
+  return { models: next, rerouted: true, promptTokens };
 }
 
 // Hard capabilities = input modalities; missing one drops request data (e.g. image
@@ -514,6 +527,23 @@ export async function handleComboChat({
     }
   }
   
+  // Per-request circuit breaker: cache failed providers to avoid retrying dead endpoints
+  const failedProviders = new Set();
+  const getProvider = (modelStr) => {
+    const slash = modelStr.indexOf("/");
+    return slash > 0 ? modelStr.slice(0, slash) : "";
+  };
+  const isProviderLevelError = (status, errorText) => {
+    const text = (errorText || "").toLowerCase();
+    if ([401, 403, 502, 503].includes(status)) return true;
+    if (text.includes("no credentials") || text.includes("account disabled") || text.includes("service unavailable")) return true;
+    if (text.includes("econnrefused") || text.includes("etimedout") || text.includes("dns")) return true;
+    return false;
+  };
+
+  // Fallback chain observability: one entry per attempted model, oldest first.
+  const fallbackChain = [];
+
   let lastError = null;
   let earliestRetryAfter = null;
   let lastStatus = null;
@@ -710,15 +740,35 @@ export async function handleComboChat({
   const status = allDisabled ? 503 : (lastStatus || 503);
   const msg = lastError || "All combo models unavailable";
 
+  // Embed the full fallback chain in the error body so clients (and tests) can
+  // observe which models were attempted and why each failed.
+  const errorBody = {
+    error: { message: msg },
+    fallbackChain,
+  };
+
   if (earliestRetryAfter) {
     const retryHuman = formatRetryAfter(earliestRetryAfter);
-    log.warn("COMBO", `All models failed | ${msg} (${retryHuman})`);
-    return unavailableResponse(status, msg, earliestRetryAfter, retryHuman);
+    const retryAfterSec = Math.max(Math.ceil((new Date(earliestRetryAfter).getTime() - Date.now()) / 1000), 1);
+    const fullMsg = `${msg} (${retryHuman})`;
+    errorBody.error.message = fullMsg;
+    log.warn("COMBO", `All models failed | ${fullMsg}`);
+    return new Response(
+      JSON.stringify(errorBody),
+      {
+        status,
+        headers: {
+          "Content-Type": "application/json",
+          // Intentionally mis-cased to prevent duplicate headers (matches unavailableResponse)
+          "retry-after": String(retryAfterSec),
+        },
+      }
+    );
   }
 
   log.warn("COMBO", `All models failed | ${msg}`);
   return new Response(
-    JSON.stringify({ error: { message: msg } }),
+    JSON.stringify(errorBody),
     { status, headers: { "Content-Type": "application/json" } }
   );
 }
