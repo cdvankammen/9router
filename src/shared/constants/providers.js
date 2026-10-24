@@ -101,6 +101,49 @@ export function isCustomEmbeddingProvider(providerId) {
 // All providers (combined)
 export const AI_PROVIDERS = { ...FREE_PROVIDERS, ...FREE_TIER_PROVIDERS, ...OAUTH_PROVIDERS, ...APIKEY_PROVIDERS, ...WEB_COOKIE_PROVIDERS };
 
+/**
+ * Client-side mirror of the POST /api/providers validity check
+ * (src/app/api/providers/route.js). Lets forms reject providers that the
+ * server would refuse with an opaque "Invalid provider" before the request
+ * is sent. Keep in sync with the server predicate.
+ */
+export function isAddableViaApiKey(providerId) {
+  if (typeof providerId !== "string" || !providerId) return false;
+  return (
+    !!APIKEY_PROVIDERS[providerId] ||
+    !!FREE_TIER_PROVIDERS[providerId] ||
+    !!WEB_COOKIE_PROVIDERS[providerId] ||
+    !!AI_PROVIDERS[providerId]?.authModes?.includes("apikey") ||
+    isOpenAICompatibleProvider(providerId) ||
+    isAnthropicCompatibleProvider(providerId) ||
+    isCustomEmbeddingProvider(providerId)
+  );
+}
+
+/**
+ * Explain why a provider cannot be added through the API-key form, so the
+ * UI can show a targeted message instead of the server's "Invalid provider".
+ * Returns null when the provider IS addable.
+ *
+ * Category is not copied onto UI entries (see buildProviderEntry), so we
+ * check the category maps directly. Dual-auth providers (category "oauth"
+ * with authModes including "apikey") are already accepted by
+ * isAddableViaApiKey, so any provider reaching the OAUTH_PROVIDERS branch
+ * here is genuinely OAuth-only.
+ */
+export function getProviderAddBlockReason(providerId) {
+  if (isAddableViaApiKey(providerId)) return null;
+  const entry = AI_PROVIDERS[providerId];
+  if (!entry) return "Unknown provider.";
+  if (FREE_PROVIDERS[providerId]) {
+    return `${entry.name} is a free provider — connect it from its provider page instead of the API key form.`;
+  }
+  if (OAUTH_PROVIDERS[providerId]) {
+    return `${entry.name} is OAuth-only — use the OAuth button on its provider page instead of the API key form.`;
+  }
+  return `${entry.name} does not support API-key connections — use the OAuth button on its provider page.`;
+}
+
 // Auth methods
 export const AUTH_METHODS = {
   oauth: { id: "oauth" },

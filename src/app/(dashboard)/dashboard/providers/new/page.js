@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Card, Button, Input, Select, Toggle } from "@/shared/components";
 import { AI_PROVIDERS, AUTH_METHODS } from "@/shared/constants/config";
+import { isAddableViaApiKey, getProviderAddBlockReason } from "@/shared/constants/providers";
 
 const providerOptions = Object.values(AI_PROVIDERS).map((p) => ({
   value: p.id,
@@ -37,7 +38,11 @@ export default function NewProviderPage() {
 
   const validate = () => {
     const newErrors = {};
-    if (!formData.provider) newErrors.provider = "Please select a provider";
+    if (!formData.provider) {
+      newErrors.provider = "Please select a provider";
+    } else if (!isAddableViaApiKey(formData.provider)) {
+      newErrors.provider = getProviderAddBlockReason(formData.provider);
+    }
     if (formData.authMethod === "api_key" && !formData.apiKey) {
       newErrors.apiKey = "API Key is required";
     }
@@ -125,6 +130,29 @@ export default function NewProviderPage() {
             </Card.Section>
           )}
 
+          {/* Block-reason notice — shown proactively when the selected provider
+              cannot be added through this form (mirrors the server predicate). */}
+          {formData.provider && (() => {
+            const reason = getProviderAddBlockReason(formData.provider);
+            if (!reason) return null;
+            return (
+              <div className="p-4 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 text-sm flex gap-3">
+                <span className="material-symbols-outlined text-lg flex-shrink-0">info</span>
+                <div>
+                  <p className="font-medium mb-1">This provider cannot be added here</p>
+                  <p>{reason}</p>
+                  <Link
+                    href={`/dashboard/providers/${formData.provider}`}
+                    className="inline-flex items-center gap-1 mt-2 text-primary hover:underline"
+                  >
+                    Go to provider page
+                    <span className="material-symbols-outlined text-sm">arrow_forward</span>
+                  </Link>
+                </div>
+              </div>
+            );
+          })()}
+
           {/* Auth Method */}
           <div className="flex flex-col gap-3">
             <label className="text-sm font-medium">
@@ -208,7 +236,13 @@ export default function NewProviderPage() {
                 Cancel
               </Button>
             </Link>
-            <Button type="submit" loading={loading} fullWidth className="flex-1">
+            <Button
+              type="submit"
+              loading={loading}
+              disabled={!!formData.provider && !isAddableViaApiKey(formData.provider)}
+              fullWidth
+              className="flex-1"
+            >
               Create Provider
             </Button>
           </div>
