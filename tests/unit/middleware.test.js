@@ -43,12 +43,12 @@ const {
 const { sanitizeHeaders, createSanitizedHeaders, __test__: szTest } = await import("../../src/lib/middleware/headerSanitizer.js");
 
 // ─── helpers ────────────────────────────────────────────────────────────
-function fakeRequest(pathname = "/api/test", headers = {}) {
+function fakeRequest(pathname = "/api/test", headers = {}, search = "") {
   return {
-    nextUrl: { pathname },
+    nextUrl: { pathname, searchParams: new URLSearchParams(search) },
     headers: new Headers(headers),
     cookies: { get: () => undefined },
-    url: `http://localhost:20127${pathname}`,
+    url: `http://localhost:20127${pathname}${search}`,
   };
 }
 
@@ -319,5 +319,61 @@ describe("dashboardGuard — middleware integration", () => {
     const response = await proxy(req);
     // Under limit + local request + requireLogin=false → nextResponse
     expect(response).toBe(mocks.nextResponse);
+  });
+
+  // ─── RSC/Next-internal exemption (Finding #16 remediation) ──────────
+  it("exempts _rsc= prefetches from rate limiting even when bucket exhausted", async () => {
+    const { proxy } = await import("../../src/dashboardGuard.js");
+    __resetBuckets();
+    // Exhaust the bucket for this IP with ordinary dashboard requests.
+    const plain = fakeRequest("/dashboard/combos", {
+      host: "localhost:20127",
+      "x-9r-peer-token": PEER_TOKEN,
+      "x-9r-real-ip": "192.168.99.98",
+    });
+    for (let i = 0; i < __test__.BURST_LIMIT + 1; i++) checkRateLimit(plain);
+    expect(checkRateLimit(plain).limited).toBe(true);
+
+    // Same IP, but a Next RSC prefetch — must NOT be 429'd by the limiter.
+    const rsc = fakeRequest("/dashboard/combos", {
+      host: "localhost:20127",
+      "x-9r-peer-token": PEER_TOKEN,
+      "x-9r-real-ip": "192.168.99.98",
+    }, "?_rsc=abc123");
+    const response = await proxy(rsc);
+    expect(response.status).not.toBe(429);
+  });
+
+  it("exempts /_next/ paths from rate limiting even when bucket exhausted", async () => {
+    const { proxy } = await import("../../src/dashboardGuard.js");
+    __resetBuckets();
+    const plain = fakeRequest("/dashboard/providers", {
+      host: "localhost:20127",
+      "x-9r-peer-token": PEER_TOKEN,
+      "x-9r-real-ip": "192.168.99.97",
+    });
+    for (let i = 0; i < __test__.BURST_LIMIT + 1; i++) checkRateLimit(plain);
+    expect(checkRateLimit(plain).limited).toBe(true);
+
+    const nextAsset = fakeRequest("/_next/static/chunk/main.js", {
+      host: "localhost:20127",
+      "x-9r-peer-token": PEER_TOKEN,
+      "x-9r-real-ip": "192.168.99.97",
+    });
+    const response = await proxy(nextAsset);
+    expect(response.status).not.toBe(429);
+  });
+
+  it("still rate-limits ordinary dashboard requests (exemption is narrow)", async () => {
+    const { proxy } = await import("../../src/dashboardGuard.js");
+    __resetBuckets();
+    const req = fakeRequest("/dashboard/usage", {
+      host: "localhost:20127",
+      "x-9r-peer-token": PEER_TOKEN,
+      "x-9r-real-ip": "192.168.99.96",
+    });
+    for (let i = 0; i < __test__.BURST_LIMIT + 1; i++) checkRateLimit(req);
+    const response = await proxy(req);
+    expect(response.status).toBe(429);
   });
 });

@@ -205,11 +205,27 @@ export const __test__ = {
   canAccessLocalOnlyRoute,
 };
 
+// Next.js fires RSC navigations as `?_rsc=…` prefetches against the page's
+// own path, in bursts that exceed the 30/5s burst cap. Exempt Next-internal
+// requests from the general limiter, mirroring `isNextInternal` in the
+// TCP-layer custom-server.rate-limiter.js (Finding #16 remediation).
+// Defensive `?.` — some test fakes omit searchParams on nextUrl.
+function isNextInternalRequest(request) {
+  return (
+    request.nextUrl.pathname.startsWith("/_next/") ||
+    (request.nextUrl.searchParams?.has("_rsc") ?? false)
+  );
+}
+
 export async function proxy(request) {
   const { pathname } = request.nextUrl;
 
-  // Apply rate limiting to all API and dashboard routes (skip static assets).
-  if (pathname.startsWith("/api/") || pathname.startsWith("/dashboard")) {
+  // Apply rate limiting to all API and dashboard routes (skip static assets
+  // and Next-internal RSC prefetches).
+  if (
+    !isNextInternalRequest(request) &&
+    (pathname.startsWith("/api/") || pathname.startsWith("/dashboard"))
+  ) {
     const rateResult = checkRateLimit(request);
     if (rateResult.limited) {
       return rateLimitResponse(rateResult, NextResponse);
