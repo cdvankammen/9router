@@ -8,7 +8,11 @@ const mockGetModelInfo = vi.fn();
 const mockHandleComboChat = vi.fn(async () => ({ ok: true, status: 200 }));
 const mockGetProviderCredentials = vi.fn();
 
-vi.mock("@/lib/localDb", () => ({ getSettings: (...a) => mockGetSettings(...a) }));
+vi.mock("@/lib/localDb", () => ({
+  getSettings: (...a) => mockGetSettings(...a),
+  getProviderConnectionById: async () => null,
+  updateProviderConnection: async () => {},
+}));
 vi.mock("@/sse/services/model.js", () => ({
   getModelInfo: (...a) => mockGetModelInfo(...a),
   getComboModels: async () => null,
