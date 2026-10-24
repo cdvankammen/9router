@@ -638,6 +638,23 @@ Although 002–004 and the limiter were committed ~11 hours before the publish t
 - `src/app/api/settings/database/migrations/route.js` — NEW read-only dry-run endpoint (auth-gated) (backlog #2)
 - `tests/unit/db-migration-hardening.test.js` — 5 tests for registry validation + refusal + dry-run (backlog #2)
 - `docs/plans-and-prompts/research/9router/51-mini2-dashboard-dom-error-audit.md` — this document, Finding #12 "Fix applied (2026-10-24)" section + Finding #13 remediation note + Finding #15 Resolution table + Finding #16 resolution + Finding #17 (published-package audit) + backlog items #1/#2/#3/#4/#5/#6/#7/#8/#9/#10/#11/#12 marked resolved
+- `docs/plans-and-prompts/research/9router/51-v4-vscode-works-pr-draft.md` — NEW, draft PR description with commit list, test-evidence table, security-review callouts, push-blocker remediation recipes, parked operator gates, and live-evidence capture from mini2
+
+---
+
+## Day 3 live verification (2026-10-24, post-remediation)
+
+After the 9 remediation commits landed on `v4-vscode-works`, a live Playwright probe of `http://mini2:20128/dashboard/media-providers/web` (still on v0.5.75 — the branch has not yet been merged/deployed) captured the three exact failure modes this audit motivated, **still happening in production on the pre-branch code**:
+
+1. **RSC prefetch 429 storm reproduced live.** `performance.getEntriesByType('resource').slice(-30)` showed 29 of 30 recent requests were Next.js RSC prefetches (`?_rsc=`) returning HTTP 429 within a 22 ms burst — hitting `/dashboard/quota`, `/dashboard/token-saver`, `/dashboard/claude-compat`, `/dashboard/memory`, `/dashboard/cli-tools`, `/dashboard/proxy-pools`, `/dashboard/skills`, `/dashboard/model-context`, and every `/dashboard/media-providers/webSearch/{provider}` prefetch. This is the precise failure mode Finding #16 / commit `b6fd4264` (RSC exemption) and backlog #1 / commit `b6dcc553` (per-(IP, category) buckets) eliminate.
+
+2. **Finding #13 evil.example.com state live.** `GET /api/auth/status` returned `authMode: "oidc"`, `ssoType: "oidc"`, `oidcConfigured: false`, `hasPassword: true`, `authenticated: false` — the degraded state the save-time gate (commit `3c3cb02a`) prevents from recurring. The unreachable IdP sits in settings, discovery fails silently at runtime, and the dashboard reports OIDC mode while falling back to password login.
+
+3. **Version drift still live.** Sidebar advertises `v0.5.75` with a banner `↑ New version available: v0.5.109` and a button offering `npm i -g 9router@latest --prefer-online`. Per Finding #17, the operator must **not** click that button — the published `0.5.109` is behind repo HEAD on security work. Upgrade path is a local build from repo HEAD.
+
+Full probe transcripts and the formatted evidence block are in the draft PR (`docs/plans-and-prompts/research/9router/51-v4-vscode-works-pr-draft.md` → "Live evidence from mini2" section).
+
+---
 
 ## See also
 
