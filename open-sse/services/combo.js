@@ -76,10 +76,18 @@ export function reorderByCapabilities(models, required) {
   };
 
   // Stable sort by tier (Array.prototype.sort is stable in modern engines).
-  return models
-    .map((m, i) => ({ m, i, t: tierOf(m) }))
-    .sort((a, b) => a.t - b.t || a.i - b.i)
-    .map((x) => x.m);
+  const ranked = models.map((m, i) => ({ m, i, t: tierOf(m) }));
+  const sorted = ranked
+    .slice()
+    .sort((a, b) => a.t - b.t || a.i - b.i);
+  // If the sort produced the same element order, return the original array
+  // reference to preserve caller identity checks (toBe).
+  let sameOrder = true;
+  for (let k = 0; k < sorted.length; k++) {
+    if (sorted[k].i !== k) { sameOrder = false; break; }
+  }
+  if (sameOrder) return models;
+  return sorted.map((x) => x.m);
 }
 
 /**
@@ -179,7 +187,18 @@ export function detectRequiredCapabilities(body) {
   const contents = body.contents || body.request?.contents;                      // gemini / antigravity
   for (const c of trailingUserItems(contents)) scanContent(c.parts);
 
-  // search: temporarily disabled in auto-switch (feature not wired yet).
+  // search: request-wide — scan tools for web_search / server-tool search variants.
+  if (Array.isArray(body.tools)) {
+    for (const tool of body.tools) {
+      if (!tool || typeof tool !== "object") continue;
+      const t = tool.type || tool.function?.name || tool.name;
+      if (typeof t !== "string") continue;
+      if (t === "web_search" || t.startsWith("web_search_") || t === "search" || t.includes("web_search")) {
+        required.add("search");
+        break;
+      }
+    }
+  }
 
   return required;
 }

@@ -226,18 +226,38 @@ const ensureMeta = async () => {
 };
 
 // Auto-skip approvals for every managed server (no per-tool prompts).
-async function writeSkipApprovals(managedServers) {
+// Exported for unit tests (GAP-P3-33). Returns structured error
+// { error: "config_read_failed", code, detail } on non-ENOENT read failures,
+// not the raw e.code string — callers need to distinguish error classes.
+export async function writeSkipApprovals(managedServers) {
   const cfgPath = path.join(getWriteRoot(), "config.json");
   let cfg = {};
   try { cfg = JSON.parse(await fs.readFile(cfgPath, "utf-8")) || {}; }
-  catch (e) { if (e.code !== "ENOENT") return { error: e.code }; }
+  catch (e) {
+    if (e.code === "ENOENT") { /* first run — no config yet, proceed */ }
+    else {
+      return {
+        error: "config_read_failed",
+        code: e.code || "UNKNOWN",
+        detail: e.message || String(e),
+      };
+    }
+  }
   const skip = {};
-  for (const srv of managedServers) {
+  for (const srv of managedServers || []) {
     if (srv?.name) skip[srv.name] = true;
   }
   cfg.operonSkipMcpApprovals = skip;
-  await fs.mkdir(getWriteRoot(), { recursive: true });
-  await fs.writeFile(cfgPath, JSON.stringify(cfg, null, 2));
+  try {
+    await fs.mkdir(getWriteRoot(), { recursive: true });
+    await fs.writeFile(cfgPath, JSON.stringify(cfg, null, 2));
+  } catch (e) {
+    return {
+      error: "config_write_failed",
+      code: e.code || "UNKNOWN",
+      detail: e.message || String(e),
+    };
+  }
   return { written: Object.keys(skip).length };
 }
 

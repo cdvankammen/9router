@@ -12,6 +12,11 @@ const CONFIG_CACHE_TTL_MS = 5000;
 let cachedConfig = null;
 let cachedConfigTs = 0;
 
+export function clearObservabilityConfigCache() {
+  cachedConfig = null;
+  cachedConfigTs = 0;
+}
+
 // Cumulative count of requestDetails dropped because the maxRecords cap was
 // exceeded (in-process; reset on server restart). Exposed via the
 // observability status API so the UI can surface silent data loss.

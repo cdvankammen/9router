@@ -5,7 +5,7 @@
 import { buildCreateTableSql } from "../schema.js";
 
 const migration = {
-  version: 2,
+  version: 5,
   name: "add-seen-models",
   up(db) {
     db.exec(

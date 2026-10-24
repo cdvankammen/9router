@@ -11,6 +11,10 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { handleImageGenerationCore } from "../../open-sse/handlers/imageGenerationCore.js";
+// Track the live Codex CLI version from the provider registry (master bumped
+// it from 0.154.0 → 0.159.0); hardcoding the old string would silently drift
+// out of sync with production.
+import { CODEX_CLI_VERSION } from "../../open-sse/config/appConstants.js";
 
 const originalFetch = global.fetch;
 
@@ -351,7 +355,7 @@ describe("handleImageGenerationCore", () => {
         headers: expect.objectContaining({
           authorization: "Bearer codex-token",
           "chatgpt-account-id": "account-123",
-          version: "0.154.0",
+          version: CODEX_CLI_VERSION,
         }),
       })
     );

@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
 import { createProxyPool } from "@/models";
+// Cloudflare API requests must not hang the deploy UI indefinitely
+const CLOUDFLARE_API_TIMEOUT_MS = 30_000;
+
 
 // Relay worker source code deployed to Cloudflare
 const RELAY_WORKER_CODE = `
@@ -76,6 +79,7 @@ export async function POST(request) {
         Authorization: `Bearer ${apiToken}`,
       },
       body: formData,
+      signal: AbortSignal.timeout(CLOUDFLARE_API_TIMEOUT_MS),
     });
 
     if (!uploadRes.ok) {
@@ -88,19 +92,24 @@ export async function POST(request) {
     }
 
     // 2. Enable workers.dev subdomain for the script
-    const enableSubdomainRes = await fetch(`${workerScriptUrl}/subdomain`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiToken}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ enabled: true }),
-    });
+    try {
+      const enableSubdomainRes = await fetch(`${workerScriptUrl}/subdomain`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ enabled: true }),
+        signal: AbortSignal.timeout(CLOUDFLARE_API_TIMEOUT_MS),
+      });
 
-    if (!enableSubdomainRes.ok) {
-      const err = await enableSubdomainRes.json().catch(() => ({}));
-      console.error("Cloudflare subdomain enable error:", err);
-      // We don't fail completely here, just continue
+      if (!enableSubdomainRes.ok) {
+        const err = await enableSubdomainRes.json().catch(() => ({}));
+        console.error("Cloudflare subdomain enable error:", err);
+      }
+    } catch (subdomainEnableErr) {
+      // Non-fatal: timeout or network error here should not block the deploy
+      console.error("Cloudflare subdomain enable failed (non-fatal):", subdomainEnableErr?.message || subdomainEnableErr);
     }
 
     // 3. Get the workers.dev subdomain for the account to construct the final URL
@@ -111,6 +120,7 @@ export async function POST(request) {
         Authorization: `Bearer ${apiToken}`,
         "Content-Type": "application/json",
       },
+      signal: AbortSignal.timeout(CLOUDFLARE_API_TIMEOUT_MS),
     });
 
     if (subdomainRes.ok) {

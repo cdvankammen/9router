@@ -793,7 +793,7 @@ export class KiroExecutor extends BaseExecutor {
       }
     };
     const processEvent = (event, controller) => {
-      const messageType = event.headers[":message-type"];
+      const messageType = event?.headers?.[":message-type"];
       if (messageType === "error" || messageType === "exception") {
         fail(
           controller,
@@ -805,7 +805,7 @@ export class KiroExecutor extends BaseExecutor {
         return false;
       }
 
-      const eventType = event.headers[":event-type"] || "";
+      const eventType = event?.headers?.[":event-type"] || "";
       const eventCountKey = KIRO_EVENT_TYPES.has(eventType) ? eventType : "other";
       eventCounts[eventCountKey] = (eventCounts[eventCountKey] || 0) + 1;
       if (eventType === "assistantResponseEvent" && typeof event.payload?.content === "string") {

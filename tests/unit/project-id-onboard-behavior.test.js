@@ -30,11 +30,15 @@ beforeEach(() => {
     vi.useFakeTimers();
     // Re-stub fetch every test — unstubAllGlobals in afterEach removes it
     vi.stubGlobal("fetch", fetchMock);
+    // Override MAX_ATTEMPTS so the retry loop runs enough iterations for the
+    // exponential-backoff assertions below.
+    process.env.ONBOARD_MAX_ATTEMPTS = "5";
 });
 
 afterEach(() => {
     vi.useRealTimers();
     vi.unstubAllGlobals();
+    delete process.env.ONBOARD_MAX_ATTEMPTS;
 });
 
 function mockLoadCodeAssistNoProject() {

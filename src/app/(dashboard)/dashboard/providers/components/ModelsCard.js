@@ -6,6 +6,7 @@ import { Card, Button, Modal } from "@/shared/components";
 import { getModelsByProviderId, getModelKind } from "@/shared/constants/models";
 import { getProviderAlias } from "@/shared/constants/providers";
 import { useCopyToClipboard } from "@/shared/hooks/useCopyToClipboard";
+import { useNotificationStore } from "@/store/notificationStore";
 
 // ── ModelRow ───────────────────────────────────────────────────
 export function ModelRow({ model, fullModel, copied, onCopy, testStatus, isCustom, isFree, onDeleteAlias, onTest, isTesting }) {
@@ -119,6 +120,7 @@ export default function ModelsCard({ providerId, kindFilter, providerAliasOverri
 
   const providerAlias = providerAliasOverride || getProviderAlias(providerId);
   const effectiveType = kindFilter || "llm";
+  const notify = useNotificationStore();
 
   const fetchData = useCallback(async () => {
     try {
@@ -130,8 +132,11 @@ export default function ModelsCard({ providerId, kindFilter, providerAliasOverri
       const customData = await customRes.json();
       if (aliasRes.ok) setModelAliases(aliasData.aliases || {});
       if (customRes.ok) setCustomModels(customData.models || []);
-    } catch (e) { console.log("ModelsCard fetch error:", e); }
-  }, []);
+    } catch (e) {
+      console.error("ModelsCard fetch error:", e);
+      notify.error("Failed to load models: " + (e?.message || "network error"));
+    }
+  }, [notify]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -143,15 +148,33 @@ export default function ModelsCard({ providerId, kindFilter, providerAliasOverri
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ model: fullModel, alias }),
       });
-      if (res.ok) await fetchData();
-    } catch (e) { console.log("set alias error:", e); }
+      if (res.ok) {
+        await fetchData();
+        notify.success(`Alias set: ${alias}`);
+      } else {
+        const data = await res.json().catch(() => ({}));
+        notify.error(data.error || `Failed to set alias "${alias}" (HTTP ${res.status})`);
+      }
+    } catch (e) {
+      console.error("set alias error:", e);
+      notify.error("Failed to set alias: " + (e?.message || "network error"));
+    }
   };
 
   const handleDeleteAlias = async (alias) => {
     try {
       const res = await fetch(`/api/models/alias?alias=${encodeURIComponent(alias)}`, { method: "DELETE" });
-      if (res.ok) await fetchData();
-    } catch (e) { console.log("delete alias error:", e); }
+      if (res.ok) {
+        await fetchData();
+        notify.success(`Alias removed: ${alias}`);
+      } else {
+        const data = await res.json().catch(() => ({}));
+        notify.error(data.error || `Failed to remove alias "${alias}" (HTTP ${res.status})`);
+      }
+    } catch (e) {
+      console.error("delete alias error:", e);
+      notify.error("Failed to remove alias: " + (e?.message || "network error"));
+    }
   };
 
   const handleAddCustomModel = async (modelId) => {
@@ -164,8 +187,15 @@ export default function ModelsCard({ providerId, kindFilter, providerAliasOverri
       if (res.ok) {
         await fetchData();
         window.dispatchEvent(new CustomEvent("customModelChanged"));
+        notify.success(`Custom model added: ${modelId}`);
+      } else {
+        const data = await res.json().catch(() => ({}));
+        notify.error(data.error || `Failed to add model "${modelId}" (HTTP ${res.status})`);
       }
-    } catch (e) { console.log("add custom model error:", e); }
+    } catch (e) {
+      console.error("add custom model error:", e);
+      notify.error("Failed to add custom model: " + (e?.message || "network error"));
+    }
   };
 
   const handleDeleteCustomModel = async (modelId) => {
@@ -175,8 +205,15 @@ export default function ModelsCard({ providerId, kindFilter, providerAliasOverri
       if (res.ok) {
         await fetchData();
         window.dispatchEvent(new CustomEvent("customModelChanged"));
+        notify.success(`Custom model removed: ${modelId}`);
+      } else {
+        const data = await res.json().catch(() => ({}));
+        notify.error(data.error || `Failed to remove model "${modelId}" (HTTP ${res.status})`);
       }
-    } catch (e) { console.log("delete custom model error:", e); }
+    } catch (e) {
+      console.error("delete custom model error:", e);
+      notify.error("Failed to remove custom model: " + (e?.message || "network error"));
+    }
   };
 
   const handleTestModel = async (modelId) => {

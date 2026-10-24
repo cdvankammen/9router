@@ -89,4 +89,63 @@ function loadLimiter() {
   console.log("✓ Test 6: independent per-IP budgets — PASS");
 }
 
+// ── Test 7: Next.js RSC prefetches bypass rate limiting ───────────────────
+// Regression: /dashboard/providers emits 53+ <Link> prefetches (?_rsc=…)
+// that used to blow past the 120 req/min general bucket and 429 the UI.
+{
+  const { checkLimit, LIMITS } = loadLimiter();
+  const ip = "203.0.113.5";
+  // Exhaust the general bucket first
+  for (let i = 0; i < LIMITS.general; i++) checkLimit(ip, "/api/x", "GET");
+  // Next request should be blocked
+  const blocked = checkLimit(ip, "/api/x", "GET");
+  assert.strictEqual(blocked.allowed, false, "general bucket should be exhausted");
+  // RSC prefetch MUST still be allowed
+  const rsc = checkLimit(ip, "/dashboard/providers/openai-compatible-chat?_rsc=11hzb", "GET");
+  assert.strictEqual(rsc.allowed, true, "RSC prefetch must bypass even when bucket exhausted");
+  // Static chunk too
+  const chunk = checkLimit(ip, "/_next/static/chunks/app/(dashboard)/dashboard/providers/page-abc123.js", "GET");
+  assert.strictEqual(chunk.allowed, true, "_next static must bypass");
+  // And the bypass must not "refill" the bucket — a normal request is still blocked
+  const after = checkLimit(ip, "/api/y", "GET");
+  assert.strictEqual(after.allowed, false, "bypass must not consume budget or refill");
+  console.log("✓ Test 7: RSC + _next bypass under exhaustion — PASS");
+}
+
+// ── Test 8: Superficially similar user URLs still count ───────────────────
+// A user URL that merely contains the substring "rsc" must NOT bypass.
+{
+  const { checkLimit, LIMITS } = loadLimiter();
+  const ip = "198.51.100.7";
+  for (let i = 0; i < LIMITS.general; i++) checkLimit(ip, "/api/x", "GET");
+  // "rsc" as part of a path segment (no "_rsc=") must still be blocked
+  const r = checkLimit(ip, "/api/search?q=rsc+models", "GET");
+  assert.strictEqual(r.allowed, false, "user URL with 'rsc' substring must NOT bypass");
+  // Same for "_next" without the slash guard (defensive)
+  const r2 = checkLimit(ip, "/api/what_is_next", "GET");
+  assert.strictEqual(r2.allowed, false, "user URL mentioning 'next' must NOT bypass");
+  console.log("✓ Test 8: user URLs not accidentally bypassed — PASS");
+}
+
+// ── Test 9: RSC bypass does not advance the counter ───────────────────────
+// Sending a burst of RSC prefetches should not eat into the general budget.
+{
+  const { checkLimit, LIMITS } = loadLimiter();
+  const ip = "192.0.2.99";
+  // Send 500 RSC prefetches
+  for (let i = 0; i < 500; i++) {
+    const r = checkLimit(ip, `/dashboard/providers/p${i}?_rsc=abc`, "GET");
+    assert.strictEqual(r.allowed, true, `RSC iter ${i} must be allowed`);
+  }
+  // General budget should still be fully intact
+  let allowed = 0;
+  for (let i = 0; i < LIMITS.general; i++) {
+    const r = checkLimit(ip, "/api/real-traffic", "GET");
+    if (r.allowed) allowed++;
+  }
+  assert.strictEqual(allowed, LIMITS.general,
+    `general budget should be untouched after RSC burst, got ${allowed}/${LIMITS.general}`);
+  console.log(`✓ Test 9: RSC burst does not consume budget (${LIMITS.general}/${LIMITS.general} intact) — PASS`);
+}
+
 console.log("\n✅ All rate-limiter unit tests passed.");

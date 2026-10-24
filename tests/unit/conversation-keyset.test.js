@@ -46,6 +46,8 @@ beforeAll(async () => {
   // batchSize=1 → saveRequestDetail flushes immediately (buffered writer)
   await updateSettings({ enableObservability: true, observabilityBatchSize: 1, observabilityMaxRecords: 500 });
   repo = await import("@/lib/db/repos/requestDetailsRepo.js");
+  // Clear the config cache so batchSize:1 takes effect immediately
+  repo.clearObservabilityConfigCache();
 
   // conv-long: 25 rows, tokens/cost scale with i
   for (let i = 0; i < 25; i++) {
