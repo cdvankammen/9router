@@ -49,8 +49,12 @@ export function classifyRoute(url, method) {
     return "static";
   }
 
-  // 2. RSC prefetches — bypass entirely (framework-generated, not user traffic)
-  if (query.includes("_rsc=")) {
+  // 2. RSC prefetches — bypass entirely (framework-generated, not user traffic).
+  //    Restricted to page routes only: an attacker appending ?_rsc=1 to
+  //    /api/auth/login would otherwise bypass the 10-req/min brute-force
+  //    protection. Next.js only emits _rsc prefetches for rendered pages,
+  //    never for API routes, so this restriction is safe (Round 9 finding).
+  if (query.includes("_rsc=") && !path.startsWith("/api/") && !path.startsWith("/v1/") && !path.startsWith("/v1beta/")) {
     return "rsc";
   }
 

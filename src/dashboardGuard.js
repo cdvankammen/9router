@@ -227,10 +227,13 @@ export const __test__ = {
 // TCP-layer custom-server.rate-limiter.js (Finding #16 remediation).
 // Defensive `?.` — some test fakes omit searchParams on nextUrl.
 function isNextInternalRequest(request) {
-  return (
-    request.nextUrl.pathname.startsWith("/_next/") ||
-    (request.nextUrl.searchParams?.has("_rsc") ?? false)
-  );
+  // _rsc prefetches are only legitimate on page routes, never on /api/ or /v1/
+  // endpoints. An attacker appending ?_rsc=1 to /api/auth/login would otherwise
+  // skip the rate limiter entirely (Round 9 finding).
+  const pathname = request.nextUrl.pathname;
+  if (pathname.startsWith("/_next/")) return true;
+  if (pathname.startsWith("/api/") || pathname.startsWith("/v1/") || pathname.startsWith("/v1beta/")) return false;
+  return request.nextUrl.searchParams?.has("_rsc") ?? false;
 }
 
 export async function proxy(request) {

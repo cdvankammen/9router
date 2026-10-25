@@ -117,7 +117,10 @@ function classifyRequest(url, method) {
 
   // Framework traffic — bypass buckets entirely (never counted, never 429'd).
   if (path.startsWith("/_next/")) return "static";
-  if (query.indexOf("_rsc=") !== -1) return "rsc";
+  // RSC prefetches are only legitimate on dashboard/page routes, never on API
+  // endpoints. An attacker appending ?_rsc=1 to /api/auth/login would otherwise
+  // bypass the 10-req/min brute-force protection (Round 9 finding).
+  if (query.indexOf("_rsc=") !== -1 && !path.startsWith("/api/") && !path.startsWith("/v1/") && !path.startsWith("/v1beta/")) return "rsc";
 
   if (method === "POST") {
     // Credential-submission endpoints — tight bucket (brute-force protection).
