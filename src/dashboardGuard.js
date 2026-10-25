@@ -56,6 +56,11 @@ const ALWAYS_PROTECTED = [
   // request data (prompts, provider responses, auth headers). Same sensitivity
   // as /api/export — force JWT regardless of requireLogin.
   "/api/messages",
+  // CLI-tools endpoints write to server filesystem (~/.codex/config.toml,
+  // ~/.claude.json, etc.) and can redirect CLI tools to attacker-controlled
+  // servers. Force JWT regardless of requireLogin — unauthenticated LAN peers
+  // could otherwise poison configs or achieve RCE via config injection.
+  "/api/cli-tools",
 ];
 
 // Require auth, but allow through if requireLogin is disabled
@@ -73,7 +78,6 @@ const PROTECTED_API_PATHS = [
   "/api/media-providers",
   "/api/pricing",
   "/api/tags",
-  "/api/cli-tools",
   "/api/mcp",
   "/api/translator",
   "/api/tunnel",
