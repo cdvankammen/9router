@@ -47,6 +47,11 @@ const ALWAYS_PROTECTED = [
   "/api/oauth/cursor/auto-import",
   "/api/oauth/kiro/auto-import",
   "/api/oauth/zed/auto-import",
+  // Bulk conversation-history export (prompts, provider responses, connection IDs)
+  // — supports limit=5000 + paginated walk, so unauthenticated LAN peers could
+  // drain the entire request log when requireLogin=false. Force JWT here even
+  // on open-by-choice deployments. Follow-up from Stage 5 security review.
+  "/api/export",
 ];
 
 // Require auth, but allow through if requireLogin is disabled
