@@ -1,0 +1,106 @@
+d2f90177|2026-10-07|feat(systemone): support Cloudflare AI clef-flash endpoint
+e10da160|2026-10-07|fix(usage): track exact Codex image token usage
+625df74d|2026-10-07|fix(gemini): rename $ref keys in functionResponse payloads
+85bc33ce|2026-10-07|feat(providers): add MiniMax Code (mcode) credits provider
+cbd594ac|2026-10-07|fix(cursor): reject empty AgentService turns without successful stop
+18ad1a89|2026-10-07|fix(cursor): forward reasoning effort to AgentService Run
+b677bfce|2026-10-07|fix(cli): store model IDs in TUI combos
+0dd4d6be|2026-10-07|fix(codex): preserve explicit tool strict flags
+63de82b8|2026-10-07|feat(codebuddy-cn): sync catalog with 2026-09-30 server config
+b00ba1aa|2026-10-07|fix(muse): route Responses-only models to their declared transport + nest reasoning effort
+46627249|2026-10-07|fix(ollama): report prompt_eval_cached_count as cached_tokens in usage tracking
+a07ed95b|2026-10-07|feat(antigravity): add Claude Sonnet 5.5 and Opus 5.5 support
+6e4f82db|2026-10-07|fix(translator): uniquify duplicate tool_call_ids for Gemini (#4532)
+ee323400|2026-10-07|fix(tts): accept server model and voice in self-hosted example
+4fa46034|2026-10-07|feat(proxy-pools): add Netlify relay proxy pool
+d8c585fb|2026-10-07|feat(keys): per-API-key access control: restrict a key to selected combos and models
+3125ac2b|2026-10-07|fix(kimi): route Responses clients to the Kimi Code /responses endpoint
+8a90d3c9|2026-10-07|fix(cli): take `connect` models from the server; add `show`, `--save`, Pi and Oh My Pi
+0f7f6e72|2026-10-07|fix(capabilities): GLM-5.2/5.3 context is 1M, not the stale 200k pin (#4544)
+2f827bcf|2026-10-07|feat(elevenlabs): add Scribe speech-to-text support (#4537)
+6a1573eb|2026-10-08|fix(combo): show compatible node models in picker without a connection (#4659)
+c61ee37d|2026-10-08|fix(capabilities): GLM-5.3 cannot disable thinking (#4656)
+09f6d395|2026-10-08|fix(gemini): do not treat properties map as schema node when tool param named properties (#4620)
+a9d0ad26|2026-10-08|feat(bedrock): add AWS Bedrock provider with AWS SSO credential support (#4157)
+a9c9f683|2026-10-08|feat(hermes): per-profile configuration across API, Dashboard and CLI (#4660)
+2d94d3ab|2026-10-08|feat(dashboard): open 9Remote sidebar item directly to website
+eea08215|2026-10-08|fix(dashboard): fix mobile layouts for endpoint, provider models and cli-tools
+24034f69|2026-10-08|feat(antigravity): refresh model catalog and update MITM defaults to Gemini 3.8
+ce4460ef|2026-10-08|# v0.5.99 (2026-10-08)
+3ef4d8e3|2026-10-11|feat(usage): Cursor IDE quota via DashboardService (spend + request buckets) (#4689)
+cff2b1d9|2026-10-11|feat(antigravity): bump IDE version to 2.22.0
+e7f41c13|2026-10-11|fix(cursor): recover long sessions from empty AgentService turns (#4690)
+f6c26d8e|2026-10-11|feat(cursor): resolve Auto (Server Picks) to the account's default agent model (#4692)
+f7708c9d|2026-10-11|test(cursor): lock KV ack metadata echo with round-trip tests (#4694)
+cfd8c618|2026-10-11|fix(cursor): hold strictProxy on the AgentService h2 path (#4696)
+ef4679df|2026-10-13|fix(opencode): encode inverted timestamp in translated session IDs (#4780)
+f5f88039|2026-10-13|fix(capabilities): advertise PDF input for current Claude models (#4761)
+468aa7d9|2026-10-13|fix(param-support): drop response_format for opencode-go deepseek models
+90f89471|2026-10-13|fix(nous): add API-key attribution tags (#4770)
+4c58e7f3|2026-10-11|fix(capabilities): add missing OpenCode Free reasoning entries (space-bunny & co)
+b2aaf83b|2026-10-13|fix(qoder): surface add-on (free-credit promo) quota in the quota tracker (#4758)
+59e9b526|2026-10-13|fix(opencode-zen): use attested free-tier identity for -free models on keyed lane (#4784)
+8f4e3800|2026-10-13|fix(combo): fallback when model returns HTTP 200 with zero usable content (#4750)
+d6431f8b|2026-10-13|feat(cli-tools): Hermes audio transcription via 9router (#4763)
+c8644368|2026-10-13|fix(opencode-go): route claude-haiku-5-5 to /messages with adaptive thinking (#4727)
+1d4335d4|2026-10-13|fix(translator): return Claude messages for forced SSE JSON responses (#4789)
+9c141910|2026-10-14|fix(vertex): honor API-key project/location for Gemini 4 Argon (#4821)
+51a1827e|2026-10-14|fix(github): route Copilot embeddings to api.githubcopilot.com (#4793)
+29fc880e|2026-10-14|feat(gemini): add Gemini 4 Argon (gemini/vertex/antigravity)
+165f9b90|2026-10-15|feat(providers): add Nous Research OAuth + free-tier provider
+e964e482|2026-10-15|fix(opencode): inject reasoning_content placeholder for Zen multi-turn chats (#4805)
+5bdcd5e7|2026-10-15|fix(opencode): move free tier to /inference/v1 with the v2 client fingerprint (#4842)
+be51142b|2026-10-15|feat(quota): anchored auto-ping schedule at fixed local times (#4848)
+7878f53b|2026-10-15|fix(codex): drop retired gpt-5.5 from registry, image and auto-ping
+7e0043de|2026-10-15|Merge branch 'chore/codex-drop-gpt-5.5'
+db81a8c9|2026-10-15|fix(headroom): avoid false compression warnings when tools dominate body (#4855)
+28d40159|2026-10-15|feat(quota): unify auto-ping mode selection and default to local timezone
+eb373017|2026-10-15|fix(gemini): drop sampling params and order functionResponse-last for Gemini 4 (#4802)
+a8f63f4d|2026-10-15|fix(models): expose no-auth free providers in /v1/models and prune custom models on node deletion
+da1756a8|2026-10-15|feat(ui): model picker regex/negation search, batch select, provider filtering
+813a0121|2026-10-15|fix(usage): token fallback for input_tokens rows and stable key masking in stats
+d95bb8ea|2026-10-15|fix(dashboard): unclip proxy dropdown and tooltips via body portal
+fb30246c|2026-10-15|fix(tests): isolate zed-native-auth DATA_DIR so it stops writing to the real DB
+2aa9307f|2026-10-15|feat(keys): per-key token quotas and pattern-based model access
+3c48d275|2026-10-15|Features:
+6ed88685|2026-10-15|Revert "feat(keys): per-key token quotas and pattern-based model access"
+87a74e1b|2026-10-15|# v0.5.104 (2026-10-15)
+38a0c449|2026-10-22|feat(web-cookie): add web provider executors, browser pool and login capture
+342ecb0d|2026-10-22|fix(pi-settings): declare existingProvider before use in POST
+d07e5bc3|2026-10-22|fix(thinking): let a transport declare its thinking shape; nest reasoning on OpenCode Go /responses
+3b137aa6|2026-10-22|fix(codebuddy): back off blocked international connections
+4a76b8de|2026-10-23|fix(commandcode): correct quota display and connection test
+32a064e2|2026-10-23|fix(docker): pin Node 22.23.4 to patch October 2026 security CVEs
+421f2262|2026-10-23|feat(stt): add Codex OAuth transcription provider
+00dd3dfc|2026-10-23|fix(media-providers): keep the connection card for non-STT OAuth media pages
+ca7b5401|2026-10-23|fix(combo): fall through on empty-content streaming responses
+8a842043|2026-10-23|feat(rtk): add a user-authored custom system prompt
+08ef047f|2026-10-23|fix(security): bump undici to 7.30.1 and bind headroom to loopback
+bc4a3cc7|2026-10-23|feat(ollama): support System One decision models (clef, clef-flash)
+792f4719|2026-10-23|fix(headroom): support native CommandCode requests
+a440ef43|2026-10-23|fix(headroom): compress native Gemini and Responses tool outputs
+3ce2b828|2026-10-23|fix(kiro): normalize Anthropic model ids onto Kiro upstream aliases
+7c42d8f8|2026-10-23|fix(openai): rename max_tokens to max_completion_tokens
+5883110b|2026-10-23|fix(deps): upgrade Monaco to 0.57.0 and pin the copy the dashboard loads
+b08f12d5|2026-10-23|fix(codex-image): skip ChatGPT Free accounts and use a Go-compatible main model
+b6a9ca43|2026-10-23|test: triage master's failing suite; fix GLM-5.2 effort, gpt-6.1-sol context, dead SSRF tests
+351b04cb|2026-10-23|feat(provider): add SenseNova provider support
+a3ca2f9b|2026-10-23|fix(dashboard): correct API key visibility guidance
+b0655314|2026-10-23|fix(capabilities): give Grok 4.7 its 500k context window
+b82f5c4a|2026-10-23|fix(combos): try the next model when credits run out
+2720cd2a|2026-10-23|fix(qoder): stop failing queued models, route Sonus/Cantus, restore capabilities
+b8331283|2026-10-23|fix(opencode-free): full reasoning support for oc/mimo-v2.6-flash-free
+dbdbb648|2026-10-23|fix(github): refresh Copilot fallback model catalog
+5853a88a|2026-10-23|fix(search): reset regex state between model matches
+5cdcddf5|2026-10-23|fix(combo): advance past a request-scoped 4xx instead of ending the combo
+95c9d03e|2026-10-23|fix(stream): fill missing tool-call ids and restore renamed tool names (#4992, #4986)
+5a4e812e|2026-10-23|fix(db): strip NUL bytes from bound strings
+313559f4|2026-10-23|fix(opencode): honor low|high|max reasoning efforts for zen free deepseek-v4.1-flash
+f172c3c4|2026-10-23|fix(antigravity): use hub/2.24.0 User-Agent and add Gemini 4 Argon medium/low tiers (#4816)
+32c5f30a|2026-10-23|fix(capabilities): send reasoning_effort for OpenCode's glm-5.3-flash-free
+9b4ea9eb|2026-10-23|feat(combos): search box for the combo list
+31b8439b|2026-10-23|fix(usage): support /api/balance for ollama cloud quota tracking (#5026)
+82aeb907|2026-10-23|fix(antigravity): resolve tiered models from client reasoning effort
+161e3493|2026-10-23|feat(image, mitm): support reference image inputs for Gemini and ensure MITM directory (#4981)
+f3f86fdd|2026-10-23|feat(combos): add Smart Router (System One) with adaptive session stickiness (#4975)
+f39d8f07|2026-10-23|# v0.5.109 (2026-10-23)
