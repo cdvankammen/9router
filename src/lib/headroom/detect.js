@@ -121,9 +121,22 @@ export function findPython310() {
 }
 
 // Probe whether a Headroom proxy is reachable at the given URL by hitting /health.
+// SSRF guard: block non-loopback URLs that target cloud metadata, private IPs,
+// or hostnames resolving to internal addresses. Loopback is allowed (default
+// headroomUrl is localhost:8787). The assertPublicUrlResolved check is skipped
+// for loopback because the operator legitimately points headroomUrl at local
+// Headroom instances.
 export async function probeProxyRunning(url) {
   if (!url) return false;
   const base = String(url).replace(/\/$/, "");
+  if (!isLoopbackHeadroomUrl(base)) {
+    try {
+      const { assertPublicUrlResolved } = await import("@/shared/utils/ssrfGuard.js");
+      await assertPublicUrlResolved(base);
+    } catch {
+      return false;
+    }
+  }
   try {
     const res = await fetch(`${base}/health`, { signal: AbortSignal.timeout(HEADROOM_HEALTH_TIMEOUT_MS) });
     return res.ok;

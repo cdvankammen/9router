@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSettings } from "@/lib/localDb";
-import { DEFAULT_HEADROOM_URL } from "@/lib/headroom/detect";
+import { DEFAULT_HEADROOM_URL, isLoopbackHeadroomUrl } from "@/lib/headroom/detect";
+import { assertPublicUrlResolved } from "@/shared/utils/ssrfGuard.js";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +22,14 @@ const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "::1"]);
 async function getTargetBase() {
   const settings = await getSettings();
   const url = settings.headroomUrl || DEFAULT_HEADROOM_URL;
+  // SSRF guard: block cloud metadata (169.254.169.254), private IPs, and
+  // hostnames that resolve to internal addresses. Loopback is allowed — the
+  // default headroomUrl is localhost:8787 and the operator may point it at a
+  // local Headroom instance. assertPublicUrlResolved would reject loopback,
+  // so we only run the full SSRF check for non-loopback URLs.
+  if (!isLoopbackHeadroomUrl(url)) {
+    await assertPublicUrlResolved(url);
+  }
   const target = new URL(url);
   if (!["http:", "https:"].includes(target.protocol)) {
     throw new Error("Headroom URL must use http or https");
