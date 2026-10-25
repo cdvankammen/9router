@@ -52,6 +52,10 @@ const ALWAYS_PROTECTED = [
   // drain the entire request log when requireLogin=false. Force JWT here even
   // on open-by-choice deployments. Follow-up from Stage 5 security review.
   "/api/export",
+  // Individual message detail + export endpoints return the same captured
+  // request data (prompts, provider responses, auth headers). Same sensitivity
+  // as /api/export — force JWT regardless of requireLogin.
+  "/api/messages",
 ];
 
 // Require auth, but allow through if requireLogin is disabled
