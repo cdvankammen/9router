@@ -526,6 +526,25 @@ export async function handleComboChat({
       rotatedModels = reordered;
     }
   }
+
+  // Context-aware routing ("overflowTarget"): reroute huge prompts to a large-context
+  // model before attempting the normal rotation order. Restored from pre-merge branch —
+  // this invocation block was lost during the origin/master merge while its two
+  // consumption sites (x-9r-context-reroute header appends) survived, leaving
+  // contextRerouted undeclared and throwing on every successful combo attempt.
+  let contextRerouted = false;
+  if (contextAwareRouting) {
+    const routed = applyContextAwareRouting({ body, models: rotatedModels, config: contextAwareRouting, log });
+    if (routed.rerouted) {
+      contextRerouted = true;
+      const target = contextAwareRouting.overflowTarget;
+      log.warn(
+        "COMBO",
+        `context-overflow reroute: est ${routed.promptTokens} tokens ≥ ${contextAwareRouting.thresholdTokens} → ${target} (was ${rotatedModels[0]})`
+      );
+    }
+    rotatedModels = routed.models;
+  }
   
   // Per-request circuit breaker: cache failed providers to avoid retrying dead endpoints
   const failedProviders = new Set();
@@ -695,6 +714,9 @@ export async function handleComboChat({
       // request-scoped fault must not evict a healthy account from rotation).
       if (requestScoped) {
         log.warn("COMBO", `Model ${modelStr} rejected the request (${result.status}), trying next`, { status: result.status });
+        const failAttempt = { model: modelStr, ok: false, status: result.status, error: errorText, latencyMs: Date.now() - attemptStart, attempt: attemptNum + 1 };
+        fallbackChain.push(failAttempt);
+        if (onFallbackEvent) { try { onFallbackEvent(failAttempt); } catch { /* observability must never break routing */ } }
         lastError = errorText || String(result.status);
         if (!lastStatus) lastStatus = result.status;
         if (!requestScopedResult) requestScopedResult = result;
@@ -713,14 +735,22 @@ export async function handleComboChat({
       // Fallback to next model
       lastError = errorText || String(result.status);
       if (!lastStatus) lastStatus = result.status;
+      const failAttempt = { model: modelStr, ok: false, status: result.status, error: errorText, latencyMs: Date.now() - attemptStart, attempt: attemptNum + 1 };
+      fallbackChain.push(failAttempt);
+      if (onFallbackEvent) { try { onFallbackEvent(failAttempt); } catch { /* observability must never break routing */ } }
       log.warn("COMBO", `Model ${modelStr} failed, trying next`, { status: result.status });
     } catch (error) {
       // Catch unexpected exceptions to ensure fallback continues
       if (comboStrategy === "smart" && sessionId && modelStr === activeStickyModel) {
         clearStickyComboSession(comboName, sessionId);
       }
-      lastError = error.message || String(error);
+      const errLatencyMs = Date.now() - attemptStart;
+      const errText = error.message || String(error);
+      lastError = errText;
       if (!lastStatus) lastStatus = 500;
+      const failAttempt = { model: modelStr, ok: false, status: 500, error: errText, latencyMs: errLatencyMs, attempt: attemptNum + 1 };
+      fallbackChain.push(failAttempt);
+      if (onFallbackEvent) { try { onFallbackEvent(failAttempt); } catch { /* observability must never break routing */ } }
       log.warn("COMBO", `Model ${modelStr} threw error, trying next`, { error: lastError });
     }
   }
