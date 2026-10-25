@@ -551,10 +551,13 @@ export async function handleComboChat({
 
   for (let i = 0; i < rotatedModels.length; i++) {
     const modelStr = rotatedModels[i];
+    const attemptStart = Date.now();
+    const attemptNum = i; // without inner retry loop, attempt number == model index
     log.info("COMBO", `Trying model ${i + 1}/${rotatedModels.length}: ${modelStr}`);
 
     try {
       const result = await handleSingleModel(body, modelStr);
+      const latencyMs = Date.now() - attemptStart;
       
       // Success (2xx). A 2xx is necessary but NOT sufficient: Gemini aborts (e.g.
       // MALFORMED_FUNCTION_CALL) still return 200 and stream empty content, which would
