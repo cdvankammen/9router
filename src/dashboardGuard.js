@@ -56,11 +56,6 @@ const ALWAYS_PROTECTED = [
   // request data (prompts, provider responses, auth headers). Same sensitivity
   // as /api/export — force JWT regardless of requireLogin.
   "/api/messages",
-  // CLI-tools endpoints write to server filesystem (~/.codex/config.toml,
-  // ~/.claude.json, etc.) and can redirect CLI tools to attacker-controlled
-  // servers. Force JWT regardless of requireLogin — unauthenticated LAN peers
-  // could otherwise poison configs or achieve RCE via config injection.
-  "/api/cli-tools",
 ];
 
 // Require auth, but allow through if requireLogin is disabled
@@ -83,10 +78,13 @@ const PROTECTED_API_PATHS = [
   "/api/tunnel",
 ];
 
-// Routes that spawn child processes or read host secrets — restrict to localhost.
+// Routes that spawn child processes, write to host filesystem, or read host
+// secrets — restrict to localhost. All /api/cli-tools/* routes write config
+// files (~/.codex/config.toml, ~/.claude.json, ~/.copilot/, etc.) and can
+// redirect CLI tools to attacker-controlled servers. Prefix match covers all
+// 20+ sub-routes; specific entries below are kept for clarity.
 const LOCAL_ONLY_PATHS = [
-  "/api/cli-tools/cowork-settings",
-  "/api/cli-tools/antigravity-mitm",
+  "/api/cli-tools/",
   "/api/mcp/",
   "/api/tunnel/tailscale-install",
   "/api/tunnel/tailscale-enable",
