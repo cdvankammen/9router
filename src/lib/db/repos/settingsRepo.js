@@ -154,7 +154,21 @@ const DEFAULT_SETTINGS = {
 async function readRaw() {
   const db = await getAdapter();
   const row = db.get(`SELECT data FROM settings WHERE id = 1`);
-  return row ? parseJson(row.data, {}) : {};
+  if (!row) return {};
+  const parsed = parseJson(row.data, {});
+  // Guard against corrupted stored JSON: if the DB contains an array (e.g.
+  // from a bad migration or client PATCH), JSON.parse returns an array and
+  // spreading it into mergeWithDefaults produces {"0": null, "1": null, ...}
+  // numeric keys that leak into every GET /api/settings response. Strip
+  // non-string-keyed entries and any numeric-named keys to keep the response
+  // shape clean. Also reject non-object parses (strings, numbers, booleans).
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
+  const clean = {};
+  for (const [k, v] of Object.entries(parsed)) {
+    if (/^\d+$/.test(k)) continue; // skip numeric-indexed keys
+    clean[k] = v;
+  }
+  return clean;
 }
 
 // Merge raw settings with defaults; backward-compat for missing keys

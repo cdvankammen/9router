@@ -4,11 +4,22 @@ import { getConsistentMachineId } from "@/shared/utils/machineId";
 
 export const dynamic = "force-dynamic";
 
-// GET /api/keys - List API keys
+// Mask API keys server-side to prevent credential leakage to unauthenticated
+// LAN peers (e.g. when requireLogin=false). Shows first 6 + last 4 chars with
+// bullet fill. The full key is returned only on POST (create) — the dashboard
+// stores it in memory for reveal/copy. Mirrors client-side maskKey in
+// EndpointPageClient.js.
+function maskKey(fullKey) {
+  if (!fullKey || fullKey.length <= 10) return fullKey || "";
+  return fullKey.slice(0, 6) + "\u2022".repeat(fullKey.length - 10) + fullKey.slice(-4);
+}
+
+// GET /api/keys - List API keys (masked)
 export async function GET() {
   try {
     const keys = await getApiKeys();
-    return NextResponse.json({ keys });
+    const maskedKeys = keys.map(k => ({ ...k, key: maskKey(k.key) }));
+    return NextResponse.json({ keys: maskedKeys });
   } catch (error) {
     console.log("Error fetching keys:", error);
     return NextResponse.json({ error: "Failed to fetch keys" }, { status: 500 });
