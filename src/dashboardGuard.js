@@ -56,6 +56,11 @@ const ALWAYS_PROTECTED = [
   // request data (prompts, provider responses, auth headers). Same sensitivity
   // as /api/export — force JWT regardless of requireLogin.
   "/api/messages",
+  // Translator console-log capture: streams server stdout/stderr which may
+  // contain API keys, tokens, provider responses, and file paths. The SSE
+  // stream at /api/translator/console-logs/stream is particularly dangerous —
+  // it's a persistent connection pushing every console.log call in real time.
+  "/api/translator/console-logs",
 ];
 
 // Require auth, but allow through if requireLogin is disabled

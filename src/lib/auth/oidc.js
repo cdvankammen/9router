@@ -63,6 +63,19 @@ export async function getOidcRuntimeConfig() {
 }
 
 export async function fetchOidcDiscovery(issuerUrl, { signal } = {}) {
+  // SSRF guard: block cloud metadata (169.254.169.254), private IPs, and
+  // hostnames resolving to internal addresses. An attacker with PATCH access
+  // to /api/settings (e.g. LAN peer when requireLogin=false, or via
+  // skipOidcValidation:true) could otherwise point oidcIssuerUrl at AWS/GCP
+  // metadata endpoints and trigger the fetch via /api/auth/oidc/start or
+  // /api/auth/oidc/callback. The discovery document response would then be
+  // parsed as JSON and potentially reflected in error messages.
+  try {
+    const { assertPublicUrlResolved } = await import("@/shared/utils/ssrfGuard.js");
+    await assertPublicUrlResolved(issuerUrl);
+  } catch (ssrfError) {
+    throw new Error(`OIDC issuer URL rejected: ${ssrfError.message}`);
+  }
   const discoveryUrl = `${trimTrailingSlashes(issuerUrl)}/.well-known/openid-configuration`;
   const res = await fetch(discoveryUrl, { cache: "no-store", signal });
   if (!res.ok) {
