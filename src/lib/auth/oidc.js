@@ -70,9 +70,15 @@ export async function fetchOidcDiscovery(issuerUrl, { signal } = {}) {
   // metadata endpoints and trigger the fetch via /api/auth/oidc/start or
   // /api/auth/oidc/callback. The discovery document response would then be
   // parsed as JSON and potentially reflected in error messages.
+  //
+  // Loopback issuers (localhost / 127.0.0.1 / ::1) are explicitly permitted —
+  // validateOidcConfigForSave's isLocalDev branch declares them legitimate dev
+  // targets, and operators running a local Keycloak/Zitadel/etc. rely on this.
+  // DNS-rebinding to loopback (e.g. evil.example -> 127.0.0.1) is still blocked
+  // by the resolved-address check; only literal loopback hostnames bypass it.
   try {
     const { assertPublicUrlResolved } = await import("@/shared/utils/ssrfGuard.js");
-    await assertPublicUrlResolved(issuerUrl);
+    await assertPublicUrlResolved(issuerUrl, { allowLoopback: true });
   } catch (ssrfError) {
     throw new Error(`OIDC issuer URL rejected: ${ssrfError.message}`);
   }

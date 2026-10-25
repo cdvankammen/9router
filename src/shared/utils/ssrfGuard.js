@@ -22,6 +22,11 @@ import dns from "node:dns";
 
 const BLOCKED_HOSTNAMES = new Set(["localhost", "ip6-localhost", "ip6-loopback"]);
 const BLOCKED_SUFFIXES = [".internal", ".local", ".localhost"];
+// Hosts that are literal loopback — exemptable via { allowLoopback: true } for
+// callers that legitimately target a local dev service. DNS-rebinding attacks
+// (e.g. attacker.example -> 127.0.0.1) are NOT in this set and remain blocked
+// by the DNS-resolution layer below.
+const LOOPBACK_HOST = new Set(["localhost", "127.0.0.1", "::1"]);
 
 // Parse dotted IPv4 to 32-bit integer, or null if not a valid IPv4 literal.
 function ipv4ToInt(host) {
@@ -169,9 +174,18 @@ export function assertPublicUrl(rawUrl) {
 // domain that merely *resolves* to a private/loopback/metadata address (wildcard-DNS
 // services like nip.io/sslip.io, or an attacker-controlled domain with an A record
 // pointed at 127.0.0.1) is rejected too, not just IPs typed directly into the URL.
-export async function assertPublicUrlResolved(rawUrl) {
+//
+// Options:
+//   allowLoopback: when true, literal loopback hosts (localhost, 127.0.0.1, ::1)
+//     are permitted while all other SSRF protections remain enforced — private
+//     ranges, cloud metadata (169.254.169.254), link-local, ULA, and DNS-rebinding
+//     to loopback via wildcard-DNS domains are still blocked. Used by callers
+//     whose target URL is legitimately a local dev service (OIDC dev issuers,
+//     Headroom on localhost:8787). Do NOT use this for user-controlled URLs.
+export async function assertPublicUrlResolved(rawUrl, { allowLoopback = false } = {}) {
   const parsed = new URL(rawUrl);
   const host = normalizeHost(parsed.hostname);
+  if (allowLoopback && LOOPBACK_HOST.has(host)) return;
   if (isBlockedHost(host)) throw new Error("Blocked URL: internal host");
 
   // Already a literal IPv4/IPv6 address — isBlockedHost above already covered it,
