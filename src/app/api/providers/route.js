@@ -125,6 +125,10 @@ export async function POST(request) {
     if (!connectionName) {
       return NextResponse.json({ error: "Name is required" }, { status: 400 });
     }
+    // Prevent CRLF injection in connection names (mirrors overrides/route.js:44 check)
+    if (/[\r\n]/.test(connectionName)) {
+      return NextResponse.json({ error: "Name cannot contain newlines" }, { status: 400 });
+    }
 
     let providerSpecificData = normalizeProviderSpecificData(provider, body, body.providerSpecificData);
 
