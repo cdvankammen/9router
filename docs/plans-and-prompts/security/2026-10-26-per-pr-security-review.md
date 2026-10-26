@@ -452,3 +452,48 @@ Unlike SAML which has a placeholder, Zed genuinely requires the user to complete
 - `628ff1ea` 24h maxAge for dashboard cookie (MEDIUM)
 - `6af26a9e` Lossless header forwarding for relay pools (MEDIUM — header leakage)
 - `2aa9307f` / `6ed88685` per-key token quotas + revert (MEDIUM — what broke?)
+
+---
+
+## Web-cookie follow-ups (from commit 3 `38a0c449`) — executed 2026-10-26
+
+### Follow-up 1: Cookie/profile storage location + permissions — **OPEN (MEDIUM)**
+
+**Code path:** `open-sse/services/webLogin.js:26-28` → `profileDir()` → `getWritableDataDir()` at `open-sse/utils/writableDataDir.js:13-27`.
+
+**Finding:** `getWritableDataDir()` resolves through `DATA_DIR` → `~/.9router` → `tmpdir/9router` → `cwd` and calls `fs.mkdirSync(base, { recursive: true })` — but **never sets `mode: 0o700`**. Browser profiles containing captured cookies (real user sessions for ChatGPT, Gemini, Grok, DeepSeek, Muse, uc-web, veoaifree-web) land under `<DATA_DIR>/browser-profiles/<profile>/` with the process default umask.
+
+**Risk:** On a shared host or multi-user box where other users have read access to `~/.9router`, any local user could read the captured cookie jars and impersonate the logged-in user at those providers. Captured cookies are equivalent to the user's session password.
+
+**Fix needed:**
+- `writableDataDir.js:21` — `mkdirSync(base, { recursive: true, mode: 0o700 })`
+- `webLogin.js:27`'s `profileDir()` call — enforce `0o700` on the profile dir itself
+- Existing profiles on deployed hosts need a one-time `chmod 700 ~/.9router/browser-profiles`
+
+### Follow-up 2: Browser pool cross-provider isolation — **CLEAN ✅**
+
+**Code path:** `open-sse/services/browserPool.js:327` builds `poolKey = ${headless ? "headless" : "headed"}:${key}` where `key` is caller-supplied.
+
+**Finding:** Each executor passes a provider-scoped key (the connection id or provider id). Cross-provider context leakage does not happen within a single pool instance. The `state.contexts` Map is keyed by this compound key; `existing.lastUsed` renewal, TTL eviction, and idle-timer shutdown all operate per-key.
+
+**No fix needed.**
+
+### Follow-up 3: Browser profile cleanup on DELETE /api/providers/[id] — **OPEN (MEDIUM)**
+
+**Code path audit:** `grep` for `browser-profiles|profileDir|removeProfile|cleanupProfile` in `src/**/*.js` returned **zero matches** — no code path removes a browser profile when a web-login connection is deleted.
+
+**Finding:** The only DELETE on `/api/providers/web-login` (at `src/app/api/providers/web-login/route.js`) cancels a *running* login session, not a stored connection. When `DELETE /api/providers/[id]` fires on a web-login connection, `deleteProviderConnection(id)` runs in `src/app/api/providers/[id]/route.js` but **the profile directory at `~/.9router/browser-profiles/<profile>/` persists forever** with its captured cookies intact.
+
+**Risk:** Orphaned cookie jars accumulate on disk indefinitely. If the captured session is still valid at the provider, the deleted connection's cookies remain usable by anyone with filesystem read access. A long-running deployment that cycles through web-login accounts builds an ever-growing archive of valid sessions.
+
+**Fix needed:**
+- `src/app/api/providers/[id]/route.js` DELETE handler — after `deleteProviderConnection(id)`, if the deleted connection had `providerSpecificData.authMethod === "web-login"`, call `rmSync(profileDir(connection.profile || "default"), { recursive: true, force: true })`
+- Add a bulk-cleanup admin endpoint or a periodic sweep for profiles with no matching connection
+
+### Updated follow-up queue
+
+| Item | Source | Priority | Status |
+|---|---|---|---|
+| ~~Cookie storage location + file permissions~~ | `38a0c449` | MEDIUM | **OPEN — fix needed** (chmod 0700) |
+| ~~Browser pool cross-provider isolation~~ | `38a0c449` | MEDIUM | ✅ CLEAN |
+| ~~Cookie cleanup on DELETE /api/providers/[id]~~ | `38a0c449` | MEDIUM | **OPEN — fix needed** (rmSync on delete) |
