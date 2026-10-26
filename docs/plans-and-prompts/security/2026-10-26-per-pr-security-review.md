@@ -550,8 +550,79 @@ When no region is configured or in env, the code defaults to `us-east-1`. This m
 | 6 | `a9d0ad26` | 2026-10-08 | AWS Bedrock + SSO credentials | HIGH — cloud credential primitive | INTEGRATED |
 
 **Total security-relevant upstream commits identified: 193**
-**Reviewed so far: 8**
-**Remaining: 185 (priority queue maintained)**
+**Reviewed so far: 10**
+**Remaining: 183 (priority queue maintained)**
+
+---
+
+## Commit 9a: `d8c585fb` — per-API-key access control (MEDIUM)
+
+**Date:** 2026-10-07
+**Author:** omar-nahhas
+**Subject:** feat(keys): per-API-key access control: restrict a key to selected combos and models
+
+### What upstream added
+API keys can be restricted to a subset of combos/models via an allow-list. Adds two columns to `apiKeys`:
+- `accessRestricted INTEGER DEFAULT 0` — when 1, the key is restricted
+- `accessAllow TEXT` — JSON-encoded allow-list of provider/model patterns
+
+Plus helpers in `src/shared/utils/keyAccess.js` (normalize, validate, from-columns, to-columns) and integration in `apiKeysRepo.js`, `keyAccess.js` engine module, and several handlers (chat, embeddings, fetch, imageGeneration, search, stt).
+
+### Integration verification (2026-10-26)
+- ✅ `src/lib/db/schema.js:88-89` — both columns declared
+- ✅ `src/lib/db/repos/apiKeysRepo.js:15,55,70` — columns read/written
+- ✅ `src/shared/utils/keyAccess.js` — full helper set present with fail-closed semantics
+- ✅ `src/lib/db/migrations/006-access-columns.js` — our `10772992` restores these columns
+
+### Conclusion
+**FULLY INTEGRATED.** Survived the token-quota revert (see 9b below) because access control is a separate concern from quotas.
+
+---
+
+## Commit 9b/9c: `2aa9307f` + `6ed88685` — per-key token quotas + REVERT (MEDIUM)
+
+**Date:** 2026-10-15 (both same day, 20 minutes apart)
+**Author:** miqonee (add), decolua (revert)
+**Subjects:**
+- `2aa9307f`: feat(keys): per-key token quotas and pattern-based model access
+- `6ed88685`: Revert "feat(keys): per-key token quotas and pattern-based model access"
+
+### The pair's story
+The first commit added two things bundled together:
+1. **Token quotas** — `tokenLimit`/`usedTokens` columns on `apiKeys`, enforced with 429 once exhausted
+2. **Pattern-based model access** — wildcard entries, deny entries, alias/id provider spellings in `keyAccess.js`
+
+Twenty minutes later, the entire commit was reverted. Both features removed.
+
+### Why this matters for our branch
+The revert is clean at the code level but created a **migration registry divergence** on deployed DBs:
+- Our commit `10772992` added `006-access-columns.js` to restore the `accessRestricted`/`accessAllow` columns from commit 9a (`d8c585fb`), which upstream bakes into `001-initial.js` but our branch's migrations predate
+- The token quota columns (`tokenLimit`/`usedTokens`) are NOT in migration 6 — they were properly reverted and are absent from current schema
+- DBs last migrated by a pre-`10772992` build have fingerprint ending at `5:add-seen-models`; current code expects `6:add-access-columns` → migrator REFUSES to apply (registry-integrity gate working correctly)
+
+### Verification that token quota columns are gone
+`grep tokenLimit|usedTokens src/lib/db/**/*.js` returns **zero matches** — the revert is complete at the schema level.
+
+### Resolution path for the migration divergence (operator action)
+The migrator's refusal is the **security control working**, not a bug. Deployed DBs that predate `10772992` need a one-time fingerprint update:
+
+```sql
+-- Run against ~/.9router/db/data.sqlite on each deployed host
+UPDATE _meta 
+SET value = '1:initial|3:message-facets|4:message-annotations|5:add-seen-models|6:add-access-columns' 
+WHERE key = 'migrationRegistryFingerprint';
+```
+
+Alternatively, add a CLI command `9router db accept-registry` to stamp the current registry as trusted. Priority: MEDIUM (documented operator path needed before next deploy cycle).
+
+### Conclusion
+**REVERT CLEAN, ACCESS COLUMNS SURVIVED.** The migration divergence is a data-plane operator action, not a code fix. The access-control feature from `d8c585fb` is fully wired; the token-quota feature is fully removed.
+
+---
+
+## Commit 10: `6af26a9e` — lossless header forwarding for relay pools (MEDIUM)
+
+(Deferred from commit 8 triage — full diff read pending next segment. Anticipated intersection: relay pools forward requests through Vercel/Netlify/Cloudflare/Deno hops; header forwarding determines what the relay operator sees. Trust boundary.)
 
 ---
 
