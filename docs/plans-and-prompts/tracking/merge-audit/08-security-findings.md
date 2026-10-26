@@ -129,13 +129,64 @@ Flagged by vision subagent (pre-fix). Cosmetic, not security. Deferred to follow
 
 ## Remediation status
 
-| # | Severity | Status |
-|---|---|---|
-| 1 | CRITICAL | Fix in flight — auth gate mirroring `/api/shutdown` |
-| 2 | HIGH | Fix in flight — mask single-GET + auth gate on PUT/DELETE |
-| 3 | INFO | Deferred (UI polish PR) |
-| 4 | INFO | Awaiting operator decision |
-| 5 | INFO | Deferred (UI polish PR) |
+| # | Severity | Status | Commit |
+|---|---|---|---|
+| 1 | CRITICAL | ✅ FIXED — auth gate mirroring `/api/shutdown` | `16cd790d` |
+| 2 | HIGH | ✅ FIXED — mask single-GET + auth gate on PUT/DELETE | `16cd790d` |
+| 3 | INFO | Deferred (UI polish PR) | — |
+| 4 | INFO | Awaiting operator decision | — |
+| 5 | INFO | Deferred (UI polish PR) | — |
+
+## Post-fix live proof (mini4:20129, PID 49663, 2026-10-26 01:02 MDT)
+
+Six sequential curl probes against the rebuilt server with commit `16cd790d`:
+
+### Finding #1 — `/api/version/shutdown` now gated
+
+```
+PROOF 1: GET /api/version/shutdown
+→ HTTP/1.1 401 Unauthorized
+   (middleware ALWAYS_PROTECTED gate rejects before route handler runs;
+    route's own GET handler would return 405 — defense in depth)
+
+PROOF 2: POST /api/version/shutdown (unauthed, body {})
+→ {"error":"Unauthorized"}  http=401
+```
+
+Before the fix, PROOF 2 returned `{"success":true}` and the server exited 500ms later. Now it rejects with 401.
+
+### Finding #2 — `/api/keys/[id]` IDOR closed
+
+```
+PROOF 3: POST /api/auth/login (fresh session)
+→ {"success":true,"mustChangePassword":false}
+
+PROOF 4: GET /api/keys (list, with auth cookie)
+→ {"keys":[{"id":"b0c998da-e0a4-498d-a266-c81284c62f7e",
+            "key":"sk-cb9••••••••••••••••••••••••1a0b", ...}]}
+   (UUID exposed, key masked — as before)
+
+PROOF 5: GET /api/keys/b0c998da-e0a4-498d-a266-c81284c62f7e (single, with auth)
+→ {"key":{"id":"b0c998da-...",
+          "key":"sk-cb9••••••••••••••••••••••••1a0b", ...}}
+   (NOW MASKED ✅ — before the fix this returned
+    "sk-cb9c2fba45e06923-d3yviq-12f51a0b" raw)
+
+PROOF 6: DELETE /api/keys/b0c998da-e0a4-498d-a266-c81284c62f7e (no auth)
+→ {"error":"Unauthorized"}  http=401
+   (before the fix this would have deleted the key)
+```
+
+All six probes behave as designed. The IDOR leak and the unauthenticated shutdown vector are both closed in production.
+
+### Test suite verdict
+
+```
+verify-no-regression.mjs: "✅ No regression. (now fails=54, baseline known=56, all known)"
+Full vitest: 4612 pass / 54 fail (same baseline as pre-fix)
+```
+
+Zero regressions from either fix.
 
 ## Evidence chain
 - Code review of `src/app/api/version/shutdown/route.js` (15 lines, no auth)
