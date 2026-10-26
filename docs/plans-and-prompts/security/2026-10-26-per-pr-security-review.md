@@ -269,3 +269,89 @@ Plus `XAI_REDIRECT_URI` at `src/lib/oauth/constants/xai.js:27` hardcodes `127.0.
 | Verify cookie cleanup on `DELETE /api/providers/[id]` | `38a0c449` | MEDIUM | 20 min |
 | ~~Audit OAuth callback proxy port binding~~ | live scan 2026-10-26 | ✅ **RESOLVED** | — (all bind 127.0.0.1) |
 | Flag `38a0c449` for auto-rewrite audit (Claude Code co-author) | `38a0c449` | LOW | 5 min |
+
+---
+
+## Commit 4: `65197ad1` — SAML 2.0 SSO integration (HIGH)
+
+**Date:** 2026-08-13
+**Author:** Duc Nguyen (Ekino)
+**Subject:** feat(auth): add native SAML 2.0 SSO integration
+
+### What upstream added
+SAML 2.0 as a **second SSO protocol alongside OIDC** under a unified `authMode`/`ssoType` model. SP flows via `@node-saml/node-saml`: AuthnRequest generation, ACS POST assertion handling, SP metadata export, and admin config test endpoint.
+
+**Security properties:**
+- Replay-protected via `saml_state` cookie (httpOnly, SameSite=Lax) matched against `InResponseTo`
+- `wantAssertionsSigned` enforced at the SAML library level
+- Uses `loginLimiter` (checkLock / recordFail / recordSuccess / getClientIp) on the ACS route
+- Settings keys added: `ssoType`, `samlEntryPoint`, `samlIssuer`, `samlCert`
+
+### Files changed (17 files, 1386 insertions)
+- `src/lib/auth/saml.js` (268 lines NEW) — SAML instance builder, X.509 cert formatter, claim pickers
+- 4 new routes: `src/app/api/auth/saml/{start,acs,metadata,test}/route.js`
+- `src/lib/db/repos/settingsRepo.js` — ssoType + saml* defaults
+- `src/app/api/auth/login/route.js` — dispatch by type
+- `src/app/api/auth/status/route.js` — SAML badge data
+- `src/app/login/page.js` — dynamic SAML sign-in button
+- `src/app/(dashboard)/dashboard/profile/page.js` — SSO protocol switcher, IdP metadata XML + cert uploaders
+- `src/shared/components/Header.js` — SAML user badge
+- `tests/auth/saml.test.js`, `tests/unit/saml.test.js` — test coverage
+- `src/dashboardGuard.js:42` — added `/api/auth/saml` to `PUBLIC_API_PATHS` (SAML routes need unauthenticated access for the IdP redirect flow)
+
+### Integration verification (2026-10-26)
+- ✅ `src/lib/auth/saml.js` exists with `formatX509Certificate`, `isSamlConfigured`, `getSamlRuntimeConfig`, `createSamlInstance`, `getSamlBaseUrl`, `buildSamlAuthorizeUrl`, `validateSamlResponse`, `pickSamlEmail`, `pickSamlDisplayName`, `generateSamlMetadata`
+- ✅ 4 routes exist under `src/app/api/auth/saml/`
+- ✅ `src/dashboardGuard.js:42` has `"/api/auth/saml"` in `PUBLIC_API_PATHS`
+- ✅ 126 matches across 10 files for SAML-related symbols — fully wired into login, status, profile, settings
+- ✅ `wantAssertionsSigned: true` enforced in `createSamlInstance`
+- ✅ `saml_state` cookie set with `httpOnly: true`, `sameSite: "lax"`, `maxAge: 600`
+- ✅ ACS route uses `loginLimiter.checkLock` / `recordFail` / `recordSuccess` / `getClientIp`
+
+### Intersection with our work
+| Our commit | Intersection | Status |
+|---|---|---|
+| `1ebed4fc`/`f7a641d3` requireAuth on admin routes | SAML routes are PUBLIC_API_PATHS (must be — IdP redirects to /saml/acs without auth) | ✅ CLEAN — design-appropriate |
+| `16cd790d` unauthed shutdown gate | No intersection — SAML doesn't touch shutdown | ✅ CLEAN |
+| `24f497b6` Finding #7 middleware promotion | `/api/auth/saml` stays in PUBLIC_API_PATHS (correct — IdP flow) | ✅ CLEAN |
+| `f7a641d3` timing-safe CLI token | No intersection | ✅ CLEAN |
+
+### Security concerns (resolved / accepted)
+
+**CONCERN 1 (LOW, accepted): `/api/auth/saml/test` route auth model**
+The test route uses its own `canAccessTestRoute()` helper which returns `true` when `settings.requireLogin === false`. On open-by-choice deploys, **any LAN peer can probe the IdP configuration** (entryPoint, issuer, cert). This is consistent with the rest of the open-by-choice model (same pattern as `/api/settings` PATCH) but leaks knowledge of the configured IdP.
+
+The test route does NOT write anything — it only echoes back validated config. So the risk is information disclosure, not state mutation. **Acceptable under the documented open-by-choice deployment model.**
+
+**CONCERN 2 (resolved): `saml_state` cookie replay protection**
+`src/app/api/auth/saml/start/route.js:22-28` sets `saml_state = requestId` with `httpOnly + sameSite=lax + maxAge=600`. `src/app/api/auth/saml/acs/route.js:28` reads it, passes it to `validateSamlResponse()` which matches it against the SAML `InResponseTo` attribute. The cookie is always cleared after the attempt (`cookieStore.delete("saml_state")` at `:31`). **Replay protection is correctly implemented.**
+
+**CONCERN 3 (resolved): `DUMMY_FALLBACK_CERT` in `saml.js:54`**
+`createSamlInstance` uses a placeholder cert when `settings.samlCert` is missing. This only activates when SAML is not configured (the library constructor requires a cert); the ACS/start routes both short-circuit with `saml_not_configured` before reaching instance creation, so the dummy cert never participates in real assertion validation. **Not a security bug.**
+
+**CONCERN 4 (LOW, accepted): X.509 cert formatter permissive regex**
+`formatX509Certificate` strips all non-base64 characters with `/[^A-Za-z0-9+/=]/g`. A malformed cert with embedded control characters would be silently cleaned rather than rejected. Since this is admin-uploaded content behind an authenticated profile page, and `@node-saml` itself re-validates the resulting PEM, this is defense-in-depth cosmetic, not a real vulnerability.
+
+### Conclusion
+**FULLY INTEGRATED.** SAML 2.0 is a genuine, well-implemented second SSO protocol. Replay protection, assertion signature enforcement, rate limiting on ACS, and proper cookie hygiene are all in place. No conflicts with our hardening work. The only information-disclosure concern (test route on open-by-choice) is consistent with the documented deployment model.
+
+---
+
+## Running CSV of analyzed upstream commits
+
+| # | Commit | Date | Subject | Intersection | Status |
+|---|---|---|---|---|---|
+| 1 | `92259214` | 2026-08-14 | GHSA-pjm4-8fpg-f9p6 peer-token | HIGH — foundational | INTEGRATED |
+| 2 | `98579f98` | 2026-09-03 | /responses rewrite | LOW | INTEGRATED |
+| 3 | `38a0c449` | 2026-10-22 | web-cookie browser pool | HIGH — new credential primitive | INTEGRATED + 3 follow-ups |
+| 4 | `65197ad1` | 2026-08-13 | SAML 2.0 SSO | HIGH — new auth protocol | INTEGRATED |
+
+**Total security-relevant upstream commits identified: 193**
+**Reviewed so far: 4**
+**Remaining: 189 (prioritized queue maintained)**
+
+**Next in queue:**
+- `ef181752` Zed OAuth lifecycle hardening (HIGH)
+- `a9d0ad26` AWS Bedrock + SSO credentials (MEDIUM)
+- `628ff1ea` 24h maxAge for dashboard cookie (MEDIUM)
+- `6af26a9e` Lossless header forwarding for relay pools (MEDIUM — header leakage)
