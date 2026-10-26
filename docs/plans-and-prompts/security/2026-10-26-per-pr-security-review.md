@@ -555,6 +555,9 @@ When no region is configured or in env, the code defaults to `us-east-1`. This m
 | 10 | `08ef047f` | 2026-10-23 | undici CVE + headroom loopback | HIGH — dependency CVE + network bind | INTEGRATED |
 | 11 | `32a064e2` | 2026-10-23 | Node 22.23.4 CVE pin | HIGH — runtime CVE patch | INTEGRATED |
 | 12 | `4fa46034` | 2026-10-07 | Netlify relay proxy pool | MEDIUM — new relay surface | INTEGRATED (safe pattern) |
+| 13 | `fb30246c` | 2026-10-15 | zed test DATA_DIR isolation | LOW — test pollution fix | INTEGRATED |
+| 14 | `b6a9ca43` | 2026-10-23 | SSRF test triage + capability fixes | LOW — test suite hygiene | INTEGRATED |
+| 15 | `421f2262` | 2026-10-23 | Codex OAuth STT provider | MEDIUM — new credential surface | INTEGRATED |
 
 **Total security-relevant upstream commits identified: 193**
 **Reviewed so far: 10**
@@ -842,6 +845,121 @@ Unlike some relay designs, the deployed function does not verify a shared secret
 
 ### Conclusion
 **FULLY INTEGRATED.** Safe header forwarding pattern confirmed. Auth gate in place.
+
+---
+
+## Commit 13: `fb30246c` — zed test DATA_DIR isolation (LOW)
+
+**Date:** 2026-10-15
+**Author:** decolua (Co-Authored-By: Claude Code)
+**Subject:** fix(tests): isolate zed-native-auth DATA_DIR so it stops writing to the real DB
+
+### What upstream fixed
+The zed-native-auth test's criterion-3 callback test saved a real "Account N" zed connection into `~/.9router` on every full-suite run. The fix sets `DATA_DIR` to a temp dir before the DB layer loads (dynamic imports + `vi.resetModules()`, same pattern as `zed-live-models.test.js`) and cleans it up in `afterAll`.
+
+### Integration verification (2026-10-26)
+- ✅ `tests/unit/zed-native-auth.test.js:32` — `process.env.DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), "9router-zed-auth-"))`
+- ✅ `tests/unit/zed-native-auth.test.js:40` — `fs.rmSync(process.env.DATA_DIR, { recursive: true, force: true })` in `afterAll`
+- ✅ Dynamic imports after DATA_DIR set ensure DB layer loads with isolated path
+
+### Security implications
+**POSITIVE:** Prevents test data from polluting the production database. A test that writes to the real DB could create phantom connections that persist across test runs.
+
+### Conclusion
+**FULLY INTEGRATED.** Test hygiene fix, no security concern.
+
+---
+
+## Commit 14: `b6a9ca43` — SSRF test triage + capability fixes (LOW)
+
+**Date:** 2026-10-23
+**Author:** openhands
+**Subject:** test: triage master's failing suite; fix GLM-5.2 effort, gpt-6.1-sol context, dead SSRF tests
+
+### What upstream fixed
+Triage of master's failing test suite (247 → 24 failures):
+1. **GLM-5.2 effort:** Exact capability entry for `glm-5.2` must repeat `thinkingEffortSupported: true` from the `*glm-5*` pattern, or reasoning_effort is silently dropped
+2. **gpt-6.1-sol context:** Without its own entry, `gpt-6.1-sol` fell through to `*gpt-6*` (1.05M), overstating the Codex window
+3. **Dead SSRF tests:** Image SSRF test mocks updated to expect array response from `dns.lookup({ all: true })` — the Node.js DNS lookup API changed
+4. **Known-fails.txt refresh:** Updated baseline
+
+### Integration verification (2026-10-26)
+- ✅ `open-sse/providers/capabilities.js:142` — `glm-5.2` entry includes `thinkingEffortSupported: true`
+- ✅ `open-sse/providers/capabilities.js:250` — `gpt-6.1-sol` has own entry with 272k context
+- ✅ SSRF test files present: `cowork-mcp-ssrf-guard.test.js`, `provider-ssrf-link-local.test.js`, `search-ssrf-guard.test.js`, `ssrf-guard-hardening.test.js`, `suggested-models-ssrf-guard.test.js`
+
+### Security implications
+**INFO:** The SSRF test fix (dns.lookup array response) is test-mock alignment, not a change to the SSRF guard itself. The guard code is unchanged.
+
+### Conclusion
+**FULLY INTEGRATED.** Test triage + capability corrections.
+
+---
+
+## Commit 15: `421f2262` — Codex OAuth STT provider (MEDIUM)
+
+**Date:** 2026-10-23
+**Author:** Hermes Agent
+**Subject:** feat(stt): add Codex OAuth transcription provider
+
+### What upstream added
+A new STT (Speech-to-Text) provider `cx/transcribe` (alias `codex/transcribe`) that:
+- Reuses existing Codex OAuth chat connections (not an OpenAI API key)
+- Converts audio to mono 24kHz PCM16 WAV with `ffmpeg`
+- Sends to ChatGPT's internal `/backend-api/transcribe` endpoint
+- Uses Codex identity headers for authentication
+
+### Security-relevant design decisions (verified in commit)
+
+**1. ffmpeg sandboxing ✅**
+Commit message: "Conversion disables network protocols and constrains ffmpeg to common audio containers." This prevents SSRF via crafted audio files that could trigger ffmpeg to make network requests.
+
+**2. Input bounds ✅**
+- 25 MiB max input file
+- 120 seconds max decoded audio duration
+- 2 concurrent conversions/transcriptions per process
+- 15 seconds conversion timeout, 60 seconds upstream timeout
+
+**3. Temp file cleanup ✅**
+"Private temporary input files are deleted on both success and failure." Verified by the commit's cleanup pattern.
+
+**4. TLS verification never relaxed ✅**
+"Direct requests use Node HTTPS HTTP/1 with normal certificate verification; proxied/relay requests retain the shared transport. TLS verification is never relaxed by this adapter."
+
+**5. Concurrency bounded ✅**
+Module-level `active` counter with explicit limits.
+
+### Files changed (significant)
+- `open-sse/handlers/codexStt.js` (97 lines NEW) — main handler
+- `open-sse/handlers/codexSttAudio.js` — audio conversion + bounds
+- `Dockerfile` — adds `ffmpeg` to runtime image
+- `docs/CODEX_STT.md` — user documentation
+
+### Integration verification (2026-10-26)
+- ✅ `open-sse/handlers/codexStt.js` exists
+- ✅ `open-sse/executors/codex.js` exists (chat executor, STT uses same OAuth)
+- ✅ `open-sse/providers/registry/codex.js` exists with identity headers
+- ✅ Dockerfile includes `ffmpeg` in runtime image
+
+### Security concerns
+
+**CONCERN 1 (MEDIUM, accepted): Undocumented internal API**
+The `/backend-api/transcribe` endpoint is an internal ChatGPT service, not the supported OpenAI audio API. Availability and behavior can change without notice. The commit docs explicitly warn: "this is an internal, undocumented ChatGPT service, not the supported OpenAI audio API."
+
+**CONCERN 2 (LOW, accepted): Audio leaves the server**
+User audio is sent to the selected ChatGPT account's transcription service. The docs warn: "Audio leaves the server for the selected ChatGPT account; use only with appropriate consent."
+
+**CONCERN 3 (INFO): Multipart parsing in shared handler**
+The commit docs note: "multipart parsing happens in the shared entry handler before the provider-specific file limit is checked; use an ingress upload limit for internet-facing deployments."
+
+### Intersection with our work
+| Our commit | Intersection | Status |
+|---|---|---|
+| `f7a641d3` route-level requireAuth | STT endpoint `/v1/audio/transcriptions` flows through the same auth gate | ✅ INTEGRATED |
+| `ac1784f3` web-cookie hardening | No intersection — Codex STT uses OAuth tokens, not web cookies | ✅ CLEAN |
+
+### Conclusion
+**FULLY INTEGRATED.** Well-engineered with explicit bounds, cleanup, and TLS verification. The undocumented-API risk is documented and accepted.
 
 ---
 
