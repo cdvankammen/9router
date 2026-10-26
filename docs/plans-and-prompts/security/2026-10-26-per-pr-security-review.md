@@ -240,14 +240,23 @@ While the audit was in progress, origin/master advanced by 17 commits. Resynced 
 
 **Zero conflicts with any of our 29 hardening commits.** None touched `dashboardGuard.js`, `requireAuth.js`, or any route we gated.
 
-### New finding: OAuth callback proxy port scan
+### New finding: OAuth callback proxy port binding — AUDITED ✅
 
-During this session a port scan was run against mini2 ports 20131–20140 looking for OAuth callback proxies that start on demand. This is a **real security surface that hasn't been audited yet**:
-- OAuth flows in several providers (Zed, Cursor, Kiro, etc.) spawn temporary localhost listeners for the redirect callback.
-- If any of those listeners bind to `0.0.0.0` instead of `127.0.0.1`, a LAN peer could intercept the OAuth code/token.
-- The scan result is evidence this is a live surface on the deployed build, not a theoretical concern.
+During this session a port scan was run against mini2 ports 20131–20140 looking for OAuth callback proxies that start on demand. This triggered a code-level audit of `src/lib/oauth/utils/server.js` (the single file that owns all OAuth callback listeners).
 
-**Priority: MEDIUM** — add to follow-up queue.
+**Result: ALL OAuth callback servers bind explicitly to `127.0.0.1`** — the LAN-intercept vector is **NOT present**.
+
+Every `server.listen()` call in the file uses the loopback address:
+- Line 80: `server.listen(portToUse, "127.0.0.1", ...)`  (generic OAuth)
+- Line 268: `server.listen(CODEX_PORT, "127.0.0.1", ...)`  (Codex fixed port)
+- Line 410: `server.listen(XAI_PROXY_PORT, "127.0.0.1", ...)`  (xAI fixed port)
+- Line 525: `server.listen(0, "127.0.0.1", ...)`  (Trae dynamic)
+- Line 624: `server.listen(0, "127.0.0.1", ...)`  (Windsurf dynamic)
+- Line 763: `server.listen(0, "127.0.0.1", ...)`  (Zed dynamic)
+
+Plus `XAI_REDIRECT_URI` at `src/lib/oauth/constants/xai.js:27` hardcodes `127.0.0.1:56121`, and every other provider's `redirectUri` is built as `http://localhost:<port>/callback` (which resolves to 127.0.0.1 in all modern OS DNS stacks).
+
+**A LAN peer on the same subnet CANNOT intercept OAuth callbacks** — the TCP bind is loopback-only. No fix needed. Closing this audit item as resolved.
 
 ---
 
@@ -258,5 +267,5 @@ During this session a port scan was run against mini2 ports 20131–20140 lookin
 | Audit webLogin cookie storage location + file permissions | `38a0c449` | MEDIUM | 30 min |
 | Verify browserPool cross-provider isolation | `38a0c449` | MEDIUM | 30 min |
 | Verify cookie cleanup on `DELETE /api/providers/[id]` | `38a0c449` | MEDIUM | 20 min |
-| **Audit OAuth callback proxy port binding (127.0.0.1 vs 0.0.0.0)** | live scan 2026-10-26 | **MEDIUM** | 45 min |
+| ~~Audit OAuth callback proxy port binding~~ | live scan 2026-10-26 | ✅ **RESOLVED** | — (all bind 127.0.0.1) |
 | Flag `38a0c449` for auto-rewrite audit (Claude Code co-author) | `38a0c449` | LOW | 5 min |
