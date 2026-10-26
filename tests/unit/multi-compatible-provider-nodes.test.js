@@ -20,6 +20,8 @@ async function setup() {
     },
   }));
   vi.doMock("@/dashboardGuard", () => ({ isLocalRequest: () => true }));
+  // Finding #7: routes now call requireAuth — mock it to pass in tests.
+  vi.doMock("@/lib/auth/requireAuth", () => ({ requireAuth: async () => true }));
 
   const { POST } = await import("@/app/api/provider-nodes/route.js");
   const { PUT } = await import("@/app/api/provider-nodes/[id]/route.js");

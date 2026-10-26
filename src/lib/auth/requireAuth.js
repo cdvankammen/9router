@@ -49,8 +49,9 @@ export async function hasValidCliToken(request) {
 export async function requireAuth(request) {
   const cliOk = await hasValidCliToken(request);
   if (cliOk) return true;
+  // Defensive: raw Request objects (tests, internal callers) may lack .cookies
   const jwtOk = await verifyDashboardAuthToken(
-    request.cookies.get("auth_token")?.value
+    request.cookies?.get?.("auth_token")?.value
   );
   return !!jwtOk;
 }

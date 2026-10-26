@@ -310,14 +310,18 @@ describe("dashboardGuard — middleware integration", () => {
   it("allows requests under rate limit with valid auth", async () => {
     const { proxy } = await import("../../src/dashboardGuard.js");
     __resetBuckets();
+    // /api/providers is now ALWAYS_PROTECTED (Finding #7, commit 24f497b6):
+    // JWT or CLI token required regardless of requireLogin. Present the
+    // CLI token (mocked getConsistentMachineId returns "cli-token").
     const req = fakeRequest("/api/providers", {
       host: "localhost:20127",
       "x-9r-peer-token": PEER_TOKEN,
       "x-9r-real-ip": "127.0.0.1",
       origin: "http://localhost:20127",
+      "x-9r-cli-token": "cli-token",
     });
     const response = await proxy(req);
-    // Under limit + local request + requireLogin=false → nextResponse
+    // Under limit + local request + valid CLI token → nextResponse
     expect(response).toBe(mocks.nextResponse);
   });
 
