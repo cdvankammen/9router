@@ -1,8 +1,54 @@
 import { NextResponse } from "next/server";
 import { deleteApiKey, getApiKeyById, updateApiKey } from "@/lib/localDb";
 import { validateKeyAccessInput } from "@/shared/utils/keyAccess.js";
+import { verifyDashboardAuthToken } from "@/lib/auth/dashboardSession";
+import { getConsistentMachineId } from "@/shared/utils/machineId";
+import crypto from "node:crypto";
 
-// GET /api/keys/[id] - Get single key
+const CLI_TOKEN_HEADER = "x-9r-cli-token";
+const CLI_TOKEN_SALT = "9r-cli-auth";
+
+// CRITICAL IDOR fix (2026-10-26): this route previously returned the raw,
+// unmasked API key for any UUID the caller knew, while the list endpoint
+// (/api/keys) handed out UUIDs freely with masking. PUT and DELETE also had
+// no owner check, allowing any authenticated session to toggle/rename/revoke
+// any key on the system.
+//
+// Fix:
+//   1. GET masks the key field (same maskKey helper as the list endpoint).
+//      The dashboard already holds the full key in memory from POST create,
+//      so masking here does not break the UI.
+//   2. PUT and DELETE require a valid session (JWT auth_token cookie or
+//      x-9r-cli-token header) — defence-in-depth alongside the middleware
+//      ALWAYS_PROTECTED gate.
+//
+// Follow-up work (Finding #2 Option B): scope operations to the current
+// session's keys and add a one-time reveal token for copy-to-clipboard.
+
+function maskKey(fullKey) {
+  if (!fullKey || fullKey.length <= 10) return fullKey || "";
+  return fullKey.slice(0, 6) + "\u2022".repeat(fullKey.length - 10) + fullKey.slice(-4);
+}
+
+async function hasValidCliToken(request) {
+  const token = request.headers.get(CLI_TOKEN_HEADER);
+  if (!token) return false;
+  const expected = await getConsistentMachineId(CLI_TOKEN_SALT);
+  const a = Buffer.from(token, "utf8");
+  const b = Buffer.from(expected, "utf8");
+  if (a.length !== b.length) return false;
+  return crypto.timingSafeEqual(a, b);
+}
+
+async function requireAuth(request) {
+  const cliOk = await hasValidCliToken(request);
+  const jwtOk = await verifyDashboardAuthToken(
+    request.cookies.get("auth_token")?.value
+  );
+  return cliOk || jwtOk;
+}
+
+// GET /api/keys/[id] - Get single key (masked, same as list)
 export async function GET(request, { params }) {
   try {
     const { id } = await params;
@@ -10,16 +56,20 @@ export async function GET(request, { params }) {
     if (!key) {
       return NextResponse.json({ error: "Key not found" }, { status: 404 });
     }
-    return NextResponse.json({ key });
+    return NextResponse.json({ key: { ...key, key: maskKey(key.key) } });
   } catch (error) {
     console.log("Error fetching key:", error);
     return NextResponse.json({ error: "Failed to fetch key" }, { status: 500 });
   }
 }
 
-// PUT /api/keys/[id] - Update key
+// PUT /api/keys/[id] - Update key (auth required)
 export async function PUT(request, { params }) {
   try {
+    if (!(await requireAuth(request))) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { id } = await params;
     const body = await request.json();
     const { isActive, access } = body;
@@ -39,16 +89,20 @@ export async function PUT(request, { params }) {
 
     const updated = await updateApiKey(id, updateData);
 
-    return NextResponse.json({ key: updated });
+    return NextResponse.json({ key: { ...updated, key: maskKey(updated.key) } });
   } catch (error) {
     console.log("Error updating key:", error);
     return NextResponse.json({ error: "Failed to update key" }, { status: 500 });
   }
 }
 
-// DELETE /api/keys/[id] - Delete API key
+// DELETE /api/keys/[id] - Delete API key (auth required)
 export async function DELETE(request, { params }) {
   try {
+    if (!(await requireAuth(request))) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { id } = await params;
 
     const deleted = await deleteApiKey(id);
