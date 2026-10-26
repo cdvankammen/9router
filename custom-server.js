@@ -70,6 +70,26 @@ http.createServer = (...args) => {
     req.headers["x-9r-real-ip"] = ip;
     req.headers["x-9r-peer-token"] = PEER_TOKEN;
     if (viaProxy) req.headers["x-9r-via-proxy"] = "1";
+
+    // Security headers — clickjacking + MIME-sniffing protection.
+    // Injected at the socket layer so every response (dashboard HTML, API JSON,
+    // static assets) gets them. Browsers ignore frame-ancestors on non-HTML
+    // content types; X-Content-Type-Options is universally safe.
+    // Routes that need to be embeddable (e.g. /api/mimo/login upstream proxy)
+    // override these via res.setHeader() before writeHead, which takes precedence.
+    if (!res.getHeader("x-frame-options")) {
+      res.setHeader("X-Frame-Options", "SAMEORIGIN");
+    }
+    if (!res.getHeader("content-security-policy")) {
+      res.setHeader("Content-Security-Policy", "frame-ancestors 'self'");
+    }
+    if (!res.getHeader("x-content-type-options")) {
+      res.setHeader("X-Content-Type-Options", "nosniff");
+    }
+    if (!res.getHeader("referrer-policy")) {
+      res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+    }
+
     return handler(req, res);
   };
   const server = origCreate(...rest, wrapped);
