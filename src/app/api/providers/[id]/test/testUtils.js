@@ -2,6 +2,7 @@ import { getProviderConnectionById, updateProviderConnection } from "@/lib/local
 import { resolveConnectionProxyConfig } from "@/lib/network/connectionProxy";
 import { testProxyUrl } from "@/lib/network/proxyTest";
 import { isOpenAICompatibleProvider, isAnthropicCompatibleProvider, AI_PROVIDERS } from "@/shared/constants/providers";
+import { assertNotLinkLocalResolved } from "@/shared/utils/ssrfGuard.js";
 import { getDefaultModel } from "open-sse/config/providerModels.js";
 import { probeBedrockCredentials } from "open-sse/executors/bedrock.js";
 import { resolveOllamaLocalHost, PROVIDERS } from "open-sse/config/providers.js";
@@ -522,6 +523,15 @@ async function testApiKeyConnection(connection, effectiveProxy = null) {
   if (isOpenAICompatibleProvider(connection.provider)) {
     const modelsBase = connection.providerSpecificData?.baseUrl;
     if (!modelsBase) return { valid: false, error: "Missing base URL" };
+    // SECURITY: block link-local / cloud-metadata base URLs (169.254.0.0/16,
+    // fe80::/10). RFC1918 + loopback are intentionally permitted — local model
+    // hosts (Ollama, LAN vLLM) are legitimate use cases for this code path.
+    // DNS resolution catches wildcard-DNS rebinding to metadata IPs.
+    try {
+      await assertNotLinkLocalResolved(modelsBase);
+    } catch (guardErr) {
+      return { valid: false, error: guardErr.message };
+    }
     try {
       const res = await fetchWithConnectionProxy(`${modelsBase.replace(/\/$/, "")}/models`, {
         headers: { "Authorization": `Bearer ${connection.apiKey}` },
@@ -535,6 +545,14 @@ async function testApiKeyConnection(connection, effectiveProxy = null) {
   if (isAnthropicCompatibleProvider(connection.provider)) {
     let modelsBase = connection.providerSpecificData?.baseUrl;
     if (!modelsBase) return { valid: false, error: "Missing base URL" };
+    // SECURITY: block link-local / cloud-metadata base URLs (see OpenAI-compat
+    // branch above for rationale). RFC1918 + loopback are permitted for local
+    // Anthropic-compatible servers (e.g. LAN-hosted Anthropic API proxies).
+    try {
+      await assertNotLinkLocalResolved(modelsBase);
+    } catch (guardErr) {
+      return { valid: false, error: guardErr.message };
+    }
     try {
       modelsBase = modelsBase.replace(/\/$/, "");
       if (modelsBase.endsWith("/messages")) modelsBase = modelsBase.slice(0, -9);
@@ -922,6 +940,13 @@ async function testApiKeyConnection(connection, effectiveProxy = null) {
       }
 case "llm7": {
         const baseUrl = connection.providerSpecificData?.baseUrl || "https://api.llm7.io/v1";
+        // SECURITY: block link-local / cloud-metadata base URLs. Default
+        // (api.llm7.io) is safe; only user-supplied overrides need guarding.
+        try {
+          await assertNotLinkLocalResolved(baseUrl);
+        } catch (guardErr) {
+          return { valid: false, error: guardErr.message };
+        }
         const res = await fetchWithConnectionProxy(`${baseUrl.replace(/\/$/, "")}/models`, {
           headers: { Authorization: `Bearer ${connection.apiKey}` },
         }, effectiveProxy);

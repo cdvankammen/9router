@@ -12,6 +12,7 @@ import {
   isNousApiKeyAccepted,
 } from "open-sse/services/nous.js";
 import { normalizeProviderId } from "@/lib/providerNormalization";
+import { assertNotLinkLocalResolved } from "@/shared/utils/ssrfGuard.js";
 
 // Probe a webSearch/webFetch provider using its searchConfig/fetchConfig.
 // Returns true if API key is accepted (status !== 401 && !== 403).
@@ -114,6 +115,14 @@ export async function POST(request) {
           return NextResponse.json({ error: "OpenAI Compatible node not found" }, { status: 404 });
         }
         const modelsUrl = `${node.baseUrl?.replace(/\/$/, "")}/models`;
+        // SECURITY: block link-local / cloud-metadata base URLs (169.254.0.0/16,
+        // fe80::/10). RFC1918 + loopback are intentionally permitted — local model
+        // hosts (Ollama, LAN vLLM) are legitimate use cases for this code path.
+        try {
+          await assertNotLinkLocalResolved(modelsUrl);
+        } catch (guardErr) {
+          return NextResponse.json({ valid: false, error: guardErr.message }, { status: 400 });
+        }
         const res = await fetch(modelsUrl, {
           headers: { "Authorization": `Bearer ${apiKey}` },
         });
@@ -131,6 +140,13 @@ export async function POST(request) {
           return NextResponse.json({ error: "Custom Embedding node not found" }, { status: 404 });
         }
         const baseUrl = node.baseUrl?.replace(/\/$/, "");
+        // SECURITY: block link-local / cloud-metadata base URLs (see OpenAI-compat
+        // branch for rationale). RFC1918 + loopback permitted for local embedding servers.
+        try {
+          await assertNotLinkLocalResolved(`${baseUrl}/models`);
+        } catch (guardErr) {
+          return NextResponse.json({ valid: false, error: guardErr.message }, { status: 400 });
+        }
         const modelsRes = await fetch(`${baseUrl}/models`, {
           headers: { "Authorization": `Bearer ${apiKey}` },
         });
@@ -167,6 +183,14 @@ export async function POST(request) {
         }
 
         const messagesUrl = `${normalizedBase}/v1/messages`;
+        // SECURITY: block link-local / cloud-metadata base URLs (see OpenAI-compat
+        // branch for rationale). RFC1918 + loopback permitted for local
+        // Anthropic-compatible servers.
+        try {
+          await assertNotLinkLocalResolved(messagesUrl);
+        } catch (guardErr) {
+          return NextResponse.json({ valid: false, error: guardErr.message }, { status: 400 });
+        }
         const model = node.defaultModel || "claude-3-haiku-20240307";
 
         const res = await fetch(messagesUrl, {

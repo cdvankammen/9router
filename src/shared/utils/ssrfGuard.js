@@ -66,6 +66,55 @@ function isBlockedIpv4(host) {
   return isBlockedIpv4Int(ip);
 }
 
+// Link-local-only check (169.254.0.0/16) — used by callers that MUST permit
+// RFC1918 private ranges + loopback (local model hosts: Ollama at
+// localhost:11434, LAN vLLM boxes at 192.168.x / 10.x, Tailscale CGNAT at
+// 100.64/10) while still blocking cloud-metadata and link-local probes.
+// 169.254.169.254 (AWS/GCP/Azure metadata) and 169.254.170.2 (ECS task
+// metadata) both fall in this range. This is the ONE IP class that is never
+// a legitimate model host.
+const LINK_LOCAL_V4_BASE = ipv4ToInt("169.254.0.0");
+function isLinkLocalIpv4(host) {
+  const ip = ipv4ToInt(host);
+  if (ip === null) return false;
+  // /16 mask
+  const mask = 0xffff0000 >>> 0;
+  return (ip & mask) === (LINK_LOCAL_V4_BASE & mask);
+}
+
+function isLinkLocalIpv6Groups(g) {
+  // fe80::/10 link-local
+  if ((g[0] & 0xffc0) === 0xfe80) return true;
+  // IPv4-mapped ::ffff:169.254.x.x — extract the embedded IPv4 and reapply
+  // the v4 link-local check. NAT64 64:ff9b::/96 and IPv4-compat ::a.b.c.d
+  // forms can also embed a link-local v4.
+  const low32 = ((g[6] << 16) | g[7]) >>> 0;
+  if ([0, 1, 2, 3, 4].every((i) => g[i] === 0) && g[5] === 0xffff) {
+    return isLinkLocalIpv4Int(low32);
+  }
+  if (g[0] === 0x0064 && g[1] === 0xff9b && [2, 3, 4, 5].every((i) => g[i] === 0)) {
+    return isLinkLocalIpv4Int(low32);
+  }
+  if ([0, 1, 2, 3, 4, 5].every((i) => g[i] === 0) && low32 !== 0 && low32 !== 1) {
+    return isLinkLocalIpv4Int(low32);
+  }
+  return false;
+}
+
+function isLinkLocalIpv4Int(ip) {
+  const mask = 0xffff0000 >>> 0;
+  return (ip & mask) === (LINK_LOCAL_V4_BASE & mask);
+}
+
+function isLinkLocalHost(host) {
+  if (isLinkLocalIpv4(host)) return true;
+  if (host.includes(":")) {
+    const groups = parseIPv6ToGroups(host.replace(/^\[|\]$/g, ""));
+    if (groups && isLinkLocalIpv6Groups(groups)) return true;
+  }
+  return false;
+}
+
 function parseHextets(s) {
   if (s === "") return [];
   const segs = s.split(":");
@@ -168,6 +217,68 @@ export function assertPublicUrl(rawUrl) {
   const parsed = new URL(rawUrl);
   const host = normalizeHost(parsed.hostname);
   if (isBlockedHost(host)) throw new Error("Blocked URL: internal host");
+}
+
+// Link-local / cloud-metadata guard — blocks ONLY the IP class that is never
+// a legitimate model host:
+//   - 169.254.0.0/16 (link-local, including AWS/GCP/Azure metadata at
+//     169.254.169.254 and ECS task metadata at 169.254.170.2)
+//   - fe80::/10 (IPv6 link-local) and IPv4-mapped forms
+//   - http://[fd00::]/... (ULA) is NOT blocked — some private model servers
+//     use ULA addressing
+//
+// Use this INSTEAD of assertPublicUrlResolved when the caller must permit
+// RFC1918 private ranges and loopback — the 9Router use case of proxying to
+// local model hosts (Ollama at localhost:11434, LAN vLLM at 192.168.x/10.x,
+// Tailscale CGNAT at 100.64/10) makes the full SSRF guard inappropriate for
+// provider baseUrl validation. The link-local block closes the cloud-metadata
+// exfiltration vector without breaking legitimate local model routing.
+//
+// Scheme check is also enforced: only http:/https: allowed. Prevents file:/,
+// gopher:, and other exotic schemes from being smuggled into the fetch path.
+export function assertNotLinkLocal(rawUrl) {
+  let parsed;
+  try {
+    parsed = new URL(rawUrl);
+  } catch {
+    throw new Error("Invalid URL");
+  }
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+    throw new Error(`Blocked URL scheme: ${parsed.protocol}`);
+  }
+  if (parsed.username || parsed.password) {
+    throw new Error("Blocked URL: embedded credentials not allowed");
+  }
+  const host = normalizeHost(parsed.hostname);
+  if (isLinkLocalHost(host)) {
+    throw new Error("Blocked URL: link-local / cloud-metadata host");
+  }
+}
+
+// Async variant: also resolves hostnames via DNS so a wildcard-DNS domain
+// (nip.io/sslip.io) or attacker-controlled A record pointed at 169.254.169.254
+// is caught, not just literals.
+export async function assertNotLinkLocalResolved(rawUrl) {
+  assertNotLinkLocal(rawUrl); // literal check first (fast path)
+  const parsed = new URL(rawUrl);
+  const host = normalizeHost(parsed.hostname);
+  const bracketless = host.replace(/^\[|\]$/g, "");
+  // Already a literal address — isLinkLocalHost above covered it.
+  if (ipv4ToInt(bracketless) !== null || bracketless.includes(":")) return;
+  let addresses;
+  try {
+    addresses = await dns.promises.lookup(host, { all: true, verbatim: true });
+  } catch {
+    return; // resolution failure isn't an SSRF signal
+  }
+  for (const { address, family } of addresses) {
+    const blocked = family === 4
+      ? isLinkLocalIpv4(address)
+      : isLinkLocalIpv6Groups(parseIPv6ToGroups(address) || []);
+    if (blocked) {
+      throw new Error("Blocked URL: hostname resolves to link-local / cloud-metadata host");
+    }
+  }
 }
 
 // Async: assertPublicUrl plus DNS resolution of non-literal hostnames, so a
