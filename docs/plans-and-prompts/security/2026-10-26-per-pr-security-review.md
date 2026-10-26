@@ -351,7 +351,104 @@ The test route does NOT write anything — it only echoes back validated config.
 **Remaining: 189 (prioritized queue maintained)**
 
 **Next in queue:**
-- `ef181752` Zed OAuth lifecycle hardening (HIGH)
+- ~~`ef181752` Zed OAuth lifecycle hardening (HIGH)~~ ← **done below**
 - `a9d0ad26` AWS Bedrock + SSO credentials (MEDIUM)
 - `628ff1ea` 24h maxAge for dashboard cookie (MEDIUM)
 - `6af26a9e` Lossless header forwarding for relay pools (MEDIUM — header leakage)
+
+---
+
+## Commit 5: `ef181752` — Zed OAuth lifecycle hardening (HIGH)
+
+**Date:** 2026-09-17
+**Author:** Mosabbir Maruf
+**Subject:** fix(zed): harden OAuth lifecycle and live model support
+
+### What upstream fixed
+Zed's "OAuth" is actually a native-app RSA-keypair signin (no client_id/secret — the credential is a per-login ephemeral RSA keypair). Several lifecycle races existed:
+
+1. **Garbage credential storage via PKCS#1 v1.5 fallback** (`open-sse/shared/zedAuth.js`):
+   PKCS#1 v1.5 unpadding is not integrity-checked — a wrong-key decrypt can "succeed" with garbage bytes. The old code silently accepted these. Now the fallback path checks for UTF-8 replacement characters (`\uFFFD`) and fails loudly rather than storing garbage as a credential.
+
+2. **Robust callback query parsing** (`parseZedCallbackPayload`):
+   Old code built `http://127.0.0.1/?${raw.replace(/^\?/, "")}` which broke when `raw` was a pathname+query (what the local proxy forwards). Now extracts the query portion cleanly.
+
+3. **`systemId` threading across the authorize→register→exchange lifecycle** (`src/lib/oauth/providers/zed.js`, `src/lib/oauth/utils/server.js`):
+   Old code minted a fresh `systemId` on every `prepareConfig`, meaning `registerSession` and `exchangeTokens` could disagree. Now `exchangeTokens` accepts a `meta` argument and prefers the registered `systemId`.
+
+4. **Proxy idle-timeout renewal on reuse** (`startZedProxy`):
+   Old code: if the proxy was already running, reuse the port but DON'T renew the timeout → a previous flow's deadline could kill the flow that just adopted the port. Now clears + resets the timeout on every adoption.
+
+5. **Ignore non-callback localhost requests** (Zed proxy `req` handler):
+   Old code: any request to the proxy triggered the exchange path. Now: only requests carrying `user_id` / `access_token` / `token` params are treated as callbacks. Prefetches, favicon probes, stray navigations are answered without touching the session — the genuine redirect can still land.
+
+6. **Don't stop proxy on exchange failure**:
+   Old code stopped the proxy in `finally`, so a superseded popup's late landing could kill the live attempt. Now only stops on success; failure paths leave the proxy alive so the real callback can still arrive.
+
+7. **Thread `proxyOptions` into `fetchZedLlmToken`** (`open-sse/shared/zedAuth.js:297`):
+   The LLM token fetch now respects proxy configuration (egress hop).
+
+### Files changed (13 files, 866 insertions)
+- `open-sse/shared/zedAuth.js` — decrypt garbage rejection, query parsing, proxyOptions threading
+- `src/lib/oauth/providers/zed.js` — meta.systemId preference
+- `src/lib/oauth/utils/server.js` — registerZedSession systemId, startZedProxy timeout renewal + non-callback filter + no-stop-on-failure
+- `open-sse/executors/zed.js` — wire values (anthropic, open_ai, google, x_ai), strip Vertex safetySettings
+- `src/shared/components/OAuthModal.js` — track owned proxy in flowRef, stop at most once
+- `src/app/api/providers/[id]/models/route.js` — connection-scoped live Zed model resolver
+- `open-sse/providers/registry/zed.js` — unhide provider
+- 3 new test files (wire format, native auth, live models)
+
+### Integration verification (2026-10-26)
+- ✅ `open-sse/shared/zedAuth.js` exists with `parseZedCallbackPayload`, `decryptZedAccessToken`, `encodeZedPrivateKeyVerifier`, `createZedNativeAuthData`, `fetchZedLlmToken`
+- ✅ `src/lib/oauth/utils/server.js` has `registerZedSession({ state, codeVerifier, systemId })`, `startZedProxy`, `stopZedProxy`
+- ✅ `src/lib/oauth/providers/zed.js` uses `meta?.systemId || config.systemId` preference
+- ✅ 3 unit test files cover wire format, native auth, live models
+- ✅ All servers bind 127.0.0.1 (already confirmed in OAuth port binding audit)
+
+### Intersection with our work
+| Our commit | Intersection | Status |
+|---|---|---|
+| `f7a641d3` timing-safe CLI token | No intersection — Zed uses RSA-OAEP decryption, not string compare | ✅ CLEAN |
+| `24f497b6` middleware promotion | `/api/oauth/[provider]/[action]` not in ALWAYS_PROTECTED (correctly — part of OAuth flow) | ✅ CLEAN |
+| `1ebed4fc` route-level requireAuth | Zed OAuth flow runs through the OAuth routes, not the gated admin routes | ✅ CLEAN |
+
+### Security implications
+
+**POSITIVE (defensive hardening):**
+1. Garbage PKCS#1 v1.5 decryptions are now rejected — prevents storing corrupted bytes as credentials (which would cause silent auth failures on every subsequent request using the connection)
+2. Timeout renewal on proxy reuse — prevents race where superseded flow's deadline kills live flow
+3. Non-callback filtering — prevents favicon/prefetch probes from corrupting session state
+
+**CONCERN 1 (LOW, accepted): `stopZedProxy` not called on error**
+The new code intentionally leaves the proxy alive on exchange failure so a late-landing genuine callback can still arrive. The idle timeout bounds this (ZED_HOSTED_CONFIG.oauthTimeoutMs). Not a security bug — bounded by timeout, and the next flow will adopt the port with a renewed timeout.
+
+**CONCERN 2 (LOW, accepted): `DUMMY_FALLBACK_CERT`-style pattern absent**
+Unlike SAML which has a placeholder, Zed genuinely requires the user to complete the RSA keypair exchange. No placeholder possible — correctly no fallback.
+
+**CONCERN 3 (INFO): `createZedNativeAuthData` generates 2048-bit RSA keys**
+2048-bit RSA is at the lower edge of current recommendations (NIST SP 800-131A Rev 2 allows through 2030). Acceptable for ephemeral per-login keypairs with ~10 minute TTL. Not a bug, but worth noting for a future upgrade to 3072 or 4096.
+
+### Conclusion
+**FULLY INTEGRATED.** This is a genuine quality + security hardening commit addressing several real OAuth lifecycle races. All defensive changes are present in current code. No conflicts with our hardening work. No follow-up items queued.
+
+---
+
+## Running CSV of analyzed upstream commits
+
+| # | Commit | Date | Subject | Intersection | Status |
+|---|---|---|---|---|---|
+| 1 | `92259214` | 2026-08-14 | GHSA-pjm4-8fpg-f9p6 peer-token | HIGH — foundational | INTEGRATED |
+| 2 | `98579f98` | 2026-09-03 | /responses rewrite | LOW | INTEGRATED |
+| 3 | `38a0c449` | 2026-10-22 | web-cookie browser pool | HIGH — new credential primitive | INTEGRATED + 3 follow-ups |
+| 4 | `65197ad1` | 2026-08-13 | SAML 2.0 SSO | HIGH — new auth protocol | INTEGRATED |
+| 5 | `ef181752` | 2026-09-17 | Zed OAuth lifecycle hardening | HIGH — OAuth race fixes | INTEGRATED |
+
+**Total security-relevant upstream commits identified: 193**
+**Reviewed so far: 5**
+**Remaining: 188 (priority queue maintained)**
+
+**Next in queue:**
+- `a9d0ad26` AWS Bedrock + SSO credentials (MEDIUM)
+- `628ff1ea` 24h maxAge for dashboard cookie (MEDIUM)
+- `6af26a9e` Lossless header forwarding for relay pools (MEDIUM — header leakage)
+- `2aa9307f` / `6ed88685` per-key token quotas + revert (MEDIUM — what broke?)
