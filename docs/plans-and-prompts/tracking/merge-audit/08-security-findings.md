@@ -288,3 +288,54 @@ Accessibility snapshot confirms:
 **Caveats:**
 - mini4 runs with `requireLogin:false`, so PROTECTED_API_PATHS pass through unauthenticated; the 401s above come from the middleware's ALWAYS_PROTECTED gate, which applies regardless of that setting.
 - Login sets `auth_token` via `Set-Cookie` only (no token in the JSON body) — scripts must use a cookie jar.
+
+---
+
+## Finding #6 — Clickjacking: no `X-Frame-Options` / CSP `frame-ancestors` on any response
+
+**Date found:** 2026-10-26 (operator probe pages `W360-Clickjacking-Proof` + `w373_attacker_page.html`)
+**Fixed:** commit `b1f9f1b6` (`fix(security): add clickjacking protection + security headers at socket layer`)
+
+### Severity
+**HIGH** — the dashboard (including the login page that prints "Default password is `123456`") renders inside an attacker-controlled cross-origin iframe, enabling UI-redress/clickjacking against any operator who visits a malicious page while the gateway is reachable.
+
+### Root cause
+No response emitted `X-Frame-Options` or `Content-Security-Policy: frame-ancestors`. The only framing-related code in the repo was `src/lib/mimoLoginSession.js:650`, which *deletes* an upstream `x-frame-options` header when proxying the MiMo login flow — the codebase actively stripped framing protection in one path and never added it anywhere else.
+
+### Fix (commit `b1f9f1b6`)
+`custom-server.js` now injects four security headers on every response at the socket layer (dashboard HTML, API JSON, static assets):
+- `X-Frame-Options: SAMEORIGIN`
+- `Content-Security-Policy: frame-ancestors 'self'`
+- `X-Content-Type-Options: nosniff`
+- `Referrer-Policy: strict-origin-when-cross-origin`
+
+The wrapper sets these defaults before the Next handler runs; a route that sets the same header name later replaces the value (standard `res.setHeader` last-write-wins semantics).
+
+### Proof — CODE layer
+- `grep -c X-Frame-Options` on the deployed `custom-server.js` shows the markers present on both mini4 instances.
+- Regression suite re-run: **4212 pass / 54 fail** (baseline known=56) — no regressions. Note `custom-server.js` itself is not unit-tested; it is proven by the live header + iframe checks below.
+
+### Proof — HTTP layer (SSH + localhost curl, authoritative — dev-side curl to these hosts was unreliable)
+| Host:port | Path | Result |
+|---|---|---|
+| mini4 :20129 (standalone v5, PID 76011) | `/login` | ✅ 200 + `X-Frame-Options: SAMEORIGIN` + `CSP: frame-ancestors 'self'` |
+| mini4 :20128 (tray v0.5.109, PID 75883) | `/login` | ✅ same headers |
+| mini4 :20129 | `/api/health`, `/dashboard/settings`, `/favicon.ico` | ✅ all four headers |
+
+### Proof — DOM/VISUAL layer (browser A/B, same attacker `data:`-origin page + identical iframe sandbox attrs)
+- **Target mini4 (`192.168.1.189:20129`):** iframe **BLOCKED**. Console: `Framing 'http://192.168.1.189:20129/' violates the following Content Security Policy directive: "frame-ancestors 'self'". The request has been blocked.` + `net::ERR_BLOCKED_BY_RESPONSE`. Frame rendered empty (no login UI in the accessibility snapshot).
+- **Target real mini2 (`mini2:20128`):** iframe **STILL RENDERS** the login UI (9Router heading, "Sign in with OIDC" button, password textbox, "Default password is `123456`") → **real mini2 remains vulnerable** (see topology correction below).
+
+### ⚠️ Topology correction — an earlier "mini2 upgrade" hit the wrong machine
+- `192.168.1.189` and `100.76.147.49` are **the same box (`Mac.lan`) = mini4**.
+- The hostname `mini2` resolves via Tailscale DNS to `mini2.local` @ **100.96.109.61 — a different machine (the real mini2)**.
+- The earlier rsync/`launchctl` "mini2 upgrade" therefore upgraded **mini4's own tray/npm-global instance** (:20128, PID 75883, now v0.5.109 with headers) — not the real mini2. The backup dir was renamed `/tmp/9r-mini2-app-backup-pre-v5` → `/tmp/9r-maclan-tray-app-backup-pre-v5` to reflect this.
+
+### Real mini2 — current state (STILL VULNERABLE)
+- Host: `mini2.local` @ `100.96.109.61` (Tailscale)
+- Server: PID 14934, `next-server (v16.3.5)`, cwd `/Applications/9Router.app/Contents/Resources/app/app`
+- Launched by `cli.js --tray --port 20128` (PID 14919); `com.9router.app.plist.disabled` in `~/Library/LaunchAgents` (not launchd-managed — tray/login-item start)
+- App bundle version **0.5.75**; `grep -c X-Frame-Options .../app/custom-server.js` = **0**
+- `/login` → `200 OK` with **no** framing headers
+- No `.env` in the bundle app dir; node v26.11.1 available at `/opt/homebrew/bin/node`
+- **Next action:** back up `/Applications/9Router.app/Contents/Resources/app`, deploy the v5 standalone into it, restart, then re-run the iframe A/B against the `mini2` hostname to confirm the block.
