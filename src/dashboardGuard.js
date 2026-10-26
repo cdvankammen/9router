@@ -4,6 +4,7 @@ import { getConsistentMachineId } from "@/shared/utils/machineId";
 import { verifyDashboardAuthToken } from "@/lib/auth/dashboardSession";
 import { hasTrustedPeerHeaders } from "@/lib/auth/trustedPeer";
 import { checkRateLimit, rateLimitResponse } from "@/lib/middleware/rateLimiter.js";
+import crypto from "node:crypto";
 
 const CLI_TOKEN_HEADER = "x-9r-cli-token";
 const CLI_TOKEN_SALT = "9r-cli-auth";
@@ -14,10 +15,19 @@ async function getCliToken() {
   return cachedCliToken;
 }
 
+// Finding #7 follow-up (2026-10-26): timing-safe comparison, matching
+// src/lib/auth/requireAuth.js. The previous `===` comparison leaked a
+// timing side-channel (byte-at-a-time network attack is hard but the
+// security claim should match the code). Length-early-return is acceptable
+// (length leaks only).
 async function hasValidCliToken(request) {
   const token = request.headers.get(CLI_TOKEN_HEADER);
   if (!token) return false;
-  return token === await getCliToken();
+  const expected = await getCliToken();
+  const a = Buffer.from(token, "utf8");
+  const b = Buffer.from(expected, "utf8");
+  if (a.length !== b.length) return false;
+  return crypto.timingSafeEqual(a, b);
 }
 
 // Public API paths — no auth required (LLM API has its own key auth inside handler).

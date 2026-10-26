@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getRequestDetailById } from "@/lib/usageDb";
 import { getAnnotations, addAnnotation, deleteAnnotation, toggleStar } from "@/lib/usageDb";
+import { requireAuth } from "@/lib/auth/requireAuth";
 
 /**
  * GET /api/messages/:id/annotations
@@ -30,6 +31,11 @@ export async function GET(request, { params }) {
  */
 export async function POST(request, { params }) {
   try {
+    // Finding #7 follow-up (2026-10-26): route-level requireAuth. Annotation
+    // writes modify stored metadata on captured conversations.
+    if (!(await requireAuth(request))) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     const { id } = await params;
     const detail = await getRequestDetailById(id);
     if (!detail) {
@@ -62,6 +68,10 @@ export async function POST(request, { params }) {
  */
 export async function DELETE(request, { params }) {
   try {
+    // Finding #7 follow-up (2026-10-26): route-level requireAuth.
+    if (!(await requireAuth(request))) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     const { id } = await params;
     const { searchParams } = new URL(request.url);
     const annotationId = searchParams.get("annotationId");
@@ -89,6 +99,10 @@ export async function DELETE(request, { params }) {
  */
 export async function PATCH(request, { params }) {
   try {
+    // Finding #7 follow-up (2026-10-26): route-level requireAuth.
+    if (!(await requireAuth(request))) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     const { id } = await params;
     const detail = await getRequestDetailById(id);
     if (!detail) {

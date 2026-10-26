@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getComboById, updateCombo, deleteCombo, getComboByName } from "@/lib/localDb";
 import { resetComboRotation } from "open-sse/services/combo.js";
+import { requireAuth } from "@/lib/auth/requireAuth";
 
 // Validate combo name: only a-z, A-Z, 0-9, -, _
 const VALID_NAME_REGEX = /^[a-zA-Z0-9_.\-]+$/;
@@ -23,8 +24,14 @@ export async function GET(request, { params }) {
 }
 
 // PUT /api/combos/[id] - Update combo
+// Finding #7 follow-up (2026-10-26): route-level requireAuth. Combos route
+// live traffic to a set of connections — rewriting a combo redirects every
+// user's requests through attacker-chosen connections.
 export async function PUT(request, { params }) {
   try {
+    if (!(await requireAuth(request))) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     const { id } = await params;
     const body = await request.json();
     
@@ -61,8 +68,12 @@ export async function PUT(request, { params }) {
 }
 
 // DELETE /api/combos/[id] - Delete combo
+// Finding #7 follow-up (2026-10-26): route-level requireAuth.
 export async function DELETE(request, { params }) {
   try {
+    if (!(await requireAuth(request))) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     const { id } = await params;
     const prev = await getComboById(id);
     const success = await deleteCombo(id);

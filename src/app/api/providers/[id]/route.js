@@ -6,6 +6,7 @@ import {
   deleteProviderConnection,
 } from "@/models";
 import { toProviderConnectionResponse, usesAwsCredentialForm } from "@/lib/providerConnectionResponse";
+import { requireAuth } from "@/lib/auth/requireAuth";
 
 function normalizeProxyConfig(body = {}) {
   const hasAnyProxyField =
@@ -78,8 +79,15 @@ export async function GET(request, { params }) {
 }
 
 // PUT /api/providers/[id] - Update connection
+// Finding #7 follow-up (2026-10-26): route-level requireAuth. PUT rewrites
+// credentials, proxy targets, and provider-specific data for the connection;
+// one unauthenticated call can redirect stored OAuth/API-key traffic to an
+// attacker-controlled proxy.
 export async function PUT(request, { params }) {
   try {
+    if (!(await requireAuth(request))) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     const { id } = await params;
     const body = await request.json();
     const {
@@ -169,8 +177,14 @@ export async function PUT(request, { params }) {
 }
 
 // DELETE /api/providers/[id] - Delete connection
+// Finding #7 follow-up (2026-10-26): route-level requireAuth. DELETE
+// removes the stored credential entirely; an unauthenticated peer could
+// wipe connections they know/guess the UUID of.
 export async function DELETE(request, { params }) {
   try {
+    if (!(await requireAuth(request))) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     const { id } = await params;
 
     const deleted = await deleteProviderConnection(id);

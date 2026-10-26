@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getRequestDetailById } from "@/lib/usageDb";
 import { buildHookContext, expandTemplate, extractText } from "@/shared/hookTemplate";
+import { requireAuth } from "@/lib/auth/requireAuth";
 
 /**
  * POST /api/hooks
@@ -38,6 +39,14 @@ import { buildHookContext, expandTemplate, extractText } from "@/shared/hookTemp
  */
 export async function POST(request) {
   try {
+    // Finding #7 follow-up (2026-10-26): route-level requireAuth. POST
+    // /api/hooks makes an outbound HTTP call using the captured message
+    // body (prompts, provider responses, auth-bearing content). An
+    // unauthenticated peer could exfiltrate stored conversation history
+    // to an attacker-controlled URL.
+    if (!(await requireAuth(request))) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     const body = await request.json().catch(() => ({}));
     const { messageId, url, template, headers, timeoutMs } = body;
 
