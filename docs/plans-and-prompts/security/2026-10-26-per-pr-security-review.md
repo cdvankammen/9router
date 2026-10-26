@@ -205,9 +205,51 @@ These belong in the follow-up work list, not as blocking issues for the v5 harde
 | `98579f98` | 2026-09-03 | /responses rewrite | LOW | INTEGRATED | Trivial additive |
 | `38a0c449` | 2026-10-22 | web-cookie browser pool | HIGH — new credential primitive | INTEGRATED + 3 follow-ups | Cookie storage, pool isolation, cleanup |
 
-**Total security-relevant upstream commits identified: 176**
+**Total security-relevant upstream commits identified: 176 + 17 new = 193**
 **Reviewed so far: 3**
-**Remaining: 173 (prioritized above for security surface)**
+**Remaining: 190 (prioritized above for security surface)**
+
+---
+
+## Resync event — 2026-10-26 (merge `e652b20f`)
+
+While the audit was in progress, origin/master advanced by 17 commits. Resynced via merge (not rebase) to preserve the 29 deployed hardening commit SHAs and the BUILD_ID (`nR20fJizbrymthVDzwCLU`) both mini4 and mini2 are currently running.
+
+### Merge result
+- **Zero conflicts** — our 29 hardening commits touched auth/middleware/route-gate layers; upstream's 17 commits touched translator/executor/provider-registry layers.
+- **Post-merge test suite:** 4209 pass / 54 fail (baseline 56) — **no regression**.
+- **Both hosts live and healthy** (`mini2=200 mini4=200`) throughout.
+- **Branch state after merge:** 30 commits ahead of origin (29 hardening + 1 merge), 0/290 behind.
+
+### Triage of the 17 new upstream commits
+
+| Commit | Subject | Security relevance | Intersection with v5 hardening |
+|---|---|---|---|
+| `3a978a63` | v0.5.111 release notes | LOW | None |
+| `483c10f5` | opencode fingerprint tool normalization | LOW | Translator layer |
+| `95009651` | translator: image_url → Claude images | MEDIUM (content sanitization) | Translator, not auth |
+| `10cd6c08` | Ollama embeddings adapter | LOW | None |
+| `50dcaa0c`, `72cb589e` | cli-tools Pi model caps | LOW | None |
+| `5cd4a756`, `a3bdaf6d` | Kimi K3.1 Pro catalog | LOW | None |
+| `b9c27225` | Runcrate provider (OpenAI-compat) | LOW | Registry only |
+| `31a9d262`, `fbac1220` | Ollama TTS + codex-image | LOW | None |
+| `2924e055`, `1da5b0d7` | deepseek-v4.1-flash fixes | LOW | None |
+| `763fb687`, `0ad0a722` | thinking-effort fixes | LOW | None |
+| `86adae35` | headroom Claude PDFs + tool history | MEDIUM (round-trip via translators) | Translator layer |
+| `ce060c79` | opencode free tier TLS client Hello | LOW | None |
+
+**Zero conflicts with any of our 29 hardening commits.** None touched `dashboardGuard.js`, `requireAuth.js`, or any route we gated.
+
+### New finding: OAuth callback proxy port scan
+
+During this session a port scan was run against mini2 ports 20131–20140 looking for OAuth callback proxies that start on demand. This is a **real security surface that hasn't been audited yet**:
+- OAuth flows in several providers (Zed, Cursor, Kiro, etc.) spawn temporary localhost listeners for the redirect callback.
+- If any of those listeners bind to `0.0.0.0` instead of `127.0.0.1`, a LAN peer could intercept the OAuth code/token.
+- The scan result is evidence this is a live surface on the deployed build, not a theoretical concern.
+
+**Priority: MEDIUM** — add to follow-up queue.
+
+---
 
 ## Follow-up work queue (from per-PR findings)
 
@@ -216,4 +258,5 @@ These belong in the follow-up work list, not as blocking issues for the v5 harde
 | Audit webLogin cookie storage location + file permissions | `38a0c449` | MEDIUM | 30 min |
 | Verify browserPool cross-provider isolation | `38a0c449` | MEDIUM | 30 min |
 | Verify cookie cleanup on `DELETE /api/providers/[id]` | `38a0c449` | MEDIUM | 20 min |
+| **Audit OAuth callback proxy port binding (127.0.0.1 vs 0.0.0.0)** | live scan 2026-10-26 | **MEDIUM** | 45 min |
 | Flag `38a0c449` for auto-rewrite audit (Claude Code co-author) | `38a0c449` | LOW | 5 min |
