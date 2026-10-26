@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getSettings, updateSettings } from "@/lib/localDb";
 import { PROVIDERS } from "open-sse/config/providers.js";
 import { resolveProviderAlias } from "open-sse/services/model.js";
+import { requireAuth } from "@/lib/auth/requireAuth";
 
 export const dynamic = "force-dynamic";
 
@@ -87,9 +88,17 @@ export async function GET(request, { params }) {
 /**
  * PUT /api/providers/[id]/overrides — body: { headers: {name: value} }
  * Empty payload clears the override.
+ *
+ * Finding #7 (2026-10-26): route-level requireAuth — this writes to GLOBAL
+ * settings.providerOverrides via updateSettings. An unauthenticated peer
+ * could inject headers (incl. x-* tracking headers) that would be sent on
+ * every user's upstream requests for that provider system-wide.
  */
 export async function PUT(request, { params }) {
   try {
+    if (!(await requireAuth(request))) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     const { id } = await params;
     const canonical = resolveProviderAlias(id);
     const body = await request.json().catch(() => ({}));

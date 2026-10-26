@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getProxyPoolById, updateProxyPool } from "@/models";
 import { testProxyUrl } from "@/lib/network/proxyTest";
 import { fetch as undiciFetch } from "undici";
+import { requireAuth } from "@/lib/auth/requireAuth";
 
 async function testVercelRelay(relayUrl, timeoutMs = 10000) {
   const controller = new AbortController();
@@ -34,8 +35,14 @@ async function testVercelRelay(relayUrl, timeoutMs = 10000) {
 }
 
 // POST /api/proxy-pools/[id]/test - Test proxy pool entry
+// Finding #7 (2026-10-26): route-level requireAuth — forces outbound GET
+// to the stored proxyPool.proxyUrl (SSRF-with-stored-config). An
+// unauthenticated peer could use any pool's URL as a bounce target.
 export async function POST(request, { params }) {
   try {
+    if (!(await requireAuth(request))) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     const { id } = await params;
     const proxyPool = await getProxyPoolById(id);
 

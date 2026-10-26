@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { deleteProviderConnectionsByProvider, deleteProviderNode, getProviderConnections, getProviderNodeById, updateProviderConnection, updateProviderNode } from "@/models";
 import { canonicalEndpoint, openAIEndpoints } from "../endpointUrls.js";
+import { requireAuth } from "@/lib/auth/requireAuth";
 
 const BEARER_AUTH = { combined: true, header: "Authorization", scheme: "bearer" };
 const ANTHROPIC_AUTH = { combined: true, header: "x-api-key", scheme: "raw", anthropicVersion: true };
@@ -15,8 +16,15 @@ function normalizeUsageFields(body) {
 }
 
 // PUT /api/provider-nodes/[id] - Update provider node
+// Finding #7 (2026-10-26): route-level requireAuth as defence-in-depth.
+// PUT propagates to every connection bound to the node via
+// Promise.all(connections.map(updateProviderConnection)) at :94-108, so one
+// unauthenticated request rewrites many connections' baseUrl/transports.
 export async function PUT(request, { params }) {
   try {
+    if (!(await requireAuth(request))) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     const { id } = await params;
     const body = await request.json();
     const { name, prefix, apiType, baseUrl, openaiUrl, anthropicUrl, supportsResponses } = body;
@@ -117,8 +125,15 @@ export async function PUT(request, { params }) {
 }
 
 // DELETE /api/provider-nodes/[id] - Delete provider node and its connections
+// Finding #7 CRITICAL: cascading delete — one request wipes every connection
+// bound to the node via deleteProviderConnectionsByProvider(id) at :121.
+// Route-level requireAuth is the minimum defence-in-depth; a future
+// confirmation-token / soft-delete would be stronger.
 export async function DELETE(request, { params }) {
   try {
+    if (!(await requireAuth(request))) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     const { id } = await params;
     const node = await getProviderNodeById(id);
 

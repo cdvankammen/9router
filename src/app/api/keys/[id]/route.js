@@ -1,12 +1,7 @@
 import { NextResponse } from "next/server";
 import { deleteApiKey, getApiKeyById, updateApiKey } from "@/lib/localDb";
 import { validateKeyAccessInput } from "@/shared/utils/keyAccess.js";
-import { verifyDashboardAuthToken } from "@/lib/auth/dashboardSession";
-import { getConsistentMachineId } from "@/shared/utils/machineId";
-import crypto from "node:crypto";
-
-const CLI_TOKEN_HEADER = "x-9r-cli-token";
-const CLI_TOKEN_SALT = "9r-cli-auth";
+import { requireAuth } from "@/lib/auth/requireAuth";
 
 // CRITICAL IDOR fix (2026-10-26): this route previously returned the raw,
 // unmasked API key for any UUID the caller knew, while the list endpoint
@@ -30,23 +25,9 @@ function maskKey(fullKey) {
   return fullKey.slice(0, 6) + "\u2022".repeat(fullKey.length - 10) + fullKey.slice(-4);
 }
 
-async function hasValidCliToken(request) {
-  const token = request.headers.get(CLI_TOKEN_HEADER);
-  if (!token) return false;
-  const expected = await getConsistentMachineId(CLI_TOKEN_SALT);
-  const a = Buffer.from(token, "utf8");
-  const b = Buffer.from(expected, "utf8");
-  if (a.length !== b.length) return false;
-  return crypto.timingSafeEqual(a, b);
-}
-
-async function requireAuth(request) {
-  const cliOk = await hasValidCliToken(request);
-  const jwtOk = await verifyDashboardAuthToken(
-    request.cookies.get("auth_token")?.value
-  );
-  return cliOk || jwtOk;
-}
+// requireAuth is now imported from @/lib/auth/requireAuth (Finding #7
+// consolidation). Same semantics: JWT auth_token cookie OR x-9r-cli-token
+// header, timing-safe comparison on the CLI token.
 
 // GET /api/keys/[id] - Get single key (masked, same as list)
 export async function GET(request, { params }) {
