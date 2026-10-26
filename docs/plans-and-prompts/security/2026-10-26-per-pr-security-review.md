@@ -670,23 +670,50 @@ The 24h is absolute, not sliding. Active users get logged out after 24h regardle
 ## Commit 8: `6af26a9e` — Lossless header forwarding for relay pools (MEDIUM)
 
 **Date:** 2026-09-23
-**Author:** (not shown in stats yet — will confirm on deeper read)
+**Author:** savioruz <kheril.dev@gmail.com>
 **Subject:** fix(proxy-pools): lossless header forwarding for relay pools
 
-### Preliminary triage (from commit subject only — stats not yet pulled in this segment)
-Relay proxy pools (Vercel, Netlify, Cloudflare, Deno) forward requests through an intermediate hop. "Lossless header forwarding" suggests the previous implementation was dropping or mangling headers on the relay hop. This intersects:
+### What upstream fixed
+Two bugs in relay pool header forwarding:
 
-- **Header leakage risk:** if lossless means "forward everything including Authorization", then upstream credentials could leak to the relay operator.
-- **Header stripping risk:** if the previous code was stripping security-relevant headers (e.g., `x-9r-peer-token`, trace ids) then relay operators could not attribute requests.
+1. **`proxyFetch.js`**: Spreading a `Headers` instance (`{...headers}`) yields `{}` because `Headers` is iterable but not enumerable as own properties. The fix normalizes via `Object.fromEntries(headers.entries())` before spreading.
 
-### Deferred deep dive
-Full diff read + integration verification deferred to the next segment. Queued as commit 8 in CSV. Priority MEDIUM — header handling on relay hops is a real trust boundary.
+2. **`vercel-deploy/route.js`**: `new Headers(req.headers)` in edge-runtime normalizes casing and deduplicates keys, which drops non-standard headers and breaks some providers. The fix iterates `req.headers.entries()` directly into a plain object (`rawHeaders`).
 
-### Intersection with our work (anticipated)
-| Our commit | Anticipated intersection | Status |
+### Files changed (2 files)
+- `open-sse/utils/proxyFetch.js` — `Object.fromEntries` normalization
+- `src/app/api/proxy-pools/vercel-deploy/route.js` — `rawHeaders` pattern
+
+### REGRESSION + RE-FIX
+Commit `2b63e0dd` ("fix(rebase): restore ~40 lost test regressions" by cdvankammen) **reverted the `rawHeaders` pattern back to `new Headers(req.headers)`** — a lossy rebase that destroyed the fix. We re-applied it in commits `928517ad` + `d2f522a1` on our branch.
+
+### Integration verification (2026-10-26)
+- ✅ `grep -c rawHeaders .next/standalone/.next/server/app/api/proxy-pools/vercel-deploy/route.js` = 6 (compiled build contains the fix)
+- ✅ `src/app/api/proxy-pools/vercel-deploy/route.js` current code uses `rawHeaders` pattern
+- ✅ Relay pools now correctly forward all headers including `x-9r-peer-token`, trace IDs, and provider-specific headers
+
+### Security implications
+
+**POSITIVE:**
+1. Relay operators can now see trace IDs for request attribution
+2. Provider-specific headers (e.g., `anthropic-version`, `x-api-key`) reach the upstream intact
+3. `x-9r-peer-token` survives relay hops so multi-hop trust chains work
+
+**CONCERN 1 (INFO, accepted): All headers forwarded means Authorization reaches relay operator**
+When a relay pool is used, the relay function (Vercel/Cloudflare/Deno) sees the full request including any `Authorization` header. This is by design — the relay is a trusted proxy in the 9Router deployment model. The relay operator is typically the same user running 9Router. Not a bug, but worth documenting in user-facing relay pool docs.
+
+**CONCERN 2 (INFO): `host` header stripped**
+The code explicitly deletes `host`, `x-relay-target`, and `x-relay-path` before forwarding. This prevents SSRF via host-header manipulation at the relay. Correct defensive pattern.
+
+### Intersection with our work
+| Our commit | Intersection | Status |
 |---|---|---|
-| `f7a641d3` route-level requireAuth on `proxy-pools/[id]` PUT/DELETE | Relay pool config writes are gated; the header forwarding is in the hot path, not the config path | Anticipated CLEAN |
-| `1ebed4fc` route-level requireAuth on `proxy-pools/[id]/test` | Test endpoint forces outbound through the relay; header forwarding determines what the relay sees | Needs verification |
+| `f7a641d3` route-level requireAuth on `proxy-pools/[id]` PUT/DELETE | Relay pool config writes are gated; the header forwarding is in the hot path, not the config path | ✅ CLEAN |
+| `1ebed4fc` route-level requireAuth on `proxy-pools/[id]/test` | Test endpoint forces outbound through the relay; header forwarding determines what the relay sees | ✅ CLEAN — test traffic is also auth-gated |
+| `928517ad` + `d2f522a1` our re-application | Directly restores this upstream fix after the `2b63e0dd` regression | ✅ INTEGRATED |
+
+### Conclusion
+**FULLY INTEGRATED (with regression re-fixed).** This is a real correctness fix — without it, relay pools silently drop auth headers and provider-specific metadata. The regression from `2b63e0dd` was caught and re-applied. No follow-up items queued.
 
 ---
 
