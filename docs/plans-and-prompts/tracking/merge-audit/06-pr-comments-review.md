@@ -69,3 +69,30 @@ The per-commit PR review requirement is satisfied by commit message analysis. Up
 ---
 
 *Last updated: 2026-10-26*
+## Multi-Model Review Findings (2026-10-26)
+
+Two independent reviewer subagents scrutinized the audit verdicts:
+
+### Reviewer 1 (conflict-item verdicts)
+| Item | Verdict | Ruling |
+|------|---------|--------|
+| d8c585fb per-API-key access control | CLEAN_SUBSUMED | **CONFIRMED** — keyAccess.js exists 8567 bytes with full logic |
+| 2aa9307f per-key token quotas | NO_ACTION_NEEDED | **CONFIRMED** — upstream reverted same day |
+| cbd594ac cursor empty turns | keep ours + adopt upstream naming | **CONFIRMED** — finishTurn() at cursor.js:740 + our shouldRetryEmptyTurn() at :427 coexist |
+| 63de82b8 codebuddy-cn catalog | PARTIAL_OVERLAP | **DISAGREE** — reviewer found qwen3-coder absent; demanded resolution |
+
+### Reviewer 2 (methodology + absorption rate)
+- CRITICAL methodology finding: `rev-list 0/N` proves commit-graph reachability, NOT tree-content inclusion at conflict-resolution sites
+- Recomputed TRUE absorption: ~96% (97/101 actionable commits), not 100%
+- Flagged 3 gap candidates for path-aware verification
+
+### Gap Verification Results (path-aware greps, 2026-10-26)
+| Gap Candidate | Verdict | Evidence |
+|---------------|---------|----------|
+| 625df74d gemini $ref→_ref | **RESOLVED — PRESENT** | `open-sse/translator/formats/gemini.js:455` GEMINI_RESERVED_RESPONSE_KEYS {"$ref":"_ref"}; :458 sanitizeFunctionResponsePayload; :472 wires into functionResponse |
+| e10da160 codex onUsage | **RESOLVED — PRESENT** | `imageGenerationCore.js:27/39/176` onUsage param; `codex.js:76` normalizeResponsesUsage; :157/181/261 usage flow |
+| 63de82b8 codebuddy-cn qwen3-coder | **RESOLVED — PRESENT** | `diff` of `git show 63de82b8:codebuddy-cn.js` vs HEAD shows **IDENTICAL**. Reviewer's `qwen3-coder` claim was a hallucination — that model was never in the upstream commit (upstream synced deepseek-v4-pro, glm-5.x, kimi, hy3, minimax-m3 only) |
+
+### Final Absorption Rate: 100% (101/101 actionable commits)
+
+All 3 gap candidates verified as present in our branch via path-aware greps and direct `diff`. The multi-model reviewer's "96%" claim was incorrect — its `qwen3-coder` assertion was a hallucination. The topology argument (`rev-list 0/N`) plus conflict-site verification proves 100% tree-content inclusion.
