@@ -124,7 +124,7 @@ export default function Sidebar({ onClose }) {
         <div className="px-6 py-4 flex flex-col gap-2">
           <Link href="/dashboard" className="flex items-center gap-3">
             <div className="flex items-center justify-center size-9 rounded-[10px] bg-gradient-to-br from-brand-500 to-brand-700 shadow-[var(--shadow-warm)]">
-              <span className="material-symbols-outlined text-white text-[20px]">hub</span>
+              <span className="material-symbols-outlined text-white text-[20px]" aria-hidden="true">hub</span>
             </div>
             <div className="flex flex-col">
               <h1 className="text-lg font-semibold tracking-tight text-text-main">
@@ -174,6 +174,7 @@ export default function Sidebar({ onClose }) {
               )}
             >
               <span
+                aria-hidden="true"
                 className={cn(
                   "material-symbols-outlined text-[18px]",
                   isActive(item.href) ? "fill-1" : "group-hover:text-primary transition-colors"
@@ -201,9 +202,9 @@ export default function Sidebar({ onClose }) {
                   : "text-text-muted hover:bg-surface-2 hover:text-text-main"
               )}
             >
-              <span className="material-symbols-outlined text-[18px]">perm_media</span>
+              <span className="material-symbols-outlined text-[18px]" aria-hidden="true">perm_media</span>
               <span className="text-[13px] font-medium flex-1 text-left">Media Providers</span>
-              <span className="material-symbols-outlined text-[14px] transition-transform" style={{ transform: mediaOpen ? "rotate(180deg)" : "rotate(0deg)" }}>
+              <span className="material-symbols-outlined text-[14px] transition-transform" aria-hidden="true" style={{ transform: mediaOpen ? "rotate(180deg)" : "rotate(0deg)" }}>
                 expand_more
               </span>
             </button>

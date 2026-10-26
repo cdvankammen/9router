@@ -242,9 +242,10 @@ export default function Header({ onMenuClick, showMenuButton = true }) {
         {showMenuButton && (
           <button
             onClick={onMenuClick}
+            aria-label="Toggle navigation menu"
             className="text-text-main hover:text-primary transition-colors"
           >
-            <span className="material-symbols-outlined">menu</span>
+            <span className="material-symbols-outlined" aria-hidden="true">menu</span>
           </button>
         )}
       </div>
@@ -261,7 +262,7 @@ export default function Header({ onMenuClick, showMenuButton = true }) {
                 }`}
               >
                 {index > 0 && (
-                  <span className="material-symbols-outlined text-text-muted text-base hidden sm:inline">
+                  <span className="material-symbols-outlined text-text-muted text-base hidden sm:inline" aria-hidden="true">
                     chevron_right
                   </span>
                 )}
