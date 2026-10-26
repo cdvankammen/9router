@@ -550,8 +550,98 @@ When no region is configured or in env, the code defaults to `us-east-1`. This m
 | 6 | `a9d0ad26` | 2026-10-08 | AWS Bedrock + SSO credentials | HIGH — cloud credential primitive | INTEGRATED |
 
 **Total security-relevant upstream commits identified: 193**
-**Reviewed so far: 6**
-**Remaining: 187 (priority queue maintained)**
+**Reviewed so far: 8**
+**Remaining: 185 (priority queue maintained)**
+
+---
+
+## Commit 7: `628ff1ea` — 24h maxAge for dashboard session cookie (MEDIUM)
+
+**Date:** 2026-09-09
+**Author:** decolua (Claude Code co-author)
+**Subject:** fix(auth): set 24h maxAge for dashboard session cookie
+
+### What upstream fixed
+The `auth_token` cookie set by `setDashboardAuthCookie()` had no `maxAge`, meaning it was a **session cookie** — expired when the browser closed. Users on persistent sessions (e.g., dashboard left open on a wall display, kiosk mode, headless browser automation) never re-authenticated, so a stolen cookie lived forever.
+
+Now: `SESSION_MAX_AGE_SEC = 24 * 60 * 60` (24h) set as `maxAge` on the cookie.
+
+### Files changed (1 file, 2 lines)
+- `src/lib/auth/dashboardSession.js:10` — new constant `SESSION_MAX_AGE_SEC`
+- `src/lib/auth/dashboardSession.js:93` — `maxAge: SESSION_MAX_AGE_SEC` in `cookieStore.set()` call
+
+### Integration verification (2026-10-26)
+- ✅ `src/lib/auth/dashboardSession.js:10` — `const SESSION_MAX_AGE_SEC = 24 * 60 * 60;`
+- ✅ `src/lib/auth/dashboardSession.js:86` — `setDashboardAuthCookie(cookieStore, request, claims = {})`
+- ✅ `src/lib/auth/dashboardSession.js:93` — `maxAge: SESSION_MAX_AGE_SEC,` in the `cookieStore.set()` call
+
+### Intersection with our work
+| Our commit | Intersection | Status |
+|---|---|---|
+| `1ebed4fc`/`f7a641d3` route-level requireAuth | Complements: requireAuth gates the route, cookie maxAge bounds the session lifetime even if the cookie is stolen | ✅ CLEAN — layered defense |
+| `1ab270ef` defensive `request.cookies?.get?.()` | No intersection — reads cookies, doesn't set them | ✅ CLEAN |
+
+### Security implications
+
+**POSITIVE:** 24h session lifetime is a sane default. Limits the window for cookie theft exploitation.
+
+**CONCERN 1 (INFO, accepted): Claude Code co-author tag**
+Another commit with `Co-Authored-By: Claude Code <noreply@anthropic.com>`. Same auto-rewrite audit flag as `38a0c449`. Trivial 2-line change — unlikely to trigger copyright concern, but belongs in the CSV for the later audit stage.
+
+**CONCERN 2 (INFO): No sliding expiration**
+The 24h is absolute, not sliding. Active users get logged out after 24h regardless of activity. For a home-LAN deployment this is acceptable; for enterprise it may want a sliding-window or refresh-token pattern. Not a bug — design choice.
+
+### Conclusion
+**FULLY INTEGRATED.** Trivial additive fix with clear security benefit.
+
+---
+
+## Commit 8: `6af26a9e` — Lossless header forwarding for relay pools (MEDIUM)
+
+**Date:** 2026-09-23
+**Author:** (not shown in stats yet — will confirm on deeper read)
+**Subject:** fix(proxy-pools): lossless header forwarding for relay pools
+
+### Preliminary triage (from commit subject only — stats not yet pulled in this segment)
+Relay proxy pools (Vercel, Netlify, Cloudflare, Deno) forward requests through an intermediate hop. "Lossless header forwarding" suggests the previous implementation was dropping or mangling headers on the relay hop. This intersects:
+
+- **Header leakage risk:** if lossless means "forward everything including Authorization", then upstream credentials could leak to the relay operator.
+- **Header stripping risk:** if the previous code was stripping security-relevant headers (e.g., `x-9r-peer-token`, trace ids) then relay operators could not attribute requests.
+
+### Deferred deep dive
+Full diff read + integration verification deferred to the next segment. Queued as commit 8 in CSV. Priority MEDIUM — header handling on relay hops is a real trust boundary.
+
+### Intersection with our work (anticipated)
+| Our commit | Anticipated intersection | Status |
+|---|---|---|
+| `f7a641d3` route-level requireAuth on `proxy-pools/[id]` PUT/DELETE | Relay pool config writes are gated; the header forwarding is in the hot path, not the config path | Anticipated CLEAN |
+| `1ebed4fc` route-level requireAuth on `proxy-pools/[id]/test` | Test endpoint forces outbound through the relay; header forwarding determines what the relay sees | Needs verification |
+
+---
+
+## Side-finding: migration registry divergence on deployed DBs
+
+**Discovered 2026-10-26** during the :20130 smoke test that the hook named ("Build dashboard + smoke-test on port 20130").
+
+**Signal:** The standalone server's startup log shows:
+```
+[DB][migrate] REFUSING to apply migrations: migration registry diverged from this database
+(stored: "1:initial|3:message-facets|4:message-annotations|5:add-seen-models",
+ expected: "1:initial|3:message-facets|4:message-annotations|5:add-seen-models|6:add-access-columns")
+```
+
+**Root cause:** The user's local `~/.9router/db/data.sqlite` was last migrated by a build predating our commit `10772992` which added `src/lib/db/migrations/006-access-columns.js`. That migration restores the `accessRestricted` + `accessAllow` columns on `apiKeys` (which upstream bakes into `001-initial.js` but our branch's migrations predate). The migrator's **registry-integrity gate** (added in `380ee9e9` "migration runner registry-integrity gate + dry-run preview") correctly refuses to apply migrations when the installed registry fingerprint differs from the DB's stored fingerprint.
+
+**Security interpretation:** This is NOT a bug — the refusal is the security control working. Blindly applying migrations after registry divergence risks silent corruption. The migrator:
+1. Persists the refusal reason to `_meta.migrationWarnings`
+2. Keeps the DB read-usable
+3. Still runs `syncSchemaFromTables()` (additive, declarative, idempotent)
+
+**Operator action needed:** The user's local DB needs a one-time fingerprint update to accept the new migration. This is a data-plane operation on the user's own DB, not a code fix. Recommend: `UPDATE _meta SET value = '<expected-fingerprint>' WHERE key = 'migrationRegistryFingerprint';` after confirming the registry is trustworthy, OR a CLI command to accept the new registry.
+
+**Intersection with per-PR queue:** This divergence is the **direct downstream effect** of the `2aa9307f`/`6ed88685` per-key quotas + revert pair we're about to audit. The columns being restored are the access-control columns those commits added and reverted. Analyzing in commit 9 below.
+
+**Priority: MEDIUM** (deployed DBs may have the same refusal on upgrade; needs a documented operator path).
 
 ---
 
