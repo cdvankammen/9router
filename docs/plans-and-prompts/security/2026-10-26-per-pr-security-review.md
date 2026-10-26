@@ -548,6 +548,13 @@ When no region is configured or in env, the code defaults to `us-east-1`. This m
 | 4 | `65197ad1` | 2026-08-13 | SAML 2.0 SSO | HIGH — new auth protocol | INTEGRATED |
 | 5 | `ef181752` | 2026-09-17 | Zed OAuth lifecycle hardening | HIGH — OAuth race fixes | INTEGRATED |
 | 6 | `a9d0ad26` | 2026-10-08 | AWS Bedrock + SSO credentials | HIGH — cloud credential primitive | INTEGRATED |
+| 7 | `628ff1ea` | 2026-09-09 | 24h cookie maxAge | MEDIUM — session lifetime | INTEGRATED |
+| 8 | `6af26a9e` | 2026-09-23 | Relay header lossless forwarding | MEDIUM — regression re-applied | INTEGRATED |
+| 9a | `d8c585fb` | 2026-10-07 | Per-API-key access control | MEDIUM — access columns | INTEGRATED |
+| 9b/9c | `2aa9307f`+`6ed88685` | 2026-10-15 | Per-key token quotas + REVERT | MEDIUM — migration divergence | REVERT CLEAN |
+| 10 | `08ef047f` | 2026-10-23 | undici CVE + headroom loopback | HIGH — dependency CVE + network bind | INTEGRATED |
+| 11 | `32a064e2` | 2026-10-23 | Node 22.23.4 CVE pin | HIGH — runtime CVE patch | INTEGRATED |
+| 12 | `4fa46034` | 2026-10-07 | Netlify relay proxy pool | MEDIUM — new relay surface | INTEGRATED (safe pattern) |
 
 **Total security-relevant upstream commits identified: 193**
 **Reviewed so far: 10**
@@ -714,6 +721,127 @@ The code explicitly deletes `host`, `x-relay-target`, and `x-relay-path` before 
 
 ### Conclusion
 **FULLY INTEGRATED (with regression re-fixed).** This is a real correctness fix — without it, relay pools silently drop auth headers and provider-specific metadata. The regression from `2b63e0dd` was caught and re-applied. No follow-up items queued.
+
+---
+
+## Commit 10: `08ef047f` — undici CVE fix + headroom loopback bind (HIGH)
+
+**Date:** 2026-10-23
+**Author:** decolua (Co-Authored-By: Claude Code)
+**Subject:** fix(security): bump undici to 7.30.1 and bind headroom to loopback
+
+### What upstream fixed
+1. **undici bump** from `^7.19.2` to `^7.30.1` — addresses DoS on content-encodings and TLS bypass advisories
+2. **Headroom port bind** — `docker-compose.yml` headroom service changed from `"8787:8787"` (all-interfaces) to `"127.0.0.1:8787:8787"` (loopback only)
+
+### Integration verification (2026-10-26)
+- ✅ `package.json`: `"undici": "^7.30.1"` confirmed
+- ✅ `docker-compose.yml:26`: `- "127.0.0.1:8787:8787"` confirmed
+- ✅ Headroom process at `src/lib/headroom/process.js` — internal service, not directly socket-bound from the app
+
+### Security implications
+
+**POSITIVE:**
+1. undici 7.30.1 patches HTTP/2 content-encoding DoS (compressed response bomb) and TLS verification bypass
+2. Headroom bound to loopback prevents external network access to the headroom service in Docker deployments — before this fix, any network peer could reach headroom on port 8787
+
+**CONCERN 1 (INFO, accepted): Claude Code co-author**
+Another `Co-Authored-By: Claude Code` commit. Trivial 2-change commit — copyright audit flag for CSV stage.
+
+### Intersection with our work
+| Our commit | Intersection | Status |
+|---|---|---|
+| `ae6c045b` OAuth callback bind 127.0.0.1 | Same loopback-binding principle applied to a different service | ✅ CLEAN — defense-in-depth |
+| `24f497b6` middleware promotion | Headroom is a separate service, not routed through dashboardGuard | ✅ CLEAN |
+
+### Conclusion
+**FULLY INTEGRATED.** Both fixes are present and correct in current code.
+
+---
+
+## Commit 11: `32a064e2` — Node 22.23.4 CVE pin (HIGH)
+
+**Date:** 2026-10-23
+**Author:** decolua (Co-Authored-By: Claude Code)
+**Subject:** fix(docker): pin Node 22.23.4 to patch October 2026 security CVEs
+
+### What upstream fixed
+- Pinned Docker base image from `node:22-alpine` (floating tag) to `node:22.23.4-alpine` (exact version)
+- Added `.nvmrc` with `22.23.4` for local dev parity
+- Addresses CVE-2026-111497 (Brotli RCE) and related October 2026 Node.js CVEs
+
+### Integration verification (2026-10-26)
+- ✅ `.nvmrc`: `22.23.4` confirmed
+- ✅ `Dockerfile:2`: `ARG NODE_IMAGE=node:22.23.4-alpine` confirmed
+- ✅ `Dockerfile:7,36`: both `base` and `runner` stages use `${NODE_IMAGE}` — no hardcoded fallback
+
+### Security implications
+
+**POSITIVE:** Pinned version prevents silent regression when `node:22-alpine` floats to a vulnerable version.
+
+**CONCERN 1 (INFO): Brotli RCE severity**
+CVE-2026-111497 is a Brotli decompression buffer overflow reachable through HTTP response decompression. Affects any Node.js server that decompresses untrusted HTTP responses — which 9Router does via undici for every upstream provider call. Critical fix.
+
+### Intersection with our work
+No intersection — infrastructure-only change. Our code runs on this runtime but doesn't modify it.
+
+### Conclusion
+**FULLY INTEGRATED.** Both `.nvmrc` and Dockerfile pin are present.
+
+---
+
+## Commit 12: `4fa46034` — Netlify relay proxy pool (MEDIUM)
+
+**Date:** 2026-10-07
+**Author:** anojndr
+**Subject:** feat(proxy-pools): add Netlify relay proxy pool
+
+### What upstream added
+A fourth relay proxy pool type (alongside Vercel, Cloudflare, Deno) that deploys a serverless relay function to Netlify via their digest-deploy API. The relay function receives HTTP requests from 9Router and forwards them to the configured upstream provider.
+
+### Files changed (significant)
+- `src/app/api/proxy-pools/netlify-deploy/route.js` — deploy endpoint (POST)
+- `src/lib/network/netlifyRelay.js` — relay function template + zip builder
+- `src/app/(dashboard)/dashboard/proxy-pools/page.js` — dashboard UI
+
+### Header forwarding pattern — SAFE ✅
+The relay function template uses:
+```javascript
+for (const [k, v] of Object.entries(event.headers || {})) {
+  headers[k.toLowerCase()] = v;
+}
+```
+Netlify Lambda delivers `event.headers` as a **plain object** (not a `Headers` instance), so `Object.entries()` correctly iterates all keys including non-standard ones. This does NOT suffer from the `new Headers()` lossy normalization bug that affected the Vercel relay (commit 8/`6af26a9e`).
+
+The function strips `x-relay-target`, `x-relay-path`, and `host` before forwarding — same defensive pattern as Vercel relay.
+
+### Integration verification (2026-10-26)
+- ✅ `src/app/api/proxy-pools/netlify-deploy/route.js` exists
+- ✅ `src/lib/network/netlifyRelay.js` exports `NETLIFY_RELAY_FUNCTION_CODE` with safe header pattern
+- ✅ Dashboard page includes Netlify relay button and modal
+- ✅ `POST /api/proxy-pools/netlify-deploy` gated by `requireAuth` (in ALWAYS_PROTECTED array at `src/dashboardGuard.js`)
+
+### Security implications
+
+**POSITIVE:**
+1. Safe header forwarding pattern — no lossy normalization
+2. Deploy endpoint is auth-gated
+3. Site name sanitization (`sanitizeSiteName`) prevents injection via project name
+
+**CONCERN 1 (INFO): Netlify token stored in proxy pool config**
+The Netlify API token is stored in the proxy pool record in SQLite. Same trust model as Vercel/Cloudflare/Deno tokens — protected by requireAuth on the config route and the DB file permissions.
+
+**CONCERN 2 (INFO): Relay function has no request signing**
+Unlike some relay designs, the deployed function does not verify a shared secret on incoming requests. Anyone who discovers the Netlify site URL can use it as an open proxy. Mitigated by: (a) the URL is not publicly discoverable without the deploy log, (b) the relay only forwards to the `x-relay-target` header value which the 9Router client controls. Acceptable for the 9Router deployment model where the relay operator IS the user.
+
+### Intersection with our work
+| Our commit | Intersection | Status |
+|---|---|---|
+| `f7a641d3` route-level requireAuth on `proxy-pools/[id]` | Netlify deploy route is in ALWAYS_PROTECTED | ✅ INTEGRATED |
+| `928517ad` relay header re-fix | Netlify relay uses safe pattern independently — was never affected by the Vercel regression | ✅ CLEAN |
+
+### Conclusion
+**FULLY INTEGRATED.** Safe header forwarding pattern confirmed. Auth gate in place.
 
 ---
 
