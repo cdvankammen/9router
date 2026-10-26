@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getSettings, updateSettings } from "@/lib/localDb";
 import { applyOutboundProxyEnv } from "@/lib/network/outboundProxy";
 import { validateOidcConfigForSave } from "@/lib/auth/oidc";
+import { validatePeerNodes } from "@/lib/network/peerNodesValidator";
 import { resetComboRotation } from "open-sse/services/combo.js";
 import bcrypt from "bcryptjs";
 
@@ -42,6 +43,31 @@ export async function PATCH(request) {
 
     // Strip protected secrets before any internal handling sets them
     for (const key of PROTECTED_SETTING_KEYS) delete body[key];
+
+    // SECURITY: peerNodes URL validation (peerNodes-injection remediation).
+    // The L1 failover consumer (cli/app/custom-server.js l1MaybeForward)
+    // forwards /v1* traffic — prompts, API keys, responses — to whatever URL
+    // is stored in settings.peerNodes when the local node is degraded. An
+    // attacker-controlled entry turns the proxy into a traffic-forwarding
+    // MITM; l1Probe also makes blind HTTP GETs to each entry (SSRF vector).
+    // Reject the PATCH early if any entry fails validation. Empty array
+    // (feature off) always passes.
+    if (Object.prototype.hasOwnProperty.call(body, "peerNodes")) {
+      const result = validatePeerNodes(body.peerNodes);
+      if (!result.ok) {
+        return NextResponse.json(
+          {
+            error: "Invalid peerNodes entry",
+            peerNodesValidation: { ok: false, errors: result.errors },
+            hint: "Each peerNodes entry must be an http(s) URL with no embedded credentials. Loopback, link-local (169.254.x.x), and cloud-metadata IPs are rejected.",
+          },
+          { status: 400 },
+        );
+      }
+      // Replace with the normalized form (trimmed, trailing-slash stripped,
+      // scheme/host lowercased, IPv4-mapped IPv6 unwrapped to plain v4).
+      body.peerNodes = result.entries;
+    }
 
     // If updating password, hash it
     if (body.newPassword) {
