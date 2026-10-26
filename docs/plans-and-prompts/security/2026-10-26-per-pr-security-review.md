@@ -448,10 +448,110 @@ Unlike SAML which has a placeholder, Zed genuinely requires the user to complete
 **Remaining: 188 (priority queue maintained)**
 
 **Next in queue:**
-- `a9d0ad26` AWS Bedrock + SSO credentials (MEDIUM)
+- ~~`a9d0ad26` AWS Bedrock + SSO credentials (MEDIUM)~~ ← **done below**
 - `628ff1ea` 24h maxAge for dashboard cookie (MEDIUM)
 - `6af26a9e` Lossless header forwarding for relay pools (MEDIUM — header leakage)
 - `2aa9307f` / `6ed88685` per-key token quotas + revert (MEDIUM — what broke?)
+
+---
+
+## Commit 6: `a9d0ad26` — AWS Bedrock provider + SSO credentials (HIGH)
+
+**Date:** 2026-10-08
+**Author:** Amirsalar Sojoudi
+**Subject:** feat(bedrock): add AWS Bedrock provider with AWS SSO credential support (#4157)
+
+### What upstream added
+Amazon Bedrock (`bedrock` + `bedrock-xai` registry entries) with two credential modes:
+- **static** — access key + secret + optional session token carried on the connection
+- **profile** — named local AWS profile resolved via `@aws-sdk/credential-providers`, which makes `aws sso login --profile X` work end-to-end with automatic refresh
+
+A hand-rolled SigV4 signer on `node:crypto` (avoiding the full `@aws-sdk/client-*` dependency for signing only), and the AWS EventStream decoder extracted from `kiro.js` into a shared util.
+
+### Security-relevant design decisions (verified in code)
+
+**1. Region validation blocks hostname-interpolation SSRF ✅**
+`open-sse/shared/awsCredentials.js:75` enforces `AWS_REGION_PATTERN = /^[a-z0-9][a-z0-9-]{0,30}$/` on the region before it is interpolated into `bedrock-runtime.<region>.amazonaws.com`. Without this, a user-supplied `providerSpecificData.region` of `evil.com/x` would resolve the host to `bedrock-runtime.evil.com` and ship the signed request, body, and session token to an attacker-chosen origin. This is a genuine SSRF guard — and it's applied to BOTH `providerSpecificData.region`, `AWS_REGION`, and `AWS_DEFAULT_REGION` env vars (the candidates list at `:67-72`).
+
+**2. Profile name validation blocks credential_process injection ✅**
+`open-sse/shared/awsCredentials.js:136` enforces `AWS_PROFILE_PATTERN = /^[\w@+.%: -]{1,64}$/` before handing the name to the AWS SDK. The SDK follows `source_profile` chains and runs `credential_process` subprocesses for whatever the named profile declares. Without validation, an arbitrary string reaches a credential resolver — this is a command-injection surface. The pattern mirrors the SDK's own parser but excludes `/` (path-shaped names are never real profiles).
+
+**3. ASIA temp-key detection with actionable error ✅**
+`awsCredentials.js:127-133` detects `accessKeyId.startsWith("ASIA")` without a session token and fails with a fixable error rather than letting the upstream return `SignatureDoesNotMatch`.
+
+**4. Session token redaction from API responses ✅**
+`src/lib/providerConnectionResponse.js:14` strips `sessionToken` from `providerSpecificData` before any connection is serialized to the client: `const { sessionToken, ...providerSpecificData } = connection.providerSpecificData`. This is why our existing `1ebed4fc` requireAuth on `providers/[id]` GET/PUT/DELETE is defense-in-depth rather than the only line of defense — even an authenticated read of a connection does not leak the session token.
+
+**5. Credential cache with TTL + resolver timeout ✅**
+- `AWS_CREDENTIAL_REFRESH_LEAD_MS = 5 * 60 * 1000` — refresh 5 min before expiry (prevents mid-stream key death)
+- `AWS_CREDENTIAL_NO_EXPIRY_TTL_MS = 60 * 1000` — floor for non-expiring profiles (bounds re-read of `~/.aws`)
+- `AWS_CREDENTIAL_RESOLVE_TIMEOUT_MS = 10 * 1000` — per-resolver timeout (prevents one hung `GetRoleCredentials` from wedging every waiter)
+- Static keys are NOT cached (so rotated secrets take effect immediately)
+
+**6. AWS SDK imported lazily via dynamic `import()` ✅**
+Static-key users never pay for the SDK module load. A missing `@aws-sdk/credential-providers` optional dependency produces an actionable error rather than breaking module load for every provider.
+
+**7. `@aws-sdk/credential-providers` marked `serverExternalPackages` in next.config.mjs ✅**
+The SDK reads `~/.aws/config` and the SSO token cache from disk at runtime and resolves credential plugins by dynamic require — neither survives bundling. Correctly excluded.
+
+### Files changed (significant)
+- `open-sse/config/awsConstants.js` (102 lines NEW) — all protocol constants + patterns
+- `open-sse/shared/awsCredentials.js` (309 lines NEW) — two-mode resolver + cache
+- `open-sse/utils/awsSigv4.js` — hand-rolled signer
+- `open-sse/executors/bedrock.js` — executor consuming the above
+- `open-sse/providers/registry/bedrock-xai.js` — xAI-via-Bedrock entry
+- `src/lib/providerConnectionResponse.js` — session token redaction
+- `next.config.mjs` — serverExternalPackages for AWS SDK
+
+### Integration verification (2026-10-26)
+- ✅ `open-sse/config/awsConstants.js` exists with all 7 constants/patterns
+- ✅ `open-sse/shared/awsCredentials.js` exists with `resolveAwsCredentials`, `resolveRegion`, `detectCredentialMode`, `clearAwsCredentialCache`
+- ✅ `open-sse/utils/awsSigv4.js` exists with `signAwsRequest`, `escapeUri`
+- ✅ `open-sse/executors/bedrock.js` imports `resolveAwsCredentials` and `signAwsRequest`
+- ✅ `open-sse/executors/index.js:88-89` registers `bedrock-xai` + `brx` alias
+- ✅ `open-sse/providers/registry/index.js:140` imports `bedrock-xai`
+- ✅ `src/lib/providerConnectionResponse.js:14` strips `sessionToken` from responses
+- ✅ `usesAwsCredentialForm()` gates the stripping on `AI_PROVIDERS[provider].credentialForm === "aws"`
+
+### Intersection with our work
+| Our commit | Intersection | Status |
+|---|---|---|
+| `1ebed4fc` / `f7a641d3` requireAuth on `providers/[id]` PUT/DELETE | Bedrock connections flow through the same routes; our gates protect them | ✅ INTEGRATED |
+| `16cd790d` IDOR key masking on `keys/[id]` | Bedrock session tokens are in `providerSpecificData`, not API keys — different surface | ✅ CLEAN |
+| `1ab270ef` defensive `request.cookies?.get?.()` | No intersection | ✅ CLEAN |
+| `f7a641d3` sibling mutations gated | Bedrock connection create/update/delete flows through already-gated routes | ✅ CLEAN |
+| `ac1784f3` web-cookie profile hardening | Bedrock credentials are in SQLite `providerSpecificData`, not filesystem | ✅ CLEAN — different storage path |
+
+### Security concerns
+
+**CONCERN 1 (LOW, accepted): `usesAwsCredentialForm` relies on `AI_PROVIDERS` registry**
+The session token redaction only fires when `AI_PROVIDERS[provider].credentialForm === "aws"`. If a new AWS-credential-form provider is added without updating the registry, its session tokens would leak in API responses. Mitigated by the fact that `AI_PROVIDERS` is a single source of truth and new providers go through the registry template.
+
+**CONCERN 2 (INFO): Hand-rolled SigV4 vs `@aws-sdk/signature-v4`**
+Upstream chose a hand-rolled signer on `node:crypto` rather than the SDK's `@aws-sdk/signature-v4` package. This trades audit surface (smaller) for implementation risk (AWS can change SigV4 edge cases). The signer is tested via the executor's live tests. Acceptable — and the commit message justifies the choice (avoid pulling the full client SDK for signing only).
+
+**CONCERN 3 (INFO): Bedrock region defaults to `us-east-1`**
+When no region is configured or in env, the code defaults to `us-east-1`. This means an accidentally unconfigured connection silently sends to Virginia. Acceptable — the error path for a malformed region is clear, and `us-east-1` is AWS's canonical default.
+
+### Conclusion
+**FULLY INTEGRATED.** This is a genuinely well-engineered AWS integration with defensive validation at every trust boundary (region, profile name, temp-key detection). The SSRF-via-region-interpolation guard and credential_process-injection-via-profile-name guard are both real security wins that we did not have to add ourselves. No follow-up items queued.
+
+---
+
+## Running CSV of analyzed upstream commits
+
+| # | Commit | Date | Subject | Intersection | Status |
+|---|---|---|---|---|---|
+| 1 | `92259214` | 2026-08-14 | GHSA-pjm4-8fpg-f9p6 peer-token | HIGH — foundational | INTEGRATED |
+| 2 | `98579f98` | 2026-09-03 | /responses rewrite | LOW | INTEGRATED |
+| 3 | `38a0c449` | 2026-10-22 | web-cookie browser pool | HIGH — new credential primitive | INTEGRATED + 3 follow-ups closed |
+| 4 | `65197ad1` | 2026-08-13 | SAML 2.0 SSO | HIGH — new auth protocol | INTEGRATED |
+| 5 | `ef181752` | 2026-09-17 | Zed OAuth lifecycle hardening | HIGH — OAuth race fixes | INTEGRATED |
+| 6 | `a9d0ad26` | 2026-10-08 | AWS Bedrock + SSO credentials | HIGH — cloud credential primitive | INTEGRATED |
+
+**Total security-relevant upstream commits identified: 193**
+**Reviewed so far: 6**
+**Remaining: 187 (priority queue maintained)**
 
 ---
 
