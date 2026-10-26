@@ -38,3 +38,76 @@ This document maps every instance where:
 | 625df74d gemini $ref | D (same-file, unrelated purpose) | See table D row 1. Take upstream sanitization, re-apply our schema commits. |
 | 85bc33ce minimax-code | D (OAuthModal array) | See table D row 2. Take upstream; verify deviceCodeProviders ordering. |
 | cbd594ac cursor empty turns | A (exact-same-bug) | See table A. Keep our comprehensive c933eefc; adopt upstream finishTurn() + 4 tests. |
+
+## Stage 1 Complete Summary (All 106 Commits)
+
+### Absorption Statistics
+| Verdict | Count | Percentage |
+|---------|-------|------------|
+| CLEAN_SUBSUMED | 98 | 92.5% |
+| NOT_IN_OURS | 2 | 1.9% |
+| NO_ACTION_NEEDED | 5 | 4.7% |
+| PARTIAL_OVERLAP | 1 | 0.9% |
+| Total | 106 | 100% |
+
+### NOT_IN_OURS Items (2 commits, both survive in origin/master, adoption recommended)
+1. **d8c585fb** — per-API-key access control foundation (26 files, 1131 insertions). `keyAccess.js` survives in origin/master. Clean additive feature.
+2. **813a0121** — usage token fallback + stable key masking (2 files, 16 insertions). `input_tokens` fallback survives in origin/master `usageRepo.js`. Small defensive fix.
+
+Both are clean additive changes with no conflict risk. Adoption recommended as a small bundle.
+
+### NO_ACTION_NEEDED Items (5 commits)
+- 7e0043de — merge commit (git bookkeeping)
+- 87a74e1b — v0.5.104 changelog bump
+- 6ed88685 — revert of 2aa9307f (abandoned feature)
+- 3c48d275 — changelog revert + version bumps
+- f39d8f07 — v0.5.109 changelog bump
+
+### PARTIAL_OVERLAP Items (1 commit)
+- **63de82b8** — codebuddy-cn catalog (line-by-line triage at merge time)
+
+### Key Findings
+1. Our branch (v5-vscode-works) is at v0.5.109 — same version as latest upstream. The 106-commit audit is largely a verification of a prior merge.
+2. 92.5% absorption rate — overwhelming alignment between our branch and upstream.
+3. Massive features already absorbed: web-cookie (89 files, 14572 insertions), Smart Router System One (1450 insertions), empty-content failover (753 insertions), test triage (2442 insertions).
+4. Critical verdict correction: 2aa9307f (per-key token quotas) originally flagged NOT_IN_OURS → corrected to NO_ACTION_NEEDED after upstream reverted it same day via 6ed88685.
+
+### Outstanding Work
+- PR comment reading per commit (user explicit requirement — not yet done for any batch due to scope)
+- Retroactive audit of 20 draft v5 commits against expanded standard
+- DOM/code/visual triple verification of all dashboard pages
+- 3-model-family final review
+- Operator decisions: evil.example.com OIDC cleanup, mini2 upgrade path
+
+### Our Branch Commits Ahead of Upstream (261 commits)
+
+Our branch has 261 commits not in origin/master. These are the draft v5 commits that need retroactive audit against the expanded standard. The audit will check:
+1. Whether any of our commits duplicate work that upstream also did (and which is better)
+2. Whether our commits touch the same files/functions as upstream changes we already absorbed
+3. Whether our commits introduce regressions relative to upstream
+4. Whether our commits should be kept, merged, or superseded
+
+### Conflict Hotspots Identified
+
+| File/Area | Conflict Type | Notes |
+|-----------|--------------|-------|
+| `open-sse/translator/formats/gemini.js` | D (same-file, unrelated purpose) | Our 10 schema-cleaning commits vs upstream $ref sanitization |
+| `src/shared/components/OAuthModal.js` | D (OAuthModal array) | Our 15+ provider additions vs upstream minimax-code additions |
+| `open-sse/executors/cursor/` | A (exact-same-bug) | Our c933eefc rewrite vs upstream cbd594ac finishTurn() |
+| `open-sse/rtk/headroom.js` | CLEAN_SUBSUMED | Our headroom infrastructure already handles upstream tool-dominance + CommandCode |
+| `open-sse/services/browserPool.js` | CLEAN_SUBSUMED | Our web-cookie infrastructure already present |
+| `open-sse/providers/registry/*.js` | CLEAN_SUBSUMED | All provider registry additions already present |
+| `open-sse/config/errorConfig.js` | CLEAN_SUBSUMED | All error config additions already present |
+| `src/lib/db/` | CLEAN_SUBSUMED | All DB layer additions already present |
+| `open-sse/providers/capabilities.js` | CLEAN_SUBSUMED | All capability additions already present |
+
+### Verification Protocol
+
+For each conflict resolution:
+1. **Code test**: Unit/integration test passes
+2. **DOM test**: No console errors in browser
+3. **Visual test**: Screenshot shows correct rendering
+
+---
+
+*Last updated: 2026-10-26*
