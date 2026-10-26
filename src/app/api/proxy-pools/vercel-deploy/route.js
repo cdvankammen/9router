@@ -26,14 +26,19 @@ export default async function handler(req) {
 
   const targetUrl = target.replace(/\\/$/, "") + relayPath;
 
-  const headers = new Headers(req.headers);
-  headers.delete("x-relay-target");
-  headers.delete("x-relay-path");
-  headers.delete("host");
+  // Build forwarded headers as a plain object from req.headers.entries()
+  // rather than `new Headers(req.headers)`. Edge-runtime Headers normalization
+  // lowercases + merges duplicate keys in ways some upstream providers reject
+  // (regression re-introduced by 2b63e0dd; original fix: 6af26a9e savioruz).
+  const rawHeaders = {};
+  for (const [k, v] of req.headers.entries()) rawHeaders[k] = v;
+  delete rawHeaders["x-relay-target"];
+  delete rawHeaders["x-relay-path"];
+  delete rawHeaders["host"];
 
   const response = await fetch(targetUrl, {
     method: req.method,
-    headers,
+    headers: rawHeaders,
     body: req.method !== "GET" && req.method !== "HEAD" ? req.body : undefined,
     duplex: "half",
     signal: AbortSignal.timeout(${RELAY_FORWARD_TIMEOUT_MS}),
