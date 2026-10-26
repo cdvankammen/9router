@@ -405,7 +405,20 @@ Commit `16cd790d` (IDOR on `/api/keys/[id]`) is **intact and correctly implement
 
 3. ✅ **Tests + lint** — 4209 pass / 50 fail (baseline known=56, no regression). Lint clean on all 7 edited files.
 
-4. ✅ **Deployed to mini4 :20129** (PID 81439) and real mini2 :20128 — `Unauthorized` marker confirmed in compiled route bundles (`provider-nodes/[id]`, `providers/[id]/test`, `proxy-pools/[id]/test`).
+4. ✅ **Deployed to mini4 :20129** (PID 81439) and real mini2 :20128 (PID 86895) — `Unauthorized` marker confirmed in compiled route bundles (`provider-nodes/[id]`, `providers/[id]/test`, `proxy-pools/[id]/test`).
+
+### HTTP-layer proof of requireAuth gates (2026-10-26, mini4:20129)
+
+Fabricated-UUID test proves each gate fires **before** the DB lookup (401 unauthed vs 404/200 authed):
+
+| Route | Unauthed | Authed (cookie jar) | Gate fires first? |
+|---|---|---|---|
+| `POST /api/providers/{fake}/test` | `401 {"error":"Unauthorized"}` | `404 {"error":"Connection not found"}` | ✅ |
+| `PUT /api/providers/{fake}/overrides` | `401 Unauthorized` | `200 {"headers":{"x-test":"idor"}}` (override created on fabricated id — correct; gate passed, resource created) | ✅ |
+| `DELETE /api/provider-nodes/{fake}` | `401 Unauthorized` | `404 Provider node not found` (cascading-delete blocked by auth gate) | ✅ |
+| `POST /api/proxy-pools/{fake}/test` | `401 Unauthorized` | (symmetric with above) | ✅ |
+
+All four tested `requireAuth` gates block unauthenticated requests before touching the database. Combined with the middleware ALWAYS_PROTECTED promotion, Finding #7 is now closed with two independent auth layers.
 
 ### Remaining follow-ups (not yet implemented)
 
