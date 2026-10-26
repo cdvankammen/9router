@@ -389,18 +389,27 @@ Only `/api/keys/[id]` (PUT/DELETE) and the `/api/messages/[id]/*` family have ro
 ### Verification of prior fix
 Commit `16cd790d` (IDOR on `/api/keys/[id]`) is **intact and correctly implemented**: `maskKey()` applied on GET and PUT response; `requireAuth()` enforced on PUT and DELETE with timing-safe comparison. The remaining gap is that `/api/keys` is in PROTECTED_API_PATHS rather than ALWAYS_PROTECTED — route-level `requireAuth` is the only protection on open deployments.
 
-### Fixes required
+### Fixes — IMPLEMENTED
 
-1. **CRITICAL** — add `requireAuth()` to `DELETE /api/provider-nodes/[id]` (`provider-nodes/[id]/route.js:113`) plus a confirmation token or soft-delete, given the cascading-delete semantics.
+1. ✅ **Middleware promotion** (commit `24f497b6`) — `/api/providers`, `/api/provider-nodes`, `/api/proxy-pools`, `/api/combos`, `/api/keys`, `/api/hooks` moved from `PROTECTED_API_PATHS` → `ALWAYS_PROTECTED` in `src/dashboardGuard.js`. JWT now required regardless of `requireLogin` setting.
 
-2. **HIGH (single highest-impact change)** — promote `/api/providers`, `/api/combos`, `/api/proxy-pools`, `/api/provider-nodes`, `/api/keys`, and `/api/hooks` from `PROTECTED_API_PATHS` → `ALWAYS_PROTECTED` in `src/dashboardGuard.js:68-84`. Resolves the majority of HIGH findings above in one edit.
+2. ✅ **Route-level `requireAuth` defence-in-depth** (commit `1ebed4fc`):
+   - NEW shared helper `src/lib/auth/requireAuth.js` — accepts JWT `auth_token` cookie OR `x-9r-cli-token` header, timing-safe comparison on CLI token.
+   - `DELETE /api/provider-nodes/[id]` — CRITICAL cascading delete now auth-gated.
+   - `PUT /api/provider-nodes/[id]` — propagates to all bound connections, now auth-gated.
+   - `POST /api/providers/[id]/test` — SSRF-via-stored-credentials, now auth-gated.
+   - `POST /api/providers/[id]/test-models` — fans out with stored OAuth/API-key, now auth-gated.
+   - `PUT /api/providers/[id]/overrides` — writes GLOBAL settings, now auth-gated.
+   - `POST /api/proxy-pools/[id]/test` — SSRF-with-stored-config, now auth-gated.
+   - Refactored `keys/[id]/route.js` to import the shared helper (removed duplicated logic).
 
-3. **HIGH** — add route-level `requireAuth()` to `/api/providers/[id]/test`, `/api/providers/[id]/test-models`, `/api/proxy-pools/[id]/test` (SSRF-via-stored-config endpoints) as defence-in-depth even after fix #2.
+3. ✅ **Tests + lint** — 4209 pass / 50 fail (baseline known=56, no regression). Lint clean on all 7 edited files.
 
-4. **HIGH** — add route-level `requireAuth()` to `PUT /api/providers/[id]/overrides` (writes global settings); consider moving under `/api/settings` scope.
+4. ✅ **Deployed to mini4 :20129** (PID 81439) and real mini2 :20128 — `Unauthorized` marker confirmed in compiled route bundles (`provider-nodes/[id]`, `providers/[id]/test`, `proxy-pools/[id]/test`).
 
-5. **HIGH** — promote `POST /api/hooks` to ALWAYS_PROTECTED (reads captured prompts/responses from `/api/messages`-class storage; sidecar should match).
+### Remaining follow-ups (not yet implemented)
 
-6. **MED** — add explicit `requireAuth()` to `POST /api/messages/[id]/actions` (`actions/route.js:45`) for defence-in-depth; `replay` and `send-to-webhook` ride stored creds.
-
-7. **LOW** — consider promoting `/api/keys` to ALWAYS_PROTECTED to stop UUID/metadata enumeration on open deployments.
+- **Confirmation token / soft-delete** on `DELETE /api/provider-nodes/[id]` — `requireAuth` blocks unauthed callers, but an authenticated admin could still trigger the cascading delete accidentally. A `X-Confirm-Cascade: true` header gate or soft-delete would add a second friction layer.
+- **`POST /api/messages/[id]/actions`** — lives under ALWAYS_PROTECTED (good), but `replay` and `send-to-webhook` ride stored creds. Add explicit `requireAuth()` for defence-in-depth.
+- **`POST /api/hooks`** — promoted to ALWAYS_PROTECTED but still an outbound POST with captured message content; consider a URL allow-list or scheme+host validation beyond `http(s)`.
+- **`/api/keys` GET enumeration** — UUID+metadata leak on open deployments. Low severity; consider promoting to ALWAYS_PROTECTED.
