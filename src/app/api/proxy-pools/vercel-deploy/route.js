@@ -27,7 +27,7 @@ export default async function handler(req) {
   const targetUrl = target.replace(/\\/$/, "") + relayPath;
 
   // Build forwarded headers as a plain object from req.headers.entries()
-  // rather than `new Headers(req.headers)`. Edge-runtime Headers normalization
+  // rather than new Headers(req.headers). Edge-runtime Headers normalization
   // lowercases + merges duplicate keys in ways some upstream providers reject
   // (regression re-introduced by 2b63e0dd; original fix: 6af26a9e savioruz).
   const rawHeaders = {};
