@@ -4,6 +4,7 @@ import { addAnnotation, deleteAnnotation } from "@/lib/usageDb";
 import { handleChat } from "@/sse/handlers/chat.js";
 import { initTranslators } from "open-sse/translator/index.js";
 import { extractText } from "@/shared/hookTemplate";
+import { requireAuth } from "@/lib/auth/requireAuth";
 
 let initialized = false;
 async function ensureInitialized() {
@@ -41,6 +42,15 @@ async function ensureInitialized() {
  */
 export async function POST(request, { params }) {
   try {
+    // Finding #7 follow-up (2026-10-26): route-level requireAuth as defence-
+    // in-depth. The middleware classifies /api/messages as ALWAYS_PROTECTED
+    // (JWT required regardless of requireLogin), but the replay and
+    // send-to-webhook actions ride stored credentials and make outbound
+    // calls — an extra auth check here catches any future middleware
+    // regression before those potent actions fire.
+    if (!(await requireAuth(request))) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     const { id } = await params;
     const detail = await getRequestDetailById(id);
     if (!detail) {
