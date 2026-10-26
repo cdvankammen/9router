@@ -16,8 +16,8 @@
  * Buckets (per-IP, independent):
  *   - auth:       10 req/min  — POST login/setup/reset-password
  *   - chat:       20 req/min  — POST /v1/chat/completions, /v1/completions
- *   - api:       120 req/min  — /api/* (other), /v1/*
- *   - general:   120 req/min  — everything else
+ *   - api:       600 req/min  — /api/* (other), /v1/*
+ *   - general:   600 req/min  — everything else
  *   - static/rsc: bypass      — Next.js framework traffic (never counted)
  *   - localhost:  unlimited   — loopback IPs bypass all rate limiting
  *
@@ -41,8 +41,14 @@ const WINDOW_MS = 60_000;       // 1 minute sliding window
 const LIMITS = {
   auth:     10,                 // POST login/setup/reset-password — brute-force protection
   chat:     20,                 // POST /v1/chat/completions, /v1/completions — expensive LLM calls
-  api:     120,                 // /api/* (other), /v1/* — dashboard + gateway traffic
-  general: 120,                 // fallback bucket
+  api:     600,                 // /api/* (other), /v1/* — dashboard + gateway traffic (10 req/s avg)
+  general: 600,                 // fallback bucket
+  // api/general raised 120→600 in lockstep with the ESM twin
+  // (src/lib/middleware/routeClassifier.js BUCKET_LIMITS) and BURST_LIMIT
+  // 30→200 in src/lib/middleware/rateLimiter.js: the providers page fires
+  // 92 <Link> prefetches on mount, so the old 120/min cap 429'd the UI on a
+  // single human-pace navigation to a heavy page. auth/chat stay tight —
+  // brute-force and upstream-cost protection are unaffected.
 };
 
 // Categories that bypass rate limiting entirely. These are framework traffic,

@@ -23,11 +23,16 @@ export const BYPASS_CATEGORIES = new Set(["static", "rsc"]);
 
 // Bucket limits (requests per window). Tuned for a single-process server
 // handling a LAN-exposed dashboard + LLM API gateway.
+// MUST stay >= BURST_LIMIT (200 in rateLimiter.js) to preserve the two-tier
+// invariant: burst cap fires first on spikes, window cap fires first on
+// sustained abuse. The providers page alone fires 92 <Link> prefetches on
+// mount, so api/general at 600/min (10 req/s avg) gives a 3× safety margin
+// over the heaviest observed single-navigation burst.
 export const BUCKET_LIMITS = {
   auth: 10,      // Tight: login brute-force protection (10/min = 1 every 6s)
   chat: 20,      // Tight: expensive upstream LLM calls (20/min = 1 every 3s)
-  api: 120,      // General: dashboard API traffic (2 req/s average)
-  general: 120,  // Fallback: same as api
+  api: 600,      // General: dashboard API traffic (10 req/s average)
+  general: 600,  // Fallback: same as api
 };
 
 /**

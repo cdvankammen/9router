@@ -89,8 +89,12 @@ describe("getBucketLimit", () => {
   it("returns the per-bucket limits", () => {
     expect(getBucketLimit("auth")).toBe(10);
     expect(getBucketLimit("chat")).toBe(20);
-    expect(getBucketLimit("api")).toBe(120);
-    expect(getBucketLimit("general")).toBe(120);
+    // api/general raised 120→600 with BURST_LIMIT 30→200: the providers page
+    // fires 92 <Link> prefetches on mount, so a single human-pace navigation
+    // to a heavy page routinely exceeds the old 120/min cap. Two-tier
+    // invariant: BURST_LIMIT (200) < api/general window caps (600).
+    expect(getBucketLimit("api")).toBe(600);
+    expect(getBucketLimit("general")).toBe(600);
   });
 
   it("falls back to the general limit for unknown buckets", () => {

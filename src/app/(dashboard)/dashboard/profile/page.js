@@ -766,16 +766,29 @@ export default function ProfilePage() {
   return (
     <div className="max-w-2xl mx-auto px-4 sm:px-0">
       <div className="flex flex-col gap-6">
-        {/* Local Mode Info */}
+        {/* Deployment Mode Info — content adapts to local vs remote host */}
         <Card>
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
             <div className="flex items-center gap-3 sm:gap-4">
-              <div className="size-10 sm:size-12 rounded-lg bg-green-500/10 text-green-500 flex items-center justify-center shrink-0">
-                <span className="material-symbols-outlined text-xl sm:text-2xl">computer</span>
+              <div className={cn(
+                "size-10 sm:size-12 rounded-lg flex items-center justify-center shrink-0",
+                isRemoteHost
+                  ? "bg-blue-500/10 text-blue-500"
+                  : "bg-green-500/10 text-green-500"
+              )}>
+                <span className="material-symbols-outlined text-xl sm:text-2xl">
+                  {isRemoteHost ? "cloud" : "computer"}
+                </span>
               </div>
               <div>
-                <h2 className="text-lg sm:text-xl font-semibold">Local Mode</h2>
-                <p className="text-sm text-text-muted">Running on your machine</p>
+                <h2 className="text-lg sm:text-xl font-semibold">
+                  {isRemoteHost ? "Remote Mode" : "Local Mode"}
+                </h2>
+                <p className="text-sm text-text-muted">
+                  {isRemoteHost
+                    ? "Running on a remote host — verify trust boundary before entering secrets"
+                    : "Running on your machine"}
+                </p>
               </div>
             </div>
             <div className="inline-flex p-1 rounded-lg bg-black/5 dark:bg-white/5 w-full sm:w-auto">

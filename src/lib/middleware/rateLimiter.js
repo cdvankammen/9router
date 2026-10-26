@@ -9,8 +9,22 @@ let cachedNextResponse = null;
 export function __setNextResponse(nr) { cachedNextResponse = nr; }
 
 const DEFAULT_WINDOW_MS = 60_000; // 1 minute sliding window
-const DEFAULT_MAX_REQUESTS = 120; // 2 req/s average (fallback when bucket unknown)
-const BURST_LIMIT = 30; // max requests in a short burst before throttling
+// 600/min = 10 req/s average. Raised from 120 after the providers page (92 <Link>
+// prefetches on mount) demonstrated that the old 2 req/s average was too tight
+// for a dashboard that legitimately fires 80-150 requests on a single human-pace
+// navigation. This is the fallback when a bucket has no classifier-specific limit;
+// per-category limits in routeClassifier.js take precedence via getBucketLimit().
+// MUST stay >= BURST_LIMIT to preserve the two-tier invariant (burst fires first
+// on spikes, window fires first on sustained abuse).
+const DEFAULT_MAX_REQUESTS = 600;
+// 200 burst — raised from 30 after the providers page (92 <Link> prefetches +
+// dashboardGuard API probes) demonstrated that a single human-pace navigation
+// to a heavy page routinely fires 80-150 requests on mount. The lower limit
+// was the direct cause of Finding #1 in 51-mini2-dashboard-dom-error-audit.md
+// recurring on v5-vscode-works (14/16 pages 429'd under 5s inter-page pacing).
+// Per-(IP, category) buckets already prevent cross-category starvation, so
+// the higher burst ceiling does not weaken brute-force protection on /api/auth/*.
+const BURST_LIMIT = 200;
 const BURST_WINDOW_MS = 5_000; // 5s burst window
 
 // Per-(IP, category) state: ip → Map(category → { count, resetAt, burstCount, burstResetAt })

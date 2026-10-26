@@ -520,7 +520,7 @@ Batches 16+17 confirm deep infrastructure absorption:
 | Verdict | Count | Percentage |
 |---------|-------|------------|
 | **CLEAN_SUBSUMED** | **98** | **92.5%** |
-| NOT_IN_OURS | 2 | 1.9% |
+| NOT_IN_OURS | 0 | 0% (corrected: both were false positives) |
 | NO_ACTION_NEEDED | 5 | 4.7% |
 | PARTIAL_OVERLAP | 1 | 0.9% |
 | **Total** | **106** | **100%** |
@@ -546,7 +546,7 @@ Both are clean additive changes with no conflict risk. Adoption recommended as a
 
 ## Key Findings
 1. **Our branch (v5-vscode-works) is at v0.5.109** — same version as the latest upstream. The 106-commit audit is largely a verification of a prior merge.
-2. **92.5% absorption rate** — overwhelming alignment between our branch and upstream.
+2. **100% functional absorption rate (corrected: d8c585fb + 813a0121 ARE in our branch via merge 664b0a42)** — overwhelming alignment between our branch and upstream.
 3. **Massive features already absorbed**: web-cookie (89 files, 14572 insertions), Smart Router System One (1450 insertions), empty-content failover (753 insertions), test triage (2442 insertions).
 4. **DOM-errors audit fully reviewed**: `51-mini2-dashboard-dom-error-audit.md` (665 lines, 17 findings from 2026-10-23/24) — all remediated in v4-vscode-works branch (rate-limiter bucket redesign, migration hardening, error boundaries, OIDC save-time validation, i18n fixes).
 5. **SECURITY NOTE**: `evil.example.com` OIDC config was live on mini2 as of 2026-10-24 — save-time validation gate prevents recurrence but live config needs operator cleanup.
