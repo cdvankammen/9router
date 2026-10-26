@@ -338,4 +338,58 @@ The wrapper sets these defaults before the Next handler runs; a route that sets 
 - App bundle version **0.5.75**; `grep -c X-Frame-Options .../app/custom-server.js` = **0**
 - `/login` → `200 OK` with **no** framing headers
 - No `.env` in the bundle app dir; node v26.11.1 available at `/opt/homebrew/bin/node`
-- **Next action:** back up `/Applications/9Router.app/Contents/Resources/app`, deploy the v5 standalone into it, restart, then re-run the iframe A/B against the `mini2` hostname to confirm the block.
+- Backup at `/tmp/9r-real-mini2-app-backup-pre-v5`; staged v5 build at `~/9router-v5-staged/` (84M, 1 frame marker, 10 SSRF markers, 21 chunks with `__proto__` hardening — all markers verified present). Launcher uses `NEXT_DIST_DIR=.next-cli-build` (per `scripts/build-cli.js:183`), so the staged `.next` must be renamed to `.next-cli-build` before swap.
+- **Next action (awaiting operator go):** swap `~/9router-v5-staged/` into `/Applications/9Router.app/Contents/Resources/app/app/`, restart PID 14919, re-run the iframe A/B against the `mini2` hostname.
+
+---
+
+## Finding #7 — IDOR / broken-access-control on `/api/[id]` routes (open deployments)
+
+**Date found:** 2026-10-26 (subagent read-only audit)
+**Severity:** CRITICAL (cascading delete) + HIGH (multiple admin mutations reachable unauthenticated)
+**Status:** DOCUMENTED — fixes pending implementation
+
+### Root cause
+The middleware in `src/dashboardGuard.js` classifies routes as **ALWAYS_PROTECTED** (JWT required regardless of `requireLogin`) or **PROTECTED_API_PATHS** (auth required, but `isAuthenticated()` returns `true` for everyone when `settings.requireLogin === false` — `dashboardGuard.js:201-205`). Many mutating admin endpoints land in the latter class. Any deployment that runs with `requireLogin:false` (the documented default, confirmed active on mini4 during the prior proof round) exposes these routes to **every network peer**.
+
+Only `/api/keys/[id]` (PUT/DELETE) and the `/api/messages/[id]/*` family have route-level `requireAuth()` as defence-in-depth. Every other `[id]` route relies solely on the middleware class.
+
+### Findings (severity order)
+
+| Route | Method | Middleware | Route-level auth | Risk (requireLogin=false) | File:line |
+|---|---|---|---|---|---|
+| `/api/provider-nodes/[id]` | DELETE | PROTECTED | none | **CRITICAL** — cascades `deleteProviderConnectionsByProvider(id)` then `deleteProviderNode(id)`: one unauthenticated request deletes **every connection bound to the node** | `provider-nodes/[id]/route.js:113-128` |
+| `/api/provider-nodes/[id]` | PUT | PROTECTED | none | HIGH — mutates node and propagates to every connection using it (`Promise.all(connections.map(updateProviderConnection))`) | `provider-nodes/[id]/route.js:94-108` |
+| `/api/providers/[id]` | DELETE | PROTECTED | none | HIGH — delete any connection by UUID | `providers/[id]/route.js:180-194` |
+| `/api/providers/[id]` | PUT | PROTECTED | none | HIGH — rewrite any connection (name, baseUrl, proxyPool, isActive, providerSpecificData) | `providers/[id]/route.js:85-176` |
+| `/api/providers/[id]/test` | POST | PROTECTED | none | HIGH — forces server outbound using stored credentials of any connection (credential use + SSRF-via-stored-config) | `providers/[id]/test/route.js:5-19` |
+| `/api/providers/[id]/overrides` | PUT | PROTECTED | none | HIGH — writes to **global** `settings.providerOverrides` via `updateSettings`; any peer injects headers sent on every user's upstream requests | `providers/[id]/overrides/route.js:85-99` |
+| `/api/combos/[id]` | PUT / DELETE | PROTECTED | none | HIGH — rewrite or delete any combo | `combos/[id]/route.js:24-74` |
+| `/api/proxy-pools/[id]` | PUT / DELETE | PROTECTED | none | HIGH — rewrite or delete any proxy pool (traffic tunnel destination) | `proxy-pools/[id]/route.js:72-120` |
+| `/api/proxy-pools/[id]/test` | POST | PROTECTED | none | HIGH — outbound GET to stored `proxyPool.proxyUrl` (SSRF-with-stored-config) | `proxy-pools/[id]/test/route.js:39-71` |
+| `/api/hooks` | POST | PROTECTED | URL scheme only | HIGH — outbound POST to attacker-controlled URL with captured message content (SSRF + data exfiltration) | `hooks/route.js:48-66` |
+| `/api/providers/[id]/models` | GET | PROTECTED | none | MED/HIGH — triggers outbound calls using stored OAuth/API-key credentials (`refreshGoogleToken`, `refreshCodexToken`) to enumerate models | `providers/[id]/models/route.js` |
+| `/api/providers/[id]` | GET | PROTECTED | none | MED — leaks connection config (providerSpecificData, proxy settings, pool bindings) | `providers/[id]/route.js:71-81` |
+| `/api/proxy-pools/[id]` | GET | PROTECTED | none | MED — leaks proxy URL (may embed creds) | `proxy-pools/[id]/route.js:58-69` |
+| `/api/keys/[id]` | GET | PROTECTED | none (but response masked) | LOW-MED — UUID + metadata leak; `maskKey()` intact at `keys/[id]/route.js:54-62` ✓ | `keys/[id]/route.js:54-62` |
+| `/api/keys/[id]` | PUT / DELETE | PROTECTED | **YES** `requireAuth()` | LOW — defence-in-depth from commit `16cd790d` intact at `:66-68` and `:92-94` ✓ | `keys/[id]/route.js:66-68, 92-94` |
+| `/api/messages/[id]/*` | all | **ALWAYS_PROTECTED** ✓ | none | LOW — JWT enforced regardless of `requireLogin` | `dashboardGuard.js:58` |
+
+### Verification of prior fix
+Commit `16cd790d` (IDOR on `/api/keys/[id]`) is **intact and correctly implemented**: `maskKey()` applied on GET and PUT response; `requireAuth()` enforced on PUT and DELETE with timing-safe comparison. The remaining gap is that `/api/keys` is in PROTECTED_API_PATHS rather than ALWAYS_PROTECTED — route-level `requireAuth` is the only protection on open deployments.
+
+### Fixes required
+
+1. **CRITICAL** — add `requireAuth()` to `DELETE /api/provider-nodes/[id]` (`provider-nodes/[id]/route.js:113`) plus a confirmation token or soft-delete, given the cascading-delete semantics.
+
+2. **HIGH (single highest-impact change)** — promote `/api/providers`, `/api/combos`, `/api/proxy-pools`, `/api/provider-nodes`, `/api/keys`, and `/api/hooks` from `PROTECTED_API_PATHS` → `ALWAYS_PROTECTED` in `src/dashboardGuard.js:68-84`. Resolves the majority of HIGH findings above in one edit.
+
+3. **HIGH** — add route-level `requireAuth()` to `/api/providers/[id]/test`, `/api/providers/[id]/test-models`, `/api/proxy-pools/[id]/test` (SSRF-via-stored-config endpoints) as defence-in-depth even after fix #2.
+
+4. **HIGH** — add route-level `requireAuth()` to `PUT /api/providers/[id]/overrides` (writes global settings); consider moving under `/api/settings` scope.
+
+5. **HIGH** — promote `POST /api/hooks` to ALWAYS_PROTECTED (reads captured prompts/responses from `/api/messages`-class storage; sidecar should match).
+
+6. **MED** — add explicit `requireAuth()` to `POST /api/messages/[id]/actions` (`actions/route.js:45`) for defence-in-depth; `replay` and `send-to-webhook` ride stored creds.
+
+7. **LOW** — consider promoting `/api/keys` to ALWAYS_PROTECTED to stop UUID/metadata enumeration on open deployments.
