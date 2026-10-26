@@ -192,6 +192,14 @@ function deepMergeObject(base, override) {
   }
   const out = { ...base };
   for (const [k, v] of Object.entries(override)) {
+    // SECURITY: defense-in-depth against prototype-pollution attempts via
+    // PATCH /api/settings. JSON.parse creates __proto__/constructor/prototype
+    // as own enumerable keys, so Object.entries would otherwise iterate them
+    // and `out[k] = ...` would mutate the local `out`'s prototype link. The
+    // stored JSON drops prototype chains on stringify (so no persistence),
+    // but skipping these keys at merge time keeps the in-memory object clean
+    // and follows the standard Node.js hardening pattern.
+    if (k === "__proto__" || k === "constructor" || k === "prototype") continue;
     out[k] = deepMergeObject(base[k], v);
   }
   return out;
