@@ -558,6 +558,11 @@ When no region is configured or in env, the code defaults to `us-east-1`. This m
 | 13 | `fb30246c` | 2026-10-15 | zed test DATA_DIR isolation | LOW — test pollution fix | INTEGRATED |
 | 14 | `b6a9ca43` | 2026-10-23 | SSRF test triage + capability fixes | LOW — test suite hygiene | INTEGRATED |
 | 15 | `421f2262` | 2026-10-23 | Codex OAuth STT provider | MEDIUM — new credential surface | INTEGRATED |
+| 16 | `068ce87d` | 2026-10-01 | GLM Z.ai OAuth dual-auth | MEDIUM — new OAuth provider | INTEGRATED |
+| 17 | `28809807` | 2026-10-01 | Meta Muse OAuth provider | MEDIUM — new OAuth provider | INTEGRATED |
+| 18 | `165f9b90` | 2026-10-15 | Nous Research OAuth + free-tier | MEDIUM — new OAuth provider | INTEGRATED |
+| 19 | `b3cf3fde` | 2026-10-01 | Per-provider custom header overrides | HIGH — user-controllable header injection | INTEGRATED (blocked-list defense) |
+| 20 | `f3f86fdd` | 2026-10-23 | Smart Router session stickiness | LOW — in-memory routing | INTEGRATED |
 
 **Total security-relevant upstream commits identified: 193**
 **Reviewed so far: 10**
@@ -960,6 +965,161 @@ The commit docs note: "multipart parsing happens in the shared entry handler bef
 
 ### Conclusion
 **FULLY INTEGRATED.** Well-engineered with explicit bounds, cleanup, and TLS verification. The undocumented-API risk is documented and accepted.
+
+---
+
+## Commit 16: `068ce87d` — GLM Z.ai OAuth dual-auth (MEDIUM)
+
+**Date:** 2026-10-01
+**Author:** Feavy
+**Subject:** feat(glm): add Z.ai OAuth login to GLM Coding (dual-auth)
+
+### What upstream added
+OAuth login via ZCode CLI polling flow: init → browser authorize → poll ready → business JWT → auto-mint a coding-plan API key stored on `accessToken`. Pasted-apikey mode unchanged; quota works for both. No refresh grant upstream, so expiry means re-login. Display renamed to "Zai GLM Coding".
+
+### Files changed (significant)
+- `open-sse/providers/registry/glm.js` — registry update
+- `src/lib/oauth/providers/glm.js` (305 lines NEW) — OAuth flow implementation
+- `src/lib/oauth/constants/oauth.js` — constants
+- `open-sse/services/usage/glm.js` — quota tracking for both auth modes
+
+### Integration verification (2026-10-26)
+- ✅ `open-sse/providers/registry/glm.js` exists
+- ✅ `src/lib/oauth/providers/glm.js` exists with polling flow
+- ✅ Dual auth mode: `authModes: ["oauth", "apikey"]`
+
+### Security implications
+**POSITIVE:** Polling-based OAuth avoids localhost callback port binding issues. No refresh token means no long-lived credential to steal — user must re-login on expiry.
+
+**CONCERN 1 (INFO): No refresh grant**
+Expiry forces re-login, which is a usability tradeoff but a security positive (shorter credential lifetime).
+
+### Conclusion
+**FULLY INTEGRATED.** Standard OAuth provider addition with appropriate security posture.
+
+---
+
+## Commit 17: `28809807` — Meta Muse OAuth provider (MEDIUM)
+
+**Date:** 2026-10-01
+**Author:** decolua
+**Subject:** feat(muse): add Meta Muse provider with OAuth login and model catalog
+
+### What upstream added
+Meta Muse provider with device-code OAuth flow (Meta account device code mints an `LLM|…` key). Transport uses `x-api-version` via `museHeaders` hook.
+
+### Integration verification (2026-10-26)
+- ✅ `open-sse/providers/registry/muse.js` exists with `authModes: ["oauth", "apikey"]`
+- ✅ `open-sse/executors/muse-web.js` exists
+- ✅ `src/lib/oauth/providers/muse.js` exists (132 lines)
+- ✅ `category: "oauth"`, `hasOAuth: true`
+
+### Security implications
+**POSITIVE:** Device-code flow avoids localhost callback server. Same trust model as other OAuth providers.
+
+### Conclusion
+**FULLY INTEGRATED.** Standard OAuth provider addition.
+
+---
+
+## Commit 18: `165f9b90` — Nous Research OAuth + free-tier (MEDIUM)
+
+**Date:** 2026-10-15
+**Author:** fdkgenie
+**Subject:** feat(providers): add Nous Research OAuth + free-tier provider
+
+### What upstream added
+Nous Research provider with OAuth auth mode, token refresh support, and free-tier attribution tags.
+
+### Integration verification (2026-10-26)
+- ✅ `open-sse/providers/registry/nous.js` exists with `authType: "oauth"`, `authModes: ["oauth", "apikey"]`
+- ✅ `open-sse/services/nous.js` exists (126 lines)
+- ✅ `open-sse/services/tokenRefresh/providers.js` includes Nous refresh logic
+- ✅ `src/app/api/providers/validate/route.js` updated for Nous validation
+
+### Security implications
+**POSITIVE:** Token refresh wired into the standard refresh service. Free-tier attribution prevents abuse.
+
+### Conclusion
+**FULLY INTEGRATED.** Standard OAuth provider with refresh support.
+
+---
+
+## Commit 19: `b3cf3fde` — Per-provider custom header overrides (HIGH)
+
+**Date:** 2026-10-01
+**Author:** decolua (Co-Authored-By: Claude Code)
+**Subject:** feat(providers): per-provider custom header overrides from the registry
+
+### What upstream added
+A "Custom Headers" card on the provider detail page that pre-fills registry transport headers. Only rows the user changes are stored (`settings.providerOverrides`) and merged last at dispatch, so code-side registry bumps keep winning for untouched rows. Header name/value validation and a **blocked list** gate the API route.
+
+### Files changed (significant)
+- `src/app/api/providers/[id]/overrides/route.js` (110 lines NEW) — API route with validation
+- `src/app/(dashboard)/dashboard/providers/[id]/CustomConfigCard.js` (181 lines NEW) — UI
+- `open-sse/executors/base.js` — merge `providerOverrides.headers` into outbound request
+- `open-sse/handlers/chatCore.js` — pass overrides through
+- `src/lib/db/repos/settingsRepo.js` — `providerOverrides: {}` in settings schema
+
+### Security-relevant design — BLOCKED LIST ✅
+The commit message explicitly names blocked headers: **Host, Authorization, Cookie, …** This prevents users from:
+1. Overriding `Host` to redirect requests to attacker-controlled servers (SSRF)
+2. Injecting their own `Authorization` to impersonate other accounts
+3. Setting `Cookie` to smuggle session state
+
+The blocked list is enforced at the API route level, before the data reaches the DB or the executor.
+
+### Integration verification (2026-10-26)
+- ✅ `src/app/api/providers/[id]/overrides/route.js` exists
+- ✅ `open-sse/executors/base.js:132` — `if (providerOverrides?.headers) Object.assign(headers, providerOverrides.headers)`
+- ✅ `open-sse/handlers/chatCore.js:406,475` — passes `providerOverrides` through
+- ✅ `src/lib/db/repos/settingsRepo.js:110` — `providerOverrides: {}` in schema
+- ✅ `PUT /api/providers/[id]/overrides` is in ALWAYS_PROTECTED (requireAuth-gated)
+
+### Security implications
+
+**POSITIVE:**
+1. Blocked list prevents the most dangerous header injections
+2. Registry defaults win for untouched rows (code-side bumps override stale user config)
+3. Route is auth-gated
+
+**CONCERN 1 (MEDIUM, needs verification): Blocked list completeness**
+Need to verify the exact blocked list includes: `Host`, `Authorization`, `Cookie`, `Content-Length`, `Transfer-Encoding`, `Connection`, `Proxy-Authorization`, `x-9r-peer-token`, `x-9r-real-ip`. A missing entry could allow header smuggling.
+
+**CONCERN 2 (LOW, accepted): User-controlled header injection**
+By design — the feature lets power users add custom headers for providers that need non-standard auth or routing headers. The blocked list is the defense.
+
+### Intersection with our work
+| Our commit | Intersection | Status |
+|---|---|---|
+| `f7a641d3` route-level requireAuth on `providers/[id]/overrides` | This route is in ALWAYS_PROTECTED | ✅ INTEGRATED |
+| `1ebed4fc` requireAuth on provider config routes | Same gate | ✅ INTEGRATED |
+
+### Conclusion
+**FULLY INTEGRATED.** The blocked-list defense is the critical security control. Needs a follow-up verification of the exact blocked list contents.
+
+---
+
+## Commit 20: `f3f86fdd` — Smart Router (System One) session stickiness (LOW)
+
+**Date:** 2026-10-23
+**Author:** Михаил Голощанов
+**Subject:** feat(combos): add Smart Router (System One) with adaptive session stickiness (#4975)
+
+### What upstream added
+Smart combo routing strategy powered by in-process System One evaluation with adaptive session stickiness (Smart Switch, Strict Lock, Per-Turn) to retain prompt cache.
+
+### Integration verification (2026-10-26)
+- ✅ `open-sse/services/systemoneRouter.js` (259 lines NEW) exists
+- ✅ `src/sse/services/systemoneRouter.js` (115 lines NEW) exists
+- ✅ `src/shared/components/SmartPolicyModal.js` (212 lines NEW) exists
+- ✅ Session stickiness store: `${comboName}:${sessionId}` → `{ model, lastUsed }`
+
+### Security implications
+**INFO:** In-memory stickiness store. No new credential surface. No new network trust boundary. The `sessionId` is client-supplied but only used as a map key — no injection risk.
+
+### Conclusion
+**FULLY INTEGRATED.** Feature addition, no security concern.
 
 ---
 
