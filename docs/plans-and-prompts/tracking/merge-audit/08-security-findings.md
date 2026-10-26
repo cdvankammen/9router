@@ -331,15 +331,26 @@ The wrapper sets these defaults before the Next handler runs; a route that sets 
 - The hostname `mini2` resolves via Tailscale DNS to `mini2.local` @ **100.96.109.61 — a different machine (the real mini2)**.
 - The earlier rsync/`launchctl` "mini2 upgrade" therefore upgraded **mini4's own tray/npm-global instance** (:20128, PID 75883, now v0.5.109 with headers) — not the real mini2. The backup dir was renamed `/tmp/9r-mini2-app-backup-pre-v5` → `/tmp/9r-maclan-tray-app-backup-pre-v5` to reflect this.
 
-### Real mini2 — current state (STILL VULNERABLE)
+### Real mini2 — FIXED (2026-10-26 deploy)
 - Host: `mini2.local` @ `100.96.109.61` (Tailscale)
-- Server: PID 14934, `next-server (v16.3.5)`, cwd `/Applications/9Router.app/Contents/Resources/app/app`
-- Launched by `cli.js --tray --port 20128` (PID 14919); `com.9router.app.plist.disabled` in `~/Library/LaunchAgents` (not launchd-managed — tray/login-item start)
-- App bundle version **0.5.75**; `grep -c X-Frame-Options .../app/custom-server.js` = **0**
-- `/login` → `200 OK` with **no** framing headers
-- No `.env` in the bundle app dir; node v26.11.1 available at `/opt/homebrew/bin/node`
-- Backup at `/tmp/9r-real-mini2-app-backup-pre-v5`; staged v5 build at `~/9router-v5-staged/` (84M, 1 frame marker, 10 SSRF markers, 21 chunks with `__proto__` hardening — all markers verified present). Launcher uses `NEXT_DIST_DIR=.next-cli-build` (per `scripts/build-cli.js:183`), so the staged `.next` must be renamed to `.next-cli-build` before swap.
-- **Next action (awaiting operator go):** swap `~/9router-v5-staged/` into `/Applications/9Router.app/Contents/Resources/app/app/`, restart PID 14919, re-run the iframe A/B against the `mini2` hostname.
+- Server: **PID 83773**, `next-server (v16.4.3)` (v5 build), cwd `/Applications/9Router.app/Contents/Resources/app/app`
+- BUILD_ID: `y69i2xp4j4quIeXrUM35w` (matches staged v5 build)
+- Launcher PID 80692 (`cli.js --tray --port 20128`) still alive; supplies `JWT_SECRET` (read from `~/.9router/jwt-secret`, 64 hex chars) and `NEXT_DIST_DIR` via `buildEnvWithRuntime(process.env)` in `cli.js:641`
+- **All 4 clickjacking headers now emitting** on `/login`, `/dashboard/settings`, `/api/health`, `/favicon.ico`
+- Backup of pre-fix v0.5.75 bundle at `/tmp/9r-real-mini2-app-backup-pre-v5`
+- Shutdown gate regression check: `GET /api/version/shutdown` = 401, `POST unauthed` = 401 ✅
+
+### Proof — mini2 iframe block (same attacker page, post-fix)
+Browser A/B with identical `data:`-origin iframe + sandbox attrs targeting `http://mini2:20128/dashboard/endpoint`:
+- Console: `Framing 'http://mini2:20128/' violates the following Content Security Policy directive: "frame-ancestors 'self'". The request has been blocked.` + `net::ERR_BLOCKED_BY_RESPONSE`
+- Accessibility snapshot: iframe rendered **empty** (no 9Router login UI, no OIDC button, no password box, no "Default password is 123456" leak)
+- **Clickjacking finding is now CLOSED on both mini4 and mini2**
+
+### Deploy mechanics learned (for future bundle upgrades)
+1. The packaged `cli.js` spawns the server via `spawnServer()` (cli.js:633) with `cwd: standaloneDir` (= `path.join(__dirname, "app")` per cli.js:551) and env from `buildEnvWithRuntime(process.env)` plus `PORT`/`HOSTNAME`.
+2. The standalone `server.js` has `distDir: "./.next"` baked in at build time — so the build dir must be named `.next` regardless of what `NEXT_DIST_DIR` was during the build (the CLI build script uses `.next-cli-build` for its own builds, but our mini4-built standalone expects `.next`).
+3. `JWT_SECRET` is supplied by the launcher from `~/.9router/jwt-secret`; a manual `nohup node custom-server.js` without that env var fails with `JWT_SECRET is required in production` at middleware load. To start manually: `export JWT_SECRET=$(cat ~/.9router/jwt-secret)`.
+4. The launcher's self-heal (`cli.js:934, 949`) will respawn the server when the server PID dies — killing only the server (not the launcher) triggers a respawn with correct env.
 
 ---
 

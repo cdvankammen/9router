@@ -61,6 +61,22 @@ const ALWAYS_PROTECTED = [
   // stream at /api/translator/console-logs/stream is particularly dangerous —
   // it's a persistent connection pushing every console.log call in real time.
   "/api/translator/console-logs",
+  // Finding #7 (2026-10-26): Admin mutation endpoints that were in
+  // PROTECTED_API_PATHS became unauthenticated when requireLogin=false.
+  // DELETE /api/provider-nodes/[id] cascades to every bound connection;
+  // PUT/DELETE on providers/combos/proxy-pools rewrites traffic routing;
+  // POST /api/providers/[id]/test and /api/proxy-pools/[id]/test force
+  // outbound calls using stored credentials (SSRF-via-stored-config);
+  // PUT /api/providers/[id]/overrides writes global settings; POST
+  // /api/hooks is outbound POST with captured message content.
+  // Promoting all of these to ALWAYS_PROTECTED is the single highest-
+  // impact change — resolves the majority of HIGH IDOR findings.
+  "/api/providers",
+  "/api/provider-nodes",
+  "/api/proxy-pools",
+  "/api/combos",
+  "/api/keys",
+  "/api/hooks",
 ];
 
 // Require auth, but allow through if requireLogin is disabled
