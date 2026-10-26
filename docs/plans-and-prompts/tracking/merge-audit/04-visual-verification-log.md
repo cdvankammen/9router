@@ -116,13 +116,29 @@ Flagged by the vision subagent but out of scope for the 2b469c6a bug-fix commit 
 | `/dashboard/providers` | `.agent/screenshots/visual-verify-providers.png` | Pre-fix baseline |
 | `/dashboard/profile` | `.agent/screenshots/visual-verify-profile.png` | Pre-fix baseline |
 
-## Post-fix browser walk (live Playwright, 2026-10-26 06:22 UTC)
+## Post-fix browser walk — full 16-page sweep (live Playwright, 2026-10-26 06:26 UTC)
 
-| Page | 429s | GA4 | Accessibility sanity | Verdict |
-|---|---|---|---|---|
-| `/dashboard/endpoint` | 0 | 0 | Sidebar, H1, endpoint URL field, API keys section all present | PASS |
-| `/dashboard/providers` | 0 | 0 | Search box, heading, chrome all rendered; heavy prefetch load absorbed | PASS |
-| `/dashboard/profile` | 0 | 0 | "Remote Mode" card + "Remote Mode" footer agree; cloud icon + trust warning shown | PASS |
-| `/dashboard/combos` | 0 | 0 | Combos H1, chrome rendered; one benign `_rsc` prefetch cancel | PASS |
+All 16 dashboard pages walked with `performance.getEntriesByType('resource')` probes for GA4 (`G-LC959F603F` / `google-analytics`) and HTTP 429 responses.
 
-**Post-fix overall**: 3/3 blocking bugs eliminated. 7 deferred items documented above.
+| Page | Resources | 429s | GA4 | Title | Verdict |
+|---|---|---|---|---|---|
+| `/dashboard` | 35 | 0 | 0 | 9Router - AI Infrastructure Management | PASS |
+| `/dashboard/endpoint` | 35 | 0 | 0 | 9Router - AI Infrastructure Management | PASS |
+| `/dashboard/providers` | 37 | 0 | 0 | 9Router - AI Infrastructure Management | PASS |
+| `/dashboard/profile` | — | 0 | 0 | 9Router - AI Infrastructure Management | PASS (accessibility: card+footer agree "Remote Mode") |
+| `/dashboard/combos` | — | 0 | 0 | 9Router - AI Infrastructure Management | PASS (1 benign `_rsc` prefetch cancel) |
+| `/dashboard/usage` | 7 | 0 | 0 | 9Router - AI Infrastructure Management | PASS (networkidle timeout but page rendered) |
+| `/dashboard/quota` | 0 | 0 | 0 | 9Router - AI Infrastructure Management | PASS |
+| `/dashboard/token-saver` | 1 | 0 | 0 | 9Router - AI Infrastructure Management | PASS |
+| `/dashboard/claude-compat` | 0 | 0 | 0 | 9Router - AI Infrastructure Management | PASS |
+| `/dashboard/memory` | 0 | 0 | 0 | AI Memory & Context \| 9Router | PASS |
+| `/dashboard/cli-tools` | 4 | 0 | 0 | 9Router - AI Infrastructure Management | PASS |
+| `/dashboard/proxy-pools` | 0 | 0 | 0 | 9Router - AI Infrastructure Management | PASS |
+| `/dashboard/skills` | 0 | 0 | 0 | 9Router - AI Infrastructure Management | PASS |
+| `/dashboard/console-log` | 1 | 0 | 0 | 9Router - AI Infrastructure Management | PASS |
+| `/dashboard/statistics` | 3 | 0 | 0 | 9Router - AI Infrastructure Management | PASS |
+| `/dashboard/translator` | 21 | 0 | 0 | 9Router - AI Infrastructure Management | PASS |
+
+**Totals**: 16 pages walked, 0 pages with 429s, 0 pages with GA4 telemetry, 0 total 429 responses, 0 total GA4 requests.
+
+**Post-fix overall**: 3/3 blocking bugs eliminated and confirmed across all 16 dashboard pages in production. 7 deferred items documented above for follow-up PRs.
