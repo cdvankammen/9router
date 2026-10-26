@@ -48,6 +48,9 @@ export async function GET(request) {
       session.accountEmail = email;
       const providerSpecificData = {
         authMethod: "web-login",
+        // Store the profile name so DELETE /api/providers/[id] can clean up
+        // the browser profile directory when the last connection is removed.
+        webLoginProfile: session.profile || "default",
         ...(config?.credentialFrom === "localStorageValue" ? { tokenSource: "localStorage" } : {}),
       };
 

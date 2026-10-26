@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import {
   getProviderConnectionById,
+  getProviderConnections,
   getProxyPoolById,
   updateProviderConnection,
   deleteProviderConnection,
@@ -187,9 +188,38 @@ export async function DELETE(request, { params }) {
     }
     const { id } = await params;
 
+    // Fetch before delete so we can clean up web-login browser profiles
+    const existing = await getProviderConnectionById(id);
+    if (!existing) {
+      return NextResponse.json({ error: "Connection not found" }, { status: 404 });
+    }
+
     const deleted = await deleteProviderConnection(id);
     if (!deleted) {
       return NextResponse.json({ error: "Connection not found" }, { status: 404 });
+    }
+
+    // Web-cookie follow-up (2026-10-26): remove the browser profile so
+    // captured cookies don't persist after the connection is gone.
+    // Profiles are shared across providers, so only remove when no other
+    // web-login connection references the same profile.
+    if (existing.providerSpecificData?.authMethod === "web-login") {
+      try {
+        const profileName = existing.providerSpecificData?.webLoginProfile || "default";
+        const allConnections = await getProviderConnections();
+        const stillUsed = allConnections.some(
+          (c) =>
+            c.id !== id &&
+            c.providerSpecificData?.authMethod === "web-login" &&
+            (c.providerSpecificData?.webLoginProfile || "default") === profileName
+        );
+        if (!stillUsed) {
+          const { removeWebLoginProfile } = await import("open-sse/services/webLogin.js");
+          removeWebLoginProfile(profileName);
+        }
+      } catch {
+        // Best-effort — profile cleanup must not block the delete response
+      }
     }
 
     return NextResponse.json({ message: "Connection deleted successfully" });

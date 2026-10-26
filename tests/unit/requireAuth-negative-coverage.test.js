@@ -120,11 +120,17 @@ describe("requireAuth negative coverage (Finding #7 hardening)", () => {
   // ── providers/[id] DELETE ─────────────────────────────────────────
   it("DELETE /api/providers/[id] returns 401 without touching DB", async () => {
     vi.doMock("@/models", () => ({
+      getProviderConnectionById: mocks.getProviderConnectionById,
+      getProviderConnections: mocks.getProviderConnections,
       deleteProviderConnection: mocks.deleteProviderConnection,
     }));
     const { DELETE } = await import("@/app/api/providers/[id]/route.js");
     const res = await DELETE(makeRequest("DELETE"), params("conn-1"));
-    await expectUnauthorized(res, [mocks.deleteProviderConnection]);
+    await expectUnauthorized(res, [
+      mocks.getProviderConnectionById,
+      mocks.getProviderConnections,
+      mocks.deleteProviderConnection,
+    ]);
   });
 
   // ── provider-nodes/[id] PUT ───────────────────────────────────────
