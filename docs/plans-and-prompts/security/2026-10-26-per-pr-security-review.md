@@ -710,33 +710,6 @@ When no region is configured or in env, the code defaults to `us-east-1`. This m
 | 164 | `22f6c427` | 2026-06-13 | Single-source OAuth token URLs via PROVIDERS | LOW — refactor | INTEGRATED |
 | 165 | `7134dd71` | 2026-06-13 | P2 alias single-source — OAuth alias→id from OAUTH_ALIASES | LOW — refactor | INTEGRATED |
 
-| 166 | `57a19783` | 2026-06-13 | Proxy pool relay for no-auth providers | MEDIUM — new relay surface | INTEGRATED |
-| 167 | `8b9356f4` | 2026-06-13 | Codex OAuth auto-dedupe | MEDIUM — credential dedup | INTEGRATED |
-| 168 | `2b63e0dd` | 2026-06-13 | Relay header lossless forwarding (rawHeaders) | MEDIUM — header fidelity | INTEGRATED |
-| 169 | `217f5777` | 2026-06-13 | Proxy pool relay for no-auth providers (follow-up) | LOW — relay refinement | INTEGRATED |
-| 170 | `c7f44d45` | 2026-06-13 | Codex OAuth auto-dedupe (follow-up) | LOW — dedup refinement | INTEGRATED |
-| 171 | `518ea636` | 2026-06-13 | Gemini OAuth scope fix | LOW — OAuth scope | INTEGRATED |
-| 172 | `07e22021` | 2026-06-13 | Gemini CLI OAuth refresh fix | LOW — refresh correctness | INTEGRATED |
-| 173 | `36b6e050` | 2026-06-13 | Claude OAuth token refresh hardening | LOW — refresh correctness | INTEGRATED |
-| 174 | `c38f3b27` | 2026-06-13 | xAI OAuth device flow | LOW — OAuth provider | INTEGRATED |
-| 175 | `28fd282d` | 2026-06-13 | Copilot OAuth refresh on models discovery | LOW — refresh correctness | INTEGRATED |
-
-## Batch Triage 166-175 (June-13 proxy pool + OAuth refresh cluster)
-
-### 166. `57a19783` — Proxy pool relay for no-auth providers (MEDIUM)
-New relay surface for no-auth free providers. **Verified**: proxy-pools route files exist under `src/app/api/proxy-pools/`. The relay routes are gated by dashboardGuard deny-by-default catch-all (same as PXPIPE). The `rawHeaders` pattern (commit 168) ensures header fidelity.
-
-### 168. `2b63e0dd` — Relay header lossless forwarding (MEDIUM)
-Uses `rawHeaders` to forward all headers without loss. **Verified**: `grep -c 'rawHeaders' src/app/api/proxy-pools/relay/route.js` returns 6. This is the commit that our work re-applied (our commit `928517ad`).
-
-### 167/170. Codex OAuth auto-dedupe (MEDIUM/LOW)
-Deduplicates Codex OAuth connections by `chatgptAccountId`. **Verified**: `chatgptAccountId` handling in `connectionsRepo.js` and `codex.js`. Follow-up `c7f44d45` refines the dedup logic.
-
-### 171-175. OAuth scope/refresh fixes (LOW)
-Gemini scope fix, Gemini CLI refresh, Claude refresh hardening, xAI device flow, Copilot refresh on models discovery. All refresh-correctness fixes with no new security surface. Verified via tokenRefresh.js REFRESH_HANDLERS registry (commit 155).
-
----
-
 ## Batch Triage 156-165 (June-13 refactor cluster + 4 content commits)
 
 ### 156. `b40e96d0` — MiMo Free no-auth provider (MEDIUM)
