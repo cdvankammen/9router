@@ -583,6 +583,9 @@ When no region is configured or in env, the code defaults to `us-east-1`. This m
 | 38 | `e10da160` | 2026-10-07 | Codex image token usage tracking | LOW — usage tracking | INTEGRATED |
 | 39 | `89ffac5a` | 2026-10-01 | GPT-6/GPT-5.4+ context windows | LOW — capability metadata | INTEGRATED |
 | 40 | `6b9dc54d` | 2026-10-01 | Grok CLI 1.0.44 version header | LOW — version header | INTEGRATED |
+| 41 | `0bc7f86e` | 2026-09-28 | Codex refresh-token reuse prevention | HIGH — credential lifecycle race | INTEGRATED |
+| 42 | `b58bd804` | 2026-09-28 | Auto-fallback to insecure TLS | **CRITICAL — MITM downgrade** | INTEGRATED (opt-out via STRICT_SSL) |
+| 43 | `24664f2c` | 2026-09-28 | strictProxy hold when no proxy resolves | MEDIUM — proxy enforcement | INTEGRATED |
 
 **Total security-relevant upstream commits identified: 193**
 **Reviewed so far: 10**
@@ -1304,6 +1307,131 @@ Send Grok CLI 1.0.44 so proxy stops returning HTTP 426. Version header fix, no s
 
 ### Batch conclusion
 **ALL INTEGRATED.** These commits are feature/fix work with no new trust boundaries, credential surfaces, or security controls. Standard upstream development.
+
+---
+
+## Commit 41: `0bc7f86e` — Codex refresh-token reuse prevention (HIGH)
+
+**Date:** 2026-09-28
+**Author:** decolua (Co-Authored-By: Claude Code)
+**Subject:** fix(codex): stop refresh-token reuse that logs accounts out on auto-ping
+
+### What upstream fixed
+OpenAI rotates the refresh token on every refresh and revokes the whole session on reuse. A 5-day `refreshLeadMs` (access tokens live ~1h) rotated the token on every call, and three refresh writers (usage poll, auto-ping tick, 5-min background refresher) each held stale snapshots — auto-ping firing at reset time reliably triggered reuse and logged the account out.
+
+### Fixes applied
+1. **`refreshLeadMs` 5d → 10min** — refresh only near actual expiry
+2. **`refreshAndUpdateCredentials`** — re-read connection from DB before refresh; throw on unrecoverable refresh instead of continuing with dead token
+3. **`checkAndRefreshToken`** — adopt newer DB tokens before refreshing (timestamp comparison)
+
+### Integration verification (2026-10-26)
+- ✅ `open-sse/providers/registry/codex.js` — `refreshLeadMs: 600000` (10 min)
+- ✅ `src/app/api/usage/[connectionId]/route.js` — re-reads latest tokens before refresh, throws on `isUnrecoverableRefreshError`
+- ✅ `src/sse/services/tokenRefresh.js` — `getProviderConnectionById` adoption logic with timestamp comparison
+- ✅ `open-sse/services/tokenRefresh/providers.js` — `dedupRefresh` prevents concurrent refresh races
+
+### Security implications
+**POSITIVE:** Prevents account logout via refresh-token reuse. The DB-read-before-refresh pattern is a genuine race-condition fix.
+
+### Conclusion
+**FULLY INTEGRATED.** Critical credential lifecycle race fixed.
+
+---
+
+## Commit 42: `b58bd804` — Auto-fallback to insecure TLS (**CRITICAL SECURITY FINDING**)
+
+**Date:** 2026-09-28
+**Author:** decolua (Co-Authored-By: Claude Code)
+**Subject:** fix(proxy): auto-fallback to insecure TLS on self-signed cert errors
+
+### ⚠️ CRITICAL SECURITY WARNING
+
+This commit introduces an **automatic MITM downgrade vulnerability**. When any TLS certificate error occurs (self-signed, expired, wrong hostname, unable to verify chain), the code **automatically retries with `rejectUnauthorized: false`** — completely disabling TLS certificate verification for that request.
+
+### What the code does (verified in `open-sse/utils/proxyFetch.js:267-270`)
+```javascript
+// ponytail: in-memory insecure agent fallback for self-signed MITM corporate/antivirus certs
+console.warn(`[ProxyFetch] TLS cert verification failed (${err.cause?.code || err.code}), retrying with insecure TLS: ${url}`);
+const insecureDispatcher = await getDispatcher(proxyUrl, true);
+return await originalFetch(url, { ...options, dispatcher: insecureDispatcher });
+```
+
+### TLS errors that trigger the downgrade (`proxyFetch.js:102-110`)
+```javascript
+const TLS_CERT_ERRORS = new Set([
+  "SELF_SIGNED_CERT_IN_CHAIN",
+  "DEPTH_ZERO_SELF_SIGNED_CERT",
+  "UNABLE_TO_VERIFY_LEAF_SIGNATURE",
+  "UNABLE_TO_GET_ISSUER_CERT",
+  "UNABLE_TO_GET_ISSUER_CERT_LOCALLY",
+  "CERT_HAS_EXPIRED",
+  "ERR_TLS_CERT_ALTNAME_INVALID",
+]);
+```
+
+### The attack scenario
+1. Attacker positions themselves as MITM (ARP spoofing, DNS poisoning, rogue WiFi, compromised proxy)
+2. Attacker presents a self-signed certificate for `api.openai.com` (or any provider)
+3. 9Router's first fetch attempt fails with `SELF_SIGNED_CERT_IN_CHAIN`
+4. **9Router automatically retries with `rejectUnauthorized: false`**
+5. The retry succeeds — attacker now has plaintext access to:
+   - API keys in `Authorization` headers
+   - OAuth tokens in request bodies
+   - Full conversation content (prompts + responses)
+   - Provider credentials (AWS SigV4 signed requests, etc.)
+
+### The opt-out mechanism
+The fallback is gated on `STRICT_SSL` environment variable:
+```javascript
+const isStrictSsl = options.strictTls === true || process.env.STRICT_SSL === "true" || process.env.STRICT_SSL === "1";
+if (!isStrictSsl && isTlsCertError(err)) {
+  // ... auto-retry with insecure TLS
+}
+```
+**This is OFF by default.** Users must explicitly set `STRICT_SSL=true` to prevent the downgrade.
+
+### Why this is dangerous
+1. **Silent downgrade**: The `console.warn` is the only signal — no user-facing notification, no dashboard alert
+2. **Corporate MITM is the stated use case**: The comment says "self-signed MITM corporate/antivirus certs" — but this means ANY self-signed cert triggers it, not just known corporate proxies
+3. **Pins to insecure dispatcher**: The insecure dispatcher is cached in `proxyDispatchers` Map — subsequent requests to the same proxy+insecure combo reuse the insecure agent
+4. **Affects ALL providers**: Every upstream call flows through `proxyAwareFetch` → `fetchWithTlsFallback`
+
+### What should be done
+**RECOMMENDATION: This needs a follow-up fix on our branch.** Options:
+1. **Default `STRICT_SSL=true`** and require explicit opt-in for insecure mode
+2. **Remove the auto-fallback entirely** — if TLS fails, fail the request; let the user configure a trusted CA bundle
+3. **Allow-list approach**: Only auto-downgrade for explicitly configured proxy hosts, not all connections
+4. **Dashboard warning**: If insecure fallback fires, surface a persistent warning in the dashboard
+
+### Intersection with our work
+| Our commit | Intersection | Status |
+|---|---|---|
+| All 8 security findings | This upstream commit **undermines** the transport security of every credential we've hardened | ⚠️ NEEDS FOLLOW-UP |
+
+### Conclusion
+**INTEGRATED BUT DANGEROUS.** The code is present and active. This is the most serious security concern found in the entire per-PR audit — a silent MITM downgrade that affects every upstream provider call. **Operator action required**: set `STRICT_SSL=true` on both deployed hosts until this is fixed.
+
+---
+
+## Commit 43: `24664f2c` — strictProxy hold when no proxy resolves (MEDIUM)
+
+**Date:** 2026-09-28
+**Author:** claytontavaresdan
+**Subject:** fix(proxy): hold strictProxy when no proxy resolves
+
+### What upstream fixed
+When `strictProxy` is enabled but no proxy URL resolves (empty config, no env var), the code was falling through to direct connection. Now it correctly throws an error instead of silently bypassing the proxy requirement.
+
+### Integration verification (2026-10-26)
+- ✅ `open-sse/utils/proxyFetch.js` — `strictProxy` enforcement in `proxyAwareFetch`
+- ✅ `open-sse/executors/cursor.js:258` — `if (proxyOptions?.strictProxy !== true) return false;`
+- ✅ `src/sse/services/auth.js:69,223` — `strictProxy: resolvedProxy.strictProxy === true` propagation
+
+### Security implications
+**POSITIVE:** Prevents silent proxy bypass when strictProxy is configured. Defense-in-depth for environments that require all traffic through a corporate proxy.
+
+### Conclusion
+**FULLY INTEGRATED.** Correct enforcement of proxy requirements.
 
 ---
 
