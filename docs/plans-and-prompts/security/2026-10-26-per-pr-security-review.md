@@ -699,6 +699,36 @@ When no region is configured or in env, the code defaults to `us-east-1`. This m
 | 153 | `9105dd0e` | 2026-06-13 | SSE_HEADERS_CORS dedup | LOW — refactor | INTEGRATED |
 | 154 | `72ce5157` | 2026-06-13 | Google OAuth client credentials dedup | LOW — refactor | INTEGRATED |
 | 155 | `0a8d92a6` | 2026-06-13 | Token refresh dispatch unification | LOW — refactor | INTEGRATED |
+| 156 | `b40e96d0` | 2026-06-13 | MiMo Free no-auth provider | MEDIUM — new provider surface | INTEGRATED |
+| 157 | `0aaa5ab3` | 2026-06-13 | Strip Anthropic billing header from system prompt | MEDIUM — data hygiene | INTEGRATED |
+| 158 | `d9b03001` | 2026-06-13 | gemini-to-openai: unsigned thought parts → reasoning_content | LOW — format correctness | INTEGRATED |
+| 159 | `05e483c0` | 2026-06-13 | provider-topology: nodeName label assignment | LOW — UI | INTEGRATED |
+| 160 | `515e2cc4` | 2026-06-13 | v0.4.77 release (aggregates prior security fixes) | LOW — release commit | INTEGRATED |
+| 161 | `8f0a9ff9` | 2026-06-13 | P0 golden tests (url/header, response stream, request body) | LOW — test coverage | INTEGRATED |
+| 162 | `39278e96` | 2026-06-13 | buildUsage helper + token-details dedup | LOW — refactor | INTEGRATED |
+| 163 | `3a26d5fb` | 2026-06-13 | Remove dead buildProviderUrl/Headers path | LOW — refactor | INTEGRATED |
+| 164 | `22f6c427` | 2026-06-13 | Single-source OAuth token URLs via PROVIDERS | LOW — refactor | INTEGRATED |
+| 165 | `7134dd71` | 2026-06-13 | P2 alias single-source — OAuth alias→id from OAUTH_ALIASES | LOW — refactor | INTEGRATED |
+
+## Batch Triage 156-165 (June-13 refactor cluster + 4 content commits)
+
+### 156. `b40e96d0` — MiMo Free no-auth provider (MEDIUM)
+New no-auth free provider. **Verified**: registry file exists with auth config. No-auth providers route through the proxy-pool strategy system (commit 109 `e1f3399b`). No credential surface.
+
+### 157. `0aaa5ab3` — Strip Anthropic billing header from system prompt (MEDIUM)
+Claude-to-OpenAI translation was leaking the `anthropic-billing` header content into the system prompt. **Verified**: billing header strip logic present in claude-to-openai translator. Data hygiene fix — prevents provider-internal metadata from leaking into client-visible prompts.
+
+### 158. `d9b03001` — Unsigned thought parts → reasoning_content (LOW)
+Gemini-to-OpenAI routes unsigned thought parts to `reasoning_content` instead of dropping them. **Verified**: `reasoning_content` handling in `gemini-to-openai.js`. Format correctness.
+
+### 159-160. UI label fix + v0.4.77 release (LOW)
+`05e483c0` — topology label assignment includes nodeName. `515e2cc4` — release commit aggregating all prior fixes (already individually audited: DB re-auth, SSRF web fetch, thought-signature routing, MiMo, billing strip, Copilot token refresh, Kiro profileArn, Tailscale probes).
+
+### 161. `8f0a9ff9` — P0 golden tests (LOW)
+Golden tests for url/header, response stream, request body. Test infrastructure — no runtime impact.
+
+### 162-165. Refactor cluster (LOW)
+`39278e96` buildUsage helper, `3a26d5fb` dead buildProviderUrl removal, `22f6c427` OAuth token URL single-source, `7134dd71` alias single-source. All DRY refactors with byte-for-byte baseline verification (PROVIDERS/alias snapshots). No security impact.
 
 ## Batch Triage 144-155 (LOW/MEDIUM commits — grouped review)
 
