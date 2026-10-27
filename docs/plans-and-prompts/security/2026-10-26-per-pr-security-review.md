@@ -573,6 +573,16 @@ When no region is configured or in env, the code defaults to `us-east-1`. This m
 | 28 | `4a76b8de` | 2026-10-23 | Commandcode quota display | LOW — UI fix | INTEGRATED |
 | 29 | `d95bb8ea` | 2026-10-15 | Dashboard proxy dropdown portal | LOW — UI fix | INTEGRATED |
 | 30 | `28d40159` | 2026-10-15 | Auto-ping mode selection | LOW — quota UI | INTEGRATED |
+| 31 | `be51142b` | 2026-10-15 | Anchored auto-ping schedule | LOW — quota feature | INTEGRATED |
+| 32 | `9c141910` | 2026-10-14 | Vertex API-key project/location | LOW — provider config | INTEGRATED |
+| 33 | `90f89471` | 2026-10-13 | Nous API-key attribution tags | LOW — quota attribution | INTEGRATED |
+| 34 | `cfd8c618` | 2026-10-11 | Cursor strictProxy on AgentService | LOW — proxy config | INTEGRATED |
+| 35 | `e7f41c13` | 2026-10-11 | Cursor empty AgentService recovery | LOW — resilience | INTEGRATED |
+| 36 | `3ef4d8e3` | 2026-10-11 | Cursor IDE quota via DashboardService | LOW — quota tracking | INTEGRATED |
+| 37 | `ef4679df` | 2026-10-13 | Opencode inverted timestamp in session IDs | LOW — translator fix | INTEGRATED |
+| 38 | `e10da160` | 2026-10-07 | Codex image token usage tracking | LOW — usage tracking | INTEGRATED |
+| 39 | `89ffac5a` | 2026-10-01 | GPT-6/GPT-5.4+ context windows | LOW — capability metadata | INTEGRATED |
+| 40 | `6b9dc54d` | 2026-10-01 | Grok CLI 1.0.44 version header | LOW — version header | INTEGRATED |
 
 **Total security-relevant upstream commits identified: 193**
 **Reviewed so far: 10**
@@ -1244,6 +1254,53 @@ UI fix to unclip proxy dropdown and tooltips via body portal. No security implic
 ### Commit 30: `28d40159` — Auto-ping mode selection (LOW)
 **Date:** 2026-10-15 | **Author:** decolua
 Unified auto-ping mode selection and default to local timezone. Quota UI feature, no security implication.
+
+### Batch conclusion
+**ALL INTEGRATED.** These commits are feature/fix work with no new trust boundaries, credential surfaces, or security controls. Standard upstream development.
+
+---
+
+## Commits 31-40: Batch triage (LOW security signal)
+
+### Commit 31: `be51142b` — Anchored auto-ping schedule (LOW)
+**Date:** 2026-10-15 | **Author:** XFairesV1
+Anchored auto-ping schedule at fixed local times. Quota feature, no security implication.
+
+### Commit 32: `9c141910` — Vertex API-key project/location (LOW)
+**Date:** 2026-10-14 | **Author:** Giulio V
+Honor API-key project/location for Gemini 4 Argon. Provider config fix, no new trust boundary.
+
+### Commit 33: `90f89471` — Nous API-key attribution tags (LOW)
+**Date:** 2026-10-13 | **Author:** IlyaKhalafi
+Add API-key attribution tags for Nous provider. Quota attribution feature, no security implication.
+
+### Commit 34: `cfd8c618` — Cursor strictProxy on AgentService (LOW)
+**Date:** 2026-10-11 | **Author:** mannnrachman
+Hold strictProxy on the AgentService h2 path. Proxy config fix, no new trust boundary.
+
+### Commit 35: `e7f41c13` — Cursor empty AgentService recovery (LOW)
+**Date:** 2026-10-11 | **Author:** mannnrachman
+Recover long sessions from empty AgentService turns. Resilience fix, no security implication.
+
+### Commit 36: `3ef4d8e3` — Cursor IDE quota via DashboardService (LOW)
+**Date:** 2026-10-11 | **Author:** mannnrachman
+Cursor IDE quota tracking via DashboardService (spend + request buckets). Quota feature, no security implication.
+
+### Commit 37: `ef4679df` — Opencode inverted timestamp in session IDs (LOW)
+**Date:** 2026-10-13 | **Author:** ShayNeeo
+Encode inverted timestamp in translated session IDs. Translator fix, no security implication.
+
+### Commit 38: `e10da160` — Codex image token usage tracking (LOW)
+**Date:** 2026-10-07 | **Author:** Đào Văn Hùng
+Track exact Codex image token usage. Usage tracking feature, no security implication.
+
+### Commit 39: `89ffac5a` — GPT-6/GPT-5.4+ context windows (LOW)
+**Date:** 2026-10-01 | **Author:** Amirsalar Sojoudi
+Publish real GPT-6/GPT-5.4+ context windows and combo token limits. Capability metadata, no security implication.
+
+### Commit 40: `6b9dc54d` — Grok CLI 1.0.44 version header (LOW)
+**Date:** 2026-10-01 | **Author:** Noval Arya Saputra
+Send Grok CLI 1.0.44 so proxy stops returning HTTP 426. Version header fix, no security implication.
 
 ### Batch conclusion
 **ALL INTEGRATED.** These commits are feature/fix work with no new trust boundaries, credential surfaces, or security controls. Standard upstream development.
