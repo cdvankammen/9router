@@ -724,6 +724,107 @@ When no region is configured or in env, the code defaults to `us-east-1`. This m
 | 178 | `c572c687` | 2026-06-08 | Copilot proactive token refresh on models discovery | LOW — refresh correctness | INTEGRATED |
 | 179 | `bbc204b6` | 2026-06-13 | proxy.js export default (Next.js 16 middleware detection) | LOW — module compat | INTEGRATED |
 | 180 | `2be00e2a` | 2026-06-06 | Raise Next client body limit to 128MB (configurable) | LOW — config | INTEGRATED |
+| 181 | `1f3d3a8f` | 2026-04-08 | CRITICAL: unauthenticated server shutdown endpoint (#519) | CRITICAL — DoS vector | INTEGRATED |
+| 182 | `1c160cc8` | 2026-03-25 | Claude Code TLS fingerprint spoofing + claudeHeaderCache | HIGH — later REMOVED (commit 83 leak fix) | INTEGRATED (superseded) |
+| 183 | `054facb0` | 2026-03-30 | thoughtSignature smuggling via _TSIG_ + ELOCKED mutex | MEDIUM — format correctness | INTEGRATED |
+| 184 | `428e2c04` | 2026-04-23 | CLI token validation in dashboardGuard | HIGH — auth hardening | INTEGRATED |
+| 185 | `b1288c50` | 2026-04-15 | Kiro AWS Identity Center device flow (#587) | MEDIUM — new auth method | INTEGRATED |
+| 186 | `8f813636` | 2026-04-28 | Token refresh proxy-aware across executors | MEDIUM — credential lifecycle | INTEGRATED |
+| 187 | `04cdb758` | 2026-04-14 | Proactive token refresh lead times + Codex proxy mgmt | MEDIUM — credential lifecycle | INTEGRATED |
+| 188 | `6a6e2fcd` | 2026-04-14 | noAuth provider support + MITM restart settings | LOW — provider surface | INTEGRATED |
+
+## Batch 181-188 (auth boundary + Claude Code spoofing + OAuth lifecycle)
+
+### 181. `1f3d3a8f` — Unauthenticated server shutdown (CRITICAL #519)
+
+**Date:** 2026-04-08
+**Author:** tuanaiseo
+**Subject:** fix(security)(app): unauthenticated server shutdown endpoint enables DoS (#519)
+
+**What upstream fixed:** `/api/shutdown` POST called `process.exit(0)` with NO auth checks. Any network-reachable party could terminate the server.
+
+**Integration verification:** `src/app/api/shutdown/route.js` now requires CLI token + JWT auth (verified in prior audit of our own Finding #7 work). This is in ALWAYS_PROTECTED (dashboardGuard.js:52).
+
+### 182. `1c160cc8` — Claude Code TLS fingerprint spoofing (HIGH)
+
+**Date:** 2026-03-25
+**Author:** kwanLeeFrmVi
+**Subject:** feat(claude-code): spoof TLS fingerprint and stabilize headers for Anthropic
+
+**What upstream added:**
+- `claudeHeaderCache.js` — intercepted and cached live Claude Code client headers
+- Forwarded cached headers dynamically to api.anthropic.com
+- Stripped first-party identity headers for non-Anthropic upstreams
+- Validated tool call IDs to match Anthropic pattern
+
+**CRITICAL CONTEXT:** This commit ADDED `claudeHeaderCache.js` which was later REMOVED in commit 83 (`13ed1456`) as a cross-account header leak. The replacement is `claudeCloaking.js` which generates synthetic headers per-request instead of caching real ones.
+
+**Integration verification:** `claudeHeaderCache.js` does NOT exist in current code. `open-sse/utils/claudeCloaking.js` is the replacement (verified in prior audit).
+
+### 183. `054facb0` — thoughtSignature smuggling + ELOCKED mutex (MEDIUM)
+
+**Date:** 2026-03-30
+**Author:** kwanLeeFrmVi
+
+**What upstream added:**
+- `_TSIG_` delimiter + base64url encoding to smuggle `thoughtSignature` into `tool_call.id` for Gemini multi-turn thinking
+- `LocalMutex` (2-layer locking) to prevent ELOCKED on concurrent DB access
+- Lockfile retries increased 5→15
+
+**Integration verification:** `open-sse/translator/response/gemini-to-openai.js:66,90,109,111` — `pendingThoughtSignature` state tracking present. The `_TSIG_` smuggling pattern may have been superseded by the `DEFAULT_THINKING_AG_SIGNATURE` approach (commit 134).
+
+### 184. `428e2c04` — CLI token validation (HIGH)
+
+**Date:** 2026-04-23
+**Author:** decolua
+
+**What upstream added:** `hasValidCliToken()` function in `dashboardGuard.js` for machineId-based CLI token validation.
+
+**Integration verification:** `src/dashboardGuard.js:23` — `async function hasValidCliToken(request)` exists. Called at lines 202, 207, 289, 302 in the guard decision tree.
+
+### 185. `b1288c50` — Kiro AWS Identity Center device flow (MEDIUM #587)
+
+**Date:** 2026-04-15
+**Author:** Dang Dinh Quan
+
+**What upstream added:** Wired AWS Identity Center (IDC) device flow into Kiro OAuth provider. Multi-method auth: Builder ID / IDC / Social / Import Token.
+
+**Integration verification:** `src/lib/oauth/providers/kiro.js:14` — `authMethod === "idc"` branching; lines 15-18 — OIDC client registration + device auth URLs; `src/lib/oauth/constants/oauth.js:67` — Kiro multi-method comment.
+
+### 186. `8f813636` — Token refresh proxy-aware across executors (MEDIUM)
+
+**Date:** 2026-04-28
+**Author:** decolua
+
+**What upstream added:** All executor `refreshCredentials` methods now accept optional `proxyOptions` for proxy-aware token refresh.
+
+**Integration verification:** `grep` confirms `proxyOptions = null` parameter on `refreshCredentials` in: `grok-cli.js:353`, `antigravity.js:353`, `github.js:395`, `base.js:88`, `default.js:285`, `kiro.js:1183`.
+
+### 187. `04cdb758` — Proactive token refresh lead times (MEDIUM)
+
+**Date:** 2026-04-14
+**Author:** decolua
+
+**What upstream added:**
+- `REFRESH_LEAD_MS` derived from registry `oauth.refreshLeadMs` per provider
+- Proactive refresh before token expiry
+- Codex proxy management
+
+**Integration verification:** `open-sse/config/appConstants.js:199-201` — `REFRESH_LEAD_MS` derivation; `open-sse/services/tokenRefresh.js:2,61,63` — imports and uses `REFRESH_LEAD_MS`.
+
+### 188. `6a6e2fcd` — noAuth provider support + MITM restart (LOW)
+
+**Date:** 2026-04-14
+**Author:** decolua
+
+**What upstream added:**
+- `noAuth` flag on provider config for free-tier providers
+- Skip token refresh on 401/403 for noAuth providers
+- MITM restart delay backoff: `[5000, 10000, 20000, 30000, 60000]` ms
+
+**Integration verification:** `open-sse/executors/base.js:15` — `this.noAuth = config?.noAuth || false`; `open-sse/handlers/chatCore.js:443-444` — skip refresh for noAuth; `src/mitm/manager.js:47` — `MITM_RESTART_DELAYS_MS` array.
+
+---
 
 ## Batch Triage 156-165 (June-13 refactor cluster + 4 content commits)
 
