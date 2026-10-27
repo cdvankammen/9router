@@ -742,6 +742,64 @@ When no region is configured or in env, the code defaults to `us-east-1`. This m
 | 196 | `6bec1e08` | 2026-04-14 | Windows Tailscale curl + fallback path | LOW — deployment | INTEGRATED |
 | 197 | `75c4598d` | 2026-04-17 | Qwen executor OAuth + marked package + ChangelogModal | LOW — UI + OAuth | INTEGRATED |
 | 198 | `3977edc4` | 2026-04-17 | Error cause formatting + HeaderMenu + LanguageSwitcher | LOW — UI | INTEGRATED |
+| 199 | `4ba546af` | 2026-05-03 | In-flight refresh cache + MITM port 443 conflict handling | MEDIUM — race condition + deployment | INTEGRATED |
+| 200 | `030fb34f` | 2026-04-24 | markAccountUnavailable resetsAtMs + Codex email backfill | LOW — credential metadata | INTEGRATED |
+| 201 | `94ab0d71` | 2026-04-21 | Qwen OAuth URLs chat.qwen.ai → qwen.ai + ollama-local baseUrl | MEDIUM — auth URL change | INTEGRATED |
+| 202 | `2e8784cf` | 2026-04-17 | Kiro quota auth expired message | LOW — UX | INTEGRATED |
+| 203 | `a6fd8469` | 2026-05-23 | Qoder COSY signing (PKCE + WAF-bypass) | MEDIUM — new provider with custom crypto | INTEGRATED |
+| 204 | `57b3e94e` | 2026-05-26 | Deno deploy relays for proxy pools (#1437) | LOW — new deploy surface (gated) | INTEGRATED |
+| 205 | `13a28452` | 2026-05-23 | Cloudflare Workers proxy deployer (#1360) | LOW — new deploy surface (gated) | INTEGRATED |
+| 206 | `ee00f82a` | 2026-05-09 | Connection proxy configuration refactor (#970) | LOW — refactor | INTEGRATED |
+| 207 | `8daa953e` | 2026-05-17 | Antigravity OAuth metadata alignment (#1226) | MEDIUM — OAuth correctness | INTEGRATED |
+| 208 | `18f87f43` | 2026-05-16 | Live model resolvers for Kiro + modalities config | LOW — model discovery | INTEGRATED |
+
+## Batch Triage 199-208 (credential lifecycle + relay deployers + OAuth correctness)
+
+### 199. `4ba546af` — In-flight refresh cache + MITM port 443 (MEDIUM)
+
+**What upstream added:**
+- In-flight token refresh cache prevents race conditions where multiple concurrent requests all trigger refresh-token rotation at once (causing invalidation storms)
+- MITM server port 443 conflict handling with user-facing kill-process prompt
+
+**Integration verification:** Verified via grep for refresh-in-flight patterns and MITM port handling.
+
+### 201. `94ab0d71` — Qwen OAuth URLs + ollama-local baseUrl (MEDIUM)
+
+**What upstream fixed:**
+- Qwen OAuth URLs changed from `chat.qwen.ai` to `qwen.ai`
+- ollama-local `baseUrl` resolved from `providerSpecificData.baseUrl` for remote Ollama hosts (closes #578)
+- Ollama Cloud added to usage/quota tracking (closes #681)
+
+**Integration verification:** Qwen URL constants updated in oauth constants and providers config.
+
+### 203. `a6fd8469` — Qoder COSY signing (MEDIUM)
+
+**What upstream added:** Replaces the Qoder placeholder with a real free-tier provider:
+- Device-flow OAuth: PKCE + nonce generated locally, user authorizes at `qoder.com/device/selectAccounts`, polls `openapi.qoder.sh`
+- COSY signing: RSA-1024 + AES-128-CBC + MD5 for chat/model-list
+- WAF-bypass body encoding: custom-alphabet base64 + thirds rearrangement
+
+**Security implications:** Custom crypto (RSA-1024, MD5) is weak by modern standards but dictated by the upstream protocol. Not a new vulnerability — the crypto is for request signing, not data encryption.
+
+### 204/205. Deno + CF Workers proxy deployers (LOW)
+
+New relay deploy surfaces. **Verified gated**: `src/app/api/proxy-pools/[id]/route.js:8` imports `requireAuth`. Both routes require authentication to deploy relays.
+
+### 207. `8daa953e` — Antigravity OAuth metadata alignment (MEDIUM #1226)
+
+**What upstream fixed:** Antigravity OAuth flow sent inconsistent client metadata between token acquisition and API usage. String enum values (`IDE_UNSPECIFIED`, `PLATFORM_UNSPECIFIED`) were used during OAuth, but numeric enums (`ideType: 9`) were used during API calls. The fix aligns both phases.
+
+**Integration verification:** Verified in antigravity executor OAuth metadata.
+
+### 200, 202, 206, 208. LOW-signal
+
+- `030fb34f` — `markAccountUnavailable` accepts `resetsAtMs` for precise cooldown + Codex email backfill
+- `2e8784cf` — Kiro quota auth expired message for social auth accounts
+- `ee00f82a` — connection proxy configuration refactor (158-line rewrite in `connectionProxy.js`)
+- `18f87f43` — live model resolvers for Kiro in `/v1/models`, modalities for OpenCode tool card
+
+---
+
 
 ## Batch Triage 189-198 (credential lifecycle + relay surfaces)
 
