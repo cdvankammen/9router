@@ -4472,3 +4472,97 @@ The other 34 commits on our branch are all `docs(security):` prefixed — audit 
 - **C.** Only rows our 3 code commits intersect with (~10 rows = 30 reviews)
 
 STRICT_SSL restart timing also needs operator coordination (Stage 6 blocker).
+
+---
+
+## Stage 4: DOM-Errors Chat Log Review (2026-10-27)
+
+**Source:** Session `3ba69e69-a2a3-4b6e-8e3a-9acd4cb9bb8d` (22MB transcript, 106 DOM-error matches)
+**Research artifact:** `docs/plans-and-prompts/research/9router/51-mini2-dashboard-dom-error-audit.md` (665 lines, 14+ findings)
+**Objective:** Review every finding from the DOM-errors session against current source to determine what's fixed vs. still open.
+
+### Finding Status Matrix
+
+| # | Finding | Severity | Status in current source | Stage 5 action |
+|---|---|---|---|---|
+| 1 | 429 storm on dashboard pages (RSC prefetch) | HIGH | **FIXED** — `custom-server.rate-limiter.js:125-129` has `isNextInternal` bypass for `/_next/` and `_rsc=` queries | None |
+| 2 | 500 on POST /api/providers (FK constraint) | HIGH | **FIXED** — FK constraint dropped from live DB; schema verified in Stage 1 | None |
+| 3 | UI no graceful fallback on 429 mid-render | MEDIUM | Open — UI enhancement | Stage 5 backlog |
+| 4 | Console Log page API URL guesses 404 | LOW | Open — cosmetic | Stage 5 backlog |
+| 5 | Google Analytics calls aborted on every page view | LOW | Open — GA config | Stage 5 backlog |
+| 6 | Stale "New version available" banner | LOW | Open — version drift | Stage 5 backlog |
+| 7 | Provider page DOM audit (clean) | — | CLEAN | None |
+| 8 | Post-restart `_rsc` 429s persist | HIGH | **FIXED** — same root cause as #1 | None |
+| 9 | `custom-server.rate-limiter.js` not the only rate limiter | MEDIUM | Open — needs audit of middleware layer | Stage 5 |
+| 10 | Full dashboard page inventory | — | CLEAN (reference doc) | None |
+| 11 | Media Provider sub-pages (92 providers) | — | CLEAN (reference doc) | None |
+| 12 | Hardcoded Chinese strings (i18n bug) | MEDIUM | Open — `model-context/page.js`, `StatisticsContent.js`, `endpointConstants.js` | Stage 5 i18n |
+| 13 | 🔒 **OIDC SSO config pointing at evil.example.com** | **CRITICAL** | **OPEN — test config in DB, not code** | Stage 5 (operator action: purge test IdP config) |
+| 14 | 429-on-RSC root cause = version drift | — | RESOLVED by source fix | None |
+| **GG** | 🔒🔒 **`x-forwarded-host` header injection steals SSO codes** | **CRITICAL** | **OPEN IN SOURCE** — see detailed analysis below | **STAGE 5 PRIORITY FIX** |
+
+### 🔒🔒 CRITICAL: Bug GG — `x-forwarded-host` header injection (STILL OPEN)
+
+**Original finding from 3ba69e69 session (wave 23):**
+> `getPublicOrigin()` in `oidc.js`/`saml.js` trusts the raw `x-forwarded-host` header whenever `BASE_URL`/`NEXT_PUBLIC_BASE_URL` is unset. The live probe on mini2:20128 proved the header reaches it **unstripped**: `custom-server.js` deletes `x-forwarded-for`/`x-real-ip` but **not** `x-forwarded-host`/`x-forwarded-proto`. `src/lib/middleware/headerSanitizer.js` *does* strip `x-forwarded-host` — but it is **never invoked in the request pipeline**.
+
+**Verified in current source (2026-10-27):**
+
+1. **`custom-server.js:58-72`** — deletes these headers on every request:
+   - `x-forwarded-for` ✅
+   - `x-real-ip` (read but not deleted explicitly — overwritten by HMAC)
+   - `x-9r-real-ip` ✅
+   - `x-9r-via-proxy` ✅
+   - `x-9r-peer-token` ✅
+   - **`x-forwarded-host` ❌ NOT DELETED**
+   - **`x-forwarded-proto` ❌ NOT DELETED**
+
+2. **`src/lib/auth/oidc.js:32-37`** — `getPublicOrigin()`:
+   ```js
+   const forwardedProto = request?.headers?.get?.("x-forwarded-proto") || "";
+   const forwardedHost = request?.headers?.get?.("x-forwarded-host") || "";
+   const host = forwardedHost || request?.headers?.get?.("host") || "";
+   // ...
+   return `${protocol}://${host}`;
+   ```
+
+3. **`src/lib/auth/saml.js:75-80`** — `getSamlBaseUrl()` has identical trust pattern.
+
+4. **`src/lib/middleware/headerSanitizer.js` EXISTS** but `grep -rn 'headerSanitizer' src/` returns **zero imports** — dead code.
+
+5. **Upstream overlap:** `git log --all --oneline --grep='forwarded-host'` = **empty**. Zero upstream commits ever addressed this. No upstream commit touched `oidc.js` since `c3d91b01` (2026-05-11, initial OIDC) or `saml.js` since `65197ad1` (2026-08-13, initial SAML).
+
+**Exploit scenario:**
+1. Attacker on LAN sends request to `mini2:20128/api/auth/oidc/start` with header `x-forwarded-host: evil.com`
+2. `getPublicOrigin()` builds `redirect_uri = https://evil.com/api/auth/oidc/callback`
+3. OIDC provider (if configured) ships authorization code to attacker's host
+4. Combined with the `evil.example.com` IdP config from Finding #13, this is a complete SSO-hijack chain
+
+**Impact:** CRITICAL on any deployment where `BASE_URL` is unset (which is the default for local installs) and `requireLogin: false`.
+
+**Fix (Stage 5):**
+1. Add `delete req.headers["x-forwarded-host"]` and `delete req.headers["x-forwarded-proto"]` to `custom-server.js:67-69` (alongside the existing x-forwarded-for delete)
+2. Or: wire `headerSanitizer.js` into the request pipeline at `src/proxy.js` → `dashboardGuard.proxy`
+3. Or: in `getPublicOrigin()` / `getSamlBaseUrl()`, only trust forwarded headers when `x-9r-real-ip` HMAC validates the request came from a trusted reverse proxy
+
+### Finding #13 — evil.example.com OIDC config (CRITICAL, operator action)
+
+The 3ba69e69 session found an active OIDC SSO configuration pointing at `evil.example.com` in the live DB on mini2. This is a **test config that was never purged**, not a code bug. The config lives in the SQLite `provider_connections` table, not in source.
+
+**Action:** Operator needs to purge the `evil.example.com` OIDC connection from mini2's DB. This is a deployment hygiene issue, not a code fix.
+
+### Stage 4 Summary
+
+| Category | Count |
+|---|---|
+| **OPEN — Stage 5 code fix needed** | 2 (Bug GG CRITICAL, rate limiter middleware audit) |
+| **OPEN — operator action** | 1 (evil.example.com IdP config purge) |
+| **OPEN — cosmetic/UX** | 5 (i18n, GA, stale banner, 404 guesses, 429 UI fallback) |
+| **FIXED in current source** | 3 (#1, #2, #8/#14) |
+| **CLEAN (reference)** | 3 (#7, #10, #11) |
+
+**Priority queue for Stage 5:**
+1. 🔒🔒 **Bug GG fix** — x-forwarded-host stripping in custom-server.js (CRITICAL, ~5 lines)
+2. 🔒 **Finding #13 purge** — operator action on mini2 (CRITICAL, no code change)
+3. **Rate limiter middleware audit** — is there a second rate limiter at the middleware layer?
+4. **i18n bug sweep** — 3 files with hardcoded Chinese strings
