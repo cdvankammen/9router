@@ -752,6 +752,81 @@ When no region is configured or in env, the code defaults to `us-east-1`. This m
 | 206 | `ee00f82a` | 2026-05-09 | Connection proxy configuration refactor (#970) | LOW — refactor | INTEGRATED |
 | 207 | `8daa953e` | 2026-05-17 | Antigravity OAuth metadata alignment (#1226) | MEDIUM — OAuth correctness | INTEGRATED |
 | 208 | `18f87f43` | 2026-05-16 | Live model resolvers for Kiro + modalities config | LOW — model discovery | INTEGRATED |
+| 209 | `91c1bc84` | 2026-03-11 | Dockerfile + workflow security hardening | HIGH — container hardening | INTEGRATED |
+| 210 | `a501c059` | 2026-03-10 | Access token handling during credential refresh | MEDIUM — credential lifecycle | INTEGRATED |
+| 211 | `8223c879` | 2026-03-12 | MEMORY_CONFIG for session/DNS/proxy dispatcher | MEDIUM — resource management | INTEGRATED |
+| 212 | `8312af79` | 2026-03-23 | Cursor Linux auto-import install verification (#313) | MEDIUM — phantom connection prevention | INTEGRATED |
+| 213 | `2bec2e18` | 2026-03-17 | Antigravity provider config + dynamic User-Agent | LOW — config update | INTEGRATED |
+
+## Batch Triage 209-213 (container + credential lifecycle + phantom-connection prevention)
+
+### 209. `91c1bc84` — Dockerfile + workflow security hardening (HIGH)
+
+**Date:** 2026-03-11
+**Author:** Doan Minh Tu
+
+**What upstream added:**
+- Dependabot configuration for automated dependency updates
+- Docker publish workflow hardening
+- Dockerfile non-root user + alpine base (node:22.23.4-alpine)
+
+**Integration verification:**
+- ✅ `Dockerfile:2` — `ARG NODE_IMAGE=node:22.23.4-alpine` (alpine = minimal attack surface)
+- ✅ `Dockerfile:81` — `EXPOSE 20128` (single port)
+- ✅ `.github/dependabot.yml` — automated dep updates
+- ✅ `.github/workflows/docker-publish.yml` — 2-line hardening
+
+**Security implications:** Alpine base reduces supply-chain surface. Dependabot catches CVEs in dependencies early.
+
+### 210. `a501c059` — Access token refresh handling (MEDIUM)
+
+**Date:** 2026-03-10
+**Author:** decolua
+
+**What upstream fixed:** Improved access token handling during credential refresh — the usage endpoint now correctly reads the refreshed token.
+
+**Integration verification:**
+- ✅ `open-sse/handlers/chatCore.js:443-451` — 401/403 triggers `executor.refreshCredentials(credentials, log)` with result used
+
+### 211. `8223c879` — MEMORY_CONFIG (MEDIUM)
+
+**Date:** 2026-03-12
+**Author:** decolua
+
+**What upstream added:**
+- `MEMORY_CONFIG` with `sessionTtlMs` (2h), cleanup intervals, proxy dispatcher limits
+- Prevents unbounded memory growth in long-running server processes
+
+**Integration verification:**
+- ✅ `open-sse/config/runtimeConfig.js:27-28` — `MEMORY_CONFIG.sessionTtlMs: 2 * 60 * 60 * 1000`
+- ✅ `open-sse/utils/proxyFetch.js` — uses config for dispatcher limits
+- ✅ `open-sse/utils/sessionManager.js` — session TTL enforcement
+
+**Security implications:** Bounded memory prevents DoS via session/agent accumulation. Also prevents credential leak via stale session retention.
+
+### 212. `8312af79` — Cursor Linux auto-import verification (MEDIUM #313)
+
+**Date:** 2026-03-23
+**Author:** Ibrahim Ryan
+
+**What upstream fixed:** Leftover Cursor config files from a removed installation triggered phantom provider connections on Linux. The fix: verify installation via `which cursor` or `.desktop` file presence before auto-import.
+
+**Security implications:** Prevents phantom connection state from lingering after uninstall. Also prevents potential token-replay from stale config.
+
+### 213. `2bec2e18` — Antigravity provider config (LOW)
+
+**Date:** 2026-03-17
+**Author:** xmllist
+
+**What upstream changed:**
+- Dynamic User-Agent (no hardcoded version string)
+- IDE_TYPE/PLUGIN_TYPE enums via `getPlatformEnum()`
+- Updated baseUrl to sandbox endpoint
+- User-Agent version bumped 1.104.0 → 1.107.0
+
+**Security implications:** INFO only. Version-string spoofing consistency for OAuth metadata.
+
+---
 
 ## Batch Triage 199-208 (credential lifecycle + relay deployers + OAuth correctness)
 
