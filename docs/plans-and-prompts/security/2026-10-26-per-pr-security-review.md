@@ -4396,3 +4396,79 @@ Both hosts need a process restart for the TLS hardening to take effect. The laun
 | ~~Cookie storage location + file permissions~~ | `38a0c449` | MEDIUM | **OPEN — fix needed** (chmod 0700) |
 | ~~Browser pool cross-provider isolation~~ | `38a0c449` | MEDIUM | ✅ CLEAN |
 | ~~Cookie cleanup on DELETE /api/providers/[id]~~ | `38a0c449` | MEDIUM | **OPEN — fix needed** (rmSync on delete) |
+
+---
+
+## Stage 2: Our-Commits-On-Top Review (2026-10-27)
+
+**Objective:** Review every code-bearing commit on `v5-vscode-works` that is NOT in `origin/master`, oldest→newest, to determine:
+- **(a)** Upstream already fixed the same bug → take theirs, drop ours
+- **(b)** Our fix is unique → keep ours
+- **(c)** Similar but different approach → note for Stage 5 reconciliation
+
+Of the 37 commits on our branch ahead of `origin/master`, **34 are audit-only documentation** (no code impact). Only **3 commits** contain actual code changes that need this review:
+
+### Commit 1: `928517ad` — Relay header lossless forwarding
+
+| Field | Value |
+|---|---|
+| **Date** | 2026-10-26 |
+| **File** | `src/app/api/proxy-pools/vercel-deploy/route.js` |
+| **What it does** | Re-applies the `rawHeaders` pattern from upstream `6af26a9e` (savioruz, 2026-09-23) inside the `RELAY_FUNCTION_CODE` template string. Upstream `2b63e0dd` (our own rebase-restoration, 2026-10-23) accidentally overwrote this fix back to `new Headers(req.headers)` which causes edge-runtime normalization of casing/duplicate keys that some providers reject. |
+| **Upstream overlap check** | `git show 2b63e0dd` diff touches `executors/default.js` (stream_options injection) and `executors/kiro.js` (defensive null check) — **never re-fixes the relay header regression**. No other upstream commit since `6af26a9e` touches `vercel-deploy/route.js` relay logic. |
+| **Verdict** | **KEEP** ✅ — our commit is the only thing standing between production and the header-normalization regression. Upstream never re-fixed this. |
+| **Test evidence** | `grep -c rawHeaders` in compiled build = 6 (verified in prior segment). |
+
+### Commit 2: `d2f522a1` — Relay comment backtick safety
+
+| Field | Value |
+|---|---|
+| **Date** | 2026-10-26 |
+| **File** | `src/app/api/proxy-pools/vercel-deploy/route.js` |
+| **What it does** | Removes backticks from around `new Headers(req.headers)` inside a comment that lives within a template literal. The backticks would terminate the outer template string at runtime. Comment-only, no functional change. |
+| **Upstream overlap check** | `git log -- vercel-deploy/route.js` shows no upstream commit after `2b63e0dd` touches this file. Current file has 11 backticks (all legitimate template literals). |
+| **Verdict** | **KEEP** ✅ — cosmetic but necessary to prevent a template literal syntax error. Zero upstream overlap. |
+
+### Commit 3: `ac1784f3` — Web-cookie browser profile hardening
+
+| Field | Value |
+|---|---|
+| **Date** | 2026-10-26 |
+| **Files** | `open-sse/services/webLogin.js`, `open-sse/utils/writableDataDir.js`, `src/app/api/providers/[id]/route.js`, `src/app/api/providers/web-login/route.js` |
+| **What it does** | Three hardening changes: (1) `mkdirSync` with `mode: 0o700` on profile dirs and writable data dir — restricts captured browser cookies to the owning user. (2) New `removeWebLoginProfile()` function in `webLogin.js`. (3) `DELETE /api/providers/[id]` now cleans up the browser profile directory when the last web-login connection using it is deleted. (4) `web-login/route.js` stores `webLoginProfile` in `providerSpecificData` for cleanup tracking. |
+| **Upstream overlap check** | `git log origin/master -- webLogin.js writableDataDir.js` → last upstream touch was `38a0c449` (2026-10-22, the original web-cookie feature). Our `ac1784f3` is 2026-10-26. `grep 0o700` confirms our additions at `webLogin.js:212-213` and `writableDataDir.js:20-22`. `grep removeWebLoginProfile` confirms our function at `webLogin.js:139`. `providers/[id]/route.js:208-218` has our cleanup logic. **Zero upstream overlap on any of these 4 files.** |
+| **Verdict** | **KEEP** ✅ — unique security hardening that upstream never addressed. The 2 OPEN findings from the web-cookie audit (directory permissions + profile cleanup) are closed by this commit. |
+| **Test evidence** | Full suite: 4209 pass / 54 fail (baseline 56) — no regression. `requireAuth-negative-coverage.test.js` updated to mock the new imports. |
+
+### Stage 2 Summary
+
+| Commit | Category | Upstream overlap | Verdict |
+|---|---|---|---|
+| `928517ad` | Relay header fix | None (upstream `2b63e0dd` caused the regression, never re-fixed) | **KEEP** |
+| `d2f522a1` | Template literal safety | None | **KEEP** |
+| `ac1784f3` | Web-cookie hardening | None (upstream `38a0c449` introduced the feature, never hardened it) | **KEEP** |
+
+**Conclusion:** All 3 of our code commits are **unique hardening** with zero upstream overlap. No commits to drop, no conflicts to resolve. Our branch is a clean superset of upstream.
+
+### Remaining audit-doc commits (no code review needed)
+
+The other 34 commits on our branch are all `docs(security):` prefixed — audit documentation only, no code impact. They do not need upstream overlap analysis:
+- 22 per-PR review batch commits (commits 8-265 in the CSV)
+- 1 revert (`fdb5a835` — clean revert of fabricated batch 166-175)
+- 1 deployment proof (`f5b06ccc`)
+- 1 web-cookie follow-up doc (`4d65d6f6`)
+- 1 Stage 1 completion commit (`f85e53be`)
+- 8 misc audit milestone commits
+
+---
+
+## Stage 3 Decision Point
+
+**Awaiting user confirmation on scope before proceeding.**
+
+265 CSV rows × 3 model families = **795 individual reviews**. Options:
+- **A.** All 265 rows (full compliance with directive, very expensive)
+- **B.** HIGH/CRITICAL rows only (~25 rows = 75 reviews)
+- **C.** Only rows our 3 code commits intersect with (~10 rows = 30 reviews)
+
+STRICT_SSL restart timing also needs operator coordination (Stage 6 blocker).
