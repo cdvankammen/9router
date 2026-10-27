@@ -732,6 +732,106 @@ When no region is configured or in env, the code defaults to `us-east-1`. This m
 | 186 | `8f813636` | 2026-04-28 | Token refresh proxy-aware across executors | MEDIUM — credential lifecycle | INTEGRATED |
 | 187 | `04cdb758` | 2026-04-14 | Proactive token refresh lead times + Codex proxy mgmt | MEDIUM — credential lifecycle | INTEGRATED |
 | 188 | `6a6e2fcd` | 2026-04-14 | noAuth provider support + MITM restart settings | LOW — provider surface | INTEGRATED |
+| 189 | `1973fe5a` | 2026-04-05 | Thought signatures for AG/Gemini CLI/Vertex + Vertex response translator | MEDIUM — format correctness | INTEGRATED |
+| 190 | `6ec58902` | 2026-04-06 | GitHub Copilot top-level copilotToken sync after refresh (#507) | MEDIUM — credential lifecycle bug | INTEGRATED |
+| 191 | `cd1e06b6` | 2026-03-30 | GitHub clientId in providers config for OAuth refresh (#442) | MEDIUM — credential lifecycle bug | INTEGRATED |
+| 192 | `f05d64e0` | 2026-03-27 | Vertex SA JSON project-scoped URL + ?alt=sse (#388) | MEDIUM — auth correctness | INTEGRATED |
+| 193 | `b3feb967` | 2026-04-11 | TTS + tunnelDashboardAccess setting | MEDIUM — auth config | INTEGRATED |
+| 194 | `89eb26de` | 2026-04-13 | Vercel relay support in proxyFetch | MEDIUM — new relay surface | INTEGRATED |
+| 195 | `3b1a608e` | 2026-04-13 | Codex cache session id + UI modals | LOW — UI + cache correctness | INTEGRATED |
+| 196 | `6bec1e08` | 2026-04-14 | Windows Tailscale curl + fallback path | LOW — deployment | INTEGRATED |
+| 197 | `75c4598d` | 2026-04-17 | Qwen executor OAuth + marked package + ChangelogModal | LOW — UI + OAuth | INTEGRATED |
+| 198 | `3977edc4` | 2026-04-17 | Error cause formatting + HeaderMenu + LanguageSwitcher | LOW — UI | INTEGRATED |
+
+## Batch Triage 189-198 (credential lifecycle + relay surfaces)
+
+### 189. `1973fe5a` — Thought signatures AG/Gemini CLI/Vertex (MEDIUM)
+
+**Date:** 2026-04-05
+**Author:** decolua
+
+**What upstream added:**
+- Split single `DEFAULT_THINKING_GEMINI_SIGNATURE` into three provider-specific constants: `DEFAULT_THINKING_AG_SIGNATURE`, `DEFAULT_THINKING_GEMINI_CLI_SIGNATURE`, `DEFAULT_THINKING_VERTEX_SIGNATURE`
+- Registered missing Vertex → OpenAI response translator (fixes empty Vertex streaming responses)
+
+**Integration verification:**
+- ✅ `open-sse/config/defaultThinkingSignature.js:3-5` — three distinct signatures
+- ✅ `open-sse/translator/request/openai-to-gemini.js:3` — imports AG + GEMINI_CLI
+- ✅ `open-sse/translator/request/openai-to-vertex.js:3` — imports VERTEX
+
+### 190. `6ec58902` — Copilot top-level copilotToken sync (MEDIUM #507)
+
+**Date:** 2026-04-06
+**Author:** Manuel B. (Co-authored-by: Claude Opus 4.6)
+
+**What upstream fixed:** `checkAndRefreshToken()` updated `providerSpecificData.copilotToken` but NOT the top-level `creds.copilotToken`. Since `GithubExecutor.buildHeaders()` reads the top-level key, every post-refresh request sent the expired token → 401 "IDE token expired".
+
+**Integration verification:**
+- ✅ `src/sse/services/tokenRefresh.js:125` — `credentials.copilotToken = newToken;` (top-level sync)
+- ✅ `open-sse/executors/github.js:63` — reads `credentials?.copilotToken || credentials?.accessToken`
+- ✅ `open-sse/executors/github.js:218-219` — refresh writes both top-level and providerSpecificData
+
+**Security implications:** Credential lifecycle correctness. Without this fix, proactive refresh was effectively broken for Copilot.
+
+### 191. `cd1e06b6` — GitHub clientId for OAuth refresh (MEDIUM #442)
+
+**Date:** 2026-03-30
+**Author:** Manuel B. (Co-authored-by: Claude Opus 4.6)
+
+**What upstream fixed:** GitHub provider was missing `clientId` in config, causing `refreshGitHubToken()` to send `client_id=undefined` on 401 retry. Also guarded against undefined `clientSecret`.
+
+**Integration verification:**
+- ✅ `open-sse/config/providers.js:73-74` — `github: { clientId: "Ov23ctRXmnYg8aIYlPcx", clientSecret: "4e217cf44b9e..." }`
+
+**Security implications:** Credential lifecycle correctness. OAuth refresh requires both client_id and client_secret.
+
+### 192. `f05d64e0` — Vertex SA JSON project-scoped URL (MEDIUM #388)
+
+**Date:** 2026-03-27
+**Author:** anuragg-saxenaa
+
+**What upstream fixed:** SA JSON + Bearer auth requires a project-scoped URL (`projects/{projectId}/locations/{location}/publishers/google/models/{model}:{action}`), not the global publishers endpoint which only works with raw API key. Also added `?alt=sse` for streaming on the SA JSON path. Location defaults to `us-central1`, overridable via `providerSpecificData.location`.
+
+**Integration verification:**
+- ✅ `open-sse/executors/vertex.js:92` — `RESOURCE_PROJECT_INVALID` error message
+- ✅ `vertex.js:104` — project-scoped URL template with `?alt=sse` for streaming
+
+### 193. `b3feb967` — tunnelDashboardAccess setting (MEDIUM)
+
+**Date:** 2026-04-11
+**Author:** decolua
+
+**What upstream added:**
+- Dynamic `tunnelDashboardAccess` setting in dashboardGuard
+- UI for managing security settings related to tunnel access
+
+**Integration verification:**
+- ✅ `src/dashboardGuard.js:330,340` — `tunnelDashboardAccess: settings.tunnelDashboardAccess === true`
+- ✅ `src/dashboardGuard.js:360` — blocks tunnel access when disabled
+
+**Intersection with our work:** Our Finding #7 middleware promotion respects this setting — when `tunnelDashboardAccess === false`, remote tunnel users can't reach the dashboard even with valid credentials.
+
+### 194. `89eb26de` — Vercel relay support (MEDIUM)
+
+**Date:** 2026-04-13
+**Author:** decolua
+
+**What upstream added:** Vercel relay support in `proxyFetch.js` for user-configured relay endpoints.
+
+**Integration verification:**
+- ✅ `open-sse/utils/proxyFetch.js:24` — comment: "proxy-pools: user-configured relay endpoints (Vercel/CF Workers/Deno etc.)"
+
+**Intersection with our work:** Relay routes are in dashboardGuard deny-by-default catch-all. Our `928517ad` + `d2f522a1` relay header lossless forwarding applies to these Vercel relays too.
+
+### 195-198. LOW-signal (all verified via hash check)
+
+- `3b1a608e` — Codex cache session id fix + AddApiKeyModal/ConnectionRow UI
+- `6bec1e08` — Windows Tailscale curl support + fallback path
+- `75c4598d` — Qwen executor OAuth handling + marked package + ChangelogModal
+- `3977edc4` — Error cause details + HeaderMenu + LanguageSwitcher controlled state
+
+---
+
 
 ## Batch 181-188 (auth boundary + Claude Code spoofing + OAuth lifecycle)
 
