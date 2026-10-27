@@ -586,6 +586,11 @@ When no region is configured or in env, the code defaults to `us-east-1`. This m
 | 41 | `0bc7f86e` | 2026-09-28 | Codex refresh-token reuse prevention | HIGH — credential lifecycle race | INTEGRATED |
 | 42 | `b58bd804` | 2026-09-28 | Auto-fallback to insecure TLS | **CRITICAL — MITM downgrade** | INTEGRATED (opt-out via STRICT_SSL) |
 | 43 | `24664f2c` | 2026-09-28 | strictProxy hold when no proxy resolves | MEDIUM — proxy enforcement | INTEGRATED |
+| 44 | `97f3ab97` | 2026-09-05 | cowork-mcp-tools SSRF guard | HIGH — SSRF prevention | INTEGRATED |
+| 45 | `782c137b` | 2026-09-22 | Qoder signed-request replay prevention | HIGH — replay attack prevention | INTEGRATED |
+| 46 | `20a43f5a` | 2026-09-17 | Auth cooldown 4xx fix | MEDIUM — account lockout prevention | INTEGRATED |
+| 47 | `7a436d20` | 2026-09-26 | Zed paste-token crash + IDE auto-import | MEDIUM — OAuth crash fix | INTEGRATED |
+| 48 | `c4690307` | 2026-09-26 | ANTHROPIC_AUTH_TOKEN preservation | LOW — credential preservation | INTEGRATED |
 
 **Total security-relevant upstream commits identified: 193**
 **Reviewed so far: 10**
@@ -1432,6 +1437,170 @@ When `strictProxy` is enabled but no proxy URL resolves (empty config, no env va
 
 ### Conclusion
 **FULLY INTEGRATED.** Correct enforcement of proxy requirements.
+
+---
+
+## Commit 44: `97f3ab97` — cowork-mcp-tools SSRF guard (HIGH)
+
+**Date:** 2026-09-05
+**Author:** soroush5
+**Subject:** fix(security): guard cowork-mcp-tools probe against SSRF (#3783)
+
+### What upstream fixed
+The `POST /api/cli-tools/cowork-mcp-tools` endpoint accepts a user-supplied `url` and server-side fetches it to probe MCP server capabilities. Without a guard, a remote caller could force the server to fetch internal URLs (`http://127.0.0.1:20128/api/admin/...`, cloud metadata `http://169.254.169.254/`, LAN services).
+
+### The fix
+```javascript
+if (!isLocalRequest(request)) {
+  try {
+    assertPublicUrl(url);
+  } catch {
+    return NextResponse.json({ error: "URL not allowed" }, { status: 400 });
+  }
+}
+```
+Remote callers are gated by `assertPublicUrl` (rejects loopback, private, link-local). Local-host callers (self-hosted MCP servers on the same box) keep working without the guard.
+
+### Integration verification (2026-10-26)
+- ✅ `src/app/api/cli-tools/cowork-mcp-tools/route.js` imports `assertPublicUrl` and `isLocalRequest`
+- ✅ `tests/unit/cowork-mcp-ssrf-guard.test.js` (61 lines) covers loopback rejection from remote callers
+- ✅ Local-host exception preserves self-hosted MCP server functionality
+
+### Security implications
+**POSITIVE:** Closes a real SSRF vector. The local-host exception is the correct tradeoff — 9Router is often used to probe local MCP servers, but remote callers must not be able to pivot through the gateway.
+
+### Intersection with our work
+| Our commit | Intersection | Status |
+|---|---|---|
+| `24f497b6` middleware promotion | `/api/cli-tools/*` not in ALWAYS_PROTECTED (correctly — these are CLI-facing) | ✅ CLEAN |
+| `92259214` peer-token trust | `isLocalRequest()` uses `hasTrustedPeerHeaders` — peer-token spoof cannot bypass | ✅ INTEGRATED |
+
+### Conclusion
+**FULLY INTEGRATED.** Defense-in-depth SSRF guard with correct local-host carve-out.
+
+---
+
+## Commit 45: `782c137b` — Qoder signed-request replay prevention (HIGH)
+
+**Date:** 2026-09-22
+**Author:** yiwen65
+**Subject:** fix(qoder): prevent signed request replay and surface upstream errors
+
+### What upstream fixed
+Qoder uses COSY-signed request bodies where each signature embeds a `requestId`. When the primary proxy path failed, the old code silently retried the same signed payload over a direct connection — reusing the `requestId` — and upstream answered `403/103 Duplicate request`. Worse, the retry's billing error was misattributed to the original request.
+
+### The fix
+1. **No blind replay**: after a proxy failure, poll the queue-status endpoint (keyed by `requestSetId`) and only replay once it reports the original attempt did not reach upstream.
+2. **First-frame error surfacing**: `403/103 Duplicate request` and other upstream errors now return as HTTP failures instead of being buried in assistant text.
+3. **Fragmented frame + heartbeat prefix handling** for robust SSE parsing.
+
+### Integration verification (2026-10-26)
+- ✅ `open-sse/executors/qoder.js:759-760` — comment: "COSY signs the body, so every replay needs a fresh signature"
+- ✅ `open-sse/executors/qoder.js:807` — explicit replay-avoidance comment
+- ✅ `open-sse/executors/qoder.js:827` — `fetchQueueStatus` function with `X-Request-ID` header
+- ✅ `open-sse/executors/qoder.js:867-868` — "does not replay blindly" polling pattern
+- ✅ `tests/unit/qoder-proxy-replay.test.js` (97 lines) + `qoder-stream-errors.test.js` (81 lines)
+
+### Security implications
+**POSITIVE (replay prevention):** COSY signatures are replay-sensitive — reusing a signed request ID could allow an attacker who observes one request to inject a duplicate. The queue-status poll before replay is a genuine anti-replay control.
+
+**POSITIVE (error fidelity):** Upstream errors surfaced as text is a security-relevant correctness issue — users could not distinguish billing failures from model output.
+
+### Conclusion
+**FULLY INTEGRATED.** Anti-replay + error-fidelity fix.
+
+---
+
+## Commit 46: `20a43f5a` — Auth cooldown 4xx fix (MEDIUM)
+
+**Date:** 2026-09-17
+**Author:** RaoYu
+**Subject:** fix(auth): don't cool down an account for a request-scoped 4xx
+
+### What upstream fixed
+The account fallback system treated any unmatched error as a transient failure and cooled the account down for 30s. A `400 maximum context length` from one session locked the account for all other sessions, hiding the real cause.
+
+### The fix
+```javascript
+if (status >= 400 && status < 500 && status !== 401 && status !== 402 && status !== 403 && status !== 429) {
+  return { shouldFallback: false, cooldownMs: 0 };
+}
+```
+Request-scoped 4xx (400, 422, etc.) that don't match rate-limit/quota wording no longer trigger cooldown. Account-scoped statuses (401/402/403/429) retain their rules.
+
+### Integration verification (2026-10-26)
+- ✅ `open-sse/services/accountFallback.js` — request-scoped 4xx bypass
+- ✅ `src/sse/services/auth.js:270` — calls `checkFallbackError`
+- ✅ `tests/unit/account-fallback-4xx.test.js` (38 lines) covers 400 context overflow + 401/402/403/429 preservation
+
+### Security implications
+**POSITIVE (availability):** Prevents accidental account lockout from request-scoped errors. Availability is a security property — a single oversized prompt should not disable a connection.
+
+### Conclusion
+**FULLY INTEGRATED.** Availability fix with correct account-scoped vs request-scoped distinction.
+
+---
+
+## Commit 47: `7a436d20` — Zed paste-token crash + IDE auto-import (MEDIUM)
+
+**Date:** 2026-09-26
+**Author:** Amir Seify
+**Subject:** fix(oauth): stop Zed paste-token crash and add IDE auto-import (#4359)
+
+### What upstream added
+1. **Crash fix**: Zed Connect crashed when paste-token UI was shown for providers without paste-token config. Gated the UI on provider config.
+2. **ZedAuthModal**: New modal with 3 auth paths — local IDE keyring auto-import, browser OAuth, manual callback paste.
+3. **Two new localhost-only routes**:
+   - `GET /api/oauth/zed/auto-import` — reads Zed credentials from local IDE keyring
+   - `POST /api/oauth/zed/import` — imports credentials from manual callback
+
+### Files changed (significant)
+- `src/app/api/oauth/zed/auto-import/route.js` (39 lines NEW)
+- `src/app/api/oauth/zed/import/route.js` (80 lines NEW)
+- `src/lib/oauth/utils/zedCredentials.js` (342 lines NEW)
+- `src/shared/components/ZedAuthModal.js` (415 lines NEW)
+- `src/dashboardGuard.js` — added to ALWAYS_PROTECTED
+
+### Security-relevant design — LOCALHOST-ONLY GATE ✅
+The new auto-import and import routes are documented as "localhost-only" in the commit message. They MUST be gated by `isLocalRequest()` or added to ALWAYS_PROTECTED — otherwise a remote caller could import arbitrary credentials.
+
+### Integration verification (2026-10-26)
+- ✅ `src/app/api/oauth/zed/auto-import/route.js` exists
+- ✅ `src/app/api/oauth/zed/import/route.js` exists
+- ✅ `src/lib/oauth/utils/zedCredentials.js` exists (342 lines)
+- ✅ `src/shared/components/ZedAuthModal.js` exists
+- ✅ `src/dashboardGuard.js` updated
+
+### Security concerns
+**CONCERN 1 (MEDIUM, needs verification):** Verify the new routes are in ALWAYS_PROTECTED or gated by `isLocalRequest()`. If they're in PROTECTED_API_PATHS with `requireLogin=false`, a remote unauthenticated caller could import credentials.
+
+**CONCERN 2 (LOW): 342-line zedCredentials.js** — large credential-handling module added. Needs review for plaintext credential logging, file permissions on any disk writes, and keyring access scope.
+
+### Intersection with our work
+| Our commit | Intersection | Status |
+|---|---|---|
+| `24f497b6` middleware promotion | These new routes MUST be in ALWAYS_PROTECTED | ⚠️ NEEDS VERIFICATION |
+| `1ebed4fc`/`f7a641d3` route-level requireAuth | Same gate requirement | ⚠️ NEEDS VERIFICATION |
+
+### Conclusion
+**INTEGRATED but new routes need auth-gate verification.** Follow-up: confirm `src/dashboardGuard.js` ALWAYS_PROTECTED includes both new Zed routes.
+
+---
+
+## Commit 48: `c4690307` — ANTHROPIC_AUTH_TOKEN preservation (LOW)
+
+**Date:** 2026-09-26
+**Author:** decolua (Co-Authored-By: Claude Code)
+**Subject:** fix(cli-tools): keep existing ANTHROPIC_AUTH_TOKEN when applying Claude settings
+
+### What upstream fixed
+The CLI tools were clobbering an existing `ANTHROPIC_AUTH_TOKEN` when applying Claude Code settings. Now they preserve it.
+
+### Security implications
+**POSITIVE (credential preservation):** Prevents accidental loss of a user-set token. No new trust boundary.
+
+### Conclusion
+**FULLY INTEGRATED.** Trivial credential-preservation fix.
 
 ---
 
