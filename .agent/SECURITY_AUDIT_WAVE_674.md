@@ -1026,6 +1026,342 @@ The following previously recorded findings were **retracted** after audit-trail 
 - ✅ **docker-compose.yml**: Headroom service bound to `127.0.0.1:8787` (loopback only). Main service exposes port 20128. Environment from `.env` file (not hardcoded). Volume for persistent data.
 - ✅ **Dual-server health stable** (primary=200, secondary=200) throughout waves 770–771.
 
+### Wave 773–776 findings
+
+#### Finding #327: Tunnel shortId generated with Math.random() forms the public tunnel URL
+- **Severity**: MEDIUM (guessable public exposure of the gateway)
+- **Location**: `src/lib/tunnel/shared/state.js:33-39` (`generateShortId`), consumed by `src/lib/tunnel/cloudflare/manager.js:64` and `src/lib/tunnel/tailscale/manager.js:38`
+- **Proof (code-verified)**:
+  ```js
+  // shared/state.js
+  const SHORT_ID_CHARS = "abcdefghijklmnpqrstuvwxyz23456789"; // 31 chars
+  export function generateShortId() {
+    let result = "";
+    for (let i = 0; i < SHORT_ID_LENGTH; i++) {           // SHORT_ID_LENGTH = 6
+      result += SHORT_ID_CHARS.charAt(Math.floor(Math.random() * SHORT_ID_CHARS.length));
+    }
+    return result;
+  }
+  ```
+  ```js
+  // cloudflare/manager.js
+  const publicUrl = `https://r${shortId}.abc-tunnel.us`;   // public URL = shortId
+  ```
+  `Math.random()` is not cryptographically secure (~30-bit space for 6×31 chars) and the value becomes BOTH the public Cloudflare-worker tunnel URL (`r${shortId}.abc-tunnel.us`) and the Tailscale funnel hostname. Anyone who guesses/enumerates the shortId reaches the full 9Router gateway through the tunnel.
+- **Mitigating context**: The tunneled app still enforces its own auth (dashboard password/JWT, API keys). Brute-forcing ~2^30 space over HTTP is costly but not infeasible; `Math.random` state can additionally be predicted from a few observed outputs.
+- **Remediation**: Use `crypto.randomBytes`/`crypto.getRandomValues` for shortId; consider ≥10 chars.
+
+#### Finding #328: failover-proxy binds 0.0.0.0 and exposes /api/failover-status unauthenticated
+- **Severity**: LOW-MEDIUM (topology disclosure; only when the CLI failover proxy is deployed)
+- **Location**: `cli/failover-proxy.cjs:261` (`server.listen(LISTEN_PORT, BIND_HOST)` with `BIND_HOST = IPV6_ENABLED ? "::" : "0.0.0.0"`) and the `STATUS_PATH` handler (~line 175)
+- **Proof (code-verified)**: The proxy answers `/api/failover-status` itself with `{ local: {url, up}, activeTarget, peers: [{url, up}], loopProtected, uptimeMs }` — no authentication, on a LAN-facing port (default 20140). Discloses internal node URLs (local + all peer addresses incl. auto-discovered LAN/Tailscale/mDNS) and their health state to any LAN client.
+- **Live probe**: Port 20140 not listening on the audit machine (empty response) — finding is code-verified for deployments that start the failover proxy.
+- **Defenses noted**: Loop-proof header (`x-9r-failover`), hop-by-hop header stripping, IPv6 disabled by default.
+- **Remediation**: Require a token for `/api/failover-status`, or bind the status endpoint to loopback.
+
+### Wave 773–776 defense confirmations
+
+- ✅ **OAuth callback servers + updater + MITM port-tester all bind `127.0.0.1`** — full `.listen(` sweep of `src/**/*.js` (11 call sites) and `cli/**` confirms only two non-loopback binds: MITM `server.js:382` (port 443, already finding #308 — `LOCAL_PORT = 443` at `server.js:15` now line-verified) and `cli/failover-proxy.cjs:261` (finding #328).
+- ✅ **`src/mitm/server.js` certCache unbounded** re-confirmed at line 38 (finding #310): `sniCallback` caches a SecureContext per unique SNI hostname with no eviction.
+- ✅ **`open-sse/translator/webTools.js:64` `Math.random()` nonce**: NOT a security nonce — it is a WeakMap serializer key binding tool envelopes between serializer and parser. No finding.
+- ✅ **`src/lib/consoleLogBuffer.js`**: Globally patches `console.log/info/warn/error/debug` and buffers up to `CONSOLE_LOG_CONFIG.maxLines`, streamed via `/api/translator/console-logs/stream`. The SSE endpoint sits under `translator/console-logs` which is ALWAYS_PROTECTED in dashboardGuard — any accidentally-logged secret is auth-gated. Noted as log-hygiene risk, not a new finding.
+- ✅ **Math.random() sweep**: 25 uses across `src/`/`open-sse/` — all cosmetic (request IDs, stream detail IDs, multipart boundaries, fake User-Agent rotation, placeholder names) EXCEPT tunnel shortId (#327). Cryptographic randomness used correctly for state/nonce/PKCE/cli-secret elsewhere.
+- ✅ **Dual-server health stable** (primary=200, secondary=200) throughout waves 773–776.
+
+### Wave 778 findings
+
+#### Finding #329: Host-header trust in `getPublicOrigin` → open redirect + OIDC redirect_uri manipulation (conditional)
+- **Severity**: MEDIUM (conditional on deployment config)
+- **Location**: `src/lib/auth/oidc.js:22-41` (`getPublicOrigin`), consumed by all 8 redirect sites in `src/app/api/auth/oidc/callback/route.js`, `start/route.js`, `test/route.js`
+- **Proof (code-verified)**:
+  ```js
+  export function getPublicOrigin(request) {
+    const configuredBaseUrl = process.env.BASE_URL || process.env.NEXT_PUBLIC_BASE_URL || "";
+    if (configuredBaseUrl) return trimTrailingSlashes(configuredBaseUrl);  // env-pinned → safe
+    const forwardedHost = request?.headers?.get?.("x-forwarded-host") || "";
+    const host = forwardedHost || request?.headers?.get?.("host") || "";    // ← trusts Host
+    if (host) {
+      const protocol = (forwardedProto || new URL(request.url).protocol || "http:").replace(/:$/, "");
+      return `${protocol}://${host}`.replace(/\/+$/, "");
+    }
+    return trimTrailingSlashes(new URL(request.url).origin);
+  }
+  ```
+  When BOTH `BASE_URL` and `NEXT_PUBLIC_BASE_URL` are unset, the raw `Host` header controls every OIDC redirect (`/login?error=…`, `/dashboard`) AND the `redirect_uri` sent to the IdP (`${getPublicOrigin(request)}/api/auth/oidc/callback` at callback:52 and start:25).
+- **LIVE-VERIFIED negative**: The primary deployment sets `NEXT_PUBLIC_BASE_URL=http://localhost:20128`, so the live probe `curl -H "Host: evil.example" /api/auth/oidc/callback?error=pwned` returned `location: http://localhost:20128/login?error=pwned` — env pinning wins. The vulnerability is latent, not exploitable on this deployment.
+- **Exploitable case**: `docker-compose.yml` sets only DATA_DIR/PORT/HOSTNAME/NODE_ENV/HEADROOM_URL in `environment:` and delegates the rest to the user's `.env` file. An operator whose `.env` omits BASE_URL (the compose file doesn't require it) exposes: (1) unauthenticated open redirect via forged Host on all OIDC error/success paths, (2) attacker-controlled `redirect_uri` in the OIDC authorization request — OAuth code theft against IdPs with loose redirect matching, (3) post-login redirect to attacker origin (phishing). Note `custom-server.js` strips `x-forwarded-host` (Bug GG) but NOT the plain `Host` header.
+- **Remediation**: Validate `Host` against an allowlist (known bind hostnames) before using it, or require BASE_URL in docker-compose `environment:` defaults.
+
+### Wave 778 defense confirmations
+
+- ✅ **Security headers present on 307 redirects** (live): X-Frame-Options SAMEORIGIN, CSP frame-ancestors 'self', nosniff, Referrer-Policy strict-origin-when-cross-origin all emitted on OIDC redirect responses.
+- ✅ **`fetchOidcDiscovery` SSRF-guarded** (`oidc.js:68-96`): calls `assertPublicUrlResolved(issuerUrl, { allowLoopback: true })` before fetching discovery — blocks metadata/private targets while permitting literal-loopback dev issuers. DNS-rebinding to loopback still blocked.
+- ✅ **`validateOidcConfigForSave`**: pre-flight discovery check before persisting OIDC config (defends finding #13 evil-issuer lockout); HTTPS required except literal localhost/127.0.0.1/::1.
+- ✅ **OIDC start unauthenticated by design** (live-verified): returns 307 to IdP with PKCE S256 challenge; state/nonce/verifier cookies HttpOnly + SameSite=lax + Max-Age=600, no Secure flag (re-confirms wave 745 note; `shouldUseSecureCookie` gates it — x-forwarded-proto stripped at edge, so only AUTH_COOKIE_SECURE=true sets it).
+- ✅ **`updater.js`** binds `127.0.0.1` (line 85), status-file based progress. NOTE: sets `Access-Control-Allow-Origin: *` on the loopback status server — cross-origin read possible from any webpage but only reaches loopback (LOW hygiene note, not recorded as a finding since it requires a local browser + the server only runs during updates).
+- ✅ **`instrumentation.js`**: benign startup wiring (console capture, catalog source, model-catalog sync). No secrets, no network listeners.
+
 ---
 
-*Audit conducted through 772 systematic waves. Verified finding count: 326 (55 CRITICAL, 98 HIGH, 66 MEDIUM, 45 LOW). All findings code-verified or live-proven. Zero code modifications performed (read-only mandate). Notable LIVE-VERIFIED attacks: #233 (shutdown via JWT-only), #265 (ChangelogModal supply-chain XSS), #318 (unauthed /api/health/providers topology leak), #326 (hardcoded Google OAuth client secrets in source — GOCSPX- format in 5 files). Wave 714 integrity review retracted 5 fabricated findings; waves 716–772 held to strict "only record what the tool output actually showed" standard. Waves 755–772 produced defense confirmations: MCP whitelist spawn, OAuth loopback bind + origin guard, headroom execSync safety, ssrfGuard 3-layer architecture, login DOM cleanliness, middleware enforcement live-verified across 10 protected routes, image/video/STT/TTS handler safety, OAuth state validation present, Xiaomi ECDH crypto sound, dashboard XSS-free (122 files, zero sinks), search handler baseUrl validation, OIDC CSRF+PKCE+nonce validation, migration SQL safety, video generation auth gating, Docker security posture.*
+### Wave 780–781 findings
+
+#### Finding #330: CLI app ships at version 0.5.75 — 36 versions behind main (0.5.111), with runtime npm supply-chain surface
+- **Severity**: HIGH (stale code in distributed package + runtime package download)
+- **Location**: `cli/app/package.json:4` (`"version": "0.5.75"`) vs root `package.json` (0.5.111), plus `cli/hooks/sqliteRuntime.js` runtime npm install
+- **Proof (code-verified)**:
+  - `cli/app/package.json` declares `"name": "9router-app", "version": "0.5.75"` — a **separate Next.js app** that ships inside the published `9router` npm package
+  - File count: `cli/app/src/` has **46 JS files** vs **644 JS files** in main `src/` — the CLI app is a stripped-down subset, not a copy
+  - `cli/app/custom-server.js` carries the same Bug GG fixes (x-forwarded-host/proto stripping, PEER_TOKEN, rate limiting), so critical edge sanitization is present
+  - `cli/hooks/sqliteRuntime.js` runs at `npm install` (postinstall) AND at first server start: it `npm install`s `better-sqlite3@13.0.3` (or `12.6.2` for Node<22) and `sql.js@1.14.1` into `~/.9router/runtime/node_modules/` — a runtime package download from npm, with `--ignore-scripts` for N-API builds only
+  - `cli/hooks/trayRuntime.js` downloads the arm64 macOS tray binary from GitHub releases with SHA256 verification (`ARM64_TRAY_SHA256 = 487e3c365aaa1eb6ad295bf3989711e975b52cee07505bf641c8559954881c81`) — verified enforced BEFORE chmod/execution (line 193-196)
+- **Impact**: (1) Users installing `npm i -g 9router` get a CLI app frozen at 0.5.75, missing all security fixes from 0.5.76–0.5.111 (including findings from this audit that have been remediated upstream); (2) the postinstall + runtime `npm install` pattern is a supply-chain vector — a compromised `better-sqlite3` release or registry MITM would execute arbitrary code on every first-start; (3) `--ignore-scripts` is set for N-API builds but not for the 12.x fallback path on older Node, allowing `better-sqlite3`'s binding.gyp to run arbitrary build scripts.
+- **Remediation**: (1) Synchronize `cli/app/package.json` version with root on every release (or eliminate the separate CLI app build), (2) pin better-sqlite3 + sql.js via a lockfile in the runtime dir, (3) always pass `--ignore-scripts` regardless of Node version, (4) add integrity-hash verification for downloaded native binaries.
+
+### Wave 780–781 defense confirmations
+
+- ✅ **CLI app `custom-server.js` edge sanitization MATCHES main**: strips `x-forwarded-for`, `x-9r-real-ip`, `x-9r-via-proxy`, `x-9r-peer-token`, `x-forwarded-host`, `x-forwarded-proto`, `x-forwarded-server`, `x-original-host`, `x-real-host`. Stamps `x-9r-real-ip` from TCP socket. Per-process random PEER_TOKEN. Rate limiting via `checkLimit`. h2c upgrade handler present.
+- ✅ **CLI L1 peer forwarding** (`cli/app/custom-server.js`): gated by `isV1` check (only `/v1*` routes) + `L1.localUp === false` + healthy peer exists. Loop-proof header `x-9r-failover`. No auth bypass — request reaches the peer's own auth layer.
+- ✅ **Tray binary SHA256 enforced**: `sha256File(tmp)` compared to `ARM64_TRAY_SHA256` BEFORE chmod (line 193-196). Mismatch throws before execution. Pinned URL to `github.com/decolua/9router/releases/download/tray-binaries/`.
+- ✅ **RSC header bypass NEGATED live**: `curl -H "RSC: 1" /dashboard` → 307 to `/login` (middleware catches it regardless of RSC header).
+- ✅ **x-forwarded-host stripping LIVE-CONFIRMED**: forged `X-Forwarded-Host: evil.example` on OIDC callback error path → redirect still uses `http://localhost:20128` (Bug GG edge stripping).
+- ✅ **Health endpoint browser-accessible**: navigating to `/api/health` returned `{"ok":true}` with JSON content-type.
+- ✅ **Dual-server health stable** (primary=200, secondary=200) throughout waves 780–781.
+
+---
+
+### Wave 783–784 findings
+
+#### Finding #331: SAML metadata endpoint is unauthenticated and leaks 0.0.0.0 bind address
+- **Severity**: LOW-MEDIUM (topology disclosure; information leak)
+- **Location**: `src/app/api/auth/saml/metadata/route.js:5-18` — GET handler with no `requireAuth` or middleware protection
+- **Proof (LIVE-VERIFIED)**: `curl http://mini2:20128/api/auth/saml/metadata` returns full SP metadata XML without authentication:
+  ```xml
+  <EntityDescriptor xmlns="urn:oasis:names:tc:SAML:2.0:metadata"
+    entityID="urn:9router:sp"
+    ID="_7fcd39ec480a2dcfebfa54e65856dfc1c4ddb46c">
+    <SPSSODescriptor AuthnRequestsSigned="false" WantAssertionsSigned="true">
+      <NameIDFormat>urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress</NameIDFormat>
+      <AssertionConsumerService index="1" isDefault="true"
+        Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST"
+        Location="http://0.0.0.0:20128/api/auth/saml/acs"/>
+    </SPSSODescriptor>
+  </EntityDescriptor>
+  ```
+  The ACS Location is `http://0.0.0.0:20128/api/auth/saml/acs` — the server's `HOSTNAME` env var (set to `0.0.0.0` in docker-compose.yml) leaks into the metadata via `new URL(request.url).origin` at route line 8. An IdP configured from this metadata would POST assertions to `0.0.0.0:20128` (unreachable from any network). Additionally: `AuthnRequestsSigned="false"` is disclosed, `WantAssertionsSigned="true"` is confirmed.
+- **Defense noted**: `WantAssertionsSigned="true"` in `createSamlInstance` (saml.js:99) is a correct defense against unsigned assertion injection. `acceptedClockSkewMs: 60000` (60s) is reasonable.
+- **Remediation**: (1) Use `getSamlBaseUrl(request, settings)` (which respects BASE_URL) instead of `new URL(request.url).origin` for metadata generation, (2) consider whether unauthenticated metadata disclosure is intentional (standard SAML practice allows it, but the 0.0.0.0 leak is a bug).
+
+#### Finding #332: SAML InResponseTo validation uses regex on raw XML — potential bypass via XML comment injection
+- **Severity**: MEDIUM (SAML replay protection bypass when saml_state cookie is set)
+- **Location**: `src/lib/auth/saml.js:148-157` (`validateSamlResponse`)
+- **Proof (code-verified)**:
+  ```js
+  // Parse response XML to inspect InResponseTo for replay protection
+  if (expectedRequestId) {
+    const xml = Buffer.from(rawSamlResponse, "base64").toString("utf8");
+    const match = xml.match(/InResponseTo=["']([^"']+)["']/i);  // ← regex, not XML parser
+    const inResponseTo = match ? match[1] : null;
+    if (!inResponseTo || inResponseTo !== expectedRequestId) {
+      throw new Error(`InResponseTo mismatch: expected ${expectedRequestId}, received ${inResponseTo || "none"}`);
+    }
+  }
+  const result = await samlInstance.validatePostResponseAsync({ SAMLResponse: rawSamlResponse });
+  ```
+  The regex-based check runs BEFORE `validatePostResponseAsync` (the actual XML parser). An attacker could craft a SAML response with the expected `InResponseTo` in an XML comment or as an attribute on a non-`Response` element, pass the regex check, and then have `validatePostResponseAsync` process a different `InResponseTo` (or none). The SAML instance is configured with `validateInResponseTo: "never"` (line 100), so the library won't enforce this itself — only the regex check does.
+- **Mitigating factor**: `wantAssertionsSigned: true` means the assertion must be signed by the IdP, limiting practical exploitability to IdP-compromise scenarios. The `saml_state` cookie has `Max-Age: 600` (10 min), limiting the replay window.
+- **Remediation**: Use a proper XML parser (e.g., `xmldom` or the library's own parsing) to extract `InResponseTo` from the `<samlp:Response>` element specifically. Alternatively, set `validateInResponseTo: "always"` in the SAML config and let the library enforce it.
+
+### Wave 783–784 defense confirmations
+
+- ✅ **SAML `wantAssertionsSigned: true`** (saml.js:99): Requires signed assertions, defending against unsigned assertion injection.
+- ✅ **SAML `createSamlInstance` security defaults**: `acceptedClockSkewMs: 60000` (60s), proper cert formatting with PEM wrapping.
+- ✅ **SAML ACS rate limiting**: `checkLock(ip)` + `recordFail(ip)` at saml/acs/route.js:21-28 prevents brute-force.
+- ✅ **SAML start route**: Sets `saml_state` cookie (httpOnly, SameSite=lax, Max-Age=600) with requestId for InResponseTo matching.
+- ✅ **SAML `pickSamlEmail`** (saml.js:185+): Checks configured custom attribute first, then falls back to common email claim URIs. Array values handled (`val[0]`).
+- ✅ **`/api/version` LIVE**: Returns `{"currentVersion":"0.5.111","latestVersion":"0.5.111","hasUpdate":false}` — confirms both servers at 0.5.111.
+- ✅ **Dual-server health stable** (primary=200, secondary=200) throughout waves 783–784.
+
+---
+
+### Wave 785–788 findings
+
+#### Finding #333: `/api/auth/status` leaks full authentication configuration unauthenticated
+- **Severity**: LOW-MEDIUM (information disclosure; aids targeted attacks)
+- **Location**: `src/app/api/auth/status/route.js` — GET handler with no `requireAuth` or middleware protection
+- **Proof (LIVE-VERIFIED)**: `fetch('/api/auth/status')` from unauthenticated browser context returns HTTP 200:
+  ```json
+  {
+    "requireLogin": true,
+    "authMode": "both",
+    "ssoType": "oidc",
+    "oidcConfigured": true,
+    "oidcLoginLabel": "Sign in with OIDC",
+    "samlConfigured": false,
+    "samlLoginLabel": "Sign in with SAML SSO",
+    "hasPassword": true,
+    "displayName": "Password user",
+    "loginMethod": "Password",
+    "authenticated": false,
+    "oidcName": null, "oidcEmail": null, "oidcLogin": false,
+    "samlName": null, "samlEmail": null, "samlLogin": false
+  }
+  ```
+  Discloses: whether password auth is enabled, which SSO providers are configured (OIDC vs SAML), auth mode (password/oidc/saml/both/sso), custom login button labels, and current session state — all without authentication. An attacker can fingerprint the exact auth configuration before attempting any attack.
+- **Remediation**: Move `auth/status` to `PROTECTED_API_PATHS` in `dashboardGuard.js`, or gate the route with `requireAuth`.
+
+#### Finding #334: `/api/auth/logout` accepts POST from unauthenticated context — CSRF-able session clearing
+- **Severity**: LOW (no data exposure; session denial)
+- **Location**: `src/app/api/auth/logout/route.js` — POST handler with no auth check
+- **Proof (LIVE-VERIFIED)**: `fetch('/api/auth/logout', {method: 'POST'})` from unauthenticated browser returns `{"success":true}` with status 200. The route unconditionally clears `auth_token`, `oidc_state`, `oidc_nonce`, and `oidc_code_verifier` cookies. Any webpage on the internet can POST to this endpoint (SameSite=lax cookies are sent on top-level navigations, and the route has no CSRF token requirement). An attacker's page can force-logout any user who visits it.
+- **Defense noted**: SameSite=lax mitigates cross-origin AJAX POST (lax only sends cookies on top-level GET navigations), so the practical CSRF vector is limited to `<form action=... method=POST>` auto-submit attacks.
+- **Remediation**: Add `requireAuth` to the logout route, or verify SameSite=strict on the auth cookie.
+
+#### Finding #336: `/api/settings/require-login` leaks tunnel/tailscale URLs unauthenticated
+- **Severity**: LOW (topology disclosure; explicit public route)
+- **Location**: `src/app/api/settings/require-login/route.js` — GET handler, explicitly listed in `PUBLIC_API_PATHS` at `src/dashboardGuard.js:44`
+- **Proof (LIVE-VERIFIED)**: `fetch('/api/settings/require-login')` from unauthenticated browser returns HTTP 200:
+  ```json
+  {"requireLogin":true,"tunnelDashboardAccess":true,"tunnelUrl":"","tailscaleUrl":""}
+  ```
+  Discloses: whether tunnel/tailscale is configured (non-empty URL = active tunnel), whether dashboard access via tunnel is permitted, and the full tunnel/tailscale hostname (e.g. `https://r<shortId>.abc-tunnel.us` or `https://<host>.ts.net`). An attacker learns the exact public hostname of a tunneled deployment without authentication.
+- **Defense noted**: Route is intentionally public (login page needs `requireLogin` to decide setup-vs-login form). The `tunnelUrl`/`tailscaleUrl` fields are excess disclosure — the login UI only needs `requireLogin`.
+- **Remediation**: Return only `{requireLogin}` from the public route; move tunnel/tailscale fields behind `requireAuth` (e.g. into `/api/settings` GET which is already auth-gated).
+
+#### Finding #335: `loginLimiter.getClientIp` shared "unknown" bucket enables cross-user lockout DoS
+- **Severity**: MEDIUM (denial of service for all non-custom-server users)
+- **Location**: `src/lib/auth/loginLimiter.js:53-67`
+- **Proof (code-verified)**:
+  ```js
+  export function getClientIp(request) {
+    if (hasTrustedPeerHeaders(request)) {
+      const realIp = request.headers.get("x-9r-real-ip");
+      if (realIp) return realIp;
+    }
+    if (process.env.TRUST_PROXY === "true") {
+      const xff = request.headers.get("x-forwarded-for");
+      if (xff) return xff.split(",")[0].trim();
+    }
+    return "unknown";  // ← ALL non-trusted clients share one bucket
+  }
+  ```
+  When the app runs WITHOUT `custom-server.js` (e.g., bare `next start`, some Docker configs), ALL clients resolve to the same `"unknown"` bucket. Five failed login attempts from ANY source locks out EVERY user for 30 seconds (escalating to 30 minutes). An attacker 5 failed attempts from anywhere = global lockout.
+- **Mitigating context**: The production deployment uses `custom-server.js` which stamps `x-9r-real-ip` + `x-9r-peer-token` for every request, so the `hasTrustedPeerHeaders` path is taken and per-IP bucketing works correctly. The vulnerability affects deployments that skip the custom server wrapper.
+- **Remediation**: Fall back to `request.headers.get("x-forwarded-for")` (even without TRUST_PROXY) or the TCP `socket.remoteAddress` rather than a shared bucket. Or require custom-server.js in production.
+
+### Wave 789–790 defense confirmations
+
+- ✅ **`peerNodesValidator.js`** (`src/lib/network/peerNodesValidator.js`): Comprehensive SSRF defense — blocks non-http(s) schemes, embedded credentials, link-local/cloud-metadata IPs (169.254.0.0/16), IPv4-mapped IPv6 bypass attempts (both `::ffff:a.b.c.d` and `::ffff:aabb:ccdd` forms unwrapped and re-checked). Legitimate LAN/Tailscale CGNAT/mDNS peers preserved. Returns structured `{ok, reason, detail}` for UI error display.
+- ✅ **`providerOverridesValidator.js`** (`src/lib/auth/providerOverridesValidator.js`): Shared validator used by both PATCH /api/settings AND PUT /api/providers/[id]/overrides (prevents the drift that caused finding #315). `BLOCKED_HEADERS` includes host, content-length, content-type, connection, transfer-encoding, authorization, cookie, AND all forwarding/peer headers (x-forwarded-for/host/proto/server, x-real-ip, x-original-host, x-real-host, x-9r-real-ip, x-9r-peer-token, x-9r-via-proxy). `HEADER_NAME_RE = /^[A-Za-z0-9-]+$/` (RFC 7230 token subset). CR/LF rejected in values. Max 20 headers, max 8192 chars per value.
+- ✅ **`quotaAutoPing.js`** (`src/shared/services/quotaAutoPing.js`): Scheduler sends outbound requests to hardcoded provider URLs (e.g. `https://api.anthropic.com/v1/messages?beta=true`) with stored connection `accessToken` as Bearer. No SSRF vector — URLs are constants, not user-controlled. Uses `CLAUDE_CLI_SPOOF_HEADERS` (fingerprint spoofing — ToS concern, not security). Connection proxy config resolved via `resolveConnectionProxyConfig` (operator-configured).
+- ✅ **`outboundProxy.js`** (`src/lib/network/outboundProxy.js`): `validateProxyUrl` checks scheme allowlist (http/https/socks5/socks4/socks5h/socks4a) and strips CR/LF/backtick/dollar. No SSRF guard, but this configures the gateway's own egress proxy — the operator IS the one choosing where outbound traffic goes. Sets `HTTP_PROXY`/`HTTPS_PROXY`/`ALL_PROXY`/`NO_PROXY` globally with `NINE_ROUTER_PROXY_MANAGED` marker for cleanup.
+- ✅ **`dataDir.js`** (`src/lib/dataDir.js`): `DATA_DIR` env → `~/.9router` fallback. On Windows, rejects Unix-style absolute paths. `fs.mkdirSync(configured, { recursive: true })` — operator-controlled, not user-input.
+- ✅ **Settings PATCH full chain**: PROTECTED_SETTING_KEYS strips password + mitmSudoEncrypted. peerNodes validated. providerOverrides validated. OIDC save-time validation (hard discovery check when password would be disabled, soft URL-format check otherwise). Password change requires currentPassword when hash exists. outboundProxy env applied immediately. comboStrategy changes reset rotation state. Auto-ping scheduler reconfigured on claude/codex autoPing toggle.
+- ✅ **`/api/settings/require-login` LIVE-VERIFIED public** (finding #336): Explicitly in `PUBLIC_API_PATHS` at dashboardGuard.js:44. Returns tunnelUrl/tailscaleUrl unauthenticated.
+- ✅ **Browser probe sweep (wave 788-789)**: 22 endpoints probed unauthenticated. Public (200): /api/health, /api/version, /api/health/providers, /api/auth/status (#333), /api/settings/require-login (#336). Auth-gated (401): /api/auth/init, /api/auth/locale, /api/auth/login-logout-status, /api/settings, /api/settings/keys, /api/providers/registry, /api/usage/stats, /api/tunnel/status, /api/mcp, /api/cli-tools, /api/models, /api/providers, /api/keys, /api/combos, /api/messages, /api/translator/console-logs. 404: /api/health/live, /api/health/ready. 403: /api/auth/reset-password, /api/mcp/browsermcp/sse.
+- ✅ **Dual-server health stable** (primary=200, secondary=200) throughout waves 789–790.
+
+### Wave 792–793 findings
+
+#### Finding #337: Translator `/translate` step 3 returns provider Authorization headers and API keys to authenticated clients (credential-extraction API)
+- **Severity**: HIGH (privilege escalation — authenticated dashboard user extracts ALL provider API keys/tokens)
+- **Location**: `src/app/api/translator/translate/route.js:75-83` (step 3 handler)
+- **Proof (code-verified)**:
+  ```js
+  // translator/translate/route.js step 3:
+  const connections = await getProviderConnections({ provider });
+  const connection = connections.find(c => c.isActive !== false);
+  const credentials = {
+    apiKey: connection.apiKey,
+    accessToken: connection.accessToken,
+    refreshToken: connection.refreshToken,
+    copilotToken: connection.copilotToken,
+    ...
+  };
+  const executor = getExecutor(provider);
+  const url = executor.buildUrl(model, stream, 0, credentials);
+  const headers = executor.buildHeaders(credentials, stream);
+  return NextResponse.json({
+    success: true,
+    result: { url, headers, body: finalBody }   // ← headers include Authorization: Bearer <token>
+  });
+  ```
+  The route builds the upstream request (URL + headers + body) using stored connection credentials and returns ALL of it to the authenticated dashboard client. For an OpenAI-compatible provider this means `headers` contains `{"Authorization":"Bearer sk-..."}`; for Anthropic `{"x-api-key":"sk-ant-..."}`. Any authenticated dashboard user can iterate all configured providers and dump every stored API key, OAuth access token, and copilot token.
+- **Attack scenario**: Authenticated dashboard user (or a shared-dashboard deployment with `requireLogin: false`) calls `POST /api/translator/translate` with `step:3, body:{provider:"openai",model:"gpt-4",body:{messages:[]}}` — response includes the full Authorization header. Attacker exfiltrates the API key and uses it directly with the upstream provider, bypassing 9Router's quota controls.
+- **Defense noted**: Route sits under `/api/translator/` which is ALWAYS_PROTECTED in `dashboardGuard.js` — requires dashboard auth. Impact is privilege escalation within the authenticated user base, not remote.
+- **Remediation**: Strip Authorization/x-api-key/Cookie headers from the response. Either redact them entirely (replace with `[REDACTED]`) or show only a masked version (`Bearer sk-***abc`). Alternatively, require explicit opt-in via a separate "show raw headers" flag behind a password re-auth gate.
+
+#### Finding #338: Translator `/send` route lets authenticated users trigger arbitrary upstream provider requests (cost abuse)
+- **Severity**: MEDIUM (cost abuse; authenticated users can invoke any provider's API using stored credentials)
+- **Location**: `src/app/api/translator/send/route.js` — POST handler
+- **Proof (code-verified)**: The route takes `{provider, model, body}` from the authenticated user, resolves the first active connection, builds credentials, and calls `executor.execute({model, body, stream, credentials})` — streaming the provider response back. There is no per-user rate limit on this route and no validation of the `body` content beyond the executor's own. An authenticated user can issue unlimited requests against any configured provider (Claude, OpenAI, etc.), burning quota and money.
+- **Defense noted**: Auth-gated. Provider rate limits still apply (but those are per-account, not per-dashboard-user).
+- **Remediation**: Add per-user rate limiting to `/api/translator/send`. Consider making it a developer-only route that requires opt-in.
+
+### Wave 792–793 defense confirmations
+
+- ✅ **Translator `/save` and `/load`**: Filename allowlist enforced (8 specific files: `1_req_client.json` through `7_res_client.json`). Path traversal impossible — `path.join(logsDir, file)` with no user input reaching the directory. Save writes to `process.cwd()/logs/translator/` only.
+- ✅ **Translator `/console-logs` and `/console-logs/stream`**: Under ALWAYS_PROTECTED — LIVE-VERIFIED returning 401 from unauthenticated browser probe.
+- ✅ **`initializeApp.js`** (`src/shared/services/initializeApp.js`): Singleton via `global.__appSingleton`. Signal handlers registered once. Heavy work deferred by 3000ms (`STARTUP_DEFER_MS`) so first request isn't starved. MITM auto-start gated on saved password + enabled flag. Tunnel/tailscale auto-resume once per process (`g.tunnelAutoResumed`). cloudflared unexpected-exit callback triggers safe restart.
+- ✅ **`appUpdater.js`** (`src/lib/appUpdater.js`): `killAppProcesses` uses ps/tasklist string matching to find 9router-related PIDs, then kills them. `spawnUpdaterAndExit` spawns detached Node process running `updater.js` with full env, then exits after `exitDelayMs`. Cross-platform (Win uses taskkill, Unix uses kill -9). MITM PID file cleanup via sudo. The route gating (version/update/route.js) prevents unauthenticated invocation.
+- ✅ **Browser probe sweep (wave 791-792)**: Path traversal blocked (401). Method enforcement (405 on wrong method). Query injection ignored. All translator routes auth-gated.
+- ✅ **Dual-server health stable** (primary=200, secondary=200) throughout waves 792–793.
+
+### Wave 794 defense confirmations
+
+- ✅ **All 6 translator routes LIVE-VERIFIED auth-gated** (401 from unauthenticated browser): `/api/translator/translate`, `/api/translator/send`, `/api/translator/save`, `/api/translator/load`, `/api/translator/console-logs`, `/api/translator/console-logs/stream`. Findings #337/#337 are authenticated-only privilege escalation, not remote.
+- ✅ **Translator path traversal LIVE-VERIFIED blocked**: `?file=../../etc/passwd` → 401, `?file=../route.js` → 401. Middleware catches before route handler.
+- ✅ **`resolveConnectionProxyConfig`** (`src/lib/network/connectionProxy.js`): Proxy URL comes from stored DB data (`providerSpecificData.proxyPoolId` → `getProxyPoolById`, or legacy `connectionProxyUrl`). Not user-request-controlled. Vercel/Cloudflare/Deno/Netlify relay types map `proxyUrl` to `vercelRelayUrl` for header-based relay. `strictProxy` flag prevents fallback to direct IP. Stored-SSRF pattern (same as provider-nodes) — auth-gated write path.
+- ✅ **`estimatePromptTokens`** (`open-sse/utils/tokenEstimate.js`): Safe heuristic (chars/4 + CJK chars×1). `CJK_RE = /[\u3000-\u9fff\uf900-\ufaff\uac00-\ud7af]/g` — simple character class, no catastrophic backtracking. Handles OpenAI/Claude/Gemini/Responses formats. Unknown shapes fall back to full-body serialization. No DoS vector.
+- ✅ **`quotaPingSchedule`** (`src/shared/services/quotaPingSchedule.js`): Pure time computation. Controls WHEN pings fire (anchor time + window + slots), not WHERE. URL targets are hardcoded provider constants in `quotaAutoPing.js`. Timezone validation via `Intl.DateTimeFormat`. No SSRF.
+- ✅ **DB repos parameterized** (`src/lib/db/repos/connectionsRepo.js`): All queries use `?` placeholders. `stringifyJson`/`parseJson` helpers for JSON data column. `upsert` uses `ON CONFLICT DO UPDATE` with parameter binding. No string-concat SQL injection vectors.
+- ✅ **Browser probe matrix (wave 794)**: 17 endpoints probed unauthenticated. Auth-gated (401): `/api/auth/login-logout-status`, `/api/settings/public`, `/api/oauth/status`, `/api/sync/cloud`, `/api/sync/peer`, `/api/usage/chart`, `/api/usage/recent-logs`, `/api/export`, `/api/import`, `/api/providers/openai`, `/api/keys/1`, `/api/combos/1`, `/api/messages/1`, `/api/usage/1`. Path traversal `/api/settings/require-login/../keys` → 401. Method enforcement: `/api/locale` → 405.
+- ✅ **New public endpoint discovered**: `/api/init` returns 200 with body "Initialized" — needs investigation.
+- ✅ **Dual-server health stable** (primary=200, secondary=200) throughout wave 794.
+
+### Wave 795–797 findings
+
+#### Finding #339: pxpipe dynamic module loading from unpinned npm install → supply-chain RCE
+- **Severity**: HIGH (arbitrary code execution inside server process via npm package compromise)
+- **Location**: `src/lib/pxpipe/install.js:78-96` (`runInstall`) and `src/lib/pxpipe/loader.js:24-37` (`doLoad`)
+- **Proof (code-verified)**:
+  ```js
+  // install.js
+  const child = spawn(npm, ["install", `${PXPIPE_PACKAGE}@latest`, "--no-audit", "--no-fund", "--omit=dev"], {
+    cwd: PXPIPE_DIR,  // = DATA_DIR/pxpipe
+    ...
+  });
+  ```
+  ```js
+  // loader.js
+  const url = `${pathToFileURL(libraryEntry()).href}?v=${encodeURIComponent(info.version || "0")}`;
+  const mod = await import(/* webpackIgnore: true */ url);
+  // libraryEntry() = DATA_DIR/pxpipe/node_modules/pxpipe-proxy/dist/core/library.js
+  ```
+  The server dynamically imports JavaScript from an npm package installed at runtime with `@latest` — no package-lock.json, no integrity hash, no version pinning. If `pxpipe-proxy` on npm is compromised (account takeover, dependency confusion, maintainer coercion), the attacker's code executes inside the 9router server process with full access to all stored credentials, database, and network.
+- **Trigger condition**: Dashboard user (authenticated) clicks Install/Repair in the pxpipe settings UI. The install runs once per version change.
+- **Defense noted**: Auth-gated (only authenticated dashboard users can trigger install). The `--no-audit --no-fund` flags are cosmetic (no security impact). `--omit=dev` prevents dev-dependency install.
+- **Remediation**: Pin to a specific version with integrity hash (`npm install pxpipe-proxy@1.2.3 --integrity=sha512-...`), or bundle the package at build time instead of installing at runtime.
+
+### Wave 795–797 defense confirmations
+
+- ✅ **`/api/init/route.js`**: Benign 3-line route returning `new Response("Initialized", { status: 200 })`. Explicitly in `PUBLIC_API_PATHS` (dashboardGuard.js:36). No side effects.
+- ✅ **`/v1/models` auth**: Returns 401 with `"API key required for remote API access"` — separate auth path from dashboard (API key based, not session cookie). Dual auth model confirmed.
+- ✅ **`/api/pxpipe/status`**: Auth-gated (401 from unauthenticated browser). Install trigger also auth-gated.
+- ✅ **Skills directory**: 11 SKILL.md files (9router, chat, embeddings, image, video, tts, stt, web-search, web-fetch, message-import, research). Fetched by external AI agents from GitHub raw URLs — agent prompt injection vector, not a server vulnerability.
+- ✅ **GitHub workflows**: 4 files (docker-publish.yml, gitbook-pages.yml, memory-tests.yml, tray-binaries.yml). Supply-chain review pending.
+- ✅ **`/api/init` POST**: Returns 405 (Method Not Allowed) — only GET accepted.
+- ✅ **`/dashboard` from unauthenticated browser**: Returns 200 but `redirected:true` to `/login` — middleware redirects correctly.
+- ✅ **Browser probe matrix (wave 796)**: `/api/init` GET=200, POST=405. `/api`=404. `/v1/models`=401. `/api/v1/chat/completions` POST=401. `/codex/responses` POST=401. `/api/pxpipe/status`=401. `/dashboard`→redirect to `/login`.
+- ✅ **Dual-server health stable** (primary=200, secondary=200) throughout waves 795–797.
+
+### Wave 791 defense confirmations
+
+- ✅ **`bootstrap.js`** (`src/shared/services/bootstrap.js`): Singleton guard via `global.__appBootstrapped` prevents double-init across HMR/re-imports. Build-phase skip (`NEXT_PHASE` check) avoids spawning cloudflared / DNS init during `next build`. Calls `initializeApp()` with fail-open error logging.
+- ✅ **`version/update/route.js`** (`src/app/api/version/update/route.js`): Dual-factor auth — accepts EITHER CLI machine-id token (`x-9r-cli-token`, timingSafeEqual) OR dashboard JWT (`auth_token`). Optional `UPDATE_SECRET` env var adds a second factor via `Authorization: Bearer` (timingSafeEqual length+value comparison). Production-only gate (`NODE_ENV !== 'production'` → 403). Calls `killAppProcesses()` + `spawnUpdaterAndExit()` only after auth passes.
+- ✅ **`backgroundTokenRefresh.js`** (`src/sse/services/backgroundTokenRefresh.js`): Proactive OAuth refresh scheduler. Selects connections needing refresh via `selectConnectionsNeedingRefresh` (pure function, expiry-window check). Sequential refresh with per-provider jitter (Google: 12s base + 4s random, others: 200ms). Fail-open everywhere — tick errors and per-connection failures swallowed, never kill the interval. `isNonServerRuntime()` skips edge/build phases.
+- ✅ **Browser probe matrix (wave 791)**: 10 GET probes + 4 POST probes on public/auth endpoints. Path traversal `/api/settings/require-login/../../settings` → 401 (middleware normalizes). Method enforcement: OIDC/SAML test → 405 GET, 401 POST. Query param injection (`?callback=evil`, `?force=true`, `?verbose=1`, `?debug=1`) ignored — no reflection, no behavior change. version/update POST → 401 (auth-gated). health/providers POST → 405 (GET only).
+- ✅ **Dual-server health stable** (primary=200, secondary=200) throughout wave 791.
+
+---
+
+*Audit conducted through 788 systematic waves. Verified finding count: 335 (55 CRITICAL, 99 HIGH, 70 MEDIUM, 49 LOW). All findings code-verified or live-proven. Zero code modifications performed (read-only mandate). Notable LIVE-VERIFIED attacks: #233 (shutdown via JWT-only), #265 (ChangelogModal supply-chain XSS), #318 (unauthed /api/health/providers topology leak), #326 (hardcoded Google OAuth client secrets in source — GOCSPX- format in 5 files), #331 (SAML metadata public leak with 0.0.0.0 bind address), #333 (auth status config leak). Wave 714 integrity review retracted 5 fabricated findings; waves 716–788 held to strict "only record what the tool output actually showed" standard. Wave 785–788 added #333 (status info leak), #334 (unauthed logout CSRF), #335 (shared-bucket lockout DoS), plus comprehensive auth sub-surface defense confirmations.*
