@@ -776,6 +776,53 @@ When no region is configured or in env, the code defaults to `us-east-1`. This m
 | 230 | `67ca219f` | 2026-05-03 | Qwen OAuth URLs chat.qwen.ai→qwen.ai (#687) | MEDIUM — auth URL change (likely duplicate of 94ab0d71) | INTEGRATED |
 | 231 | `f410061e` | 2026-05-01 | proxyFetch refactor + MediaProviderDetailPage | LOW — refactor | INTEGRATED |
 
+| 232 | `67e0db77` | 2026-04-05 | Anthropic-Beta header update + claudeCloaking | MEDIUM — OAuth header spoofing | INTEGRATED |
+| 233 | `5abf7102` | 2026-03-26 | Inject placeholder when Responses API input[] empty (#419) | LOW — format correctness | INTEGRATED |
+| 234 | `e3a7733a` | 2026-03-26 | Vertex AI strip functionCall id + synthetic thoughtSignature (#414) | LOW — format correctness | INTEGRATED |
+| 235 | `e9ccae4c` | 2026-03-23 | iflow: inject stream_options for usage in streaming | LOW — usage correctness | INTEGRATED |
+| 236 | `31775393` | 2026-03-10 | iflow: sync model list with CLIProxyAPI | LOW — model discovery | INTEGRATED |
+| 237 | `06a53071` | 2026-03-10 | gemini-cli: User-Agent + X-Goog-Api-Client headers | LOW — header hygiene | INTEGRATED |
+| 238 | `6437a1c5` | 2026-03-09 | claude-to-openai: simplify usage token calculation | LOW — refactor | INTEGRATED |
+| 239 | `076e70c5` | 2026-03-09 | Providers UX: hover button + inline dropdown | LOW — UI | INTEGRATED |
+| 240 | `9bca03bf` | 2026-03-09 | Delete proxy pools migration API route | LOW — cleanup | INTEGRATED |
+| 241 | `f94ac213` | 2026-03-09 | Bulk proxy pool updates sequential (avoid lost writes) | MEDIUM — write correctness | INTEGRATED |
+| 242 | `4c469291` | 2026-03-06 | Test support cline + kilocode oauth checks (#258) | LOW — test coverage | INTEGRATED |
+| 243 | `75f486b7` | 2026-03-06 | Profile ARN in OAuth provider mapping + polling UX | LOW — OAuth UX | INTEGRATED |
+
+## Batch Triage 232-243 (March 2026 cluster — Anthropic headers + Vertex + small fixes)
+
+### 232. `67e0db77` — Anthropic-Beta header update (MEDIUM)
+
+**What upstream added:** Updated Anthropic-Beta headers + expanded claudeCloaking.js (104 lines added). Notably this commit *adds* 1 line to `claudeHeaderCache.js` — later REMOVED entirely in commit 83 (`13ed1456`) as a cross-account leak.
+
+**Integration verification:** claudeHeaderCache.js no longer exists; claudeCloaking.js is the surviving replacement.
+
+### 233-234. Responses/Vertex format fixes (LOW)
+
+- `5abf7102` — inject placeholder message when Responses API `input[]` empty (#419)
+- `e3a7733a` — strip `functionCall`/`functionResponse` id + synthetic thoughtSignature for Vertex (#414)
+
+Both are translator correctness fixes. Verified via existing translator integration in prior batches.
+
+### 241. `f94ac213` — Bulk proxy pool sequential writes (MEDIUM)
+
+**What upstream fixed:** Bulk proxy pool updates lost writes due to concurrent JSON db writes. Fix: run updates sequentially.
+
+**Security implications:** Write correctness prevents the class of bug where a user thinks they configured a proxy pool but the write was silently lost — leading to requests going direct instead of through the proxy (potential credential exposure).
+
+### 235-240, 242-243. LOW-signal
+
+- `e9ccae4c` — iflow stream_options injection for usage
+- `31775393` — iflow model list sync with CLIProxyAPI
+- `06a53071` — gemini-cli User-Agent + X-Goog-Api-Client headers
+- `6437a1c5` — claude-to-openai usage simplification
+- `076e70c5` — providers UX hover/inline
+- `9bca03bf` — proxy pools migration route deletion
+- `4c469291` — test support for cline/kilocode oauth checks
+- `75f486b7` — profile ARN in OAuth provider mapping + polling UX
+
+---
+
 ## Batch Triage 222-231 (xiaomi provider + release commits + UI refactors)
 
 ### 223. `40cfa63e` — xiaomi-tokenplan MiMo V2.5 Pro Claude-native alias (MEDIUM)
