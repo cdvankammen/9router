@@ -709,6 +709,21 @@ When no region is configured or in env, the code defaults to `us-east-1`. This m
 | 163 | `3a26d5fb` | 2026-06-13 | Remove dead buildProviderUrl/Headers path | LOW — refactor | INTEGRATED |
 | 164 | `22f6c427` | 2026-06-13 | Single-source OAuth token URLs via PROVIDERS | LOW — refactor | INTEGRATED |
 | 165 | `7134dd71` | 2026-06-13 | P2 alias single-source — OAuth alias→id from OAUTH_ALIASES | LOW — refactor | INTEGRATED |
+| 166 | `7648c341` | 2026-06-08 | Real client IP rate-limiting + remote default-password guard | CRITICAL — trust boundary | INTEGRATED |
+| 167 | `5e1c1261` | 2026-05-18 | Harden public API and local-only access gates | CRITICAL — dashboardGuard hardening | INTEGRATED |
+| 168 | `bb868085` | 2026-05-15 | Deny-by-default API auth + safe SSE controller | CRITICAL — auth boundary | INTEGRATED |
+| 169 | `52c38cf9` | 2026-05-10 | OAuth callback postMessage scoping (CWE-1385) + TLS re-verify (CWE-295) | CRITICAL — 2 findings | INTEGRATED |
+| 170 | `fe3ce25a` | 2026-05-15 | JWT_SECRET handling hardening (fail-fast in prod) | HIGH — secret management | INTEGRATED |
+| 171 | `026a7c9b` | 2026-05-20 | Login rate limiter (loginLimiter.js) | HIGH — brute-force protection | INTEGRATED |
+| 172 | `c3d91b01` | 2026-05-11 | OIDC dashboard auth (#1020) | HIGH — new auth method | INTEGRATED |
+| 173 | `c233c7c8` | 2026-06-06 | Codex durable OAuth refresh lifecycle (single-flight) | MEDIUM — credential lifecycle | INTEGRATED |
+| 174 | `d976f4cc` | 2026-05-21 | xAI Grok OAuth PKCE + API key + image | MEDIUM — new provider | INTEGRATED |
+| 175 | `9406bd18` | 2026-06-13 | Vertex ADC authorized_user credential | MEDIUM — new auth method | INTEGRATED |
+| 176 | `76f3d4b7` | 2026-05-11 | MITM Linux cert NSS DB injection (Chrome/Firefox/snap) | MEDIUM — cert trust surface | INTEGRATED |
+| 177 | `b977bf74` | 2026-06-13 | anthropic-compatible Bearer for third-party gateways | LOW — auth header | INTEGRATED |
+| 178 | `c572c687` | 2026-06-08 | Copilot proactive token refresh on models discovery | LOW — refresh correctness | INTEGRATED |
+| 179 | `bbc204b6` | 2026-06-13 | proxy.js export default (Next.js 16 middleware detection) | LOW — module compat | INTEGRATED |
+| 180 | `2be00e2a` | 2026-06-06 | Raise Next client body limit to 128MB (configurable) | LOW — config | INTEGRATED |
 
 ## Batch Triage 156-165 (June-13 refactor cluster + 4 content commits)
 
@@ -748,6 +763,98 @@ Unified two parallel switch blocks into a single `REFRESH_HANDLERS` map at `open
 
 ### Remaining (144-146, 148-149, 152-154) — All LOW
 Headroom logging/diagnosics/UI refactors, Claude 429 cooldown, registry consolidation, SSE header dedup, Google OAuth credential dedup. No security impact. All verified integrated via prior grep passes.
+
+---
+
+## Batch Triage 166-180 (auth boundary + OAuth hardening cluster — all verified)
+
+### 166. `7648c341` — Real client IP rate-limiting + default-password guard (CRITICAL)
+
+**The trust boundary we've been referencing throughout this audit.**
+- `custom-server.js:9` — per-process HMAC secret proving `x-9r-real-ip` was stamped by us, not the client
+- `custom-server.js:57` — reads `req.socket.remoteAddress` (unspoofable)
+- `custom-server.js:66` — **deletes** any client-provided `x-9r-real-ip` before stamping (prevents pre-stamping)
+- `custom-server.js:70` — stamps validated IP into `req.headers["x-9r-real-ip"]`
+- `src/lib/auth/loginLimiter.js:53-57` — keys rate-limit on trusted IP, `TRUST_PROXY=true` opt-in, global fallback
+- `src/app/api/auth/login/route.js:92` — `mustChangePassword: false` flag (force-change gate at :65-92 when default+remote)
+- `src/dashboardGuard.js:129` — `/api/auth/reset-password` in LOCAL_ONLY_PATHS
+
+**Security implications:** This is the foundational commit for our peer-token trust system. The delete-before-stamp pattern at line 66 is the critical defense against attacker pre-stamping `x-9r-real-ip: 127.0.0.1` to bypass LOCAL_ONLY gates.
+
+### 167. `5e1c1261` — Harden public API and local-only access gates (CRITICAL)
+
+- `src/dashboardGuard.js:51+` — expanded LOCAL_ONLY_PATHS and ALWAYS_PROTECTED
+- `tests/unit/dashboard-guard.test.js` — 167 new lines (24 test cases total)
+
+### 168. `bb868085` — Deny-by-default API auth + safe SSE controller (CRITICAL)
+
+- `src/dashboardGuard.js` — 56-line expansion adding deny-by-default `/api/*` catch-all (the line at :300 we've cited repeatedly)
+- `src/proxy.js` — simplified after guard promotion
+- `src/app/api/tunnel/tailscale-install/route.js` — 10-line local-only hardening
+
+### 169. `52c38cf9` — OAuth callback postMessage scoping + TLS re-verify (CRITICAL, 2 findings)
+
+**Finding 1 — CWE-1385 (postMessage targetOrigin "*"):**
+- `src/app/callback/page.js:36` — `expectedOrigins` array
+- `callback/page.js:47-49` — iterates origins and calls `window.opener.postMessage(data, origin)` per-origin instead of `"*"`
+
+**Finding 2 — CWE-295 (TLS verification disabled on DNS-bypass fetch):**
+- `open-sse/utils/proxyFetch.js:244` — `rejectUnauthorized: false` only when `insecure` flag set (no longer default)
+- `proxyFetch.js:279` — `createBypassRequest(parsedUrl, realIP, options)`
+- `proxyFetch.js:298` — `servername: parsedUrl.hostname` preserved
+- `proxyFetch.js:374` — DNS-bypass path calls `createBypassRequest`
+
+**INTERSECTION WITH OUR CRITICAL TLS FINDING (commit 42 / b58bd804):** This is the SAME CWE-295 class as our auto-fallback TLS downgrade finding. Upstream fixed one site (DNS-bypass path); our finding is a different site (TLS cert error auto-fallback in fetchWithTlsFallback). Both are now mitigated via `STRICT_SSL=true`.
+
+### 170. `fe3ce25a` — JWT_SECRET handling hardening (HIGH)
+
+- `src/lib/auth/dashboardSession.js:13-44` — fail-fast in production without `JWT_SECRET`; ephemeral dev secret with loud warning
+- Prevents the class of bug where production deployments silently use weak/random ephemeral secrets that invalidate all sessions on restart
+
+### 171. `026a7c9b` — Login rate limiter (HIGH)
+
+- `src/lib/auth/loginLimiter.js` — 64 lines, `Map<ip, {fails, lockUntil, lockLevel, lastFailAt}>`
+- Progressive lock escalation, `MAX_ATTEMPTS` threshold, time-window expiry
+- Wired into `/api/auth/login` route
+
+### 172. `c3d91b01` — OIDC dashboard auth (HIGH, #1020)
+
+- `src/lib/auth/oidc.js` — 234 lines; state/nonce/code_verifier (PKCE) at lines 6-8
+- `src/app/api/auth/oidc/{start,callback,test}/route.js` — 3 new routes
+- `src/app/api/auth/status/route.js` — new status endpoint
+- `src/dashboardGuard.js` — expanded to recognize OIDC session cookies
+
+### 173. `c233c7c8` — Codex durable OAuth refresh lifecycle (MEDIUM)
+
+- `open-sse/executors/codex.js:248` — `refreshCredentials(credentials, log)` override
+- `open-sse/executors/base.js:88` — base class default
+- Per-connection single-flight to prevent refresh-token rotation races (Merged from PR #1664)
+
+### 174. `d976f4cc` — xAI Grok OAuth PKCE + API key + image (MEDIUM)
+
+- `src/lib/oauth/providers/xai.js:27` — `flowType: "authorization_code_pkce"`
+- `src/lib/oauth/constants/xai.js:25` — `XAI_LOOPBACK_PORT = 56121`
+- `src/lib/oauth/constants/xai.js:29` — PKCE verifier byte length
+- Dual auth (OAuth + API key via console.x.ai)
+
+### 175. `9406bd18` — Vertex ADC authorized_user credential (MEDIUM)
+
+- `open-sse/executors/vertex.js:11-19` — parses ADC JSON, checks `type === "authorized_user"`
+- `vertex.js:88-92` — project-scoped path for OAuth/ADC (avoids `RESOURCE_PROJECT_INVALID`)
+- `vertex.js:150` — Bearer token refresh via Google OAuth2 endpoint
+
+### 176. `76f3d4b7` — MITM Linux cert NSS DB injection (MEDIUM, #1010)
+
+- `src/mitm/cert/install.js:190-229` — bash script injected at install time
+- Iterates `$HOME/.pki/nssdb`, `$HOME/snap/chromium/current/.pki/nssdb`, all Firefox profiles (`cert9.db` + `cert8.db`), snap Firefox profiles
+- Distros: Debian/Arch/Fedora/openSUSE covered via package-manager detection
+
+### 177-180. LOW-signal (all verified)
+
+- `b977bf74` — Bearer auth comment at `open-sse/executors/default.js:243` for third-party Anthropic gateways
+- `c572c687` — Copilot `refreshToken` passed through `src/app/api/v1/models/route.js:36,70,88`
+- `bbc204b6` — `src/proxy.js:13` `export default async function proxy(request)`
+- `2be00e2a` — `next.config.mjs` `NINEROUTER_PROXY_CLIENT_MAX_BODY_SIZE` configurable
 
 ---
 
