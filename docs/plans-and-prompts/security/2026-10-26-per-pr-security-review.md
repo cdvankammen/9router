@@ -802,6 +802,98 @@ When no region is configured or in env, the code defaults to `us-east-1`. This m
 | 254 | `0a394d0d` | 2026-02-04 | Allow HTTP for local network (secure:false) | HIGH — cookie security regression | INTEGRATED (with concern) |
 | 255 | `137f315b` | 2026-02-04 | Cursor IDE OAuth import token flow | MEDIUM — new OAuth provider | INTEGRATED |
 
+| 256 | `686585d5` | 2026-02-02 | Token expiry check + key validation in provider test route (536-line expansion) | HIGH — test route surface | INTEGRATED |
+| 257 | `1c6dd6df` | 2026-02-02 | Codex Cursor compat + Next.js 16 proxy migration (dup of 7b864a9d) | LOW — duplicate commit | INTEGRATED |
+| 258 | `7b864a9d` | 2026-02-02 | Codex Cursor compat + Next.js 16 proxy migration (dup of 1c6dd6df) | LOW — duplicate commit | INTEGRATED |
+| 259 | `e9b0a73e` | 2026-01-31 | Codex Cursor compat + Next.js 16 proxy migration (dup, different author) | LOW — duplicate commit | INTEGRATED |
+| 260 | `f2ca6f0d` | 2026-01-29 | Kiro token refresh in tokenRefresh.js | MEDIUM — credential lifecycle | INTEGRATED |
+| 261 | `31cc79ab` | 2026-01-27 | Kiro OAuth configuration + PNG asset updates | LOW — config + assets | INTEGRATED |
+| 262 | `0943387d` | 2026-01-20 | Integrated proxy support (proxyFetch.js creation, 84 lines) | HIGH — foundational proxy surface | INTEGRATED |
+| 263 | `6b22b1f4` | 2026-01-16 | Fix Kiro token refresh logic | MEDIUM — credential lifecycle fix | INTEGRATED |
+| 264 | `26b61e5f` | 2026-01-15 | Feat Kiro OAuth + Fix Codex (initial Kiro OAuth implementation) | MEDIUM — new OAuth provider | INTEGRATED |
+
+## Batch Triage 256-264 (Final tail — Jan-Feb 2026 foundational commits)
+
+### 256. `686585d5` — Token expiry + key validation in test route (HIGH)
+
+**Date:** 2026-02-02
+**Author:** decolua
+
+**What upstream added:** Massive 536-line expansion of `src/app/api/providers/[id]/test/route.js` adding token expiration checking and key validation. This is the provider connection-test endpoint that makes outbound calls using stored credentials.
+
+**Integration verification:** Test route files exist under `src/app/api/providers/[id]/test/`. The route is in PROTECTED_API_PATHS via `/api/providers` prefix match — requires auth.
+
+**Security implications:** This endpoint makes outbound calls using stored credentials (SSRF-via-stored-config vector we addressed in commit 140 / `090886ce` with `assertPublicUrl`). Our Finding #7 middleware promotion added route-level `requireAuth` to `/api/providers/[id]/test`.
+
+### 257-259. `1c6dd6df` / `7b864a9d` / `e9b0a73e` — Codex Cursor compat (3 duplicates, LOW)
+
+**Dates:** 2026-01-31 to 2026-02-02
+**Authors:** Hellodebasishsahu, decolua (×2)
+
+**What upstream added:** All three commits have identical messages: "feat(codex): Cursor compatibility + Next.js 16 proxy migration" — force streaming for Codex/OpenAI, strip unsupported params, migrate `middleware.js` → `proxy.js` for Next.js 16, webpack explicit in dev/build, updated Codex User-Agent.
+
+**Why 3 duplicates:** Likely rebases across branches during the Next.js 16 migration. Only the final state matters.
+
+**Integration verification:**
+- ✅ `src/proxy.js` exists (renamed from middleware.js)
+- ✅ `next.config.mjs` references proxy correctly
+
+### 260. `f2ca6f0d` — Kiro token refresh in tokenRefresh.js (MEDIUM)
+
+**Date:** 2026-01-29
+**Author:** decolua
+
+**What upstream added:** 13-line addition to `open-sse/services/tokenRefresh.js` for Kiro token refresh support.
+
+**Integration verification:** Kiro refresh handler is registered in the `REFRESH_HANDLERS` map at `tokenRefresh.js:139+` (verified in commit 155 / `0a8d92a6`).
+
+### 261. `31cc79ab` — Kiro OAuth config + PNG assets (LOW)
+
+**Date:** 2026-01-27
+**Author:** decolua
+
+**What upstream changed:** Kiro OAuth configuration update + regenerated provider PNG assets (antigravity, claude, cline, codex, copilot, cursor).
+
+**Integration verification:** `public/providers/kiro.png` + `antigravity.png` exist.
+
+### 262. `0943387d` — Integrated proxy support (proxyFetch.js creation) (HIGH)
+
+**Date:** 2026-01-20
+**Author:** decolua
+
+**What upstream added:** **Foundational commit** — created `open-sse/utils/proxyFetch.js` (84 lines), introducing DNS-bypass and proxy-aware fetch for the entire open-sse engine.
+
+**Integration verification:**
+- ✅ `open-sse/utils/proxyFetch.js` — now 374+ lines (expanded by later commits)
+- ✅ `open-sse/index.js` — exports the proxy utilities
+- ✅ Subsequent commits (`52c38cf9` commit 169) hardened this with TLS re-verification on DNS-bypass path
+
+**Security implications:** This is the foundational file for our CRITICAL TLS finding (commit 42 / `b58bd804`). The auto-fallback TLS downgrade (`fetchWithTlsFallback`) was added here or in a follow-up. Both upstream's TLS fix (`52c38cf9`) and our `STRICT_SSL=true` mitigation apply to this file.
+
+### 263. `6b22b1f4` — Fix Kiro token refresh logic (MEDIUM)
+
+**Date:** 2026-01-16
+**Author:** decolua
+
+**What upstream fixed:** Simplified Kiro token refresh in `open-sse/executors/kiro.js` (31→7 net lines after refactor), added usageDb tracking.
+
+**Integration verification:** Kiro executor exists at `open-sse/executors/kiro.js` (1183+ lines per prior audit) with `refreshCredentials` method.
+
+### 264. `26b61e5f` — Feat Kiro OAuth + Fix Codex (MEDIUM)
+
+**Date:** 2026-01-15
+**Author:** decolua
+
+**What upstream added:** Initial Kiro OAuth implementation:
+- `open-sse/config/codexInstructions.js` (120 lines) — Codex system instructions
+- Kiro OAuth constants added
+- Kiro executor + Codex executor updates
+- Provider model additions
+
+**Integration verification:** Kiro OAuth flow is fully implemented with AWS SSO OIDC client registration, device auth, and token refresh (verified in commits 120, 143, 185).
+
+---
+
 ## Batch Triage 244-255 (Feb 2026 — auth boundary foundation + outbound proxy + auto-login removal)
 
 ### 244. `4e92a663` — Dashboard auth guard as Next.js proxy (CRITICAL #227)
