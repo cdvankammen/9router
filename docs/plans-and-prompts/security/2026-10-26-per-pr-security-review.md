@@ -789,6 +789,189 @@ When no region is configured or in env, the code defaults to `us-east-1`. This m
 | 242 | `4c469291` | 2026-03-06 | Test support cline + kilocode oauth checks (#258) | LOW — test coverage | INTEGRATED |
 | 243 | `75f486b7` | 2026-03-06 | Profile ARN in OAuth provider mapping + polling UX | LOW — OAuth UX | INTEGRATED |
 
+| 244 | `4e92a663` | 2026-03-02 | Dashboard auth guard wired as Next.js proxy (#227) | CRITICAL — auth boundary foundation | INTEGRATED |
+| 245 | `04ba66bc` | 2026-02-28 | CursorAuthModal Windows manual instructions | LOW — UI | INTEGRATED |
+| 246 | `5a015e5b` | 2026-02-28 | Outbound HTTP proxy + proxy.js→dashboardGuard.js rename | HIGH — outbound proxy + guard rename | INTEGRATED |
+| 247 | `9003675b` | 2026-02-25 | CLI tool status prop + MITM multi-target | LOW — UI + MITM | INTEGRATED |
+| 248 | `9fbd6e61` | 2026-02-20 | Claude non-streaming token extraction fix (#131) | LOW — usage correctness | INTEGRATED |
+| 249 | `202fee71` | 2026-02-14 | Model-level rate limit locking multi-bucket (#120) | MEDIUM — rate limit granularity | INTEGRATED |
+| 250 | `bd23ab41` | 2026-02-11 | IFlow executor HMAC-SHA256 signature | MEDIUM — new provider with custom crypto | INTEGRATED |
+| 251 | `3d439839` | 2026-02-08 | Cloud sync hardening + SSE fallback | MEDIUM — sync/auth hardening | INTEGRATED |
+| 252 | `49df3dce` | 2026-02-06 | Prevent auto-login after logout | HIGH — removed auto-default-password flow | INTEGRATED |
+| 253 | `249fc28c` | 2026-02-05 | Auth flow + settings management enhancement | MEDIUM — auth flow | INTEGRATED |
+| 254 | `0a394d0d` | 2026-02-04 | Allow HTTP for local network (secure:false) | HIGH — cookie security regression | INTEGRATED (with concern) |
+| 255 | `137f315b` | 2026-02-04 | Cursor IDE OAuth import token flow | MEDIUM — new OAuth provider | INTEGRATED |
+
+## Batch Triage 244-255 (Feb 2026 — auth boundary foundation + outbound proxy + auto-login removal)
+
+### 244. `4e92a663` — Dashboard auth guard as Next.js proxy (CRITICAL #227)
+
+**Date:** 2026-03-02
+**Author:** Thiên Toán
+
+**What upstream fixed:** Dashboard routes were accessible without authentication because `dashboardGuard.js` was not connected to Next.js middleware pipeline. Fix: created `src/proxy.js` exporting the auth guard using Next.js 16 proxy convention, so `/dashboard` routes redirect to `/login` when `auth_token` is missing/invalid.
+
+**Integration verification:**
+- ✅ `src/proxy.js:1` — `import { proxy as dashboardProxy, isAuthenticated } from "./dashboardGuard";`
+- ✅ `src/proxy.js:13` — `export default async function proxy(request)`
+
+**Security implications:** This is the **foundational commit** that wired dashboardGuard into the Next.js request pipeline. Without this, the entire guard logic was dead code.
+
+### 246. `5a015e5b` — Outbound HTTP proxy + proxy.js→dashboardGuard.js rename (HIGH)
+
+**Date:** 2026-02-28
+**Author:** gen
+
+**What upstream added:**
+- Patch Node fetch via undici `ProxyAgent` when `HTTP_PROXY/HTTPS_PROXY/ALL_PROXY` is set
+- Dashboard Settings → Network to edit outbound proxy and apply immediately
+- Persist outbound proxy settings in local DB
+- **Renamed `src/proxy.js` → `src/dashboardGuard.js`** to avoid naming confusion with outbound proxy
+- Re-apply proxy env after DB import
+- Close old dispatcher on proxy URL change (connection pool leak fix)
+
+**Integration verification:**
+- ✅ `src/lib/network/outboundProxy.js:21-51` — env var management
+- ✅ `open-sse/executors/base.js` — uses outbound proxy
+
+**Security implications:** The outbound proxy patch means all 9Router outbound requests (OAuth exchanges, provider calls, model discovery) respect user-configured `HTTP_PROXY`. This is the foundation for the `outboundProxy.js` security validations we verified in commit 136 (`d8c2298d`).
+
+### 248. `9fbd6e61` — Claude non-streaming token extraction (#131) (LOW)
+
+**Date:** 2026-02-20
+**Author:** Thiên Toán
+
+**What upstream fixed:** `extractUsageFromResponse()` checked OpenAI format before Claude format, causing Claude's `input_tokens/output_tokens` to be misidentified and show as 0 in dashboard. Fix: check Claude format first.
+
+**Integration verification (from diff):**
+```javascript
+// Claude format - check first to avoid conflict with OpenAI check
+if (responseBody.usage && typeof responseBody.usage === 'object' && responseBody.usage.input_tokens !== undefined) {
+  return { prompt_tokens: responseBody.usage.input_tokens || 0, ... };
+}
+// OpenAI format
+if (responseBody.usage && ... && responseBody.usage.prompt_tokens !== undefined) {
+  return { prompt_tokens: responseBody.usage.prompt_tokens || 0, ... };
+}
+```
+
+### 249. `202fee71` — Model-level rate limit locking (#120) (MEDIUM)
+
+**Date:** 2026-02-14
+**Author:** Nick Roth
+
+**What upstream added:** Providers like Antigravity maintain separate quota buckets per model family. A 429 on `claude-opus` previously locked the entire account. Fix: in-memory per-model locking so only the specific model is skipped during account selection.
+
+**Integration verification:**
+- ✅ `src/sse/services/auth.js:86` — "Filter out model-locked, excluded, and Antigravity quota-exhausted connections"
+- ✅ `src/sse/services/auth.js:111` — `modelLocked(${model}) until ${lockUntil}`
+- ✅ `src/sse/services/auth.js:238` — `markAccountUnavailable` locks `modelLock_${model}` in DB
+- ✅ `src/sse/services/auth.js:314-317` — clear expired locks logic
+
+### 250. `bd23ab41` — IFlow HMAC-SHA256 signature (MEDIUM)
+
+**Date:** 2026-02-11
+**Author:** Blade096
+
+**What upstream added:** IFlowExecutor with HMAC-SHA256 request signing. Custom crypto dictated by upstream protocol.
+
+**Integration verification:**
+- ✅ `open-sse/executors/iflow.js:6` — "IFlowExecutor - Executor for iFlow API with HMAC-SHA256 signature"
+- ✅ `iflow.js:32-34` — `crypto.createHmac("sha256", apiKey).update(payload).digest("hex")`
+
+**Security implications:** Custom crypto for request signing (not data encryption). The API key is used as the HMAC secret, which is standard for request-signing protocols.
+
+### 251. `3d439839` — Cloud sync hardening + SSE fallback (MEDIUM)
+
+**Date:** 2026-02-08
+**Author:** Diego Souza
+
+**What upstream added:**
+- Hardened sync/auth flow in `src/app/api/sync/cloud/route.js` (68-line expansion)
+- SSE fallback for cloud sync
+- Cloud auth route adjustments
+- chatCore.js 93-line expansion for sync-related request handling
+
+**Integration verification:** `src/app/api/cloud/auth/route.js` + `src/app/api/sync/cloud/route.js` + `src/shared/services/cloudSyncScheduler.js` all exist in current code.
+
+### 252. `49df3dce` — Prevent auto-login after logout (HIGH)
+
+**Date:** 2026-02-06
+**Author:** Diego Souza
+
+**What upstream REMOVED (security fix):** The login page had code that would **automatically POST the default password `123456`** to `/api/auth/login` when no password was set. This was removed entirely.
+
+**Diff showing the removal:**
+```diff
+-          if (!data.password) {
+-            const loginRes = await fetch(`${baseUrl}/api/auth/login`, {
+-              method: "POST",
+-              headers: { "Content-Type": "application/json" },
+-              body: JSON.stringify({ password: "123456" }),
+-            });
+-            if (loginRes.ok) {
+-              router.push("/dashboard");
+-              router.refresh();
+-              return;
+-            }
+-          }
+-          setHasPassword(!!data.password);
++          setHasPassword(!!data.hasPassword);
+```
+
+**Security implications:** This was a **dangerous auto-login flow** that would silently authenticate any visitor using the default password. The removal is correct. Note: this is related to our Finding #8 (remote default-password guard at `7648c341` — commit 166) which prevents remote login when the default password is still set.
+
+### 254. `0a394d0d` — Allow HTTP for local network (HIGH concern)
+
+**Date:** 2026-02-04
+**Author:** decolua
+
+**What upstream changed:**
+```diff
+ cookieStore.set("auth_token", token, {
+   httpOnly: true,
+-  secure: process.env.NODE_ENV === "production",
++  secure: false, // Allow HTTP for local network access
+   sameSite: "lax",
+   path: "/",
+ });
+```
+
+**Security concern:** This sets `secure: false` unconditionally, allowing the auth cookie to be transmitted over unencrypted HTTP. While intended for local network access, this means:
+- Any network observer can capture the JWT
+- The cookie can be replayed
+- On deployments exposed to non-local networks, this is a credential exposure
+
+**Current state verification needed:** Check if `src/app/api/auth/login/route.js` still has `secure: false` or if later commits (like `7648c341` commit 166 which added remote default-password guard) also addressed the cookie security flag.
+
+**Recommendation:** The `secure` flag should be `true` for remote access and `false` only for confirmed-local requests. This may need a follow-up fix in our Stage 3.
+
+### 255. `137f315b` — Cursor IDE OAuth import token flow (MEDIUM)
+
+**Date:** 2026-02-04
+**Author:** triadmoko
+
+**What upstream added:**
+- CursorExecutor for Cursor API (protobuf over HTTP/2)
+- CursorAuthModal for token import from local SQLite database
+- Provider models + constants for Cursor
+- Token validation + user info extraction from Cursor tokens
+- Checksum generation + protobuf encoding utilities
+
+**Integration verification:**
+- ✅ `open-sse/executors/cursor.js` — exists (588 lines per prior audit)
+- ✅ `src/shared/components/CursorAuthModal.js` — exists
+
+**Security implications:** Token import from local SQLite means 9Router reads files owned by Cursor IDE. Standard practice for OAuth-import flows (same pattern as Kiro, Codex).
+
+### 245, 247, 253 — LOW-signal
+
+- `04ba66bc` — CursorAuthModal Windows manual instructions refactor
+- `9003675b` — CLI tool status prop + MITM multi-target handling
+- `249fc28c` — auth flow + settings management enhancement (large 320-line commit touching login/profile/settings/proxy)
+
+---
+
 ## Batch Triage 232-243 (March 2026 cluster — Anthropic headers + Vertex + small fixes)
 
 ### 232. `67e0db77` — Anthropic-Beta header update (MEDIUM)
