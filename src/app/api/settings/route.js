@@ -3,6 +3,7 @@ import { getSettings, updateSettings } from "@/lib/localDb";
 import { applyOutboundProxyEnv } from "@/lib/network/outboundProxy";
 import { validateOidcConfigForSave } from "@/lib/auth/oidc";
 import { validatePeerNodes } from "@/lib/network/peerNodesValidator";
+import { validateProviderOverrides } from "@/lib/auth/providerOverridesValidator";
 import { resetComboRotation } from "open-sse/services/combo.js";
 import bcrypt from "bcryptjs";
 
@@ -179,6 +180,24 @@ export async function PATCH(request) {
             { status: 400 },
           );
         }
+      }
+    }
+
+    // SECURITY (Row 19, 2026-10-27): providerOverrides header-injection gate.
+    // The dedicated /api/providers/[id]/overrides route already validates
+    // headers, but PATCH /api/settings previously passed providerOverrides
+    // straight to updateSettings() -> deepMergeObject with zero validation,
+    // letting an authenticated user persist arbitrary headers (incl.
+    // Authorization, Host, Cookie, forwarding headers) that would be sent
+    // on every subsequent upstream request via base.js:132
+    // `Object.assign(headers, providerOverrides.headers)`.
+    //
+    // Both write paths now share the same validator module so the two
+    // surfaces can never drift apart.
+    if (Object.prototype.hasOwnProperty.call(body, "providerOverrides")) {
+      const result = validateProviderOverrides(body.providerOverrides);
+      if (!result.ok) {
+        return NextResponse.json({ error: result.error }, { status: 400 });
       }
     }
 
