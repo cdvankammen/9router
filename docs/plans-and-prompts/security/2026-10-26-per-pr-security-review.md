@@ -665,6 +665,19 @@ When no region is configured or in env, the code defaults to `us-east-1`. This m
 | 120 | `abc0add0` | 2026-07-03 | Kiro IdC auth regional routing | MEDIUM — auth path correctness | INTEGRATED |
 | 121 | `8a664d61` | 2026-06-29 | Kimchi OAuth provider | MEDIUM — new OAuth provider | INTEGRATED |
 | 122 | `a4f44e3e` | 2026-06-26 | Kiro external_idp Microsoft SSO | MEDIUM — new auth method | INTEGRATED |
+| 123 | `baf33565` | 2026-07-29 | UI: count free-tier oauth connections | LOW — UI stats | INTEGRATED |
+| 124 | `44c7b348` | 2026-07-29 | UI: count dual-auth provider cards | LOW — UI stats | INTEGRATED |
+| 125 | `8b0fcf4b` | 2026-07-29 | CLI-tools: Claude Code max context tokens setting | LOW — LOCAL_ONLY gated | INTEGRATED |
+| 126 | `cfbdf060` | 2026-07-09 | volcengine-ark: clamp Kimi max_tokens to 32768 | LOW — param clamp | INTEGRATED |
+| 127 | `081c6f2a` | 2026-07-07 | count_tokens: structured Anthropic blocks | LOW — endpoint correctness | INTEGRATED |
+| 128 | `bbae990b` | 2026-07-07 | volcengine-ark: clamp GLM-5 max_tokens | LOW — param clamp | INTEGRATED |
+| 129 | `46e6c01a` | 2026-07-05 | claude: reconcile max_tokens vs thinking budget | LOW — param correctness | INTEGRATED |
+| 130 | `54e3245a` | 2026-07-03 | usage: track cached tokens + cost normalization | LOW — usage accounting | INTEGRATED |
+| 131 | `cd557a25` | 2026-07-03 | claude: drop foreign thinking signatures | LOW — passthrough correctness | INTEGRATED |
+| 132 | `9102c4c6` | 2026-07-03 | xiaomi-tokenplan: region selector + key validation hardening | LOW — validation | INTEGRATED |
+| 133 | `7afaecd6` | 2026-07-03 | kimchi: strip reasoning_content echo | LOW — token bounding | INTEGRATED |
+| 134 | `2d94fffe` | 2026-06-29 | gemini: thoughtSignature backfill + DONE sentinel suppress | LOW — format correctness | INTEGRATED |
+| 135 | `2deacf69` | 2026-06-26 | token-saver: full width card layout | LOW — UI only | INTEGRATED |
 
 **Total security-relevant upstream commits identified: 193**
 **Reviewed so far: 10**
@@ -2954,6 +2967,51 @@ Import Kiro accounts authenticated via Microsoft Entra/365 SSO using CLIProxyAPI
 
 ### Conclusion
 **FULLY INTEGRATED.** New auth method with proper scoping and host allowlist.
+
+---
+
+## Batch Triage 123-135 (LOW-signal commits — grouped review)
+
+All verified present in current code. None touch auth boundaries or credential handling.
+
+### 123. `baf33565` — UI: count free-tier oauth connections (LOW)
+Provider list hardcoded "apikey" for stats/toggle on free-tier cards, hiding oauth connections. Uses `dualAuthTypes` per provider. UI-only.
+
+### 124. `44c7b348` — UI: count dual-auth provider cards (LOW)
+Shares oauth+apikey stats for dual-auth providers so card totals match detail page. UI-only.
+
+### 125. `8b0fcf4b` — CLI-tools: Claude Code max context tokens (LOW)
+Adds `CLAUDE_CODE_MAX_CONTEXT_TOKENS` selector writing to settings.json. **Verified gated**: `/api/cli-tools/` is in `LOCAL_ONLY_PATHS` (dashboardGuard.js:118) — loopback + CLI token required.
+
+### 126. `cfbdf060` — volcengine-ark: Kimi max_tokens clamp 32768 (LOW)
+Param clamp preventing upstream 400s. Correctness.
+
+### 127. `081c6f2a` — count_tokens: structured Anthropic blocks (LOW)
+Token estimation for tool_use/tool_result/thinking blocks. Fixes Claude Code auto-compaction. `tests/unit/count-tokens.test.js` added.
+
+### 128. `bbae990b` — volcengine-ark: GLM-5 max_tokens clamp (LOW)
+Config-driven STRIP_RULES clamp. `tests/unit/param-support.test.js` added.
+
+### 129. `46e6c01a` — claude: max_tokens vs thinking budget reconcile (LOW)
+Fixes ordering bug where max-effort budget could exceed clamped max_tokens → Anthropic 400. Correctness.
+
+### 130. `54e3245a` — usage: cached tokens + cost normalization (LOW)
+`canonicalizeUsage()` normalizes cache-inclusive convention; cached/cache_creation priced as subsets of prompt_tokens to stop double-counting. Usage accounting.
+
+### 131. `cd557a25` — claude: drop foreign thinking signatures (LOW)
+Combo mixes models so non-Claude thinking signatures leaked into history and Anthropic rejected them. Validates and drops invalid signatures (claude.js:279). Passthrough correctness.
+
+### 132. `9102c4c6` — xiaomi-tokenplan: region selector + validation (LOW)
+Region `<Select>` in modals, accepts 403 as valid-key signal, 8s fetch timeout. Validation hardening.
+
+### 133. `7afaecd6` — kimchi: strip reasoning_content echo (LOW)
+Strips `reasoning_content` from assistant messages above 8-char threshold (kimchi.js:82-84) to bound multi-turn input tokens. Verified in current code.
+
+### 134. `2d94fffe` — gemini: thoughtSignature backfill (LOW)
+Backfills `DEFAULT_THINKING_AG_SIGNATURE` on functionCall parts missing it; suppresses OpenAI `data: [DONE]` sentinel for antigravity/gemini/vertex. Format correctness.
+
+### 135. `2deacf69` — token-saver: full width card layout (LOW)
+Single-line CSS change. UI-only.
 
 ---
 
