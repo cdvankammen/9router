@@ -623,6 +623,10 @@ When no region is configured or in env, the code defaults to `us-east-1`. This m
 | 78 | `45ec1d30` | 2026-09-10 | Deepseek Anthropic-only tool types | LOW — translator fix | INTEGRATED |
 | 79 | `1fd208e2` | 2026-09-28 | Codebuddy-intl recurring quota forward | LOW — quota fix | INTEGRATED |
 | 80 | `b04c03c6` | 2026-08-14 | Alibaba Token Plan provider | LOW — new provider | INTEGRATED |
+| 81 | `8a527fec` | 2026-08-13 | 3 bundled security fixes (SSRF search baseUrl, default-pw remote login, request-details redaction) | HIGH — 3 separate vulns | INTEGRATED |
+| 82 | `d433c0b2` | 2026-08-05 | Qoder PAT (Personal Access Token) end-to-end | MEDIUM — new credential type | INTEGRATED |
+| 83 | `13ed1456` | 2026-08-05 | Claude global header cache removal (cross-account leak) | HIGH — info leak fix | INTEGRATED |
+| 84 | `ae4f76c4` | 2026-08-05 | Redirect active sessions from /login | LOW — auth UX | INTEGRATED |
 
 **Total security-relevant upstream commits identified: 193**
 **Reviewed so far: 10**
@@ -1961,6 +1965,162 @@ Add Alibaba Token Plan (token-plan.ap-southeast-1). Standard provider addition.
 
 ### Batch conclusion
 **ALL INTEGRATED.** These commits are feature/fix work with no new trust boundaries, credential surfaces, or security controls. Standard upstream development.
+
+---
+
+## Commit 81: `8a527fec` — 3 bundled security fixes (HIGH)
+
+**Date:** 2026-08-13
+**Author:** zmf
+**Subject:** fix(security): SSRF guard on search baseUrl, default-password remote login, and request-details redaction
+
+### Three distinct vulnerabilities fixed in one commit
+
+**Fix 1: SSRF guard on search baseUrl**
+`resolveBaseUrl()` in `open-sse/handlers/search/callers.js` accepts a client-supplied `baseUrl` override. Without a guard, a remote caller could set `baseUrl: "http://169.254.169.254/latest/meta-data/"` and force the server to fetch cloud metadata, or `baseUrl: "http://127.0.0.1:20128/api/admin"` to pivot through the gateway.
+
+The fix: `assertPublicUrl(override)` rejects non-public URLs. The provider's own configured `baseUrl` remains trusted (admin-controlled).
+
+**Fix 2: Default-password remote login returns 403**
+A fresh install with no stored hash and no `INITIAL_PASSWORD` set has the hardcoded default password `123456`. Before this fix, a remote attacker could log in with the default password and receive a valid JWT, then use that JWT to `PATCH /api/settings` and disable authentication entirely (CVE-2026-56679 class attack).
+
+The fix: when `mustChangePassword` is true (fresh install + remote), the route returns **403 without issuing a JWT**. The user must change the password from the local machine or set `INITIAL_PASSWORD` before first launch.
+
+```javascript
+if (mustChangePassword) {
+  return NextResponse.json(
+    { success: false, error: "Default password must be changed before remote access...", mustChangePassword },
+    { status: 403, headers: NO_STORE_HEADERS }
+  );
+}
+```
+
+**Fix 3: Request-details payload redaction**
+`/api/usage/request-details` returned full conversation payloads (user prompts, tool calls, provider responses) to any dashboard-authenticated user. The fix redacts `request`, `providerRequest`, `providerResponse`, and `response` to `{ redacted: true }` while preserving metadata (model, tokens, latency, status).
+
+### Integration verification (2026-10-26)
+- ✅ `open-sse/handlers/search/callers.js:32` — `assertPublicUrl` imported
+- ✅ `open-sse/handlers/search/callers.js:91` — `assertPublicUrl(override)` in `resolveBaseUrl`
+- ✅ `src/app/api/auth/login/route.js:65` — `setupRequired` check
+- ✅ `src/app/api/auth/login/route.js:92` — `mustChangePassword: false` on success path
+- ✅ `src/app/api/usage/request-details/route.js:56-66` — `redactedDetails` map with 4 keys
+- ✅ `src/lib/db/repos/requestDetailsRepo.js:78` — `sanitizeHeaders` (header-level redaction)
+- ✅ `tests/unit/search-ssrf-guard.test.js` (49 lines) + `tests/unit/request-details-redaction.test.js` (54 lines)
+
+### Security implications
+
+**POSITIVE (3 separate vulnerability closures):**
+1. **SSRF on search**: Closes a real SSRF vector through client-controlled `baseUrl`
+2. **Default-password remote login**: Closes the most dangerous fresh-install attack chain (CVE-2026-56679 class). The deliberate decision to NOT issue any credential before password rotation is correct security engineering.
+3. **Request-details redaction**: Prevents any authenticated user from reading all users' conversation history
+
+**CONCERN 1 (INFO): No remote self-service password change**
+The commit explicitly documents: "this intentionally leaves no remote self-service password-change path — the change-password flow requires a JWT, which we deliberately withhold." This is a correct security trade-off, not a bug.
+
+### Intersection with our work
+| Our commit | Intersection | Status |
+|---|---|---|
+| `24f497b6` middleware promotion | Login route is in ALWAYS_PROTECTED | ✅ INTEGRATED |
+| `1ebed4fc`/`f7a641d3` route-level requireAuth | Same defense-in-depth | ✅ INTEGRATED |
+| `97f3ab97` cowork-mcp-tools SSRF guard (commit 44) | Both use `assertPublicUrl` from the same guard | ✅ INTEGRATED — shared infrastructure |
+
+### Conclusion
+**FULLY INTEGRATED.** Three genuine vulnerability closures in one commit. The default-password remote login fix is particularly important — it closes a critical fresh-install attack chain.
+
+---
+
+## Commit 82: `d433c0b2` — Qoder PAT (Personal Access Token) end-to-end (MEDIUM)
+
+**Date:** 2026-08-05
+**Author:** mannnrachman
+**Subject:** feat(qoder): support PAT (Personal Access Token) connections end-to-end
+
+### What upstream added
+`pt-...` token auth as an alternative to OAuth device flow. A PAT cannot sign COSY requests directly, so it's exchanged for a short-lived job token (`jt-...`) plus userId via `openapi.qoder.sh`, then used for signing.
+
+Also fixes job-token traffic being rejected by `api3.qoder.sh` with 403 "Login expired" — routes `jt-` traffic to `api2.qoder.sh` instead.
+
+### Integration verification (2026-10-26)
+- ✅ `open-sse/executors/qoder.js:655-728` — PAT exchange + `jt-` routing
+- ✅ `open-sse/providers/registry/qoder.js:62` — `usageApikey: true`
+- ✅ `open-sse/services/qoderModels.js` — PAT job-token cache with 5-min refresh buffer
+- ✅ Dashboard AddApiKeyModal updated for PAT labeling
+
+### Security implications
+**POSITIVE (credential type support):** PAT provides an alternative to OAuth for automation/CI use cases. The PAT→job-token exchange is short-lived (24h) with 5-min refresh buffer.
+
+**CONCERN 1 (INFO): PAT job-token cache is in-memory**
+`patJobCache` is a module-level `Map` — lost on process restart. Acceptable because PAT exchange is fast and the cache is a performance optimization, not a security primitive.
+
+### Conclusion
+**FULLY INTEGRATED.** New credential type with correct lifecycle management.
+
+---
+
+## Commit 83: `13ed1456` — Claude global header cache removal (HIGH — info leak fix)
+
+**Date:** 2026-08-05
+**Author:** decolua
+**Subject:** fix(claude): remove global header cache, gate anthropic-beta by model
+
+### What upstream fixed (CRITICAL INFO LEAK)
+The global `claudeHeaderCache` singleton **overlaid the last-seen Claude Code client's identity headers onto every subsequent request**, leaking one client's headers (`anthropic-beta`, `user-agent`, `x-stainless-*`, etc.) onto another client/account sharing the same server.
+
+In a multi-user deployment, this means:
+1. User A (Claude Code) makes a request → their identity headers are cached
+2. User B (different account) makes a request → **User A's headers are sent to Anthropic as User B's identity**
+3. Anthropic may attribute User B's requests to User A's account (billing, rate limits, audit logs)
+
+### The fix
+1. **Removed `claudeHeaderCache.js` entirely** — confirmed: file does NOT exist ✅
+2. **Removed `claudeOverlay` hook** from `HEADER_HOOKS` in `default.js`
+3. **`selectAnthropicBeta(model, body)`** — per-request computation at `shared.js:74`, gating heavy-agent flags (`advanced-tool-use`, `effort`) to opus/sonnet only
+4. **`buildHeaders` now takes `model` parameter** — per-request header construction
+
+### Integration verification (2026-10-26)
+- ✅ `open-sse/utils/claudeHeaderCache.js` — **REMOVED** (file does not exist)
+- ✅ `open-sse/providers/shared.js:74` — `selectAnthropicBeta(model, body)` export
+- ✅ `open-sse/executors/base.js:129` — `buildHeaders(credentials, stream, url, model)` takes model
+- ✅ `open-sse/executors/default.js` — `claudeOverlay` hook removed from `HEADER_HOOKS`
+
+### Security implications
+
+**POSITIVE (cross-account info leak fix):**
+This is a **critical security fix** for multi-user deployments. The global header cache was a cross-account data leak — one user's identity headers were sent with another user's requests. This could cause:
+- Billing attribution errors (User B's requests charged to User A)
+- Rate limit cross-contamination
+- Audit log corruption (actions attributed to wrong account)
+
+### Intersection with our work
+| Our commit | Intersection | Status |
+|---|---|---|
+| All multi-user deployments | This fix is essential for any deployment serving multiple users | ✅ INTEGRATED |
+| `b3cf3fde` custom header overrides (commit 19) | Different surface (user-configured vs cached) | ✅ CLEAN |
+
+### Conclusion
+**FULLY INTEGRATED.** Critical cross-account info leak fix. The complete removal of `claudeHeaderCache.js` confirms the fix is thorough.
+
+---
+
+## Commit 84: `ae4f76c4` — Redirect active sessions from /login (LOW)
+
+**Date:** 2026-08-05
+**Author:** DaDecky
+**Subject:** fix(auth): redirect active sessions from /login
+
+### What upstream fixed
+`/api/auth/status` did not expose whether the auth cookie corresponds to a valid dashboard session, so `/login` could only detect "auth disabled" (`requireLogin === false`) and not "already logged in". Added `authenticated` to the status response and redirect from `/login` when true.
+
+### Integration verification (2026-10-26)
+- ✅ `src/app/api/auth/status/route.js:41` — `authenticated: !!session` (authenticated path)
+- ✅ `src/app/api/auth/status/route.js:61` — `authenticated: false` (unauthenticated path)
+- ✅ `src/app/login/page.js:43` — `if (data.authenticated === true || data.requireLogin === false)` redirect
+
+### Security implications
+**INFO:** Auth UX improvement — prevents already-authenticated users from seeing the login page. No new trust boundary.
+
+### Conclusion
+**FULLY INTEGRATED.** Auth UX fix.
 
 ---
 
