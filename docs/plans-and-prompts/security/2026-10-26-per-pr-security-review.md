@@ -563,6 +563,9 @@ When no region is configured or in env, the code defaults to `us-east-1`. This m
 | 18 | `165f9b90` | 2026-10-15 | Nous Research OAuth + free-tier | MEDIUM — new OAuth provider | INTEGRATED |
 | 19 | `b3cf3fde` | 2026-10-01 | Per-provider custom header overrides | HIGH — user-controllable header injection | INTEGRATED (blocked-list defense) |
 | 20 | `f3f86fdd` | 2026-10-23 | Smart Router session stickiness | LOW — in-memory routing | INTEGRATED |
+| 21 | `813a0121` | 2026-10-15 | Token fallback + stable key masking in stats | LOW-MEDIUM — info leak prevention | INTEGRATED |
+| 22 | `a8f63f4d` | 2026-10-15 | no-auth free providers in /v1/models + prune custom models | LOW — model listing | INTEGRATED |
+| 23 | `59e9b526` | 2026-10-13 | Attested free-tier identity for -free models | MEDIUM — identity attestation boundary | INTEGRATED |
 
 **Total security-relevant upstream commits identified: 193**
 **Reviewed so far: 10**
@@ -1120,6 +1123,88 @@ Smart combo routing strategy powered by in-process System One evaluation with ad
 
 ### Conclusion
 **FULLY INTEGRATED.** Feature addition, no security concern.
+
+---
+
+## Commit 21: `813a0121` — Token fallback + stable key masking in stats (LOW-MEDIUM)
+
+**Date:** 2026-10-15
+**Author:** Mike (miqonee)
+**Subject:** fix(usage): token fallback for input_tokens rows and stable key masking in stats
+
+### What upstream fixed
+1. **Token counting bug:** The 24h/today live-history branch read only `tokens.prompt_tokens` from the JSON blob, so rows recorded with `input_tokens` (embeddings, Gemini) counted as zero. Now falls back to `input_tokens` and the persisted `promptTokens` column.
+2. **Stable key masking:** `maskApiKey` and the `apiKeyMap` lookup now `trim()` so whitespace variants resolve and mask consistently. Key-name fallback shows the masked key instead of the raw key prefix.
+
+### Integration verification (2026-10-26)
+- ✅ `src/lib/db/repos/usageRepo.js:6` — `maskApiKey` trims input
+- ✅ `src/lib/db/repos/usageRepo.js:334,514,641` — `maskApiKey` used in all read paths
+- ✅ `src/lib/db/repos/usageRepo.js:591` — `tokens.prompt_tokens || tokens.input_tokens || r.promptTokens` fallback chain
+
+### Security implications
+
+**POSITIVE (info leak prevention):**
+The key-masking fix closes a real info-leak path: whitespace variants of the same key previously resolved to different masked forms, which could leak the raw key prefix in the dashboard when the UI compared masked strings. Now the mask is stable regardless of whitespace.
+
+**CONCERN 1 (INFO, accepted): `maskApiKey` is display-only, not a crypto primitive**
+This is `slice(0,8) + "***" + slice(-4)` — suitable for dashboard display but not suitable as a hash or token. Correct usage context.
+
+### Conclusion
+**FULLY INTEGRATED.** Data integrity + info leak prevention fix.
+
+---
+
+## Commit 22: `a8f63f4d` — no-auth free providers in /v1/models + prune custom models (LOW)
+
+**Date:** 2026-10-15
+**Author:** Mike (miqonee)
+**Subject:** fix(models): expose no-auth free providers in /v1/models and prune custom models on node deletion
+
+### What upstream fixed
+1. **Free provider exposure:** `buildModelsList` now registers virtual connections for `noAuth` free providers (e.g., opencode, edge-tts) so their models stay listed in `/v1/models` even when other providers are connected.
+2. **Custom model pruning:** `deleteProviderNode` now also deletes compatible-node `customModels` kv rows, so deleted nodes stop surfacing models.
+
+### Integration verification (2026-10-26)
+- ✅ `src/app/api/v1/models/route.js:371-380` — `FREE_PROVIDERS` loop creates virtual connections for `noAuth` providers
+- ✅ `src/app/api/v1/models/route.js:420,575` — `isDisabled()` now checks `providerId` alongside alias
+- ✅ `src/lib/db/repos/nodesRepo.js` — prune logic present
+
+### Security implications
+**INFO:** No new trust boundary. The `/v1/models` endpoint is a read-only listing; authentication is enforced by the standard API key gate. Free-provider virtual connections are flagged `id: "noauth"` and cannot be used for request dispatch.
+
+### Conclusion
+**FULLY INTEGRATED.** Correctness fix for model listing.
+
+---
+
+## Commit 23: `59e9b526` — Attested free-tier identity for -free models (MEDIUM)
+
+**Date:** 2026-10-13
+**Author:** alwaghani
+**Subject:** fix(opencode-zen): use attested free-tier identity for -free models on keyed lane (#4784)
+
+### What upstream fixed
+Free-tier models (those with `-free` suffix) are gated behind the attested free-tier identity even when the request comes through a keyed lane. Without this fix, a user with an API key could route `-free` model requests through their paid identity, bypassing the provider's free-tier rate limits and quota accounting.
+
+### Integration verification (2026-10-26)
+- ✅ `open-sse/providers/models/helpers.js:42` — comment: "these behind the attested free-tier identity even on the keyed lane"
+- ✅ `open-sse/executors/opencode-zen.js:286` — comment: "Free-tier models are gated behind the attested free-tier identity"
+
+### Security implications
+
+**POSITIVE (quota enforcement):**
+This is an **anti-abuse** control — prevents keyed users from consuming free-tier quota under their paid identity. The attestation mechanism ensures free-tier requests use the correct identity regardless of which lane the request entered.
+
+**CONCERN 1 (INFO, accepted): Attestation mechanism**
+The attested identity is a server-side constant, not user-supplied. No injection risk.
+
+### Intersection with our work
+| Our commit | Intersection | Status |
+|---|---|---|
+| `1ebed4fc`/`f7a641d3` route-level requireAuth | Keyed lane is auth-gated; this fix is about identity selection WITHIN the keyed lane | ✅ CLEAN |
+
+### Conclusion
+**FULLY INTEGRATED.** Anti-abuse quota enforcement.
 
 ---
 
