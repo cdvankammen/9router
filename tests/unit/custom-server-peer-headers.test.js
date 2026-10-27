@@ -68,6 +68,51 @@ describe("custom-server peer header sanitizing", () => {
     expect(headers["x-forwarded-for"]).toBeUndefined();
   });
 
+  // ── Bug GG (2026-10-27): host/proto forwarding headers must be stripped ──
+  // Without this, oidc.js getPublicOrigin() and saml.js getSamlBaseUrl() build
+  // redirect_uri from an attacker-supplied x-forwarded-host when BASE_URL is
+  // unset, enabling SSO authorization-code theft via LAN header injection.
+  // See Stage 4 of docs/plans-and-prompts/security/2026-10-26-per-pr-security-review.md.
+  it("strips x-forwarded-host to prevent SSO redirect_uri hijack (Bug GG)", async () => {
+    const headers = await get({ "x-forwarded-host": "evil.example.com" });
+    expect(headers["x-forwarded-host"]).toBeUndefined();
+  });
+
+  it("strips x-forwarded-proto so OIDC/SAML cannot be coerced to https (Bug GG)", async () => {
+    const headers = await get({ "x-forwarded-proto": "https" });
+    expect(headers["x-forwarded-proto"]).toBeUndefined();
+  });
+
+  it("strips x-forwarded-server, x-original-host, x-real-host (Bug GG depth)", async () => {
+    const headers = await get({
+      "x-forwarded-server": "evil.example.com",
+      "x-original-host": "evil.example.com",
+      "x-real-host": "evil.example.com",
+    });
+    expect(headers["x-forwarded-server"]).toBeUndefined();
+    expect(headers["x-original-host"]).toBeUndefined();
+    expect(headers["x-real-host"]).toBeUndefined();
+  });
+
+  it("strips all Bug GG headers together and still derives the real IP", async () => {
+    const headers = await get({
+      "x-forwarded-for": "203.0.113.9",
+      "x-forwarded-host": "evil.example.com",
+      "x-forwarded-proto": "https",
+      "x-forwarded-server": "evil.example.com",
+      "x-original-host": "evil.example.com",
+      "x-real-host": "evil.example.com",
+    });
+    expect(headers["x-forwarded-for"]).toBeUndefined();
+    expect(headers["x-forwarded-host"]).toBeUndefined();
+    expect(headers["x-forwarded-proto"]).toBeUndefined();
+    expect(headers["x-forwarded-server"]).toBeUndefined();
+    expect(headers["x-original-host"]).toBeUndefined();
+    expect(headers["x-real-host"]).toBeUndefined();
+    // Loopback-proxy trust path still works: forwarded IP adopted.
+    expect(headers["x-9r-real-ip"]).toBe("203.0.113.9");
+  });
+
   // chat.js snapshots every client header into the request detail. Anything that grants
   // access must not survive into a record the dashboard renders and cloud sync uploads.
   it("keeps the peer token out of persisted request details", () => {

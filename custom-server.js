@@ -67,6 +67,18 @@ http.createServer = (...args) => {
     delete req.headers["x-forwarded-for"];
     delete req.headers["x-9r-via-proxy"];
     delete req.headers["x-9r-peer-token"];
+    // Bug GG (2026-10-27): strip host/proto forwarding headers so route
+    // handlers (notably oidc.js/saml.js getPublicOrigin) cannot be tricked
+    // into building attacker-controlled redirect_uri values when BASE_URL
+    // is unset. These headers must only be trusted from a verified reverse
+    // proxy; custom-server.js is the TCP-socket boundary, so strip them
+    // unconditionally here and only re-stamp safe equivalents if/when a
+    // trusted proxy layer is introduced.
+    delete req.headers["x-forwarded-host"];
+    delete req.headers["x-forwarded-proto"];
+    delete req.headers["x-forwarded-server"];
+    delete req.headers["x-original-host"];
+    delete req.headers["x-real-host"];
     req.headers["x-9r-real-ip"] = ip;
     req.headers["x-9r-peer-token"] = PEER_TOKEN;
     if (viaProxy) req.headers["x-9r-via-proxy"] = "1";
