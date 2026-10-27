@@ -659,6 +659,12 @@ When no region is configured or in env, the code defaults to `us-east-1`. This m
 | 114 | `6acc3bb9` | 2026-07-16 | anthropic-version lowercase to prevent header dup | MEDIUM — header dedup | INTEGRATED |
 | 115 | `9c58ba64` | 2026-07-16 | kiro session cache reuse (conversationId stability) | MEDIUM — cache affinity | INTEGRATED |
 | 116 | `57b3b2c1` | 2026-07-23 | console-log capture boot init + SSE no-buffer headers | MEDIUM — observability | INTEGRATED |
+| 117 | `dcf1927f` | 2026-07-10 | PXPIPE token saver — multimodal prompt compression | MEDIUM — new RTK + npm install surface | INTEGRATED (auth concern flagged) |
+| 118 | `a625ea9f` | 2026-07-10 | Request lifecycle logging refactor (session-colored tags) | LOW — observability | INTEGRATED |
+| 119 | `c85a5c57` | 2026-07-23 | Embedding token persistence | MEDIUM — usage tracking | INTEGRATED |
+| 120 | `abc0add0` | 2026-07-03 | Kiro IdC auth regional routing | MEDIUM — auth path correctness | INTEGRATED |
+| 121 | `8a664d61` | 2026-06-29 | Kimchi OAuth provider | MEDIUM — new OAuth provider | INTEGRATED |
+| 122 | `a4f44e3e` | 2026-06-26 | Kiro external_idp Microsoft SSO | MEDIUM — new auth method | INTEGRATED |
 
 **Total security-relevant upstream commits identified: 193**
 **Reviewed so far: 10**
@@ -2782,6 +2788,172 @@ The commit reads session IDs from `x-session-id`, `session_id`, `conversation_id
 
 ### Conclusion
 **FULLY INTEGRATED.** Observability + proxy buffering fix.
+
+---
+
+## Commit 117: `dcf1927f` — PXPIPE token saver (MEDIUM)
+
+**Date:** 2026-07-10
+**Author:** Elio Bonfim Júnior
+**Subject:** feat(pxpipe): PXPIPE token saver — multimodal prompt compression (#2465)
+
+### What upstream added
+A fifth Token Saver that renders Claude-format request bodies as dense PNGs via the `pxpipe-proxy` library, cutting estimated input tokens by ~35-60%. Disabled by default. Features:
+- Dynamic `npm install` into `DATA_DIR/pxpipe` with per-version cache-bust loader
+- 8 API endpoints (`/api/pxpipe/{install,health,start,stop,restart,status,logs,stats}`)
+- JSONL event log with rotation, dashboard page, per-request Activated/Skipped annotation
+- Fail-open on any error/timeout (matches RTK contract)
+
+### Integration verification (2026-10-26)
+- ✅ 8 route files under `src/app/api/pxpipe/*/route.js`
+- ✅ `src/lib/pxpipe/install.js:7` — `PXPIPE_PACKAGE = "pxpipe-proxy"` constant (no injection vector)
+- ✅ `src/lib/pxpipe/install.js:92` — `spawn(npm, ["install", "${PXPIPE_PACKAGE}@latest", "--no-audit", "--no-fund", "--omit=dev"])`
+- ✅ `tests/unit/pxpipe.test.js` — 95-line test suite
+
+### Security implications
+
+**INITIAL CONCERN (RESOLVED): Auth coverage of PXPIPE endpoints**
+The 8 PXPIPE endpoints are NOT in `ALWAYS_PROTECTED` and NOT in `LOCAL_ONLY_PATHS`. Initial assessment flagged them as potentially unauthenticated.
+
+**Resolution:** `src/dashboardGuard.js:295` implements deny-by-default for ALL `/api/*` routes: `if (pathname.startsWith("/api/")) { if (isPublicApi(pathname)) return NextResponse.next(); if (await hasValidCliToken(request) || await isAuthenticated(request)) return NextResponse.next(); return NextResponse.json({ error: "Unauthorized" }, { status: 401 }); }`. PXPIPE is covered by this catch-all — same exposure as any non-ALWAYS_PROTECTED `/api/` endpoint when `requireLogin=false`.
+
+**CONCERN 1 (MEDIUM): Dynamic npm install via child_process**
+The `/api/pxpipe/install` endpoint runs `npm install pxpipe-proxy@latest` via `child_process.spawn()`. While the package name is a hardcoded constant (no injection vector), this endpoint:
+- Downloads and executes arbitrary code from npm
+- Runs with the same privileges as the 9Router server process
+- Could be triggered by any authenticated user (or any user when `requireLogin=false`)
+
+**Mitigation:** The package name is hardcoded as `PXPIPE_PACKAGE = "pxpipe-proxy"` — no user-controlled input reaches the spawn call. The `--no-audit --no-fund --omit=dev` flags minimize attack surface. The install target is `DATA_DIR/pxpipe`, not the main `node_modules`.
+
+**Recommendation:** Consider moving `/api/pxpipe/install` to `ALWAYS_PROTECTED` to require JWT even when `requireLogin=false`, since it triggers code download/execution.
+
+### Conclusion
+**INTEGRATED with advisory.** Auth coverage is adequate via deny-by-default catch-all. The npm install surface is sandboxed by hardcoded package name but could benefit from ALWAYS_PROTECTED elevation.
+
+---
+
+## Commit 118: `a625ea9f` — Request lifecycle logging refactor (LOW)
+
+**Date:** 2026-07-10
+**Author:** decolua (Co-authored-by: Cursor)
+**Subject:** refactor(log): unify request lifecycle logging with session-colored tags
+
+### What upstream changed
+Collapsed scattered per-request console lines into 3 correlated lines (request, transform, done) with stable per-session color tags for concurrent request tracing. Also fixed usage card wrapping.
+
+### Security implications
+**INFO:** Observability improvement. No security impact. Session color tags help debug concurrent request interleaving.
+
+### Conclusion
+**FULLY INTEGRATED.** Observability refactor.
+
+---
+
+## Commit 119: `c85a5c57` — Embedding token persistence (MEDIUM)
+
+**Date:** 2026-07-23
+**Author:** zie
+**Subject:** fix(usage): record exact embedding tokens
+
+### What upstream fixed
+Embedding usage was not recording exact token counts. The fix extracts `prompt_tokens`/`input_tokens` and `total_tokens` from the provider response and persists them.
+
+### Integration verification (2026-10-26)
+- ✅ `src/sse/handlers/embeddings.js:20-24` — `prompt_tokens`, `total_tokens` extraction with `input_tokens` fallback
+- ✅ `tests/unit/embedding-usage-persistence.test.js` — 91-line test suite
+
+### Security implications
+**INFO:** Usage tracking correctness. No security impact.
+
+### Conclusion
+**FULLY INTEGRATED.** Usage tracking fix.
+
+---
+
+## Commit 120: `abc0add0` — Kiro IdC auth regional routing (MEDIUM)
+
+**Date:** 2026-07-03
+**Author:** Volodymyr Saakian (Co-authored-by: Cursor)
+**Subject:** fix(kiro): route IdC auth to regional CodeWhisperer surface (#2297)
+
+### What upstream fixed
+IAM Identity Center (`authMethod=idc`) tokens failed with 403 "bearer token invalid" because they were routed to `kiro.dev` instead of the CodeWhisperer `*.amazonaws.com` surface. The fix:
+- Treats `idc` like `api_key`/`external_idp` for CodeWhisperer routing
+- Makes the Amazon base URL region-aware from `credentials.region` instead of hardcoded `us-east-1`
+- Sends resolved `profileArn` or empty for idc/external_idp, never the shared builder-id placeholder
+
+### Integration verification (2026-10-26)
+- ✅ `open-sse/executors/kiro.js:243-244` — `isApiKey`/`isExternalIdp` from `authMethod`
+- ✅ `open-sse/executors/kiro.js:249,253` — `TokenType: API_KEY` / `TokenType: EXTERNAL_IDP` headers
+- ✅ `open-sse/executors/kiro.js:265-267` — `profileArn` → `x-amzn-codewhisperer-profile-arn` header
+- ✅ `open-sse/executors/kiro.js:305-310` — `regionalize()` function for amazonaws.com URLs
+
+### Security implications
+**POSITIVE (credential routing correctness):** IdC tokens now reach the correct AWS endpoint with proper region routing. Prevents silent credential rejection.
+
+### Conclusion
+**FULLY INTEGRATED.** Auth path correctness fix.
+
+---
+
+## Commit 121: `8a664d61` — Kimchi OAuth provider (MEDIUM)
+
+**Date:** 2026-06-29
+**Author:** Nant361 (Co-authored-by: Cursor)
+**Subject:** feat(kimchi): add Kimchi OAuth provider support
+
+### What upstream added
+New OAuth provider for Kimchi (`app.kimchi.dev`) using browser-token flow:
+- Routes through OpenAI-compatible gateway
+- Live model discovery for `/v1/models`
+- Claude-compatible request normalization
+- Connection test wiring
+
+### Integration verification (2026-10-26)
+- ✅ `src/lib/oauth/providers/kimchi.js:3` — provider definition
+- ✅ `src/lib/oauth/providers/kimchi.js:7` — `baseUrl` from config with trailing-slash strip
+- ✅ `src/lib/oauth/providers/kimchi.js:17-24` — token validation via `validationUrl`
+- ✅ `src/lib/oauth/providers/index.js:27,58` — registered in provider index
+- ✅ `open-sse/executors/kimchi.js` — 103-line executor
+- ✅ `open-sse/services/kimchiModels.js` — 176-line model discovery
+
+### Security implications
+**POSITIVE (browser-token flow):** No localhost callback port binding. Token is passed directly from browser to server.
+
+**CONCERN 1 (INFO): External validation URL**
+Token validation goes to `config.validationUrl || "https://api.cast.ai/v1/llm/openai/supported-providers"` — this is an external service that validates the Kimchi token. The token is sent as a Bearer header to this external endpoint. This is standard for browser-token OAuth flows.
+
+### Conclusion
+**FULLY INTEGRATED.** New OAuth provider with standard browser-token flow.
+
+---
+
+## Commit 122: `a4f44e3e` — Kiro external_idp Microsoft SSO (MEDIUM)
+
+**Date:** 2026-06-26
+**Author:** Stevanus Pangau (Co-authored-by: Cursor)
+**Subject:** feat(kiro): add external_idp CLIProxyAPI import for Microsoft SSO
+
+### What upstream added
+Import Kiro accounts authenticated via Microsoft Entra/365 SSO using CLIProxyAPI JSON:
+- `external_idp` refresh path (form-encoded OAuth2)
+- Microsoft login host allowlist
+- `TokenType: EXTERNAL_IDP` header for runtime and usage/quota requests
+- Dashboard import UI
+- Scoped to `authMethod === "external_idp"`; existing Kiro auth unchanged
+
+### Integration verification (2026-10-26)
+- ✅ `open-sse/executors/kiro.js:244` — `isExternalIdp = authMethod === "external_idp"`
+- ✅ `open-sse/executors/kiro.js:253` — `TokenType: EXTERNAL_IDP` header
+- ✅ `open-sse/executors/kiro.js:283-284` — CodeWhisperer surface for external_idp
+
+### Security implications
+**POSITIVE (host allowlist):** Microsoft login host allowlist prevents open-redirect in the refresh flow.
+
+**POSITIVE (scoping):** Scoped to `authMethod === "external_idp"` only — existing Kiro auth paths are unchanged.
+
+### Conclusion
+**FULLY INTEGRATED.** New auth method with proper scoping and host allowlist.
 
 ---
 
