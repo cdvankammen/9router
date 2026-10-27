@@ -627,6 +627,22 @@ When no region is configured or in env, the code defaults to `us-east-1`. This m
 | 82 | `d433c0b2` | 2026-08-05 | Qoder PAT (Personal Access Token) end-to-end | MEDIUM — new credential type | INTEGRATED |
 | 83 | `13ed1456` | 2026-08-05 | Claude global header cache removal (cross-account leak) | HIGH — info leak fix | INTEGRATED |
 | 84 | `ae4f76c4` | 2026-08-05 | Redirect active sessions from /login | LOW — auth UX | INTEGRATED |
+| 85 | `e02bde4a` | 2026-08-13 | Kimchi dual OAuth + API key | LOW — provider auth mode | INTEGRATED |
+| 86 | `35f86e58` | 2026-08-05 | Antigravity header scoping to loadCodeAssist | MEDIUM — provider fingerprint | INTEGRATED |
+| 87 | `646b3b9b` | 2026-08-05 | Cloudflare-AI API key auth declaration | LOW — auth mode fix | INTEGRATED |
+| 88 | `948dd8f8` | 2026-08-05 | OAuth register-session searchParams declaration | LOW — ReferenceError fix | INTEGRATED |
+| 89 | `0e5da70c` | 2026-08-05 | freeTier/apikey default authModes | LOW — UI fix | INTEGRATED |
+| 90 | `f260a181` | 2026-08-02 | Ollama Cloud quota + background OAuth refresh | MEDIUM — credential lifecycle | INTEGRATED |
+| 91 | `30fec431` | 2026-08-13 | snake_case token limits on /v1/models | LOW — API format | INTEGRATED |
+| 92 | `67271d85` | 2026-08-13 | Opencode official client headers on free-tier | LOW — identity header | INTEGRATED |
+| 93 | `b44bb09f` | 2026-08-13 | Kiro real output tokens | LOW — usage tracking | INTEGRATED |
+| 94 | `71dcdc10` | 2026-08-13 | Headroom toggle with proxy down | LOW — UI fix | INTEGRATED |
+| 95 | `41588bea` | 2026-08-05 | TokenRouter pricing + thinking config | LOW — provider config | INTEGRATED |
+| 96 | `b4808929` | 2026-08-05 | TokenRouter provider | LOW — new provider | INTEGRATED |
+| 97 | `baebc9a0` | 2026-08-05 | i18n port typo + RTK docs | LOW — docs | INTEGRATED |
+| 98 | `651df2f0` | 2026-08-05 | OpenDesign CLI tool support | LOW — CLI tool | INTEGRATED |
+| 99 | `41606a37` | 2026-08-05 | Cached tokens in forced-SSE->JSON path | LOW — usage tracking | INTEGRATED |
+| 100 | `c06cc084` | 2026-08-05 | `open` external for xAI/Grok refresh on Windows | LOW — platform fix | INTEGRATED |
 
 **Total security-relevant upstream commits identified: 193**
 **Reviewed so far: 10**
@@ -2121,6 +2137,143 @@ This is a **critical security fix** for multi-user deployments. The global heade
 
 ### Conclusion
 **FULLY INTEGRATED.** Auth UX fix.
+
+---
+
+## Commit 86: `35f86e58` — Antigravity header scoping (MEDIUM)
+
+**Date:** 2026-08-05
+**Author:** decolua
+**Subject:** fix(oauth): scope antigravity header fixes to loadCodeAssist/onboardUser only
+
+### What upstream fixed
+Google fingerprints `User-Agent`/`Client-Metadata` on `loadCodeAssist` and `onboardUser`, silently refusing to provision a `cloudaicompanionProject` when they don't match the real IDE. The previous fix overwrote the shared `gemini-cli` constants, affecting all providers. This commit splits antigravity's headers out of the shared constants.
+
+### The fix
+- New `ANTIGRAVITY_LOAD_CODE_ASSIST_HEADERS` constant (no `X-Goog-Api-Client`, no `Client-Metadata`)
+- `fetchProjectId` selects headers based on `provider === "antigravity"`
+- `onboardUser` also receives the provider parameter for correct header selection
+
+### Integration verification (2026-10-26)
+- ✅ `open-sse/config/appConstants.js` — `ANTIGRAVITY_LOAD_CODE_ASSIST_HEADERS` export
+- ✅ `open-sse/services/projectId.js:216` — `fetch(endpoints.loadCodeAssist, { headers: { ...headers, ... } })`
+- ✅ `open-sse/providers/registry/antigravity.js` — `loadCodeAssistUserAgent: ANTIGRAVITY_IDE_USER_AGENT`
+
+### Security implications
+**POSITIVE (provider isolation):** Prevents cross-provider header leakage. Each provider's OAuth flow now uses its own header set, preventing one provider's identity headers from being sent to another provider's endpoint.
+
+### Conclusion
+**FULLY INTEGRATED.** Provider isolation fix for OAuth header scoping.
+
+---
+
+## Commit 90: `f260a181` — Background OAuth refresh scheduler (MEDIUM)
+
+**Date:** 2026-08-02
+**Author:** B1nh M1nh
+**Subject:** feat: Ollama Cloud quota tracker + proactive background OAuth refresh
+
+### What upstream added
+A `backgroundTokenRefresh` scheduler that proactively refreshes OAuth connections within `max(provider lead, 30min)` of expiry, independent of inbound traffic.
+
+### Design decisions (verified in code)
+- **10s after boot, then every 5min** — `unref()`'d timers so the scheduler doesn't keep the process alive
+- **`DISABLE_BACKGROUND_TOKEN_REFRESH` kill-switch** — env var to disable entirely
+- **Fail-open per tick/connection** — one failed refresh doesn't block others
+- **`checkAndRefreshToken` gains opt-in `{force}`** — for the scheduler; request path unchanged
+- **Registered from both `custom-server.js` (listening event) and `initializeApp.js`** — double-registration is idempotent
+
+### Integration verification (2026-10-26)
+- ✅ `src/sse/services/backgroundTokenRefresh.js` — 184 lines, `startBackgroundTokenRefresh()` + `stopBackgroundTokenRefresh()` exports
+- ✅ `src/sse/services/backgroundTokenRefresh.js:148` — `DISABLE_BACKGROUND_TOKEN_REFRESH` kill-switch
+- ✅ `custom-server.js:18,97` — `startBackgroundTokenRefreshFromCustomServer()` registered on `listening` event
+- ✅ `src/shared/services/initializeApp.js:118-119` — dynamic import + start
+- ✅ `open-sse/providers/registry/ollama.js` — `usageApikey: true` added
+
+### Security implications
+
+**POSITIVE (credential lifecycle):**
+Proactive refresh prevents mid-request token expiry, which would cause visible errors to users. The scheduler runs independently of traffic, so idle deployments still keep tokens fresh.
+
+**CONCERN 1 (INFO, accepted): Scheduler runs with full DB access**
+The background refresh reads all OAuth connections from the DB and refreshes them. This is by design — the scheduler needs to know which tokens are near expiry. The DB access is the same as the request path.
+
+**CONCERN 2 (INFO): `unref()`'d timers**
+The scheduler uses `unref()` so it doesn't prevent process shutdown. This means if the process is shutting down, pending refreshes may not complete. Acceptable — the next boot will catch up.
+
+### Intersection with our work
+| Our commit | Intersection | Status |
+|---|---|---|
+| `0bc7f86e` Codex refresh-token reuse (commit 41) | The background scheduler could trigger the same reuse race if not coordinated | ✅ CLEAN — `dedupRefresh` in `tokenRefresh/providers.js` prevents concurrent refresh |
+| `24f497b6` middleware promotion | Background refresh doesn't go through HTTP routes | ✅ CLEAN |
+
+### Conclusion
+**FULLY INTEGRATED.** Proactive credential lifecycle management with correct fail-open semantics.
+
+---
+
+## Commits 85, 87-89, 91-100: Batch triage (LOW security signal)
+
+All commits in this batch are feature/fix work with no new trust boundaries, credential surfaces, or security controls. Standard upstream development.
+
+### Commit 85: `e02bde4a` — Kimchi dual OAuth + API key (LOW)
+**Date:** 2026-08-13 | **Author:** Fadjrir Herlambang
+Kimchi's transport is OpenAI-compatible but registry declared OAuth-only. Added `authModes: ["oauth", "apikey"]` and a `kimchi` case to `testApiKeyConnection`. Standard dual-auth provider fix.
+
+### Commit 87: `646b3b9b` — Cloudflare-AI API key auth declaration (LOW)
+**Date:** 2026-08-05 | **Author:** Sutarto Jordan Chrisfivo
+Cloudflare AI registry was missing `authType`/`authModes`, causing dashboard to report "No connections". Added `authType: "apikey"`, `authModes: ["apikey"]`. UI fix.
+
+### Commit 88: `948dd8f8` — OAuth register-session searchParams (LOW)
+**Date:** 2026-08-05 | **Author:** alfep
+Missing `searchParams` declaration caused ReferenceError → 500 HTML instead of JSON. One-line fix: `const searchParams = new URL(request.url).searchParams;`. Bug fix.
+
+### Commit 89: `0e5da70c` — freeTier/apikey default authModes (LOW)
+**Date:** 2026-08-05 | **Author:** techysy
+Providers without `authModes` were treated as oauth-only, hiding apikey connections. Added fallback to `["oauth", "apikey", "api_key"]` for freeTier/apikey providers. UI fix.
+
+### Commit 91: `30fec431` — snake_case token limits on /v1/models (LOW)
+**Date:** 2026-08-13 | **Author:** haumanto
+Expose snake_case token limits on /v1/models. API format fix.
+
+### Commit 92: `67271d85` — Opencode official client headers (LOW)
+**Date:** 2026-08-13 | **Author:** CyrixJD115
+Send official client headers on free-tier requests. Identity header fix.
+
+### Commit 93: `b44bb09f` — Kiro real output tokens (LOW)
+**Date:** 2026-08-13 | **Author:** nguyenha935
+Report real output tokens and stop discarding usable turns. Usage tracking fix.
+
+### Commit 94: `71dcdc10` — Headroom toggle with proxy down (LOW)
+**Date:** 2026-08-13 | **Author:** decolua
+Toggle reflects enabled setting even when proxy is down. UI fix.
+
+### Commit 95: `41588bea` — TokenRouter pricing + thinking config (LOW)
+**Date:** 2026-08-05 | **Author:** Dasep Moch Luay
+Add TokenRouter accurate pricing + thinking config. Provider config.
+
+### Commit 96: `b4808929` — TokenRouter provider (LOW)
+**Date:** 2026-08-05 | **Author:** Ubuntu
+Add TokenRouter provider. Standard provider addition.
+
+### Commit 97: `baebc9a0` — i18n port typo + RTK docs (LOW)
+**Date:** 2026-08-05 | **Author:** huuanh20
+Docs fix. No code change.
+
+### Commit 98: `651df2f0` — OpenDesign CLI tool support (LOW)
+**Date:** 2026-08-05 | **Author:** Diwak4r
+Add OpenDesign CLI tool support. CLI tool addition.
+
+### Commit 99: `41606a37` — Cached tokens in forced-SSE->JSON path (LOW)
+**Date:** 2026-08-05 | **Author:** omar-nahhas
+Don't lose cached tokens in the forced-SSE->JSON path. Usage tracking fix.
+
+### Commit 100: `c06cc084` — `open` external for xAI/Grok refresh on Windows (LOW)
+**Date:** 2026-08-05 | **Author:** Tomauskasz
+Keep `open` external so xAI/Grok token refresh works on Windows. Platform fix.
+
+### Batch conclusion
+**ALL INTEGRATED.** These commits are feature/fix work with no new trust boundaries, credential surfaces, or security controls. Standard upstream development.
 
 ---
 
