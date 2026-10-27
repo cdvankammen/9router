@@ -566,6 +566,13 @@ When no region is configured or in env, the code defaults to `us-east-1`. This m
 | 21 | `813a0121` | 2026-10-15 | Token fallback + stable key masking in stats | LOW-MEDIUM — info leak prevention | INTEGRATED |
 | 22 | `a8f63f4d` | 2026-10-15 | no-auth free providers in /v1/models + prune custom models | LOW — model listing | INTEGRATED |
 | 23 | `59e9b526` | 2026-10-13 | Attested free-tier identity for -free models | MEDIUM — identity attestation boundary | INTEGRATED |
+| 24 | `31b8439b` | 2026-10-23 | Ollama cloud /api/balance quota tracking | LOW — quota feature | INTEGRATED |
+| 25 | `a3ca2f9b` | 2026-10-23 | API key visibility guidance | LOW — UI guidance | INTEGRATED |
+| 26 | `8a842043` | 2026-10-23 | RTK custom system prompt | LOW — user preference | INTEGRATED |
+| 27 | `00dd3dfc` | 2026-10-23 | OAuth media pages connection card | LOW — UI fix | INTEGRATED |
+| 28 | `4a76b8de` | 2026-10-23 | Commandcode quota display | LOW — UI fix | INTEGRATED |
+| 29 | `d95bb8ea` | 2026-10-15 | Dashboard proxy dropdown portal | LOW — UI fix | INTEGRATED |
+| 30 | `28d40159` | 2026-10-15 | Auto-ping mode selection | LOW — quota UI | INTEGRATED |
 
 **Total security-relevant upstream commits identified: 193**
 **Reviewed so far: 10**
@@ -1205,6 +1212,41 @@ The attested identity is a server-side constant, not user-supplied. No injection
 
 ### Conclusion
 **FULLY INTEGRATED.** Anti-abuse quota enforcement.
+
+---
+
+## Commits 24-30: Batch triage (LOW security signal)
+
+### Commit 24: `31b8439b` — Ollama cloud /api/balance quota tracking (LOW)
+**Date:** 2026-10-23 | **Author:** AMD-it
+Ollama Cloud migrated quota limits from `/api/usage` to `/api/balance`. Added fallback to `/api/balance` when `/api/usage` limits are missing. Quota feature addition, no new trust boundary.
+
+### Commit 25: `a3ca2f9b` — API key visibility guidance (LOW)
+**Date:** 2026-10-23 | **Author:** monsterlag
+Dashboard UI guidance fix for API key visibility. No security implication.
+
+### Commit 26: `8a842043` — RTK custom system prompt (LOW)
+**Date:** 2026-10-23 | **Author:** decolua
+Added user-authored custom system prompt for RTK (token compression). User preference feature, no new credential surface.
+
+### Commit 27: `00dd3dfc` — OAuth media pages connection card (LOW)
+**Date:** 2026-10-23 | **Author:** decolua
+UI fix to keep the connection card for non-STT OAuth media pages. No security implication.
+
+### Commit 28: `4a76b8de` — Commandcode quota display (LOW)
+**Date:** 2026-10-23 | **Author:** 钛白
+UI fix for quota display and connection test on commandcode provider. No security implication.
+
+### Commit 29: `d95bb8ea` — Dashboard proxy dropdown portal (LOW)
+**Date:** 2026-10-15 | **Author:** decolua
+UI fix to unclip proxy dropdown and tooltips via body portal. No security implication.
+
+### Commit 30: `28d40159` — Auto-ping mode selection (LOW)
+**Date:** 2026-10-15 | **Author:** decolua
+Unified auto-ping mode selection and default to local timezone. Quota UI feature, no security implication.
+
+### Batch conclusion
+**ALL INTEGRATED.** These commits are feature/fix work with no new trust boundaries, credential surfaces, or security controls. Standard upstream development.
 
 ---
 
