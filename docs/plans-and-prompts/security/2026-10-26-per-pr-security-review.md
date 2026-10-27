@@ -643,6 +643,10 @@ When no region is configured or in env, the code defaults to `us-east-1`. This m
 | 98 | `651df2f0` | 2026-08-05 | OpenDesign CLI tool support | LOW — CLI tool | INTEGRATED |
 | 99 | `41606a37` | 2026-08-05 | Cached tokens in forced-SSE->JSON path | LOW — usage tracking | INTEGRATED |
 | 100 | `c06cc084` | 2026-08-05 | `open` external for xAI/Grok refresh on Windows | LOW — platform fix | INTEGRATED |
+| 101 | `8e04fe17` | 2026-07-25 | zed/trae/windsurf OAuth + callback proxy hardening (CSRF+SSRF) | HIGH — OAuth proxy security | INTEGRATED |
+| 102 | `aa0448f7` | 2026-07-25 | refresh_token rotation between retry attempts | HIGH — rotating-RT correctness | INTEGRATED |
+| 103 | `68566f53` | 2026-07-17 | Kimi dual-auth merge + K3/K2.7 models | MEDIUM — provider consolidation | INTEGRATED |
+| 104 | `7dfb3466` | 2026-07-16 | Grok CLI expiresAt surface for proactive refresh | MEDIUM — refresh lifecycle | INTEGRATED |
 
 **Total security-relevant upstream commits identified: 193**
 **Reviewed so far: 10**
@@ -2274,6 +2278,167 @@ Keep `open` external so xAI/Grok token refresh works on Windows. Platform fix.
 
 ### Batch conclusion
 **ALL INTEGRATED.** These commits are feature/fix work with no new trust boundaries, credential surfaces, or security controls. Standard upstream development.
+
+---
+
+## Commit 101: `8e04fe17` — zed/trae/windsurf OAuth + callback proxy hardening (HIGH)
+
+**Date:** 2026-07-25
+**Author:** decolua (Co-Authored-By: Claude Fable 5)
+**Subject:** feat(oauth): zed/trae/windsurf providers + harden callback proxies
+
+### What upstream fixed (multiple security concerns in one commit)
+1. **Login-CSRF + SSRF on local callback proxies** — trae/windsurf/zed callback proxies had no loopback-origin guard, state validation, or apiOrigins allowlist. A malicious webpage could forge a callback to the localhost proxy and either log the user in as the attacker's account (CSRF) or use the proxy as an SSRF pivot.
+2. **Zed RSA private key transit** — the RSA private key used for the Zed native-auth flow was transiting via GET query parameter, which would log it to browser history, proxy logs, and referrer headers. Moved to POST body.
+3. **Proxy log redaction** — sensitive fields (codeVerifier, state tokens) now redacted from proxy access logs.
+4. **OAuth provider split** — `src/lib/oauth/providers.js` split into per-provider files with facade re-export (5 standard refresh providers folded into config-driven generic).
+5. **workbuddy duplicate removed** — `open-sse/executors/workbuddy.js` deleted (was a duplicate of codebuddy-intl).
+
+### Integration verification (2026-10-26)
+- ✅ `open-sse/executors/index.js` — `WorkBuddyExecutor` removed from registry
+- ✅ `open-sse/executors/trae.js` — 343+ lines, SOLO remote agent API with `Authorization: Cloud-IDE-JWT` header
+- ✅ `open-sse/executors/windsurf.js` — 600+ lines
+- ✅ `src/lib/oauth/providers/` — split into per-provider files (zed.js, trae.js, windsurf.js, etc.)
+- ✅ Callback proxy routes include `isLocalRequest` guard (verified via `ae4f76c4` follow-up at dashboardGuard.js)
+
+### Security implications
+
+**POSITIVE (3 distinct vulnerability closures):**
+1. Login-CSRF on callback proxies — closed via loopback-origin + state validation
+2. SSRF via callback proxy — closed via apiOrigins allowlist
+3. Zed RSA key in URL query — closed via POST body transit
+
+**CONCERN 1 (INFO, accepted): trae/windsurf hidden from registry**
+Commit message: "hide trae/windsurf from registry (no tool calling support)". These executors exist but aren't exposed in the dashboard model picker. Acceptable — they're SOLO agent APIs without tool-calling.
+
+### Intersection with our work
+| Our commit | Intersection | Status |
+|---|---|---|
+| `ae6c045b` OAuth callback bind 127.0.0.1 | Same trust boundary (localhost callback) | ✅ INTEGRATED — defense-in-depth |
+| `ef181752` Zed OAuth lifecycle hardening (commit 5) | Same Zed flow, this commit adds CSRF/SSRF hardening | ✅ INTEGRATED |
+
+### Conclusion
+**FULLY INTEGRATED.** Major OAuth security hardening across 3 providers. The login-CSRF + SSRF closures on local callback proxies are genuine vulnerability fixes.
+
+---
+
+## Commit 102: `aa0448f7` — refresh_token rotation between retry attempts (HIGH)
+
+**Date:** 2026-07-25
+**Author:** decolua (Co-Authored-By: Claude Fable 5)
+**Subject:** fix(refresh): rotate refresh_token between retry attempts
+
+### What upstream fixed
+Rotating-RT providers (xAI/grok-cli) issue a **new refresh_token on every refresh**. The `refreshWithRetry` helper (3 attempts) was reusing the already-consumed RT on attempt 2/3, causing `invalid_grant` → `auth_failed retryable=false` and killing the session.
+
+### The fix (verified at `open-sse/handlers/chatCore.js:333-344`)
+```javascript
+const newCredentials = await refreshWithRetry(async () => {
+  const result = await executor.refreshCredentials(credentials, log);
+  if (result?.refreshToken && result.refreshToken !== credentials.refreshToken) {
+    if (result.accessToken) credentials.accessToken = result.accessToken;
+    credentials.refreshToken = result.refreshToken;  // ← rotate in place
+  }
+  return result;
+}, 3, log);
+```
+The credentials object is mutated in place so the next retry attempt uses the fresh RT.
+
+### Integration verification (2026-10-26)
+- ✅ `open-sse/handlers/chatCore.js:333-344` — inline closure that mutates `credentials.refreshToken` between retries
+- ✅ Comment explicitly names xAI/grok-cli as rotating-RT providers
+- ✅ Complements commit 41 (`0bc7f86e`) which re-reads the DB before refresh; this commit rotates within a single request's retry loop
+
+### Security implications
+
+**POSITIVE (credential lifecycle correctness):**
+Without this fix, a single transient refresh failure on xAI/grok-cli cascaded into a permanent auth failure (consumed RT reused → invalid_grant → retryable=false). This is a correctness fix with availability impact.
+
+**CONCERN 1 (INFO, accepted): In-place mutation of shared credentials object**
+The `credentials` object is mutated, which could surprise callers expecting it to be immutable. Acceptable because `credentials` is request-scoped in `handleChatCore` and not shared across requests.
+
+### Intersection with our work
+| Our commit | Intersection | Status |
+|---|---|---|
+| `0bc7f86e` Codex refresh-token reuse (commit 41) | Same concern (rotating RT), different scope (DB read vs retry loop) | ✅ INTEGRATED — complementary fixes |
+
+### Conclusion
+**FULLY INTEGRATED.** Essential rotating-RT correctness fix.
+
+---
+
+## Commit 103: `68566f53` — Kimi dual-auth merge + K3/K2.7 models (MEDIUM)
+
+**Date:** 2026-07-17
+**Author:** decolua (Co-authored-by: Cursor)
+**Subject:** feat(kimi): merge OAuth into dual-auth provider, add K3/K2.7 models
+
+### What upstream changed
+1. **Merged `kimi-coding` into `kimi`** — the registry previously had two separate entries (`kimi` for API key, `kimi-coding` for OAuth). Now a single `kimi` entry with `authModes: ["oauth", "apikey"]` (same dual-auth pattern as xiaomi-mimo).
+2. **Added K3 + K2.7 Code models** with proper pricing, vision caps, and baseline updates.
+3. **Parity with CLIProxyAPI device flow** — `buildKimiHeaders(deviceId)` now derives device-model/device-name from OS primitives (`platform()`, `arch()`, `hostname()`) with stable deviceId per OAuth session.
+
+### Integration verification (2026-10-26)
+- ✅ `open-sse/providers/registry/kimi-coding.js` — DELETED (65 lines removed)
+- ✅ `open-sse/providers/registry/kimi.js` — dual-auth entry
+- ✅ `open-sse/config/appConstants.js` — `buildKimiHeaders(deviceId)` with OS-derived identity fields
+- ✅ `open-sse/services/tokenRefresh.js` — kimi refresh wired in
+
+### Security implications
+
+**POSITIVE (credential lifecycle):**
+Stable deviceId per OAuth session prevents refresh churn. The OS-primitives approach avoids fingerprinting instability.
+
+**CONCERN 1 (INFO, accepted): `hostname()` leakage**
+`hostname()` is included in `X-Msh-Device-Name` header sent to Kimi's API. This is the local machine's hostname, which could be identifying. Acceptable because it's only sent to the Kimi API (not to arbitrary providers) and the user explicitly configured a Kimi connection.
+
+### Conclusion
+**FULLY INTEGRATED.** Provider consolidation + dual-auth pattern.
+
+---
+
+## Commit 104: `7dfb3466` — Grok CLI expiresAt surface for proactive refresh (MEDIUM)
+
+**Date:** 2026-07-16
+**Author:** Ella CEO
+**Subject:** fix(grok-cli): surface expiresAt so proactive token refresh fires (#2546)
+
+### What upstream fixed
+Grok CLI (xAI) `mapTokens` stored `expiresIn` but never `expiresAt`. The proactive refresh path (`shouldRefreshCredentials` / `checkAndRefreshToken`) only reads `expiresAt`/`tokenExpiresAt`, so proactive refresh never fired — only the reactive 401 path could refresh. Users saw intermittent "token expired" failures ~40-45 min after login.
+
+### The fix (verified at `src/lib/oauth/providers.js:353-361`)
+```javascript
+const expiresAt = tokens.expires_in
+  ? new Date(Date.now() + tokens.expires_in * 1000).toISOString()
+  : null;
+
+return {
+  accessToken: tokens.access_token,
+  refreshToken: tokens.refresh_token || null,
+  expiresIn: tokens.expires_in,
+  expiresAt,  // ← new: absolute expiry for proactive refresh
+  scope: tokens.scope,
+  // ...
+};
+```
+
+### Integration verification (2026-10-26)
+- ✅ `src/lib/oauth/providers.js` — `expiresAt` computed from `expires_in`
+- ✅ `tests/unit/grok-cli-expiresat-2546.test.js` — 57 lines covering proactive-refresh decision path
+- ✅ Complements commit 90 (`f260a181`) background refresh scheduler — without `expiresAt`, the scheduler couldn't know when to refresh xAI tokens
+
+### Security implications
+
+**POSITIVE (availability):**
+Fixes silent token expiry for xAI/Grok CLI users. Proactive refresh is an availability property — users shouldn't see auth errors during active sessions.
+
+### Intersection with our work
+| Our commit | Intersection | Status |
+|---|---|---|
+| `f260a181` background OAuth refresh (commit 90) | This commit provides the `expiresAt` data that commit 90's scheduler consumes | ✅ INTEGRATED — complementary |
+
+### Conclusion
+**FULLY INTEGRATED.** Token expiry lifecycle fix.
 
 ---
 
