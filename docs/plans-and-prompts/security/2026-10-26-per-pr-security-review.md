@@ -647,6 +647,12 @@ When no region is configured or in env, the code defaults to `us-east-1`. This m
 | 102 | `aa0448f7` | 2026-07-25 | refresh_token rotation between retry attempts | HIGH — rotating-RT correctness | INTEGRATED |
 | 103 | `68566f53` | 2026-07-17 | Kimi dual-auth merge + K3/K2.7 models | MEDIUM — provider consolidation | INTEGRATED |
 | 104 | `7dfb3466` | 2026-07-16 | Grok CLI expiresAt surface for proactive refresh | MEDIUM — refresh lifecycle | INTEGRATED |
+| 105 | `9c9dd7b1` | 2026-07-29 | Qoder PAT auth + model list refresh | MEDIUM — credential lifecycle | INTEGRATED |
+| 106 | `a11937cd` | 2026-07-10 | Grok CLI device-code OAuth flow | MEDIUM — new OAuth provider | INTEGRATED |
+| 107 | `c73c419d` | 2026-07-10 | Codex bare-email OAuth dedup (chatgptAccountId) | MEDIUM — credential dedup correctness | INTEGRATED |
+| 108 | `c9926897` | 2026-07-16 | X-9Router-Token-Saver bypass header | LOW — per-request RTK opt-out | INTEGRATED |
+| 109 | `e1f3399b` | 2026-07-10 | Auto-rotate proxy strategy for no-auth providers | LOW — load distribution | INTEGRATED |
+| 110 | `481e7e46` | 2026-07-05 | Headroom dashboard proxy (LOCAL_ONLY + cookie strip) | MEDIUM — new proxy surface | INTEGRATED |
 
 **Total security-relevant upstream commits identified: 193**
 **Reviewed so far: 10**
@@ -2439,6 +2445,162 @@ Fixes silent token expiry for xAI/Grok CLI users. Proactive refresh is an availa
 
 ### Conclusion
 **FULLY INTEGRATED.** Token expiry lifecycle fix.
+
+---
+
+## Commit 105: `9c9dd7b1` — Qoder PAT auth + model list refresh (MEDIUM)
+
+**Date:** 2026-07-29
+**Author:** decolua (Co-Authored-By: Claude Fable 5)
+**Subject:** feat(qoder): support PAT auth and refresh model list
+
+### What upstream added
+Follow-up to commit 82 (`d433c0b2`). Exchanges Personal Access Tokens for short-lived job tokens via the region's `jobToken/exchange` endpoint, closes SSE streams on terminal frames, re-enables OAuth + API-key auth modes, and replaces the model catalog.
+
+### Integration verification (2026-10-26)
+- ✅ `open-sse/services/qoderModels.js:102` — `exchangeJobToken` returns `{ jobToken, jobRefreshToken, expiresAt }`
+- ✅ `open-sse/services/qoderModels.js:109` — `fetchUserIdForJobToken` with `Authorization: Bearer ${jobToken}`
+- ✅ `open-sse/services/qoderModels.js:140-142` — `resolved = { accessToken: jobToken, userId, expiresAt }`
+
+### Security implications
+**POSITIVE (credential lifecycle correctness):** Short-lived job tokens (24h) with refresh buffer prevent long-lived credential exposure. The PAT→job-token exchange is a proper credential-layering pattern.
+
+### Conclusion
+**FULLY INTEGRATED.** Credential lifecycle correctness for PAT-based auth.
+
+---
+
+## Commit 106: `a11937cd` — Grok CLI device-code OAuth flow (MEDIUM)
+
+**Date:** 2026-07-10
+**Author:** Fadjrir Herlambang
+**Subject:** feat(grok-cli): add Grok CLI / Grok Build provider with OAuth device-code flow (#2502)
+
+### What upstream added
+New OAuth provider routing through `cli-chat-proxy.grok.com` (OpenAI Responses API), distinct from `xai` (api.x.ai) and `grok-web` (cookie SSO):
+- Device-code flow to `auth.x.ai` with no-PKCE
+- Shared xAI token refresh
+- `store=false` multi-turn continuity via reasoning `encrypted_content`
+- Quota tracker: on-demand window + prepaid balance on dashboard
+- Connection test: 402 spending-limit = soft success (auth OK, out of credits)
+- Virtual effort models `grok-4.5-{low,medium,high}`
+
+### Integration verification (2026-10-26)
+- ✅ `src/lib/oauth/providers/grok-cli.js:8` — `flowType: "device_code"`
+- ✅ `src/lib/oauth/providers/grok-cli.js:17-44` — device code request + poll with `urn:ietf:params:oauth:grant-type:device_code`
+- ✅ `src/lib/oauth/providers/grok-cli.js:120` — `authMethod: "device_code"`
+- ✅ `open-sse/executors/grok-cli.js` — 397 lines
+
+### Security implications
+**POSITIVE (device-code flow):** Device-code flow avoids localhost callback port binding entirely. No-PKCE is acceptable because the device-code endpoint is bound to the registered client ID.
+
+**CONCERN 1 (INFO): 402 soft success on connection test**
+A 402 (spending limit) is treated as "auth OK, out of credits". This is correct UX — the credential is valid, just the account has no balance.
+
+### Conclusion
+**FULLY INTEGRATED.** New OAuth provider with device-code flow.
+
+---
+
+## Commit 107: `c73c419d` — Codex bare-email OAuth dedup (MEDIUM)
+
+**Date:** 2026-07-10
+**Author:** HermesHunter
+**Subject:** fix(codex): avoid bare-email OAuth dedup (#2477)
+
+### What upstream fixed
+When a second Codex OAuth login happened with the same email but different `chatgptAccountId`, the dedup logic overwrote the first account's rotated token pair. The fix: only update an existing row when both share the same `chatgptAccountId`.
+
+Also: fall back to `workspaceId || chatgptAccountId || accountId` for the `chatgpt-account-id` header.
+
+### Integration verification (2026-10-26)
+- ✅ `src/lib/db/repos/connectionsRepo.js:160` — `incomingWs = data.providerSpecificData?.chatgptAccountId`
+- ✅ `src/lib/db/repos/connectionsRepo.js:170,175` — `existingWs = c.providerSpecificData?.chatgptAccountId`
+- ✅ `open-sse/executors/codex.js:229-235` — chatgptAccountId fallback for header
+
+### Security implications
+**POSITIVE (credential isolation):** Prevents cross-account token overwrite. A second Codex login now creates a new row instead of overwriting the first account's tokens.
+
+### Conclusion
+**FULLY INTEGRATED.** Multi-account credential isolation fix.
+
+---
+
+## Commit 108: `c9926897` — X-9Router-Token-Saver bypass header (LOW)
+
+**Date:** 2026-07-16
+**Author:** joachimBrindeau
+**Subject:** feat(rtk): add X-9Router-Token-Saver header to bypass token savers per request
+
+### What upstream added
+A per-request opt-out header `X-9Router-Token-Saver: off` that bypasses RTK compression for that specific request.
+
+### Security implications
+**INFO:** Client-controllable bypass of token compression. The header is consumed server-side, not forwarded to upstream providers. No new trust boundary.
+
+### Conclusion
+**INTEGRATED.** Client-controlled RTK opt-out.
+
+---
+
+## Commit 109: `e1f3399b` — Auto-rotate proxy strategy for no-auth providers (LOW)
+
+**Date:** 2026-07-10
+**Author:** Fadjrir Herlambang
+**Subject:** feat(proxy-pools): auto-rotate strategy for no-auth providers (#2409)
+
+### What upstream added
+Round-robin/random proxy pool rotation for no-auth free providers (e.g., OpenCode Free) to distribute load across all active pools and avoid per-IP rate limits.
+
+### Integration verification (2026-10-26)
+- ✅ `src/lib/network/connectionProxy.js:14,22` — `round-robin` strategy implementation
+- ✅ `src/sse/services/auth.js:49-50` — `rotateStrategy` read from `settings.providerStrategies`
+- ✅ `src/sse/services/auth.js:145,158` — strategy application during connection resolution
+- ✅ `src/shared/components/NoAuthProxyCard.js:12,19` — UI for strategy selection
+
+### Security implications
+**INFO:** Load distribution feature. No new trust boundary. The rotation is in-memory (resets on restart).
+
+### Conclusion
+**FULLY INTEGRATED.** Load distribution feature.
+
+---
+
+## Commit 110: `481e7e46` — Headroom dashboard proxy (MEDIUM)
+
+**Date:** 2026-07-05
+**Author:** Sutarto Jordan Chrisfivo
+**Subject:** fix(headroom): proxy dashboard through app (#2372)
+
+### What upstream added
+A 9Router-side proxy so the Headroom dashboard and its data endpoints (`/stats`, `/health`, `/stats-history`, `/transformations/feed`) stay same-origin when opened remotely through the 9Router app. Added an "Open Headroom Dashboard" link in the Token Saver modal.
+
+### Security-relevant design
+- `/api/headroom/proxy` gated as **LOCAL_ONLY** (loopback + CLI token)
+- Strips `cookie`/`authorization` when the Headroom target is non-loopback to avoid leaking viewer credentials
+
+### Integration verification (2026-10-26)
+- ✅ `src/app/api/headroom/proxy/[...path]/route.js` — proxy route exists
+- ✅ `src/dashboardGuard.js:117` — `LOCAL_ONLY_PATHS` array
+- ✅ `src/dashboardGuard.js:132` — `"/api/headroom/proxy"` in LOCAL_ONLY_PATHS
+- ✅ `src/dashboardGuard.js:281` — LOCAL_ONLY enforcement logic
+
+### Security implications
+
+**POSITIVE (credential isolation):**
+The cookie/authorization strip on non-loopback targets prevents viewer credentials from being forwarded to a remote Headroom instance. This is defense-in-depth — even if a user configures a non-loopback Headroom URL, their session cookie stays local.
+
+**CONCERN 1 (INFO): LOCAL_ONLY means no remote dashboard access**
+Remote users cannot access the Headroom proxy. This is by design — the proxy is for local-only Headroom administration.
+
+### Intersection with our work
+| Our commit | Intersection | Status |
+|---|---|---|
+| `24f497b6` middleware promotion | `/api/headroom/proxy` is in LOCAL_ONLY_PATHS (requires peer-token trust) | ✅ INTEGRATED |
+| `92259214` peer-token trust | LOCAL_ONLY uses `isLocalRequest` which uses `hasTrustedPeerHeaders` | ✅ INTEGRATED |
+
+### Conclusion
+**FULLY INTEGRATED.** New proxy surface with correct LOCAL_ONLY gating and credential stripping.
 
 ---
 
