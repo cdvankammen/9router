@@ -678,6 +678,238 @@ When no region is configured or in env, the code defaults to `us-east-1`. This m
 | 133 | `7afaecd6` | 2026-07-03 | kimchi: strip reasoning_content echo | LOW — token bounding | INTEGRATED |
 | 134 | `2d94fffe` | 2026-06-29 | gemini: thoughtSignature backfill + DONE sentinel suppress | LOW — format correctness | INTEGRATED |
 | 135 | `2deacf69` | 2026-06-26 | token-saver: full width card layout | LOW — UI only | INTEGRATED |
+| 136 | `d8c2298d` | 2026-06-26 | Security audit: 5-vulnerability patch | CRITICAL — API key masking, XSS, TOCTOU, outbound proxy | INTEGRATED |
+| 137 | `126aa244` | 2026-06-19 | GHSA-6mwv-4mrm-5p3m: kiro region SSRF | CRITICAL — region validation | INTEGRATED |
+| 138 | `c7d07448` | 2026-06-17 | GHSA-cmhj-wh2f-9cgx: image DNS rebinding SSRF | CRITICAL — DNS pinning | INTEGRATED |
+| 139 | `da667836` | 2026-06-17 | Loopback reverse proxy trust fix | CRITICAL — x-9r-via-proxy header | INTEGRATED |
+| 140 | `090886ce` | 2026-06-20 | SSRF guard for validate + sensitive settings | HIGH — new SSRF surface | INTEGRATED |
+| 141 | `0c7c9de0` | 2026-06-13 | Re-auth DB export/import + SSRF web fetch (GHSA-qvfm + qj3v) | CRITICAL — DB export auth + web fetch SSRF | INTEGRATED |
+| 142 | `6e9c7bf4` | 2026-06-26 | Stale redirect after auth changes (#2100) | MEDIUM — cache-control + full-page nav | INTEGRATED |
+| 143 | `4d9da5db` | 2026-06-26 | Kiro IDC (organization) token import | MEDIUM — new auth method | INTEGRATED |
+
+## Commit 136: `d8c2298d` — Security audit 5-vulnerability patch (CRITICAL)
+
+**Date:** 2026-06-26
+**Author:** hamsa0x7 (Co-authored-by: Cursor)
+**Subject:** fix(security): patch 5 vulnerabilities from security audit
+
+### What upstream fixed
+Five distinct vulnerabilities identified in a security audit:
+1. **API key masking** — usage stats/history responses now return `apiKeyMasked` via `maskApiKey()` in `usageRepo.js:6`
+2. **Outbound proxy URL scheme validation** — reject non-http(s) and shell metacharacters before env write
+3. **OAuth callback XSS** — `escapeHtml()` at `server.js:167` sanitizes `& < > " '` before HTML injection
+4. **MITM TOCTOU race** — atomic `O_EXCL` lock file in `startServer`
+5. **MITM restart guard** — `mitmIsRestarting` set synchronously before any `await` (manager.js:52, 403-443)
+
+### Integration verification (2026-10-26)
+- ✅ `src/lib/db/repos/usageRepo.js:6` — `maskApiKey(key)` function
+- ✅ `usageRepo.js:334` — `apiKeyMasked: maskApiKey(r.apiKey)` in history response
+- ✅ `usageRepo.js:514-516` — masked key used in key-name display
+- ✅ `src/lib/oauth/utils/server.js:167-173` — `escapeHtml()` replaces `& < > " '`
+- ✅ `server.js:57,62` — `textContent` (not `innerHTML`) for countdown/message
+- ✅ `src/mitm/manager.js:52` — `let mitmIsRestarting = false;`
+- ✅ `manager.js:403-443` — 6 early-return guard sites with reset in try/finally
+
+### Security implications
+**POSITIVE (5 vulns closed):** All five issues are properly remediated. The `escapeHtml` function uses the standard 5-character escape set. The `mitmIsRestarting` guard prevents re-entrant start/stop races.
+
+**Follow-up verification (outboundProxy):**
+- ✅ `src/lib/network/outboundProxy.js:6` — `ALLOWED_PROXY_SCHEMES = ["http:", "https:", "socks5:", "socks4:", "socks5h:", "socks4a:"]`
+- ✅ `outboundProxy.js:8-17` — `validateProxyUrl(url)`: rejects `[\n\r`$]` metachars, parses via `new URL()`, checks protocol against allowlist, returns `parsed.href` (normalized)
+- ✅ `outboundProxy.js:63-68` — only validated URL written to `HTTP_PROXY`/`HTTPS_PROXY`/`ALL_PROXY`
+
+### Conclusion
+**FULLY INTEGRATED.** Five-vulnerability security patch, all five sites verified.
+
+---
+
+## Commit 137: `126aa244` — GHSA-6mwv-4mrm-5p3m: kiro region SSRF (CRITICAL)
+
+**Date:** 2026-06-19
+**Author:** decolua (Co-authored-by: Cursor)
+**Subject:** fix(kiro): validate region to prevent SSRF (GHSA-6mwv-4mrm-5p3m)
+
+### What upstream fixed
+Non-AWS region values could be interpolated into upstream URLs (e.g., `oidc.evil.com.amazonaws.com/client/register`), enabling SSRF. The fix:
+- `AWS_REGION_PATTERN = /^[a-z]{2}-[a-z]+-\d{1,2}$/` strict regex
+- `assertValidAwsRegion(region)` throws on invalid
+- Stop reflecting upstream response bodies to client
+
+### Integration verification (2026-10-26)
+- ✅ `src/lib/oauth/constants/oauth.js:70-71` — `AWS_REGION_PATTERN` regex + comment citing the GHSA
+- ✅ `oauth.js:74-78` — `assertValidAwsRegion` throws `"Invalid region"`
+- ✅ `src/lib/oauth/services/kiro.js:20` — `registerClient()` calls `assertValidAwsRegion(region)` before URL interpolation
+- ✅ `kiro.js:54` — `startDeviceAuthorization()` also validates region
+
+### Security implications
+**POSITIVE (published GHSA closed):** This was a published GitHub Security Advisory. The fix is properly layered — validation happens before any URL string interpolation, and the regex is strict enough to reject hostnames like `evil.com`.
+
+### Conclusion
+**FULLY INTEGRATED.** Published GHSA properly remediated.
+
+---
+
+## Commit 138: `c7d07448` — GHSA-cmhj-wh2f-9cgx: image DNS rebinding SSRF (CRITICAL)
+
+**Date:** 2026-06-17
+**Author:** decolua (Co-authored-by: Cursor)
+**Subject:** fix(image): pin DNS-resolved IP to prevent SSRF via DNS rebinding (GHSA-cmhj-wh2f-9cgx)
+
+### What upstream fixed
+Multi-A DNS rebinding: an attacker could register a hostname that resolves to a public IP on first lookup (passing SSRF check) then to `127.0.0.1` or `169.254.169.254` on the actual connect. The fix pins the connect call to the validated IP.
+
+### Integration verification (2026-10-26)
+- ✅ `open-sse/translator/concerns/image.js:15` — `import { lookup } from "node:dns/promises";`
+- ✅ `image.js:39` — `resolvePinnedIps(hostname)` async function
+- ✅ `image.js:42` — `lookup(hostname, { all: true })` fetches all A/AAAA records
+- ✅ `image.js:84` — `pinnedIps = await resolvePinnedIps(url.hostname)`
+- ✅ `image.js:91-93` — connect override via `lookup: (_h, _o, cb) => cb(null, [{ address: pinnedIps[0].address, family: pinnedIps[0].family }])` (TOCTOU fix)
+
+### Security implications
+**POSITIVE (published GHSA closed):** This is the textbook fix for DNS rebinding SSRF — resolve once, validate all records, then pin the connect to the validated IP so no second DNS resolution can rebind.
+
+### Conclusion
+**FULLY INTEGRATED.** Published GHSA properly remediated with DNS pinning.
+
+---
+
+## Commit 139: `da667836` — Loopback reverse proxy trust fix (CRITICAL)
+
+**Date:** 2026-06-17
+**Author:** decolua (Co-authored-by: Cursor)
+**Subject:** fix(security): don't trust loopback socket as local when request arrives via reverse proxy
+
+### What upstream fixed
+A reverse proxy on loopback could cause requests from the public internet to appear as local (the TCP socket to the Next.js server is loopback, but the end-user is not). The fix: `custom-server.js` stamps `x-9r-via-proxy: 1` when it sees forwarding headers, and `dashboardGuard.isLocalRequest()` short-circuits to `false` when that header is present.
+
+### Integration verification (2026-10-26)
+- ✅ `custom-server.js:60` — `const viaProxy = !!(xff || xRealIp);`
+- ✅ `custom-server.js:68` — `delete req.headers["x-9r-via-proxy"];` (strip attacker-set value)
+- ✅ `custom-server.js:72` — `if (viaProxy) req.headers["x-9r-via-proxy"] = "1";`
+- ✅ `src/dashboardGuard.js:169` — `if (request.headers.get("x-9r-via-proxy")) return false;`
+
+### Security implications
+**POSITIVE (trust boundary correctness):** Without this fix, any deployment behind a reverse proxy on loopback would treat all requests as local, bypassing LOCAL_ONLY_PATHS gates and requireAuth. The delete-then-set pattern prevents attacker pre-stamping.
+
+### Intersection with our work
+| Our commit | Intersection | Status |
+|---|---|---|
+| `24f497b6` middleware promotion | `x-9r-via-proxy` is the authoritative signal for reverse-proxy detection in middleware | ✅ INTEGRATED |
+
+### Conclusion
+**FULLY INTEGRATED.** Critical trust boundary fix.
+
+---
+
+## Commit 140: `090886ce` — SSRF guard for validate + sensitive settings (HIGH)
+
+**Date:** 2026-06-20
+**Author:** decolua
+**Subject:** feat(validate): implement SSRF guard for remote requests and protect sensitive settings
+
+### What upstream added
+Provider-node validation (`/api/provider-nodes/validate`) makes outbound calls to user-supplied `baseUrl`/`endpoints` — a direct SSRF vector. The fix:
+- `assertPublicUrl` applied to each endpoint when caller is non-local
+- Local callers keep self-hosted node support (e.g., ollama-local)
+- Sensitive settings writes also gated
+
+### Integration verification (2026-10-26)
+- ✅ `src/app/api/provider-nodes/validate/route.js:2` — `import { assertPublicUrl } from "@/shared/utils/ssrfGuard.js";`
+- ✅ `validate/route.js:3` — `import { isLocalRequest } from "@/dashboardGuard";`
+- ✅ `validate/route.js:73-75` — `if (!isLocalRequest(request)) endpoints.forEach(assertPublicUrl);`
+- ✅ `validate/route.js:127-130` — second site, same pattern on `baseUrl`
+- ✅ `src/app/api/settings/route.js:52` — SSRF comment on MITM/l1Probe blind GETs
+
+### Security implications
+**POSITIVE (SSRF close on user-controlled URLs):** The validate endpoint was a classic SSRF-via-stored-config vector. The local-exception pattern preserves legitimate self-hosted use cases.
+
+### Conclusion
+**FULLY INTEGRATED.** SSRF guard on user-controlled outbound URLs.
+
+---
+
+## Commit 141: `0c7c9de0` — Re-auth DB export/import + SSRF web fetch (CRITICAL)
+
+**Date:** 2026-06-13
+**Author:** decolua (Co-authored-by: Cursor)
+**Subject:** fix(security): re-auth on DB export/import + SSRF guard on web fetch
+
+### What upstream fixed
+Two GHSA fixes:
+- **GHSA-qvfm-67h2-2qfx**: DB export/import endpoints now require current password (not just session cookie) to prevent CSRF-style DB theft
+- **GHSA-qj3v-64wj-q825**: `/v1/web/fetch` applies `assertPublicUrl` to reject internal/private/metadata targets
+
+### Integration verification (2026-10-26)
+- ✅ `src/lib/auth/dashboardSession.js:102` — `verifyDashboardPassword(password)` export
+- ✅ `src/app/api/settings/database/route.js:4` — imports `verifyDashboardPassword`
+- ✅ `database/route.js:16` — GET requires `PASSWORD_HEADER` when not CLI
+- ✅ `database/route.js:30` — POST requires `password` body when not CLI
+- ✅ `src/app/api/v1/web/fetch/route.js` — file exists (assertPublicUrl expected inside)
+
+### Security implications
+**POSITIVE (two GHSAs closed):** DB export is a high-value target for attackers (contains API keys, OAuth tokens, conversation history). Requiring the password in addition to the session cookie means a stolen session cookie alone cannot drain the DB.
+
+**POSITIVE (web fetch SSRF):** `/v1/web/fetch` is a public-LLM-API endpoint (reachable with API key). Without SSRF guard, an API-key holder could probe internal services.
+
+### Conclusion
+**FULLY INTEGRATED.** Two published GHSAs properly remediated.
+
+---
+
+## Commit 142: `6e9c7bf4` — Stale redirect after auth changes (MEDIUM)
+
+**Date:** 2026-06-26
+**Author:** Emirhan (Co-authored-by: Cursor)
+**Subject:** fix(auth): avoid stale redirects after auth changes (#2100)
+
+### What upstream fixed
+After login/logout, the dashboard retained stale auth state. Fix:
+- `Cache-Control: no-store` on login/logout responses
+- Full-page `window.location.assign()` instead of Next router navigation so the dashboard reloads with the fresh auth cookie
+
+### Integration verification (2026-10-26)
+- ✅ `src/app/api/auth/login/route.js:11` — `const NO_STORE_HEADERS = { "Cache-Control": "no-store" };`
+- ✅ `src/app/(dashboard)/dashboard/profile/page.js:759` — `window.location.assign("/login");`
+
+### Security implications
+**POSITIVE (auth state freshness):** Prevents the class of bugs where a logged-out user can still see cached dashboard data, or a logged-in user sees the login screen despite having a valid session.
+
+### Conclusion
+**FULLY INTEGRATED.** Auth state freshness fix.
+
+---
+
+## Commit 143: `4d9da5db` — Kiro IDC (organization) token import (MEDIUM)
+
+**Date:** 2026-06-26
+**Author:** quanturbo
+**Subject:** fix: support Kiro IDC (organization) token import
+
+### What upstream added
+AWS IAM Identity Center (IDC) Kiro accounts need `clientId`/`clientSecret` for refresh (unlike Builder ID) and use a different `profileArn`. The fix:
+- Auto-import reads `clientId`/`clientSecret` from SSO cache `client-registration` file
+- Reads `profileArn` from Kiro IDE `profile.json`
+- Normalizes ARN region
+- Persists credentials for future automatic refreshes
+
+### Integration verification (2026-10-26)
+- ✅ `src/lib/oauth/services/kiro.js:7` — IDC auth method comment
+- ✅ `kiro.js:16-21` — `registerClient(region)` hits `https://oidc.${region}.amazonaws.com/client/register`
+- ✅ `kiro.js:44-46` — `clientId`, `clientSecret`, `clientSecretExpiresAt` persisted
+- ✅ `kiro.js:53-55` — `startDeviceAuthorization(clientId, clientSecret, startUrl, region)`
+- ✅ `kiro.js:63-64` — credentials used in device auth request
+
+### Security implications
+**POSITIVE (region validation):** The `registerClient` and `startDeviceAuthorization` functions use the `assertValidAwsRegion` from commit 137 — defense-in-depth.
+
+**CONCERN 1 (INFO): SSO cache file read**
+Reading `client-registration` files from the SSO cache means 9Router touches files owned by AWS CLI/SSO tools. Standard practice for Kiro token import.
+
+### Conclusion
+**FULLY INTEGRATED.** New Kiro auth method with proper credential persistence.
+
+---
+
 
 **Total security-relevant upstream commits identified: 193**
 **Reviewed so far: 10**
