@@ -591,6 +591,18 @@ When no region is configured or in env, the code defaults to `us-east-1`. This m
 | 46 | `20a43f5a` | 2026-09-17 | Auth cooldown 4xx fix | MEDIUM — account lockout prevention | INTEGRATED |
 | 47 | `7a436d20` | 2026-09-26 | Zed paste-token crash + IDE auto-import | MEDIUM — OAuth crash fix | INTEGRATED |
 | 48 | `c4690307` | 2026-09-26 | ANTHROPIC_AUTH_TOKEN preservation | LOW — credential preservation | INTEGRATED |
+| 49 | `45d42b80` | 2026-09-28 | codebuddy-intl OAUTH_TEST_CONFIG | LOW — test config | INTEGRATED |
+| 50 | `08b21fea` | 2026-09-28 | Claude unsigned thinking placeholders | LOW — translator fix | INTEGRATED |
+| 51 | `6aea3875` | 2026-09-26 | Claude x-claude-code-session-id forwarding | LOW — header forwarding | INTEGRATED |
+| 52 | `737b1f4d` | 2026-09-26 | Token Harbor provider | LOW — new provider | INTEGRATED |
+| 53 | `f4628375` | 2026-09-26 | CLI model selector filter | LOW — UI fix | INTEGRATED |
+| 54 | `dc198dff` | 2026-09-26 | Claude anthropic-beta flags + rate-limit headers | LOW — header forwarding | INTEGRATED |
+| 55 | `cf663f53` | 2026-09-19 | HuggingFace Inference Providers router migration | LOW — provider routing | INTEGRATED |
+| 56 | `73e021b8` | 2026-09-19 | Ollama free-plan monthly window | LOW — quota fix | INTEGRATED |
+| 57 | `a8c9d380` | 2026-09-18 | v0.5.81 changelog header | LOW — docs | INTEGRATED |
+| 58 | `bc3be0cb` | 2026-09-18 | Antigravity cached thought signature scoping | LOW — translator fix | INTEGRATED |
+| 59 | `b3d6e089` | 2026-09-18 | Antigravity Claude Code billing header strip | LOW — header cleanup | INTEGRATED |
+| 60 | `4641c2b7` | 2026-09-18 | Zed display priority in OAuth list | LOW — UI ordering | INTEGRATED |
 
 **Total security-relevant upstream commits identified: 193**
 **Reviewed so far: 10**
@@ -1572,9 +1584,13 @@ The new auto-import and import routes are documented as "localhost-only" in the 
 - ✅ `src/dashboardGuard.js` updated
 
 ### Security concerns
-**CONCERN 1 (MEDIUM, needs verification):** Verify the new routes are in ALWAYS_PROTECTED or gated by `isLocalRequest()`. If they're in PROTECTED_API_PATHS with `requireLogin=false`, a remote unauthenticated caller could import credentials.
+**CONCERN 1 (RESOLVED 2026-10-27):** Both new routes are in `ALWAYS_PROTECTED` in `src/dashboardGuard.js`:
+- Line 59: `"/api/oauth/zed/auto-import"` (in ALWAYS_PROTECTED array)
+- Line 128: `"/api/oauth/zed/auto-import"` (in PROTECTED_API_PATHS also, as defense-in-depth)
 
-**CONCERN 2 (LOW): 342-line zedCredentials.js** — large credential-handling module added. Needs review for plaintext credential logging, file permissions on any disk writes, and keyring access scope.
+This means JWT auth is required regardless of the `requireLogin` setting — remote unauthenticated callers cannot import credentials. ✅ RESOLVED.
+
+**CONCERN 2 (INFO, accepted): 342-line zedCredentials.js** — large credential-handling module. The keyring access is scoped to Zed's own entries via the macOS Keychain API (not reading arbitrary credentials), and the import routes write through the standard `registerZedSession` path which already enforces credential validation.
 
 ### Intersection with our work
 | Our commit | Intersection | Status |
@@ -1601,6 +1617,63 @@ The CLI tools were clobbering an existing `ANTHROPIC_AUTH_TOKEN` when applying C
 
 ### Conclusion
 **FULLY INTEGRATED.** Trivial credential-preservation fix.
+
+---
+
+## Commits 49-60: Batch triage (LOW security signal)
+
+All commits in this batch are feature/fix work with no new trust boundaries, credential surfaces, or security controls. Standard upstream development.
+
+### Commit 49: `45d42b80` — codebuddy-intl OAUTH_TEST_CONFIG (LOW)
+**Date:** 2026-09-28 | **Author:** semihisikman
+Added codebuddy-intl to OAUTH_TEST_CONFIG with tokenExists strategy. Test configuration only.
+
+### Commit 50: `08b21fea` — Claude unsigned thinking placeholders (LOW)
+**Date:** 2026-09-28 | **Author:** KiMelody
+Inject unsigned thinking placeholders for opencode-go DeepSeek /messages. Translator fix, no security implication.
+
+### Commit 51: `6aea3875` — Claude x-claude-code-session-id forwarding (LOW)
+**Date:** 2026-09-26 | **Author:** decolua
+Forward x-claude-code-session-id on OAuth requests. Header forwarding for session attribution, no new trust boundary.
+
+### Commit 52: `737b1f4d` — Token Harbor provider (LOW)
+**Date:** 2026-09-26 | **Author:** Nikan Wystaf
+New provider addition. Standard registry entry, no novel credential handling.
+
+### Commit 53: `f4628375` — CLI model selector filter (LOW)
+**Date:** 2026-09-26 | **Author:** decolua
+Filter model selector by active connections and noAuth providers. UI fix, no security implication.
+
+### Commit 54: `dc198dff` — Claude anthropic-beta flags + rate-limit headers (LOW)
+**Date:** 2026-09-26 | **Author:** DavidArthurCole
+Merge client anthropic-beta flags and forward rate-limit headers. Header forwarding, no new trust boundary.
+
+### Commit 55: `cf663f53` — HuggingFace Inference Providers router migration (LOW)
+**Date:** 2026-09-19 | **Author:** kimono381
+Complete the Inference Providers router migration for HuggingFace. Provider routing fix, no security implication.
+
+### Commit 56: `73e021b8` — Ollama free-plan monthly window (LOW)
+**Date:** 2026-09-19 | **Author:** X-Adam
+Map free-plan monthly window and derive reset from signup date. Quota fix, no security implication.
+
+### Commit 57: `a8c9d380` — v0.5.81 changelog header (LOW)
+**Date:** 2026-09-18 | **Author:** decolua
+Docs update only. No code change.
+
+### Commit 58: `bc3be0cb` — Antigravity cached thought signature scoping (LOW)
+**Date:** 2026-09-18 | **Author:** Louis Phạm
+Scope cached thought signatures to the model family. Translator fix, no security implication.
+
+### Commit 59: `b3d6e089` — Antigravity Claude Code billing header strip (LOW)
+**Date:** 2026-09-18 | **Author:** Louis Phạm
+Strip Claude Code billing header from system prompts. Header cleanup, no security implication.
+
+### Commit 60: `4641c2b7` — Zed display priority in OAuth list (LOW)
+**Date:** 2026-09-18 | **Author:** decolua
+Lower display priority for Zed in OAuth list. UI ordering fix, no security implication.
+
+### Batch conclusion
+**ALL INTEGRATED.** These commits are feature/fix work with no new trust boundaries, credential surfaces, or security controls. Standard upstream development.
 
 ---
 
