@@ -687,6 +687,40 @@ When no region is configured or in env, the code defaults to `us-east-1`. This m
 | 142 | `6e9c7bf4` | 2026-06-26 | Stale redirect after auth changes (#2100) | MEDIUM — cache-control + full-page nav | INTEGRATED |
 | 143 | `4d9da5db` | 2026-06-26 | Kiro IDC (organization) token import | MEDIUM — new auth method | INTEGRATED |
 
+| 144 | `fb543a1f` | 2026-06-26 | Headroom: clarify token diagnostics vs billing | LOW — logging clarity | INTEGRATED |
+| 145 | `cb65a45e` | 2026-06-26 | Token-saver dashboard page extraction | LOW — UI refactor | INTEGRATED |
+| 146 | `50ed79fe` | 2026-06-21 | Headroom: Docker sidecar proxy support | LOW — deployment flexibility | INTEGRATED |
+| 147 | `8321032e` | 2026-06-21 | CodeBuddy CN: API key auth + credit quota | MEDIUM — dual-auth provider | INTEGRATED |
+| 148 | `b55cf36d` | 2026-06-20 | Headroom: proxy lifecycle management + dashboard | LOW — process management | INTEGRATED |
+| 149 | `79df34ca` | 2026-06-17 | Claude OAuth 429 spam reduction | LOW — rate limit handling | INTEGRATED |
+| 150 | `706e6513` | 2026-06-17 | Kiro headless API-key auth + direct claude:kiro route | MEDIUM — new auth + translator | INTEGRATED |
+| 151 | `aba4c45d` | 2026-06-15 | Translator ESM-safe registry + tool-id pairing | MEDIUM — module system correctness | INTEGRATED |
+| 152 | `bb9e9aa9` | 2026-06-14 | Registry consolidation + DRY cleanup | LOW — refactor | INTEGRATED |
+| 153 | `9105dd0e` | 2026-06-13 | SSE_HEADERS_CORS dedup | LOW — refactor | INTEGRATED |
+| 154 | `72ce5157` | 2026-06-13 | Google OAuth client credentials dedup | LOW — refactor | INTEGRATED |
+| 155 | `0a8d92a6` | 2026-06-13 | Token refresh dispatch unification | LOW — refactor | INTEGRATED |
+
+## Batch Triage 144-155 (LOW/MEDIUM commits — grouped review)
+
+All verified present in current code. Security-relevant items noted individually.
+
+### 147. `8321032e` — CodeBuddy CN dual-auth (MEDIUM)
+Adds API key auth alongside existing OAuth device-code flow. **Verified**: `open-sse/providers/registry/codebuddy-cn.js:19-20` — `authModes: ["oauth", "apikey"]`, `hasOAuth: true`. Dual-auth pattern matches kiro/codex precedent.
+
+### 150. `706e6513` — Kiro headless API-key + direct route (MEDIUM)
+Long-lived `ksk_` API keys for Kiro/AWS CodeWhisperer plus direct `claude:kiro` / `kiro:claude` translator routes avoiding the lossy OpenAI two-hop pivot. **Verified**: `open-sse/executors/kiro.js:243,249` — `isApiKey` check + `TokenType: API_KEY` header; `open-sse/translator/index.js:105,204` — direct route registration comments; `claude-to-kiro.js:6` and `kiro-to-claude.js:10` confirm self-contained translators.
+
+### 151. `aba4c45d` — ESM-safe registry (MEDIUM)
+Replaced `require()` with static side-effect imports in translator/index.js to survive ESM circular import order. **Verified**: `grep -c 'require(' open-sse/translator/index.js` returns **0**. Also added deterministic tool_call id derivation for gemini/antigravity functionCall/functionResponse pairing.
+
+### 155. `0a8d92a6` — REFRESH_HANDLERS registry (LOW)
+Unified two parallel switch blocks into a single `REFRESH_HANDLERS` map at `open-sse/services/tokenRefresh.js:139`. **Verified** at lines 139, 183, 193.
+
+### Remaining (144-146, 148-149, 152-154) — All LOW
+Headroom logging/diagnosics/UI refactors, Claude 429 cooldown, registry consolidation, SSE header dedup, Google OAuth credential dedup. No security impact. All verified integrated via prior grep passes.
+
+---
+
 ## Commit 136: `d8c2298d` — Security audit 5-vulnerability patch (CRITICAL)
 
 **Date:** 2026-06-26
