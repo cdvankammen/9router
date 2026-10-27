@@ -653,6 +653,12 @@ When no region is configured or in env, the code defaults to `us-east-1`. This m
 | 108 | `c9926897` | 2026-07-16 | X-9Router-Token-Saver bypass header | LOW — per-request RTK opt-out | INTEGRATED |
 | 109 | `e1f3399b` | 2026-07-10 | Auto-rotate proxy strategy for no-auth providers | LOW — load distribution | INTEGRATED |
 | 110 | `481e7e46` | 2026-07-05 | Headroom dashboard proxy (LOCAL_ONLY + cookie strip) | MEDIUM — new proxy surface | INTEGRATED |
+| 111 | `b870b5d4` | 2026-09-03 | SSRF guard bypass closes (#3714) — 4 bypass classes | CRITICAL — SSRF hardening | INTEGRATED |
+| 112 | `cadef6c4` | 2026-08-28 | RTK system prompt injection format-safe + idempotent | CRITICAL — prompt injection correctness | INTEGRATED |
+| 113 | `8ac631d6` | 2026-06-26 | GHSA-hj98-rc6w-m8cw: IPv6-mapped IPv4 block | CRITICAL — SSRF bypass | INTEGRATED |
+| 114 | `6acc3bb9` | 2026-07-16 | anthropic-version lowercase to prevent header dup | MEDIUM — header dedup | INTEGRATED |
+| 115 | `9c58ba64` | 2026-07-16 | kiro session cache reuse (conversationId stability) | MEDIUM — cache affinity | INTEGRATED |
+| 116 | `57b3b2c1` | 2026-07-23 | console-log capture boot init + SSE no-buffer headers | MEDIUM — observability | INTEGRATED |
 
 **Total security-relevant upstream commits identified: 193**
 **Reviewed so far: 10**
@@ -2601,6 +2607,181 @@ Remote users cannot access the Headroom proxy. This is by design — the proxy i
 
 ### Conclusion
 **FULLY INTEGRATED.** New proxy surface with correct LOCAL_ONLY gating and credential stripping.
+
+---
+
+## Commit 111: `b870b5d4` — SSRF guard bypass closes (CRITICAL #3714)
+
+**Date:** 2026-09-03
+**Author:** openhands
+**Subject:** fix(security): close SSRF guard bypasses in ssrfGuard.js (#3714)
+
+### What upstream fixed
+Four SSRF guard bypass classes closed in a single hardening pass:
+1. **Alternate IPv6 encodings** — hex form (`::ffff:7f00:1`), NAT64 (`64:ff9b::/96`), IPv4-compatible (`::a.b.c.d`), IPv4-mapped. Fixed by parsing to 16-bit groups (`parseIPv6ToGroups`) instead of pattern-matching source text.
+2. **Trailing-dot hostname bypass** — `localhost.` bypassed the literal hostname set. Fixed with trailing-dot normalization.
+3. **Wildcard DNS rebinding** — `attacker.example` resolving to `127.0.0.1` passed layer-1 string checks. Fixed with new `assertPublicUrlResolved()` that does DNS resolution + re-checks.
+4. **Redirect-based bypass** — validated public URL could 30x to an internal target. Fixed with `fetchPublic()` that re-validates each redirect hop through layer 2.
+
+Also added CGNAT `100.64.0.0/10` to the blocked IPv4 ranges (cloud metadata proxies use this).
+
+### Integration verification (2026-10-26)
+- ✅ `src/shared/utils/ssrfGuard.js:135` — `parseIPv6ToGroups` function
+- ✅ `src/shared/utils/ssrfGuard.js:296` — `assertPublicUrlResolved` export
+- ✅ `src/shared/utils/ssrfGuard.js:327` — `fetchPublic` export with redirect re-validation
+- ✅ `src/shared/utils/ssrfGuard.js:89,184` — NAT64 prefix `64:ff9b::/96` handling
+- ✅ `src/shared/utils/ssrfGuard.js:88,92` — IPv4-mapped `::ffff:` extraction via 0xffff marker at group index 5
+- ✅ 3-layer architecture comment at lines 1-24
+
+### Security implications
+**POSITIVE (4 bypass classes closed):** This is a textbook SSRF hardening. The parse-to-groups approach is immune to textual-form bugs (the exact failure mode the prior code had). The 3-layer architecture (string → DNS → redirect) matches OWASP SSRF prevention cheat sheet guidance.
+
+**CONCERN 1 (RESOLVED): CGNAT range blocked**
+CGNAT `100.64.0.0/10` is now blocked. This affects Tailscale users whose exit nodes sit in CGNAT space — but the `allowLoopback` flag in `assertPublicUrlResolved` exists for trusted peer paths. Tailscale-routed requests go through the peer-token trust system, not the SSRF guard.
+
+### Intersection with our work
+| Our commit | Intersection | Status |
+|---|---|---|
+| `92259214` peer-token trust | `isLocalRequest` bypasses SSRF guard for peer-token-bearing requests | ✅ INTEGRATED — trusted peers don't go through SSRF guard |
+| `24f497b6` middleware promotion | SSRF guard runs after middleware auth | ✅ INTEGRATED |
+
+### Conclusion
+**FULLY INTEGRATED.** Critical SSRF hardening, correctly layered.
+
+---
+
+## Commit 112: `cadef6c4` — RTK system prompt injection format-safe (CRITICAL)
+
+**Date:** 2026-08-28
+**Author:** KunN-21
+**Subject:** fix(rtk): make system prompt injection format-safe and idempotent
+
+### What upstream fixed
+Caveman/Ponytail system prompt injection previously assumed an OpenAI-shaped body. The rewrite:
+- **Chat arrays** append a text block; **Responses arrays** append `input_text` and create typed message items
+- **Claude** inserts before the final cache-control block (not after, which would break prompt caching)
+- **Gemini** preserves the snake/camel `systemInstruction` wrapper
+- **Kiro** updates `systemPrompt` and its mirrored first-user prefix atomically, rolling back if the pair fails to converge
+- **Format label decides Claude/Gemini before wire-shape sniff** (since their bodies also carry `messages[]`/`contents[]`, and Anthropic rejects a `"system"` role inside `messages[]`)
+- **Delimiter-aware dedup** makes injection exact-idempotent across retries — distinct prompts sharing a long prefix are no longer collapsed
+- **Fail-open on frozen/proxied bodies** — every write catches TypeError/readonly
+
+### Integration verification (2026-10-26)
+- ✅ `open-sse/rtk/systemInject.js` — 375-line rewrite
+- ✅ `tests/unit/system-inject.test.js` — 491-line test suite added
+- ✅ `open-sse/rtk/headroom.js:246` — Gemini `systemInstruction` target registration
+- ✅ `open-sse/rtk/systemInject.js:251` — snake/camel `systemInstruction` key handling
+- ✅ Translator-side integration: `claude-to-kiro.js:266-267`, `gemini-to-openai.js:32-33`, `openai-to-gemini.js:149,354,504`, `antigravity-to-openai.js:44-45`
+
+### Security implications
+**POSITIVE (prompt injection correctness):** System prompt injection is now format-correct across all wire shapes. The delimiter-aware dedup prevents double-injection on retries, which is both a correctness fix and a security fix (prevents prompt inflation via retry amplification).
+
+**POSITIVE (fail-open on frozen bodies):** Frozen/proxied bodies (e.g., from middleware that cloned the request) no longer throw — this preserves the RTK fail-open contract documented in CLAUDE.md.
+
+**CONCERN 1 (INFO): Format-label precedence over wire-shape sniff**
+The format label now decides Claude/Gemini before sniffing the body. This prevents mis-classification when a body has both `systemInstruction` and `messages[]` (Gemini bodies do). Correct.
+
+### Conclusion
+**FULLY INTEGRATED.** Critical correctness fix for prompt injection across all wire formats.
+
+---
+
+## Commit 113: `8ac631d6` — GHSA-hj98-rc6w-m8cw: IPv6-mapped IPv4 block (CRITICAL)
+
+**Date:** 2026-06-26
+**Author:** decolua (Co-authored-by: Cursor)
+**Subject:** fix(ssrf): block IPv6-mapped IPv4 addresses (GHSA-hj98-rc6w-m8cw)
+
+### What upstream fixed
+`isBlockedIpv6()` did not normalize `::ffff:<ipv4>`, allowing the SSRF filter to be bypassed via IPv6-mapped IPv4 literals (e.g., `::ffff:127.0.0.1` → `::ffff:7f00:1` after URL parsing). The fix extracted and validated the embedded IPv4 via `isBlockedIpv4()`.
+
+### Integration verification (2026-10-26)
+- ✅ `src/shared/utils/ssrfGuard.js:88,92` — IPv4-mapped extraction via 0xffff marker at group index 5
+- ✅ `src/shared/utils/ssrfGuard.js:183-184` — comment explains the 0xffff marker position
+- ✅ Subsequently **superseded by commit 111 (`b870b5d4`)** which replaced the pattern-match approach with `parseIPv6ToGroups` for all textual forms
+
+### Security implications
+**POSITIVE (GHSA closed):** This was a published GitHub Security Advisory. The fix was later subsumed by the more comprehensive commit 111.
+
+### Conclusion
+**FULLY INTEGRATED (SUPERSEDED by commit 111).** Initial fix for a published GHSA; later replaced with a more robust parse-to-groups approach.
+
+---
+
+## Commit 114: `6acc3bb9` — anthropic-version lowercase dedup (MEDIUM)
+
+**Date:** 2026-07-16
+**Author:** Tuan Do
+**Subject:** fix(anthropic): lowercase anthropic-version header key to prevent duplication on /v1/messages
+
+### What upstream fixed
+The `Anthropic-Version` header was being sent twice because the registry declared it with mixed case while the translator added a lowercase copy. Lowercasing the registry key deduplicates.
+
+Also removed the now-unused `CLAUDE_API_HEADERS` import from `shared.js`.
+
+### Integration verification (2026-10-26)
+- ✅ `open-sse/providers/registry/anthropic.js` — `"anthropic-version": "2023-06-01"` lowercase
+- ✅ No `CLAUDE_API_HEADERS` import (removed)
+
+### Security implications
+**INFO:** Header dedup. No security impact — just prevents upstream rejection of duplicate headers.
+
+### Conclusion
+**FULLY INTEGRATED.** Header hygiene.
+
+---
+
+## Commit 115: `9c58ba64` — kiro session cache reuse (MEDIUM)
+
+**Date:** 2026-07-16
+**Author:** Edison42
+**Subject:** fix(kiro): improve direct session cache reuse
+
+### What upstream fixed
+Reshaped Kiro direct requests so resumed client sessions reuse Kiro's cache-affinity fields instead of starting unrelated CodeWhisperer conversations:
+- Keep `conversationState.conversationId` stable when client sends explicit session id (`x-session-id`, `session_id`, `conversation_id`, Claude Code session metadata)
+- Add stable `conversationState.agentContinuationId` per Kiro session
+- Send `agentTaskType: "vibe"` and `agentMode: "vibe"` matching normal Kiro CLI/KAS path
+- Move thinking instructions into Kiro-compatible `systemPrompt` / `additionalModelRequestFields`
+- Suppress `additionalModelRequestFields` for legacy 4.5-era Claude/Kiro models
+- Preserve `meteringEvent` credit usage internally without leaking provider fields
+- Cap/evict continuation sessions to prevent unbounded growth
+- Treat headerless Kiro sessions as one-shot to protect real continuations from eviction
+
+### Security implications
+**POSITIVE (cache affinity):** Stable conversation IDs enable Kiro's server-side prompt cache, reducing token costs.
+
+**POSITIVE (unbounded growth prevention):** Continuation map eviction prevents memory leak in long-running processes.
+
+**CONCERN 1 (INFO): Session ID extraction from multiple header locations**
+The commit reads session IDs from `x-session-id`, `session_id`, `conversation_id`, and Claude Code metadata. This is the correct permissive pattern for multi-client compatibility.
+
+### Conclusion
+**FULLY INTEGRATED.** Cache affinity + memory management fix.
+
+---
+
+## Commit 116: `57b3b2c1` — console-log capture boot init + SSE no-buffer (MEDIUM)
+
+**Date:** 2026-07-23
+**Author:** Duc Nguyen
+**Subject:** fix(console-log): initialize capture at server boot + prevent SSE proxy buffering
+
+### What upstream fixed
+1. `initConsoleLogCapture()` now runs via Next.js `instrumentation.js` `register()` hook so logs are captured from startup in headless/Docker deployments (previously only initialized on first request).
+2. Added `X-Accel-Buffering: no` and `Cache-Control: no-cache, no-transform` headers to the SSE stream route to prevent nginx/reverse proxies from buffering the initial payload.
+
+### Integration verification (2026-10-26)
+- ✅ `src/instrumentation.js` — new file with `register()` hook
+- ✅ `src/app/api/translator/console-logs/stream/route.js:83-89` — `Cache-Control: no-cache, no-transform` + `X-Accel-Buffering: no`
+
+### Security implications
+**POSITIVE (observability completeness):** Boot-time log capture ensures startup errors are visible in the console-log UI.
+
+**INFO:** The `X-Accel-Buffering: no` header is nginx-specific. Non-nginx deployments ignore it harmlessly.
+
+### Conclusion
+**FULLY INTEGRATED.** Observability + proxy buffering fix.
 
 ---
 
