@@ -605,6 +605,24 @@ When no region is configured or in env, the code defaults to `us-east-1`. This m
 | 60 | `4641c2b7` | 2026-09-18 | Zed display priority in OAuth list | LOW — UI ordering | INTEGRATED |
 | 61 | `b870b5d4` | 2026-09-03 | SSRF guard bypass closure (#3714) | HIGH — IPv6/DNS/redirect bypasses | INTEGRATED |
 | 62 | `cadef6c4` | 2026-08-28 | RTK system prompt injection format-safety | MEDIUM — prompt injection robustness | INTEGRATED |
+| 63 | `f6e7cabe` | 2026-09-10 | ClinePass workos: prefix fix + token refresh | MEDIUM — credential lifecycle | INTEGRATED |
+| 64 | `6091ff59` | 2026-09-17 | Opencode 403 FreeTierError canonical format | MEDIUM — free-tier identity | INTEGRATED |
+| 65 | `0c6ab4f9` | 2026-09-17 | Opencode stable upstream session per identity | MEDIUM — session reuse | INTEGRATED |
+| 66 | `73cb8914` | 2026-09-10 | Xiaomi-mimo dual auth | MEDIUM — new auth mode | INTEGRATED |
+| 67 | `88676b30` | 2026-08-16 | Cline extension JSON token refresh | MEDIUM — credential lifecycle | INTEGRATED |
+| 68 | `5a86f6a8` | 2026-08-28 | ollama-search + zai-search credential fallback | LOW — provider fallback | INTEGRATED |
+| 69 | `4a371d1d` | 2026-08-28 | Canonicalize nested cached_tokens | LOW — usage tracking | INTEGRATED |
+| 70 | `2fd99eae` | 2026-08-28 | Claude Code session id from request header | LOW — session forwarding | INTEGRATED |
+| 71 | `2203cd8f` | 2026-08-28 | Drop golden url/header snapshot test | LOW — test cleanup | INTEGRATED |
+| 72 | `e7dd72a8` | 2026-09-03 | Responses-shape cached_tokens extraction | LOW — usage tracking | INTEGRATED |
+| 73 | `6efb9790` | 2026-09-03 | Tokenrouter models + missing provider icons | LOW — catalog | INTEGRATED |
+| 74 | `c08efdbe` | 2026-09-03 | Gemini thoughtSignature replay | LOW — translator fix | INTEGRATED |
+| 75 | `f388b5e5` | 2026-09-04 | Remove noisy background refresh logs | LOW — logging | INTEGRATED |
+| 76 | `81f4f930` | 2026-09-05 | Opencode-go stable session header | LOW — header fix | INTEGRATED |
+| 77 | `a7047a07` | 2026-09-10 | Codex CLI version header single-source | LOW — version header | INTEGRATED |
+| 78 | `45ec1d30` | 2026-09-10 | Deepseek Anthropic-only tool types | LOW — translator fix | INTEGRATED |
+| 79 | `1fd208e2` | 2026-09-28 | Codebuddy-intl recurring quota forward | LOW — quota fix | INTEGRATED |
+| 80 | `b04c03c6` | 2026-08-14 | Alibaba Token Plan provider | LOW — new provider | INTEGRATED |
 
 **Total security-relevant upstream commits identified: 193**
 **Reviewed so far: 10**
@@ -1772,6 +1790,177 @@ Format-safe injection prevents a class of prompt corruption bugs where RTK compr
 
 ### Conclusion
 **FULLY INTEGRATED.** Format-safe + idempotent system prompt injection.
+
+---
+
+## Commit 63: `f6e7cabe` — ClinePass workos: prefix fix + token refresh (MEDIUM)
+
+**Date:** 2026-09-10
+**Author:** izzzzzi
+**Subject:** fix(cline): stop workos:-prefixing ClinePass API keys and add clinepass token refresh
+
+### What upstream fixed
+`getClineAccessToken()` unconditionally prefixed every token with `workos:`, which is correct for Cline OAuth access tokens (WorkOS JWTs starting with `eyJ…`) but wrong for ClinePass API keys (opaque strings like `clp_…`). The API rejected the prefixed value with 401.
+
+### The fix
+Only prefix tokens that look like a WorkOS JWT; API keys and other opaque tokens pass through untouched. Existing `workos:` prefix is never doubled.
+
+### Security implications
+**POSITIVE (credential correctness):** Prevents silent auth failure caused by double-prefixing. The JWT-shape check (`eyJ…`) is a safe discriminator between WorkOS tokens and opaque API keys.
+
+### Conclusion
+**FULLY INTEGRATED.** Credential lifecycle correctness fix.
+
+---
+
+## Commit 64: `6091ff59` — Opencode 403 FreeTierError canonical format (MEDIUM)
+
+**Date:** 2026-09-17
+**Author:** anojndr
+**Subject:** fix(opencode): resolve 403 FreeTierError with canonical session format and valid User-Agent
+
+### What upstream fixed
+OpenCode upstream validates free-tier requests: User-Agent must be `opencode/<version>` (>= 1.17.0) and `x-opencode-session` must match canonical `ses_` format. The fix:
+- Default `OPENCODE_UA` to `opencode/1.18.31`
+- Generate canonical descending session IDs
+- Provide deterministic foreign session translation
+- Isolate credentials per-request
+
+### Integration verification (2026-10-26)
+- ✅ `open-sse/executors/opencode.js` — 134+ lines of session/UA handling
+- ✅ `tests/unit/opencode-session.test.js` — 202 lines
+
+### Security implications
+**POSITIVE (free-tier attestation):** Correct free-tier identity presentation prevents 403 rejection. Per-request credential isolation prevents cross-request leakage.
+
+### Conclusion
+**FULLY INTEGRATED.** Free-tier identity correctness + credential isolation.
+
+---
+
+## Commit 65: `0c6ab4f9` — Opencode stable upstream session per identity (MEDIUM)
+
+**Date:** 2026-09-17
+**Author:** ErfanBagheri404
+**Subject:** fix(opencode): reuse one stable upstream session per identity to stop 429s
+
+### What upstream fixed
+Follow-up to commit 64: with no explicit session, every request minted a fresh `x-opencode-session`, burning through upstream free-tier quota (accounted per session) and surfacing as 429 FreeUsageLimitError. The fix:
+- Stable canonical session per downstream identity (connectionId, else auth-header hash, else shared default)
+- Evicted after `MEMORY_CONFIG.sessionTtlMs`
+- Deterministic `x-opencode-request` per message (stable across retries)
+- 6 more unit tests (22 total)
+
+### Security implications
+**POSITIVE (quota accounting correctness):** Prevents free-tier quota exhaustion from session churn. Identity-based session reuse is the correct abstraction.
+
+**CONCERN 1 (INFO): Auth-header hash as identity fallback**
+When no connectionId is available, the code hashes the auth header to derive a stable identity. This is acceptable because the hash is used only as a map key, not as a credential.
+
+### Conclusion
+**FULLY INTEGRATED.** Quota accounting correctness via session reuse.
+
+---
+
+## Commit 66: `73cb8914` — Xiaomi-mimo dual auth (MEDIUM)
+
+**Date:** 2026-09-10
+**Author:** 叶炜朋
+**Subject:** feat(xiaomi-mimo): merge MiMo Desktop support into xiaomi-mimo as dual auth
+
+### What upstream added
+Dual-auth pattern (same as kimi): API key (`sk-`) covers the cloud API, Desktop/OAuth adds the account session used by Preview models.
+- Registry: `category: oauth`, `authModes: ["oauth", "apikey"]`, oauth block, two `mimo-x-*-preview` models, invite signupUrl
+- Executor: routes Preview models to the account-service route with a Cookie session; everything else keeps the sourceFormat-matched transport
+
+### Security implications
+**INFO:** New dual-auth provider following the established kimi pattern. Cookie session for Preview models flows through the standard credential service.
+
+### Conclusion
+**FULLY INTEGRATED.** Standard dual-auth provider addition.
+
+---
+
+## Commit 67: `88676b30` — Cline extension JSON token refresh (MEDIUM)
+
+**Date:** 2026-08-16
+**Author:** Paulo Schuller
+**Subject:** fix(oauth): refresh Cline tokens with extension JSON contract
+
+### What upstream fixed
+Cline's token refresh expects a specific JSON contract matching the VS Code extension's format. The fix wires `refreshClineToken` into the standard `tokenRefresh/providers.js` with the correct body shape.
+
+### Integration verification (2026-10-26)
+- ✅ `open-sse/services/tokenRefresh/providers.js` — Cline refresh provider
+- ✅ `open-sse/services/tokenRefresh.js` — wired into refresh dispatch
+- ✅ `tests/unit/token-refresh-generic.test.js` — 39 lines covering generic refresh contract
+
+### Security implications
+**POSITIVE (credential lifecycle):** Correct refresh contract prevents silent token expiry.
+
+### Conclusion
+**FULLY INTEGRATED.** Credential refresh correctness.
+
+---
+
+## Commits 68-80: Batch triage (LOW security signal)
+
+All commits in this batch are feature/fix work with no new trust boundaries, credential surfaces, or security controls. Standard upstream development.
+
+### Commit 68: `5a86f6a8` — ollama-search + zai-search credential fallback (LOW)
+**Date:** 2026-08-28 | **Author:** decolua
+New search providers with credential fallback. Standard provider addition.
+
+### Commit 69: `4a371d1d` — Canonicalize nested cached_tokens (LOW)
+**Date:** 2026-08-28 | **Author:** Óscar Fonseca
+Preserve nested cached_tokens in canonicalizeUsage. Usage tracking fix.
+
+### Commit 70: `2fd99eae` — Claude Code session id from request header (LOW)
+**Date:** 2026-08-28 | **Author:** decolua
+Read Claude Code session id from its request header. Session forwarding.
+
+### Commit 71: `2203cd8f` — Drop golden url/header snapshot test (LOW)
+**Date:** 2026-08-28 | **Author:** decolua
+Test cleanup — removed snapshot test. No code change.
+
+### Commit 72: `e7dd72a8` — Responses-shape cached_tokens extraction (LOW)
+**Date:** 2026-09-03 | **Author:** IEatCodeDaily
+Read Responses-shape cached_tokens in extractUsageFromResponse. Usage tracking.
+
+### Commit 73: `6efb9790` — Tokenrouter models + missing provider icons (LOW)
+**Date:** 2026-09-03 | **Author:** decolua
+Streamline tokenrouter models and add missing provider icons. Catalog fix.
+
+### Commit 74: `c08efdbe` — Gemini thoughtSignature replay (LOW)
+**Date:** 2026-09-03 | **Author:** decolua
+Persist and replay thoughtSignature with session namespace. Translator fix.
+
+### Commit 75: `f388b5e5` — Remove noisy background refresh logs (LOW)
+**Date:** 2026-09-04 | **Author:** decolua
+Chore: remove noisy background token refresh logs. Logging cleanup.
+
+### Commit 76: `81f4f930` — Opencode-go stable session header (LOW)
+**Date:** 2026-09-05 | **Author:** turingcat
+Send stable session header for opencode-go. Header fix.
+
+### Commit 77: `a7047a07` — Codex CLI version header single-source (LOW)
+**Date:** 2026-09-10 | **Author:** decolua
+Restore Version header and single-source the CLI version. Version header fix.
+
+### Commit 78: `45ec1d30` — Deepseek Anthropic-only tool types (LOW)
+**Date:** 2026-09-10 | **Author:** kimono381
+Keep Anthropic-only tool types when forwarding to /anthropic/v1/messages. Translator fix.
+
+### Commit 79: `1fd208e2` — Codebuddy-intl recurring quota forward (LOW)
+**Date:** 2026-09-28 | **Author:** Clayton Tavares
+Forward `recurring` for codebuddy-intl quota packs. Quota fix.
+
+### Commit 80: `b04c03c6` — Alibaba Token Plan provider (LOW)
+**Date:** 2026-08-14 | **Author:** Nguyen Thanh Dat
+Add Alibaba Token Plan (token-plan.ap-southeast-1). Standard provider addition.
+
+### Batch conclusion
+**ALL INTEGRATED.** These commits are feature/fix work with no new trust boundaries, credential surfaces, or security controls. Standard upstream development.
 
 ---
 
