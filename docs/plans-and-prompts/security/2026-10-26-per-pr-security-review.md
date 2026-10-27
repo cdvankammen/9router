@@ -757,6 +757,14 @@ When no region is configured or in env, the code defaults to `us-east-1`. This m
 | 211 | `8223c879` | 2026-03-12 | MEMORY_CONFIG for session/DNS/proxy dispatcher | MEDIUM — resource management | INTEGRATED |
 | 212 | `8312af79` | 2026-03-23 | Cursor Linux auto-import install verification (#313) | MEDIUM — phantom connection prevention | INTEGRATED |
 | 213 | `2bec2e18` | 2026-03-17 | Antigravity provider config + dynamic User-Agent | LOW — config update | INTEGRATED |
+| 214 | `880f4eca` | 2026-03-09 | Proxy pool + per-connection binding + strictProxy | HIGH — network routing | INTEGRATED |
+| 215 | `c7850513` | 2026-06-06 | Claude forced tool_choice 400 on cc/ OAuth route (#1592) | MEDIUM — translator correctness | INTEGRATED |
+| 216 | `29f3e189` | 2026-03-09 | Cline WorkOS auth token shape | MEDIUM — auth correctness | INTEGRATED |
+| 217 | `a224f68e` | 2026-03-12 | kimi-coding OAuth provider addition | MEDIUM — new OAuth provider (later merged to kimi dual-auth) | INTEGRATED |
+| 218 | `11b2fcd6` | 2026-03-03 | Antigravity OAuth fix | MEDIUM — OAuth correctness | INTEGRATED |
+| 219 | `573b0f02` | 2026-03-05 | Qwen buildQwenBaseUrl + MITM + CLI tools restructure | MEDIUM — new provider + surface | INTEGRATED |
+| 220 | `d12b14f4` | 2026-03-13 | AI SDK Accept header + JSON markdown stripping | LOW — SDK compat | INTEGRATED |
+| 221 | `89405125` | 2026-03-09 | proxyTest error handling + default test URL | LOW — test correctness | INTEGRATED |
 
 ## Batch Triage 209-213 (container + credential lifecycle + phantom-connection prevention)
 
@@ -3749,6 +3757,112 @@ Backfills `DEFAULT_THINKING_AG_SIGNATURE` on functionCall parts missing it; supp
 
 ### 135. `2deacf69` — token-saver: full width card layout (LOW)
 Single-line CSS change. UI-only.
+
+---
+
+## Batch Triage 214-221 (proxy pools + OAuth correctness + AI SDK compat)
+
+### 214. `880f4eca` — Proxy pool + per-connection binding + strictProxy (HIGH)
+
+**Date:** 2026-03-09
+**Author:** decolua
+
+**What upstream added:**
+- Centralized proxy pool management with reusable pools
+- Per-connection proxy binding with legacy fallback
+- `strictProxy` option: fail hard instead of silently falling back to direct
+
+**Integration verification:**
+- ✅ `open-sse/executors/qoder.js:809` — `{ ...proxyOptions, strictProxy: true }`
+- ✅ `open-sse/executors/cursor.js:258-260` — `strictProxy` check + `proxyPoolId`
+- ✅ `src/lib/network/connectionProxy.js:70-76` — `proxyPoolId` normalized from `providerSpecificData`, `__none__` sentinel
+
+**Security implications:** The `strictProxy` flag prevents the silent-fallback class of bug where a misconfigured proxy causes requests to leak out the direct path. This is defense-in-depth for credential-bearing requests.
+
+### 215. `c7850513` — Claude forced tool_choice 400 on cc/ OAuth (#1592) (MEDIUM)
+
+**Date:** 2026-06-06
+**Author:** Claude Code
+
+**What upstream fixed:** `convertOpenAIToolChoice` mapped `{type:"function"}` verbatim and `cloakClaudeTools` left `tool_choice.name` unsuffixed — both rejected by Claude on the cc/ path with 400. Fix: map forced-function to `{type:"tool",name}`, allowlist Claude-valid types, suffix `tool_choice.name` when targeting a renamed client tool.
+
+**Integration verification:**
+- ✅ `open-sse/translator/request/openai-to-claude.js:186-187` — tool_choice conversion
+- ✅ `openai-to-claude.js:330` — comment: "Claude only accepts tool_choice.type of auto|any|tool|none"
+- ✅ `openai-to-claude.js:345` — OpenAI forced-tool mapping
+- ✅ `open-sse/translator/formats/claude.js:511,521` — modelCaps.forcedToolChoice check
+
+### 216. `29f3e189` — Cline WorkOS auth token shape (MEDIUM)
+
+**Date:** 2026-03-09
+**Author:** apeltekci
+
+**What upstream fixed:** Cline's WorkOS-based auth uses a different token shape than plain API keys. The fix adds `src/shared/utils/clineAuth.js` (37 lines) and wires it into the default executor and provider service.
+
+**Integration verification:**
+- ✅ `src/shared/utils/clineAuth.js` — exists, re-exports from `open-sse/shared/clineAuth.js`
+- ✅ `src/lib/oauth/providers/cline.js` + `clinepass.js` — separate provider entries
+- ✅ `open-sse/providers/registry/cline.js` + `clinepass.js` — registry entries
+
+### 217. `a224f68e` — kimi-coding OAuth provider (MEDIUM)
+
+**Date:** 2026-03-12
+**Author:** decolua
+
+**What upstream added:** Kimi Coding as a distinct OAuth provider with specific configuration. Later merged into the `kimi` dual-auth provider (commit 103 / `68566f53`).
+
+**Integration verification:**
+- ✅ `src/lib/oauth/providers/index.js:77-78` — legacy `kimi-coding` → `kimi` alias mapping
+- ✅ `src/lib/oauth/providers/kimi.js:5` — comment confirms alias retention
+
+**Security implications:** The alias mapping preserves backward compat for old UI/API routes while the underlying provider is now dual-auth (OAuth + API key).
+
+### 218. `11b2fcd6` — Antigravity OAuth fix (MEDIUM)
+
+**Date:** 2026-03-03
+**Author:** decolua
+
+**What upstream fixed:** Antigravity OAuth client credentials consolidated into `ANTIGRAVITY_OAUTH_CLIENT` in `open-sse/providers/shared.js` (commit 154 / `72ce5157` later dedup'd this). The fix here moves config from scattered literals into `ANTIGRAVITY_CONFIG` at `src/lib/oauth/constants/oauth.js:47-49`.
+
+**Integration verification:**
+- ✅ `src/lib/oauth/constants/oauth.js:5` — imports from shared.js
+- ✅ `oauth.js:45-49` — `ANTIGRAVITY_CONFIG` spreads shared client + registry OAuth
+- ✅ `oauth.js:179,204` — User-Agent strings for Antigravity
+- ✅ `open-sse/services/provider.js:42-43` — `userAgent === "antigravity"` detection
+- ✅ `open-sse/services/usage/google.js:8,12` — antigravity weekly quota integration
+
+### 219. `573b0f02` — Qwen + MITM + CLI tools restructure (MEDIUM)
+
+**Date:** 2026-03-05
+**Author:** decolua
+
+**What upstream added:** `buildQwenBaseUrl` for Qwen resource URLs, `buildProviderUrl` Qwen support, provider-specific token refresh for Qwen, CLI Tools page refactor excluding MITM tools, new MITM server management components, Qwen-specific API routes.
+
+**Security implications:** INFO — Qwen is a new provider addition. The MITM/CLI tools restructure separates concerns but doesn't change trust boundaries (MITM still gated by dashboardGuard LOCAL_ONLY).
+
+### 220. `d12b14f4` — AI SDK Accept header + JSON markdown stripping (LOW)
+
+**Date:** 2026-03-13
+**Author:** Nick Roth (cherry-picked from PR #290)
+
+**What upstream added:**
+- Respect `Accept: application/json` header to return non-streaming JSON instead of SSE (fixes AI SDK `generateObject`/`generateText` compatibility)
+- Strip markdown code block markers (` ```json...``` `) from Claude non-streaming responses to prevent JSON parse errors
+
+**Integration verification:**
+- ✅ `open-sse/handlers/chatCore/nonStreamingHandler.js:188` — "Strip markdown code block markers (e.g. kimi wraps JSON in ```json...```)"
+- ✅ `nonStreamingHandler.js:353` — JSON Content-Type response
+- ✅ `open-sse/handlers/chatCore/sseToJsonHandler.js:251,311` — SSE→JSON conversion with proper headers
+
+### 221. `89405125` — proxyTest error handling (LOW)
+
+**Date:** 2026-03-09
+**Author:** huynhquangtoan
+
+**What upstream fixed:** Improved error handling in proxy test + updated default test URL.
+
+**Integration verification:**
+- ✅ `src/lib/network/proxyTest.js:28` — `testProxyUrl({ proxyUrl, testUrl, timeoutMs })` function signature
 
 ---
 
