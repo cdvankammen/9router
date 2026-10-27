@@ -287,6 +287,48 @@ describe("dashboard guard local-only access", () => {
   });
 });
 
+describe("dashboard guard public auth routes", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    process.env.NINEROUTER_PEER_TOKEN = PEER_TOKEN;
+    mocks.getSettings.mockResolvedValue({ requireLogin: true });
+    mocks.validateApiKey.mockResolvedValue(false);
+    mocks.getConsistentMachineId.mockResolvedValue("cli-token");
+    mocks.verifyDashboardAuthToken.mockResolvedValue(false);
+  });
+
+  // Regression test (2026-10-27): /api/auth/setup was missing from the public
+  // allow-list, so the deny-by-default /api/* rule returned 401 before the
+  // handler ran. A fresh install with no stored hash and no INITIAL_PASSWORD
+  // could never bootstrap a password. The handler enforces its own
+  // isLocalRequest() + (storedHash || INITIAL_PASSWORD) gates, so allowing
+  // the route here is safe.
+  it("allows /api/auth/setup GET without auth (public, handler enforces local-only)", async () => {
+    const response = await proxy(request("/api/auth/setup", {
+      host: "router.example.com",
+    }));
+
+    expect(response).toBe(mocks.nextResponse);
+  });
+
+  it("allows /api/auth/setup POST without auth (public, handler enforces local-only)", async () => {
+    const response = await proxy(request("/api/auth/setup", {
+      host: "router.example.com",
+      "content-type": "application/json",
+    }));
+
+    expect(response).toBe(mocks.nextResponse);
+  });
+
+  it("allows /api/auth/login without auth (already public — sanity)", async () => {
+    const response = await proxy(request("/api/auth/login", {
+      host: "router.example.com",
+    }));
+
+    expect(response).toBe(mocks.nextResponse);
+  });
+});
+
 describe("dashboard guard helpers", () => {
   it("extracts bearer API keys before x-api-key", () => {
     const apiRequest = request("/v1/chat/completions", {

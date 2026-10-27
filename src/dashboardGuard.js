@@ -40,6 +40,13 @@ const PUBLIC_API_PATHS = [
   "/api/auth/status",
   "/api/auth/oidc",
   "/api/auth/saml",
+  // First-run setup — the route handler enforces isLocalRequest() and rejects
+  // requests when a hash or INITIAL_PASSWORD already exists, so exposing it
+  // here is safe and required: without this entry, a fresh install can never
+  // bootstrap a password because the deny-by-default /api/* rule returns 401
+  // before the handler runs. (Discovered 2026-10-27 while proving Row 19 on
+  // mini4 — setupRequired=true but POST /api/auth/setup → 401 Unauthorized.)
+  "/api/auth/setup",
   "/api/version",
   "/api/settings/require-login",
 ];
