@@ -603,6 +603,8 @@ When no region is configured or in env, the code defaults to `us-east-1`. This m
 | 58 | `bc3be0cb` | 2026-09-18 | Antigravity cached thought signature scoping | LOW — translator fix | INTEGRATED |
 | 59 | `b3d6e089` | 2026-09-18 | Antigravity Claude Code billing header strip | LOW — header cleanup | INTEGRATED |
 | 60 | `4641c2b7` | 2026-09-18 | Zed display priority in OAuth list | LOW — UI ordering | INTEGRATED |
+| 61 | `b870b5d4` | 2026-09-03 | SSRF guard bypass closure (#3714) | HIGH — IPv6/DNS/redirect bypasses | INTEGRATED |
+| 62 | `cadef6c4` | 2026-08-28 | RTK system prompt injection format-safety | MEDIUM — prompt injection robustness | INTEGRATED |
 
 **Total security-relevant upstream commits identified: 193**
 **Reviewed so far: 10**
@@ -1674,6 +1676,118 @@ Lower display priority for Zed in OAuth list. UI ordering fix, no security impli
 
 ### Batch conclusion
 **ALL INTEGRATED.** These commits are feature/fix work with no new trust boundaries, credential surfaces, or security controls. Standard upstream development.
+
+---
+
+## Commit 61: `b870b5d4` — SSRF guard bypass closure (HIGH)
+
+**Date:** 2026-09-03
+**Author:** openhands
+**Subject:** fix(security): close SSRF guard bypasses in ssrfGuard.js (#3714)
+
+### What upstream fixed
+Four SSRF guard bypass classes reported in issue #3714:
+
+1. **Alternate IPv6 encodings**: Hex format (`::ffff:7f00:1`), NAT64, IPv4-compatible, IPv4-mapped. The old code only recognized dotted form (`::ffff:127.0.0.1`) via regex.
+2. **Trailing dots on hostnames**: `localhost.` bypassed the `localhost` check because hostname comparison ran on the raw string without normalization.
+3. **Wildcard DNS domains**: `attacker.nip.io` resolving to `127.0.0.1` bypassed literal-IP checks because the guard only inspected the URL string, not the resolved address.
+4. **HTTP redirect following**: A public URL that 302s to `http://169.254.169.254/latest/meta-data/` was followed without re-validation.
+
+### The fix (verified in `src/shared/utils/ssrfGuard.js`)
+
+**Layer 1 — `assertPublicUrl()` (synchronous)**
+- `parseIPv6ToGroups()` — parses ANY textual IPv6 form (dotted-IPv4 tail, `::` compression in any position, full/partial forms) into 8 16-bit groups. Reasoning about numeric values rather than source strings makes this immune to URL-parser normalization bugs.
+- CGNAT range `100.64.0.0/10` added to blocked ranges (some cloud metadata proxies use it)
+- Trailing-dot normalization on hostnames
+
+**Layer 2 — `assertPublicUrlResolved()` (async)**
+- DNS resolution of non-literal hostnames via `node:dns`
+- Rejects hostnames that resolve to private/loopback/metadata IPs (blocks nip.io/sslip.io attacks)
+
+**Layer 3 — `fetchPublic()` (fetch wrapper)**
+- Manual redirect handling: each redirect target is re-validated through `assertPublicUrlResolved` before following
+- Prevents public URL → internal redirect attack
+
+### Files changed (5)
+- `src/shared/utils/ssrfGuard.js` — +191 lines (three-layer architecture)
+- `open-sse/handlers/search/index.js` — switched to `fetchPublic()`
+- `src/sse/handlers/fetch.js` — switched to `fetchPublic()`
+- `tests/unit/ssrf-guard-hardening.test.js` — 147 lines of bypass coverage
+
+### Integration verification (2026-10-26)
+- ✅ `src/shared/utils/ssrfGuard.js:216` — `assertPublicUrl` export
+- ✅ `src/shared/utils/ssrfGuard.js:296` — `assertPublicUrlResolved` export
+- ✅ `src/shared/utils/ssrfGuard.js:323-337` — redirect re-validation in `fetchPublic`
+- ✅ `src/shared/utils/ssrfGuard.js:41` — CGNAT range `[ipv4ToInt("100.64.0.0"), 10]`
+- ✅ 3-layer architecture documented in file header comments
+
+### Security implications
+
+**POSITIVE (defense-in-depth):**
+This is one of the most important security commits in the entire audit. The three-layer architecture closes every known SSRF bypass class:
+- Layer 1 catches obvious bad input at request-build time (cheap)
+- Layer 2 catches DNS-based bypasses (nip.io attacks)
+- Layer 3 catches redirect-based bypasses (public URL → internal redirect)
+
+**CONCERN 1 (INFO): `fetchPublic` adoption is partial**
+Only `search/index.js` and `sse/handlers/fetch.js` are confirmed migrated to `fetchPublic()`. Other server-side fetch call sites may still use raw `fetch()` without redirect re-validation. This is an incremental hardening — not every call site needs it, but web-fetch and image-fetch paths should be audited.
+
+### Intersection with our work
+| Our commit | Intersection | Status |
+|---|---|---|
+| `97f3ab97` cowork-mcp-tools SSRF guard (commit 44 above) | Uses `assertPublicUrl` from this commit's layer 1 | ✅ INTEGRATED — our commit 44 depends on this commit's work |
+| All proxy/relay code | Relies on `proxyAwareFetch` which has its own DNS handling | ✅ CLEAN — separate code path |
+
+### Conclusion
+**FULLY INTEGRATED.** Foundational SSRF defense with three-layer architecture. This commit is a dependency for our commit 44 (cowork-mcp-tools SSRF guard).
+
+---
+
+## Commit 62: `cadef6c4` — RTK system prompt injection format-safety (MEDIUM)
+
+**Date:** 2026-08-28
+**Author:** KunN-21
+**Subject:** fix(rtk): make system prompt injection format-safe and idempotent
+
+### What upstream fixed
+The RTK (reduce-token-kit) system prompt injection was not format-safe — injecting a plain-text system prompt into a Claude-format or Gemini-format request body could corrupt the message structure, causing provider-side parse errors or silent prompt dropping. Additionally, retrying the injection on an already-injected body could duplicate the prompt.
+
+### The fix (verified in `open-sse/rtk/systemInject.js`)
+- `injectSystemPrompt(body, format, prompt)` dispatches across OpenAI chat, Responses, Claude, Gemini, and Kiro shapes
+- Idempotency check at line 290: `if (next === content) return; // already injected — idempotent across retries`
+- Format-aware injection preserves provider-specific message structure
+
+### Integration verification (2026-10-26)
+- ✅ `open-sse/rtk/systemInject.js:11` — `injectSystemPrompt` export
+- ✅ `open-sse/rtk/systemInject.js:290` — idempotency guard
+- ✅ `open-sse/rtk/caveman.js`, `ponytail.js`, `customPrompt.js`, `headroom.js` all import from `systemInject.js`
+
+### Security implications
+
+**POSITIVE (prompt injection robustness):**
+Format-safe injection prevents a class of prompt corruption bugs where RTK compression could silently break provider message formats. The idempotency guard prevents prompt duplication on retry paths.
+
+**CONCERN 1 (INFO, accepted): Custom prompt is user-controlled**
+`customPrompt.js` allows users to set arbitrary system prompt text via settings. This is by design (power-user feature), but the format-safety ensures the text is injected correctly regardless of content. No injection risk — the prompt is injected as message content, not as code or template strings.
+
+### Conclusion
+**FULLY INTEGRATED.** Format-safe + idempotent system prompt injection.
+
+---
+
+## TLS Mitigation Status (CRITICAL finding from commit 42 / `b58bd804`)
+
+### mini4 (192.168.1.189)
+- ✅ `STRICT_SSL=true` added to `~/9router-build/.env`
+- ⏳ Requires restart of PID 95872 to take effect
+
+### mini2 (100.96.109.61)
+- ✅ `export STRICT_SSL=true` added to `/Applications/9Router.app/Contents/MacOS/9router-launcher` (before `exec node cli.js`)
+- ✅ Backup created: `9router-launcher.bak-tls-20261027-*`
+- ⏳ Requires restart of PID 79639 to take effect
+
+### Operator action required
+Both hosts need a process restart for the TLS hardening to take effect. The launcher modifications are persistent across restarts. Recommend coordinated restart during next maintenance window.
 
 ---
 
