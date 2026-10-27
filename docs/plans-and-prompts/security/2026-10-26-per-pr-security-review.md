@@ -765,6 +765,64 @@ When no region is configured or in env, the code defaults to `us-east-1`. This m
 | 219 | `573b0f02` | 2026-03-05 | Qwen buildQwenBaseUrl + MITM + CLI tools restructure | MEDIUM — new provider + surface | INTEGRATED |
 | 220 | `d12b14f4` | 2026-03-13 | AI SDK Accept header + JSON markdown stripping | LOW — SDK compat | INTEGRATED |
 | 221 | `89405125` | 2026-03-09 | proxyTest error handling + default test URL | LOW — test correctness | INTEGRATED |
+| 222 | `f161b295` | 2026-06-06 | Dashboard menu reorganization | LOW — UI refactor | INTEGRATED |
+| 223 | `40cfa63e` | 2026-06-06 | xiaomi-tokenplan MiMo V2.5 Pro Claude-native alias | MEDIUM — new executor surface | INTEGRATED |
+| 224 | `cce8a50c` | 2026-05-31 | opencode-go + xiaomi-tokenplan connection test (#1576) | LOW — test routing | INTEGRATED |
+| 225 | `69bc71cf` | 2026-05-23 | Qoder OAuth service layout refactor (Kiro-style) | LOW — refactor | INTEGRATED |
+| 226 | `7bc97eae` | 2026-05-23 | Gemini embeddings output dimensions forward (#1366) | LOW — format correctness | INTEGRATED |
+| 227 | `d26db17f` | 2026-05-15 | xiaomi token plan provider | MEDIUM — new provider | INTEGRATED |
+| 228 | `2190ff06` | 2026-05-14 | v0.4.41 release (cli-tools + jcode) | LOW — release commit | INTEGRATED |
+| 229 | `8f4d29ca` | 2026-05-12 | v0.4.30 release (aggregates prior security fixes) | LOW — release commit | INTEGRATED |
+| 230 | `67ca219f` | 2026-05-03 | Qwen OAuth URLs chat.qwen.ai→qwen.ai (#687) | MEDIUM — auth URL change (likely duplicate of 94ab0d71) | INTEGRATED |
+| 231 | `f410061e` | 2026-05-01 | proxyFetch refactor + MediaProviderDetailPage | LOW — refactor | INTEGRATED |
+
+## Batch Triage 222-231 (xiaomi provider + release commits + UI refactors)
+
+### 223. `40cfa63e` — xiaomi-tokenplan MiMo V2.5 Pro Claude-native alias (MEDIUM)
+
+**Date:** 2026-06-06
+**Author:** Mr_NoboDy
+
+**What upstream added:** MiMo V2.5 Pro as a Claude-native model for xiaomi-tokenplan, routed through a dedicated executor (`open-sse/executors/xiaomi-tokenplan-mimo.js`) that translates OpenAI→Claude and back for streaming/non-streaming. 
+
+**Integration verification:**
+- ✅ `open-sse/executors/xiaomi-tokenplan-mimo.js` — dedicated executor exists
+- ✅ Wired into provider models
+
+**Security implications:** New executor surface. The Claude-format translation path is well-tested (same pattern as kiro, trae, windsurf). No new credential surface — uses existing xiaomi-tokenplan auth.
+
+### 227. `d26db17f` — xiaomi token plan provider (MEDIUM)
+
+**Date:** 2026-05-15
+**Author:** decolua
+
+**What upstream added:** The base xiaomi-tokenplan provider registration. Commit 223 later adds the MiMo alias on top of this.
+
+**Integration verification:**
+- ✅ `open-sse/providers/registry/xiaomi-tokenplan.js` — registry entry
+- ✅ `open-sse/executors/xiaomi-tokenplan.js` — base executor
+
+### 230. `67ca219f` — Qwen OAuth URL update #687 (MEDIUM)
+
+**Date:** 2026-05-03
+**Author:** Anurag Saxena
+
+**What upstream fixed:** Qwen OAuth URLs from `chat.qwen.ai` to `qwen.ai`.
+
+**INTERSECTION WITH COMMIT 201 (`94ab0d71`):** Both commits address the same Qwen URL migration — `94ab0d71` was the first fix (#683), `67ca219f` is the follow-up (#687). Both now integrated; the final state is `qwen.ai` URLs.
+
+### 222, 224-226, 228-229, 231 — All LOW-signal
+
+- `f161b295` — dashboard menu reorganization across sidebar/header/profile
+- `cce8a50c` — opencode-go + xiaomi-tokenplan cases in connection test route
+- `69bc71cf` — Qoder OAuth service layout mirrors Kiro's pattern
+- `7bc97eae` — Gemini embeddings output dimensions forwarding
+- `2190ff06` — v0.4.41 release commit
+- `8f4d29ca` — v0.4.30 release (aggregates: CWE-1385, CWE-295, developer→system normalization, PORT env, dropdown readability, Claude CLI headers, tool deduper — all individually audited)
+- `f410061e` — proxyFetch refactor + MediaProviderDetailPage layout
+
+---
+
 
 ## Batch Triage 209-213 (container + credential lifecycle + phantom-connection prevention)
 
