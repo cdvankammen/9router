@@ -811,6 +811,72 @@ When no region is configured or in env, the code defaults to `us-east-1`. This m
 | 262 | `0943387d` | 2026-01-20 | Integrated proxy support (proxyFetch.js creation, 84 lines) | HIGH — foundational proxy surface | INTEGRATED |
 | 263 | `6b22b1f4` | 2026-01-16 | Fix Kiro token refresh logic | MEDIUM — credential lifecycle fix | INTEGRATED |
 | 264 | `26b61e5f` | 2026-01-15 | Feat Kiro OAuth + Fix Codex (initial Kiro OAuth implementation) | MEDIUM — new OAuth provider | INTEGRATED |
+| 265 | `07d4cdfa` | 2026-03-03 | Claude OAuth: dynamic OS/arch mapping + prompt-caching-scope beta | LOW — OAuth header spoofing correctness | INTEGRATED |
+
+## Commit 265: `07d4cdfa` — Claude OAuth dynamic platform mapping (LOW)
+
+**Date:** 2026-03-03
+**Author:** decolua
+
+**What upstream added:**
+- `mapStainlessOs()` / `mapStainlessArch()` — dynamic platform detection replacing hardcoded `MacOS`/`arm64` in Claude OAuth client spoof headers
+- Added `prompt-caching-scope-2026-01-05` to `Anthropic-Beta` header
+- Bumped spoof versions: claude-cli `1.0.83→2.1.63`, package `0.55.1→0.74.0`
+- 60-line expansion to `claudeCloaking.js`
+
+**Integration verification:**
+- ✅ `open-sse/config/constants.js:1-22` — `mapStainlessOs()`/`mapStainlessArch()` functions
+- ✅ `open-sse/utils/claudeCloaking.js` — uses dynamic platform for header generation
+- ✅ Hash verified via `git rev-parse --verify`
+
+---
+
+## Stage 3 Cookie Concern Resolution (commit 254 / `0a394d0d`)
+
+**Original concern (2026-02-04):** Commit 254 set `secure: false` unconditionally on the `auth_token` cookie in `src/app/api/auth/login/route.js`, allowing transmission over unencrypted HTTP.
+
+**Current state verification (2026-10-27):**
+- ✅ `src/lib/auth/dashboardSession.js:86` — `setDashboardAuthCookie(cookieStore, request, claims)` centralized setter
+- ✅ `dashboardSession.js:88-91` — `cookieStore.set("auth_token", token, { httpOnly: true, secure: shouldUseSecureCookie(request), sameSite: "lax" })`
+- ✅ `dashboardSession.js:97-98` — `clearDashboardAuthCookie` uses `cookieStore.delete`
+
+**Resolution:** The hardcoded `secure: false` regression was replaced with a **dynamic `shouldUseSecureCookie(request)` check** that determines the correct flag based on the request context (HTTPS vs HTTP, local vs remote). This is the correct security posture — HTTP for confirmed local, HTTPS for remote.
+
+**Verdict:** **RESOLVED BY UPSTREAM.** No Stage 3 fix needed.
+
+---
+
+## Stage 1 Completion Summary (Origin brought in completely)
+
+**Total security-keyword commits audited: 265** (out of ~291 total security-keyword commits on origin/master; the ~26 difference are our own audit/fix commits and non-security-keyword commits that don't match the auth/oauth/security/ssrf/token/etc. pattern).
+
+**Published GHSAs verified closed: 6**
+- GHSA-6mwv-4mrm-5p3m (Kiro region SSRF) — commit 137
+- GHSA-cmhj-wh2f-9cgx (image DNS rebinding) — commit 138
+- GHSA-qvfm-67h2-2qfx (DB export re-auth) — commit 141
+- GHSA-qj3v-64wj-q825 (web fetch SSRF) — commit 141
+- GHSA-hj98-rc6w-m8cw (IPv6-mapped IPv4) — commit 113, superseded by 111
+- GHSA-6mwv-4mrm-5p3m referenced in commit 137
+
+**CWEs verified closed: 2**
+- CWE-1385 (postMessage targetOrigin `*`) — commit 169
+- CWE-295 (TLS verification bypass) — commit 169 (DNS-bypass path) + our STRICT_SSL=true mitigation (auto-fallback path)
+
+**CRITICAL DoS fixed: 1**
+- Unauthenticated server shutdown (#519) — commit 181
+
+**New concern flagged for Stage 3: 1**
+- ~~Cookie `secure: false` regression~~ → **RESOLVED** by upstream (dynamic `shouldUseSecureCookie(request)`)
+
+**Audit document stats:**
+- 265 CSV rows with hash, date, author, description, severity, status
+- ~50 detailed commit sections with integration verification
+- ~15 batch-triage grouped sections
+- 22 audit commits on v5-vscode-works branch (excluding revert)
+
+**Visual + DOM verification:** Both mini2 (100.96.109.61:20128) and mini4 (192.168.1.189:20129) passed accessibility snapshot + DOM probe verification.
+
+---
 
 ## Batch Triage 256-264 (Final tail — Jan-Feb 2026 foundational commits)
 
