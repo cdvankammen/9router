@@ -6,6 +6,8 @@ import { validatePeerNodes } from "@/lib/network/peerNodesValidator";
 import { validateProviderOverrides } from "@/lib/auth/providerOverridesValidator";
 import { resetComboRotation } from "open-sse/services/combo.js";
 import bcrypt from "bcryptjs";
+import { DATA_DIR } from "@/lib/dataDir.js";
+import { DATA_FILE } from "@/lib/db/paths.js";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -25,12 +27,21 @@ export async function GET() {
     
     const enableRequestLogs = process.env.ENABLE_REQUEST_LOGS === "true";
     const enableTranslator = process.env.ENABLE_TRANSLATOR === "true";
+
+    // Expose the resolved data directory + database file so the dashboard can
+    // show the actual storage location (which varies when DATA_DIR env is set,
+    // on Windows, or when the fallback ~/.9router is used). Replaces the
+    // previous hardcoded "~/.9router/db/data.sqlite" string in the UI.
+    // Safe to expose: the /api/settings endpoint is already gated by the
+    // dashboard auth middleware (requireLogin + JWT cookie).
     
     return NextResponse.json({ 
       ...safeSettings, 
       enableRequestLogs,
       enableTranslator,
-      hasPassword: !!password
+      hasPassword: !!password,
+      dataDir: DATA_DIR,
+      dataFile: DATA_FILE,
     }, { headers: SETTINGS_RESPONSE_HEADERS });
   } catch (error) {
     console.log("Error getting settings:", error);
