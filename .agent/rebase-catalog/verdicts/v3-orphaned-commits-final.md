@@ -82,7 +82,7 @@ All 11 replay candidates have been re-inspected against v5 HEAD. **Verdict: 10 A
 | 10ed2871 | toolPruner truncation idempotent | **ABSORBED** | `open-sse/services/memory/toolPruner.js` exists and is imported |
 | a236b6b3 | connection IDs drill-down in provider error panel | **ABSORBED** | `ProviderErrorPanel.js` + `ErrorGroupList.js` have drill-down functionality; `StatisticsContent.js` has provider⇄model drill-down |
 | 478deefb | Cursor auto-import path validation (GAP-P1-12) | **ABSORBED** | Route uses `getCandidatePaths()` with hardcoded platform-specific paths only — no user input in path construction; path traversal architecturally impossible |
-| 4768482d | SSRF guard suggested-models + smartRouter | **ABSORBED** | Route moved to `src/app/api/providers/suggested-models/`; `src/shared/utils/ssrfGuard.js` exists with `assertPublicUrl` export |
+| 4768482d | SSRF guard suggested-models + smartRouter | **REPLAY-APPLIED** | Guard was LOST during v4/v5 merge — route had bare `fetch(url)` with no SSRF check and no auth. Replay-applied with additional hardening: `requireAuth` gate + `ALLOWED_CATALOG_HOSTS` allowlist (12 hosts) + `fetchPublic` (DNS-resolution SSRF guard + redirect-safe) + `AbortSignal.timeout(10000)` + scheme/credentials checks. 18/18 regression tests pass. |
 
 ---
 
