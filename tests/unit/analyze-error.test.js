@@ -9,6 +9,13 @@ const mockGetModelInfo = vi.fn();
 const mockGetProviderCredentials = vi.fn();
 const mockHandleChatCore = vi.fn();
 
+// Security gate (2026-10-29): route now requires requireAuth. Mock it to
+// always pass so the tests below exercise the business logic, not the auth
+// gate. The auth gate itself is covered by credential-mutation-requireauth.test.js.
+vi.mock("@/lib/auth/requireAuth", () => ({
+  requireAuth: async () => true,
+}));
+
 vi.mock("@/lib/db/repos/requestDetailsRepo.js", () => ({
   getRequestDetailById: (...a) => mockGetRequestDetailById(...a),
 }));

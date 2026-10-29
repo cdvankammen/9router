@@ -4,6 +4,7 @@ import { getSettings } from "@/lib/db/repos/settingsRepo.js";
 import { getModelInfo } from "@/sse/services/model.js";
 import { getProviderCredentials } from "@/sse/services/auth.js";
 import { handleChatCore } from "open-sse/handlers/chatCore.js";
+import { requireAuth } from "@/lib/auth/requireAuth";
 
 export const dynamic = "force-dynamic";
 
@@ -25,6 +26,17 @@ function truncate(value) {
  */
 export async function POST(request) {
   try {
+    // Security (2026-10-29): route-level requireAuth. This endpoint:
+    // 1. Reads captured request details (prompts, provider responses, auth
+    //    headers) from the request log — sensitive data.
+    // 2. Uses stored provider credentials to make an outbound LLM call,
+    //    forwarding the captured content as the prompt.
+    // On requireLogin=false deployments, an unauthenticated LAN peer could
+    // force the server to spend tokens/credits AND exfiltrate stored request
+    // data to the configured LLM provider.
+    if (!(await requireAuth(request))) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     const { detailId } = await request.json();
     if (!detailId) {
       return NextResponse.json({ error: "detailId is required" }, { status: 400 });

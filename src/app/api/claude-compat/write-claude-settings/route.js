@@ -3,6 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import fs from "node:fs/promises";
 import { updateSettings } from "@/lib/localDb";
+import { requireAuth } from "@/lib/auth/requireAuth";
 import {
   sanitizeDefaultModels,
   buildClaudeEnvOverrides,
@@ -29,6 +30,15 @@ const BAK_FILE = () => `${LIVE_FILE()}.9router.bak`;
 // (ANTHROPIC_AUTH_TOKEN / BASE_URL / telemetry flags all survive verbatim).
 // An existing file that fails to parse is never overwritten.
 export async function POST(request) {
+  // Security (2026-10-29): route-level requireAuth. This endpoint writes
+  // directly to ~/.claude/settings.json on the host filesystem — a privileged
+  // mutation. An unauthenticated LAN peer on requireLogin=false deployments
+  // could inject environment variables into the user's Claude Code config
+  // (e.g., set ANTHROPIC_BASE_URL to an attacker server to capture tokens,
+  // or toggle telemetry flags).
+  if (!(await requireAuth(request))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   let envOverrides;
   let defaultModels;
   try {

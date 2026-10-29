@@ -136,6 +136,8 @@ const LOCAL_ONLY_PATHS = [
   "/api/auth/reset-password",
   "/api/headroom/start",
   "/api/headroom/stop",
+  "/api/headroom/restart",
+  "/api/headroom/extras",
   "/api/headroom/proxy",
 ];
 
