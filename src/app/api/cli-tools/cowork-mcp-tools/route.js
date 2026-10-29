@@ -83,7 +83,12 @@ async function probeMcp(url) {
   }
 }
 
+import { requireAuth } from "@/lib/auth/requireAuth";
+
 export async function POST(request) {
+  if (!(await requireAuth(request))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   try {
     const { url } = await request.json();
     if (!url || typeof url !== "string") {

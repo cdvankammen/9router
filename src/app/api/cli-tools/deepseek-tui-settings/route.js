@@ -103,7 +103,12 @@ const has9RouterConfig = (config) => {
     return /localhost|127\.0\.0\.1|0\.0\.0\.0/.test(openaiSection.base_url);
 };
 
-export async function GET() {
+import { requireAuth } from "@/lib/auth/requireAuth";
+
+export async function GET(request) {
+  if (!(await requireAuth(request))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
     try {
         const installed = await checkDeepSeekInstalled();
         if (!installed) {
@@ -124,6 +129,9 @@ export async function GET() {
 }
 
 export async function POST(request) {
+  if (!(await requireAuth(request))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
     try {
         const { baseUrl, apiKey, model } = await request.json();
         if (!baseUrl || !model) {
@@ -147,7 +155,10 @@ export async function POST(request) {
     }
 }
 
-export async function DELETE() {
+export async function DELETE(request) {
+  if (!(await requireAuth(request))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
     try {
         const configPath = getDeepSeekConfigPath();
         try {

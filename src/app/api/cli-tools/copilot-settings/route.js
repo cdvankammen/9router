@@ -42,7 +42,12 @@ const get9RouterEntry = (config) => {
 };
 
 // GET - Read current copilot config
-export async function GET() {
+import { requireAuth } from "@/lib/auth/requireAuth";
+
+export async function GET(request) {
+  if (!(await requireAuth(request))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   try {
     const config = await readConfig();
     const entry = get9RouterEntry(config);
@@ -63,6 +68,9 @@ export async function GET() {
 
 // POST - Apply 9Router config to chatLanguageModels.json
 export async function POST(request) {
+  if (!(await requireAuth(request))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   try {
     const { baseUrl, apiKey, models } = await request.json();
 
@@ -121,7 +129,10 @@ export async function POST(request) {
 }
 
 // DELETE - Remove 9Router entry from chatLanguageModels.json
-export async function DELETE() {
+export async function DELETE(request) {
+  if (!(await requireAuth(request))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   try {
     const configPath = getConfigPath();
 

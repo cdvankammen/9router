@@ -74,7 +74,12 @@ const readConfig = async () => {
   }
 };
 
-export async function GET() {
+import { requireAuth } from "@/lib/auth/requireAuth";
+
+export async function GET(request) {
+  if (!(await requireAuth(request))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   try {
     const installed = await checkPiInstalled();
     if (!installed) {
@@ -100,6 +105,9 @@ export async function GET() {
 }
 
 export async function POST(request) {
+  if (!(await requireAuth(request))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   let rawBody;
   try {
     rawBody = await request.json();
@@ -185,7 +193,10 @@ export async function POST(request) {
   }
 }
 
-export async function DELETE() {
+export async function DELETE(request) {
+  if (!(await requireAuth(request))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   try {
     const configPath = await resolveModelsJsonPath();
     let existing = {};

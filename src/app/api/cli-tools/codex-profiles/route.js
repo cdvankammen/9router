@@ -16,7 +16,12 @@ const isValidModel = (model) => {
 };
 
 // GET - List all custom profiles from ~/.codex/*.config.toml
-export async function GET() {
+import { requireAuth } from "@/lib/auth/requireAuth";
+
+export async function GET(request) {
+  if (!(await requireAuth(request))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   try {
     const codexDir = getCodexDir();
     let files = [];
@@ -58,6 +63,9 @@ export async function GET() {
 
 // POST - Create or update a profile ~/.codex/<name>.config.toml
 export async function POST(request) {
+  if (!(await requireAuth(request))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   try {
     const { name, model } = await request.json();
 
@@ -97,6 +105,9 @@ export async function POST(request) {
 
 // DELETE - Remove a profile ~/.codex/<name>.config.toml
 export async function DELETE(request) {
+  if (!(await requireAuth(request))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   try {
     const { name } = await request.json();
     const cleanName = typeof name === "string" ? name.trim().toLowerCase() : "";

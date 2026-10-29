@@ -103,7 +103,12 @@ const checkHermesInstalled = async () => {
   }
 };
 
+import { requireAuth } from "@/lib/auth/requireAuth";
+
 export async function GET(request) {
+  if (!(await requireAuth(request))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   try {
     const installed = await checkHermesInstalled();
     if (!installed) {
@@ -191,6 +196,9 @@ const applyToAllProfiles = async ({ normalizedBaseUrl, apiKey, model }) => {
 };
 
 export async function POST(request) {
+  if (!(await requireAuth(request))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   try {
     const body = await request.json();
     const { baseUrl, apiKey, model, selections, audio } = body;
@@ -268,6 +276,9 @@ export async function POST(request) {
 }
 
 export async function DELETE(request) {
+  if (!(await requireAuth(request))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   try {
     let body = null;
     if (request && typeof request.json === "function") {

@@ -65,7 +65,12 @@ function checkPrivilege(pwd) {
 }
 
 // GET - Full MITM status (server + per-tool DNS)
-export async function GET() {
+import { requireAuth } from "@/lib/auth/requireAuth";
+
+export async function GET(request) {
+  if (!(await requireAuth(request))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   try {
     const status = await getMitmStatus();
     const settings = await getSettings();
@@ -92,6 +97,9 @@ export async function GET() {
 
 // POST - Start MITM server (cert + server, no DNS)
 export async function POST(request) {
+  if (!(await requireAuth(request))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   try {
     const { apiKey, sudoPassword, mitmRouterBaseUrl, forceKillPort443 } = await request.json();
     const pwd = getPassword(sudoPassword) || await loadEncryptedPassword() || "";
@@ -140,6 +148,9 @@ export async function POST(request) {
 
 // DELETE - Stop MITM server (removes all DNS first, then kills server)
 export async function DELETE(request) {
+  if (!(await requireAuth(request))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   try {
     const body = await request.json().catch(() => ({}));
     const { sudoPassword } = body;
@@ -161,6 +172,9 @@ export async function DELETE(request) {
 
 // PATCH - Toggle DNS for a specific tool (enable/disable)
 export async function PATCH(request) {
+  if (!(await requireAuth(request))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   try {
     const { tool, action, sudoPassword } = await request.json();
     const pwd = getPassword(sudoPassword) || await loadEncryptedPassword() || "";

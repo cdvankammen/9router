@@ -44,7 +44,12 @@ const STATUS_GETTERS = {
 };
 
 // Batch endpoint: gather all CLI tool statuses in one round-trip
-export async function GET() {
+import { requireAuth } from "@/lib/auth/requireAuth";
+
+export async function GET(request) {
+  if (!(await requireAuth(request))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   const entries = await Promise.all(
     Object.entries(STATUS_GETTERS).map(async ([toolId, getter]) => {
       try {

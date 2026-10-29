@@ -88,7 +88,12 @@ const readSettings = async () => {
 };
 
 // GET - Check claude CLI and read current settings
-export async function GET() {
+import { requireAuth } from "@/lib/auth/requireAuth";
+
+export async function GET(request) {
+  if (!(await requireAuth(request))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   try {
     const isInstalled = await checkClaudeInstalled();
     
@@ -122,6 +127,9 @@ export async function GET() {
 
 // POST - Backup old fields and write new settings
 export async function POST(request) {
+  if (!(await requireAuth(request))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   try {
     const { env, exaMcpEnabled, autoCompactWindow } = await request.json();
     
@@ -213,7 +221,10 @@ const RESET_ENV_KEYS = [
 ];
 
 // DELETE - Reset settings (remove env fields)
-export async function DELETE() {
+export async function DELETE(request) {
+  if (!(await requireAuth(request))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   try {
     const settingsPath = getClaudeSettingsPath();
 

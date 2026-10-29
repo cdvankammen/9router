@@ -6,7 +6,12 @@ import { getMitmStatus } from "@/mitm/manager";
 import { writeAliasForTool } from "@/lib/mitmAliasCache";
 
 // GET - Get MITM aliases for a tool
+import { requireAuth } from "@/lib/auth/requireAuth";
+
 export async function GET(request) {
+  if (!(await requireAuth(request))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   try {
     const { searchParams } = new URL(request.url);
     const toolName = searchParams.get("tool");
@@ -20,6 +25,9 @@ export async function GET(request) {
 
 // PUT - Save MITM aliases for a specific tool
 export async function PUT(request) {
+  if (!(await requireAuth(request))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   try {
     const { tool, mappings } = await request.json();
 

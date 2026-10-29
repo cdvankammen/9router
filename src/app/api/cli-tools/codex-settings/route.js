@@ -80,7 +80,12 @@ const has9RouterConfig = (config) => {
 };
 
 // GET - Check codex CLI and read current settings
-export async function GET() {
+import { requireAuth } from "@/lib/auth/requireAuth";
+
+export async function GET(request) {
+  if (!(await requireAuth(request))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   try {
     const isInstalled = await checkCodexInstalled();
     
@@ -108,6 +113,9 @@ export async function GET() {
 
 // POST - Update 9Router settings (merge with existing config)
 export async function POST(request) {
+  if (!(await requireAuth(request))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   try {
     const { baseUrl, apiKey, model, subagentModel } = await request.json();
     
@@ -163,7 +171,10 @@ export async function POST(request) {
 }
 
 // DELETE - Remove 9Router settings only (keep other settings)
-export async function DELETE() {
+export async function DELETE(request) {
+  if (!(await requireAuth(request))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   try {
     const configPath = getCodexConfigPath();
 

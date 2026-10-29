@@ -261,7 +261,12 @@ export async function writeSkipApprovals(managedServers) {
   return { written: Object.keys(skip).length };
 }
 
-export async function GET() {
+import { requireAuth } from "@/lib/auth/requireAuth";
+
+export async function GET(request) {
+  if (!(await requireAuth(request))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   try {
     const installed = await checkInstalled();
     if (!installed) {
@@ -329,6 +334,9 @@ export async function GET() {
 }
 
 export async function POST(request) {
+  if (!(await requireAuth(request))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   try {
     const { baseUrl, apiKey, models, plugins, localPlugins, customPlugins } = await request.json();
 
@@ -388,7 +396,10 @@ export async function POST(request) {
   }
 }
 
-export async function DELETE() {
+export async function DELETE(request) {
+  if (!(await requireAuth(request))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   try {
     const meta = await readJson(await getMetaPath());
     if (!meta?.appliedId) {

@@ -64,7 +64,12 @@ const readDevinVersion = async () => {
 };
 
 // GET — install detection only. No config to write: the binary handles its own auth.
-export async function GET() {
+import { requireAuth } from "@/lib/auth/requireAuth";
+
+export async function GET(request) {
+  if (!(await requireAuth(request))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   try {
     const { installed, source } = await checkDevinInstalled();
     if (!installed) {

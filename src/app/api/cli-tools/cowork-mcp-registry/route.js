@@ -58,7 +58,12 @@ async function fetchAll() {
   return out.filter((s) => (seen.has(s.url) ? false : (seen.add(s.url), true)));
 }
 
+import { requireAuth } from "@/lib/auth/requireAuth";
+
 export async function GET(request) {
+  if (!(await requireAuth(request))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   const { searchParams } = new URL(request.url);
   const force = searchParams.get("refresh") === "1";
   const cache = gcache();

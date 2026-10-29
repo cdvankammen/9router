@@ -55,7 +55,12 @@ const has9RouterConfig = (config) => {
 };
 
 // GET - Check opencode CLI and read current settings
-export async function GET() {
+import { requireAuth } from "@/lib/auth/requireAuth";
+
+export async function GET(request) {
+  if (!(await requireAuth(request))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   try {
     const isInstalled = await checkOpenCodeInstalled();
 
@@ -90,6 +95,9 @@ export async function GET() {
 
 // POST - Apply 9Router as openai-compatible provider (multi-model support)
 export async function POST(request) {
+  if (!(await requireAuth(request))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   try {
     const { baseUrl, apiKey, model, models, activeModel, subagentModel } = await request.json();
 
@@ -175,6 +183,9 @@ export async function POST(request) {
 
 // PATCH - Update specific settings (e.g., clear active model)
 export async function PATCH(request) {
+  if (!(await requireAuth(request))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   try {
     const { clearActiveModel } = await request.json();
     const configPath = getConfigPath();
@@ -211,6 +222,9 @@ export async function PATCH(request) {
 
 // DELETE - Remove 9Router provider or specific models from config
 export async function DELETE(request) {
+  if (!(await requireAuth(request))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   try {
     const { searchParams } = new URL(request.url);
     const modelToRemove = searchParams.get("model");

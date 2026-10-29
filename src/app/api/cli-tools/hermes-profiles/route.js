@@ -6,7 +6,12 @@ export const dynamic = "force-dynamic";
 // GET - List every Hermes profile on this machine (default home + ~/.hermes/profiles/*).
 // Discovery is filesystem-based: a directory only counts as a profile when it carries one of
 // Hermes' identity files, mirroring what `hermes profile list` accepts.
-export async function GET() {
+import { requireAuth } from "@/lib/auth/requireAuth";
+
+export async function GET(request) {
+  if (!(await requireAuth(request))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   try {
     const profiles = await listProfiles();
     return NextResponse.json({ profiles });

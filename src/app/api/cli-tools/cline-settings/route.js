@@ -52,7 +52,12 @@ const has9RouterConfig = (globalState) => {
   return isOpenAi && (baseUrl.includes("localhost") || baseUrl.includes("127.0.0.1") || baseUrl.includes("9router"));
 };
 
-export async function GET() {
+import { requireAuth } from "@/lib/auth/requireAuth";
+
+export async function GET(request) {
+  if (!(await requireAuth(request))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   try {
     const installed = await checkInstalled();
     if (!installed) {
@@ -77,6 +82,9 @@ export async function GET() {
 }
 
 export async function POST(request) {
+  if (!(await requireAuth(request))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   try {
     const { baseUrl, apiKey, model } = await request.json();
     if (!baseUrl || !apiKey || !model) {
@@ -107,7 +115,10 @@ export async function POST(request) {
   }
 }
 
-export async function DELETE() {
+export async function DELETE(request) {
+  if (!(await requireAuth(request))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   try {
     const globalState = await readJson(getGlobalStatePath());
     if (!globalState) {
