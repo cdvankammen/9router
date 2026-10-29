@@ -11,6 +11,7 @@
  */
 
 import { describe, it, expect, vi, afterEach } from "vitest";
+import fs from "node:fs";
 
 const NOW = Date.parse("2026-08-07T12:00:00.000Z");
 const HOUR = 3600 * 1000;
@@ -198,7 +199,11 @@ describe("startSrComboCleanup (scheduler gate)", () => {
     // Direct tick with real DB adapter (sql.js fallback works everywhere).
     // Use a temp DATA_DIR so we never touch the dev DB.
     const originalDataDir = process.env.DATA_DIR;
-    process.env.DATA_DIR = "/tmp/9r-sr-cleanup-test-" + Date.now();
+    const tempDataDir = "/tmp/9r-sr-cleanup-test-" + Date.now();
+    process.env.DATA_DIR = tempDataDir;
+    // Clear the driver's global adapter singleton so this inline integration test
+    // never reuses an adapter bound to a previous suite's DATA_DIR (see db-driver-chain).
+    delete global._dbAdapter;
 
     try {
       const { getAdapter } = await import("../../src/lib/db/driver.js");
@@ -240,6 +245,9 @@ describe("startSrComboCleanup (scheduler gate)", () => {
       const ids = remaining.map((r) => r.id).sort();
       expect(ids).toEqual(["sr-fresh", "user-keeper"]);
     } finally {
+      try { global._dbAdapter?.instance?.close?.(); } catch {}
+      delete global._dbAdapter;
+      fs.rmSync(tempDataDir, { recursive: true, force: true });
       if (originalDataDir === undefined) delete process.env.DATA_DIR;
       else process.env.DATA_DIR = originalDataDir;
       mod.stopSrComboCleanup();

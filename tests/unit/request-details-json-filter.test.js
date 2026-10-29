@@ -3,15 +3,29 @@
  * JSON column (errorCategory, sourceApp) via JSON1 — and that pagination
  * math stays correct when those filters are applied.
  */
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeAll, beforeEach, afterAll } from "vitest";
+import fs from "node:fs";
 
 const TEST_DIR = "/tmp/9r-jsonfilter-" + Date.now();
 
 describe("requestDetails JSON1 filters (errorCategory/sourceApp)", () => {
+  beforeAll(() => {
+    // Clear the driver's global adapter singleton so this suite never reuses
+    // an adapter bound to a previous suite's DATA_DIR (see db-driver-chain).
+    delete global._dbAdapter;
+  });
+
   beforeEach(() => {
     process.env.DATA_DIR = TEST_DIR;
     // saveRequestDetail no-ops unless observability is enabled
     process.env.ENABLE_REQUEST_LOGS = "true";
+  });
+
+  afterAll(() => {
+    try { global._dbAdapter?.instance?.close?.(); } catch {}
+    delete global._dbAdapter;
+    delete process.env.ENABLE_REQUEST_LOGS;
+    fs.rmSync(TEST_DIR, { recursive: true, force: true });
   });
 
   async function seed() {

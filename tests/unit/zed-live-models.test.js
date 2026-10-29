@@ -86,12 +86,17 @@ let createProviderConnection;
 
 beforeAll(async () => {
   process.env.DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), "9router-zed-live-"));
+  // Clear the driver's global adapter singleton so this suite never reuses
+  // an adapter bound to a previous suite's DATA_DIR (see db-driver-chain).
+  delete global._dbAdapter;
   vi.resetModules();
   ({ GET } = await import("@/app/api/providers/[id]/models/route.js"));
   ({ createProviderConnection } = await import("@/models/index.js"));
 });
 
 afterAll(() => {
+  try { global._dbAdapter?.instance?.close?.(); } catch {}
+  delete global._dbAdapter;
   fs.rmSync(process.env.DATA_DIR, { recursive: true, force: true });
   if (originalDataDir === undefined) delete process.env.DATA_DIR;
   else process.env.DATA_DIR = originalDataDir;

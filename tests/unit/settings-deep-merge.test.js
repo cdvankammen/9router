@@ -6,13 +6,26 @@
  * allowedProviders, allowedModels, costQualityTradeoff, maxCandidates.
  */
 
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeAll, beforeEach, afterAll } from "vitest";
+import fs from "node:fs";
 
 const TEST_DIR = "/tmp/9r-settings-deepmerge-" + Date.now();
 
 describe("settingsRepo nested deep-merge", () => {
+  beforeAll(() => {
+    // Clear the driver's global adapter singleton so this suite never reuses
+    // an adapter bound to a previous suite's DATA_DIR (see db-driver-chain).
+    delete global._dbAdapter;
+  });
+
   beforeEach(() => {
     process.env.DATA_DIR = TEST_DIR;
+  });
+
+  afterAll(() => {
+    try { global._dbAdapter?.instance?.close?.(); } catch {}
+    delete global._dbAdapter;
+    fs.rmSync(TEST_DIR, { recursive: true, force: true });
   });
 
   it("partial smartRouter update keeps sibling defaults", async () => {
