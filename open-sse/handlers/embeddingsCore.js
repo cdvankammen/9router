@@ -134,7 +134,6 @@ export async function handleEmbeddingsCore({
     response: new Response(JSON.stringify(normalized), {
       headers: {
         "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "*",
       },
     }),
   };

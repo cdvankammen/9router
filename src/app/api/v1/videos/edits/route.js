@@ -1,5 +1,5 @@
 import { handleVideoCreate } from "@/sse/handlers/videoGeneration.js";
-import { corsOptionsResponse } from "@/shared/utils/corsOptions.js";
+import { corsOptionsResponse, withCorsHeaders } from "@/shared/utils/corsOptions.js";
 
 export async function OPTIONS(request) {
   return corsOptionsResponse(request, "POST, OPTIONS");
@@ -7,5 +7,5 @@ export async function OPTIONS(request) {
 
 /** POST /v1/videos/edits - async video edit (xAI Grok Imagine) */
 export async function POST(request) {
-  return await handleVideoCreate(request, "edits");
+  return withCorsHeaders(request, await handleVideoCreate(request, "edits"));
 }

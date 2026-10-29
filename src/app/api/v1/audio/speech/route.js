@@ -1,5 +1,5 @@
 import { handleTts } from "@/sse/handlers/tts.js";
-import { corsOptionsResponse } from "@/shared/utils/corsOptions.js";
+import { corsOptionsResponse, withCorsHeaders } from "@/shared/utils/corsOptions.js";
 
 export async function OPTIONS(request) {
   return corsOptionsResponse(request, "POST, OPTIONS");
@@ -7,5 +7,5 @@ export async function OPTIONS(request) {
 
 /** POST /v1/audio/speech - OpenAI-compatible TTS endpoint */
 export async function POST(request) {
-  return await handleTts(request);
+  return withCorsHeaders(request, await handleTts(request));
 }

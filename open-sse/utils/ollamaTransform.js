@@ -79,7 +79,7 @@ export function transformToOllama(response, model) {
     return new Response("", { status: response.status, headers: { "Content-Type": "application/x-ndjson" } });
   }
   return new Response(response.body.pipeThrough(transform), {
-    headers: { "Content-Type": "application/x-ndjson", "Access-Control-Allow-Origin": "*" }
+    headers: { "Content-Type": "application/x-ndjson" }
   });
 }
 

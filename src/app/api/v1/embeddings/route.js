@@ -1,5 +1,5 @@
 import { handleEmbeddings } from "@/sse/handlers/embeddings.js";
-import { corsOptionsResponse } from "@/shared/utils/corsOptions.js";
+import { corsOptionsResponse, withCorsHeaders } from "@/shared/utils/corsOptions.js";
 
 /**
  * Handle CORS preflight
@@ -12,5 +12,5 @@ export async function OPTIONS(request) {
  * POST /v1/embeddings - OpenAI-compatible embeddings endpoint
  */
 export async function POST(request) {
-  return await handleEmbeddings(request);
+  return withCorsHeaders(request, await handleEmbeddings(request));
 }

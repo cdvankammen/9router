@@ -81,7 +81,7 @@ async function executeExecutorDrivenVideo({ provider, rawBody, credentials, sign
         }),
         {
           status: 200,
-          headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+          headers: { "Content-Type": "application/json" },
         }
       ),
     };
@@ -289,7 +289,6 @@ export async function handleVideoProxyCore({
       status: upstream.status,
       headers: {
         "Content-Type": outType,
-        "Access-Control-Allow-Origin": "*",
       },
     }),
   };

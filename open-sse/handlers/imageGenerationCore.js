@@ -74,7 +74,7 @@ export async function handleImageGenerationCore({
           return {
             success: true,
             response: new Response(buf, {
-              headers: { "Content-Type": mime, "Content-Disposition": `inline; filename="image.${fmt === "jpeg" ? "jpg" : fmt}"`, "Access-Control-Allow-Origin": "*" },
+              headers: { "Content-Type": mime, "Content-Disposition": `inline; filename="image.${fmt === "jpeg" ? "jpg" : fmt}"` },
             }),
           };
         }
@@ -83,7 +83,7 @@ export async function handleImageGenerationCore({
       return {
         success: true,
         response: new Response(JSON.stringify(finalBody), {
-          headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+          headers: { "Content-Type": "application/json" },
         }),
       };
     } catch (error) {
@@ -215,7 +215,6 @@ export async function handleImageGenerationCore({
           headers: {
             "Content-Type": mime,
             "Content-Disposition": `inline; filename="image.${fmt === "jpeg" ? "jpg" : fmt}"`,
-            "Access-Control-Allow-Origin": "*",
           },
         }),
       };
@@ -227,7 +226,6 @@ export async function handleImageGenerationCore({
     response: new Response(JSON.stringify(finalBody), {
       headers: {
         "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "*",
       },
     }),
   };

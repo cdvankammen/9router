@@ -1,6 +1,6 @@
 import { handleChat } from "@/sse/handlers/chat.js";
 import { initTranslators } from "open-sse/translator/index.js";
-import { corsOptionsResponse } from "@/shared/utils/corsOptions.js";
+import { corsOptionsResponse, withCorsHeaders } from "@/shared/utils/corsOptions.js";
 
 let initialized = false;
 
@@ -26,6 +26,6 @@ export async function POST(request) {
   // Fallback to local handling
   await ensureInitialized();
   
-  return await handleChat(request);
+  return withCorsHeaders(request, await handleChat(request));
 }
 

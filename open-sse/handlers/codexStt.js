@@ -8,7 +8,7 @@ import { createErrorResult } from "../utils/error.js";
 
 let active = 0;
 const failure = (status, message) => Object.assign(new Error(message), { status });
-const cors = { "Access-Control-Allow-Origin": "*", "Cache-Control": "no-store" };
+const noStoreHeaders = { "Cache-Control": "no-store" };
 
 // Keep the signal connected until the response body finishes, not just headers.
 export function codexHttpFetch(url, { headers, body, signal }) {
@@ -87,8 +87,8 @@ export async function transcribeCodex({ formData, credentials, signal: clientSig
     try { data = JSON.parse(bytes.toString("utf8")); } catch { throw failure(502, "Invalid transcription response"); }
     if (typeof data?.text !== "string" || data.text.length > 250000) throw failure(502, "Invalid transcription response");
     return { success: true, response: format === "text"
-      ? new Response(data.text, { headers: { ...cors, "Content-Type": "text/plain; charset=utf-8" } })
-      : Response.json({ text: data.text }, { headers: cors }) };
+      ? new Response(data.text, { headers: { ...noStoreHeaders, "Content-Type": "text/plain; charset=utf-8" } })
+      : Response.json({ text: data.text }, { headers: noStoreHeaders }) };
   } catch (error) {
     return createErrorResult(error.status || (signal.aborted ? 504 : 502), error.status ? error.message : "Codex transcription failed");
   } finally {

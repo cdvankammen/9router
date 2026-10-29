@@ -227,7 +227,6 @@ export async function inspectAndWrapCommandCodeResponse(originalResponse, model)
         statusText: statusCode === 503 ? "Service Unavailable" : (statusCode === 429 ? "Too Many Requests" : "Bad Gateway"),
         headers: {
           "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*",
         },
       }
     );

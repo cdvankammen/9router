@@ -1,5 +1,5 @@
 import { handleFetch } from "@/sse/handlers/fetch.js";
-import { corsOptionsResponse } from "@/shared/utils/corsOptions.js";
+import { corsOptionsResponse, withCorsHeaders } from "@/shared/utils/corsOptions.js";
 
 /**
  * Handle CORS preflight — delegates to the shared helper which consults
@@ -13,5 +13,5 @@ export async function OPTIONS(request) {
  * POST /v1/web/fetch - Web URL fetch/extract endpoint
  */
 export async function POST(request) {
-  return await handleFetch(request);
+  return withCorsHeaders(request, await handleFetch(request));
 }

@@ -579,12 +579,15 @@ describe("handleEmbeddingsCore — success path", () => {
     expect(body.data[0]).toHaveProperty("index");
   });
 
-  it("response includes CORS header Access-Control-Allow-Origin: *", async () => {
+  it("response does NOT include CORS header (applied at app boundary)", async () => {
     vi.mocked(fetch).mockResolvedValueOnce(makeProviderResponse(VALID_EMBEDDING_RESPONSE));
 
     const result = await handleEmbeddingsCore(makeOptions());
 
-    expect(result.response.headers.get("Access-Control-Allow-Origin")).toBe("*");
+    // CORS headers are applied at the app boundary (src/shared/utils/corsOptions.js
+    // withCorsHeaders), not inside open-sse engine handlers. The engine response
+    // must not carry a hardcoded wildcard.
+    expect(result.response.headers.get("Access-Control-Allow-Origin")).toBeNull();
   });
 
   it("response Content-Type is application/json", async () => {

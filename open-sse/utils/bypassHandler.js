@@ -134,8 +134,7 @@ function createNonStreamingResponse(sourceFormat, model, text) {
       success: true,
       response: new Response(JSON.stringify(openaiResponse), {
         headers: {
-          "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*"
+          "Content-Type": "application/json"
         }
       })
     };
@@ -168,8 +167,7 @@ function createNonStreamingResponse(sourceFormat, model, text) {
     success: true,
     response: new Response(JSON.stringify(finalResponse), {
       headers: {
-        "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "*"
+        "Content-Type": "application/json"
       }
     })
   };
@@ -216,8 +214,7 @@ function createStreamingResponse(sourceFormat, model, text) {
       headers: {
         "Content-Type": "text/event-stream",
         "Cache-Control": "no-cache",
-        "Connection": "keep-alive",
-        "Access-Control-Allow-Origin": "*"
+        "Connection": "keep-alive"
       }
     })
   };

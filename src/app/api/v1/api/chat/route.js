@@ -1,7 +1,7 @@
 import { handleChat } from "@/sse/handlers/chat.js";
 import { initTranslators } from "open-sse/translator/index.js";
 import { transformToOllama } from "open-sse/utils/ollamaTransform.js";
-import { corsOptionsResponse } from "@/shared/utils/corsOptions.js";
+import { corsOptionsResponse, withCorsHeaders } from "@/shared/utils/corsOptions.js";
 
 let initialized = false;
 
@@ -27,6 +27,7 @@ export async function POST(request) {
   } catch {}
 
   const response = await handleChat(request);
-  return transformToOllama(response, modelName);
+  const ollamaResponse = transformToOllama(response, modelName);
+  return withCorsHeaders(request, ollamaResponse);
 }
 

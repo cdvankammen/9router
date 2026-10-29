@@ -14,10 +14,7 @@ export const SSE_HEADERS_NO_BUFFER = {
   "X-Accel-Buffering": "no"
 };
 
-// Variant for client-facing SSE responses (adds permissive CORS)
-export const SSE_HEADERS_CORS = {
-  "Content-Type": "text/event-stream",
-  "Cache-Control": "no-cache",
-  "Connection": "keep-alive",
-  "Access-Control-Allow-Origin": "*"
-};
+// NOTE: SSE_HEADERS_CORS was removed in the CORS Phase 3B refactor.
+// CORS headers are now applied exclusively at the app boundary
+// (src/shared/utils/corsOptions.js withCorsHeaders). Use SSE_HEADERS
+// for all SSE responses — the allowlist is the single source of truth.

@@ -48,6 +48,18 @@ export async function corsOptionsResponse(request, methods = "GET, POST, OPTIONS
 export async function withCorsHeaders(request, response) {
   const cors = await resolveCorsHeaders(request);
   const headers = new Headers(response.headers);
+
+  // Strip any CORS headers that upstream handlers (e.g. open-sse) may have
+  // hardcoded. This function is the single authoritative CORS gate — the
+  // allowlist in settings.corsAllowedOrigins is the only source of truth.
+  // Without this strip, a hardcoded "*" from open-sse would leak through even
+  // when the allowlist rejects the requesting origin.
+  headers.delete("Access-Control-Allow-Origin");
+  headers.delete("Access-Control-Allow-Methods");
+  headers.delete("Access-Control-Allow-Headers");
+
+  // Apply resolved CORS headers (may be empty if origin is disallowed —
+  // browser blocks the response, non-browser clients are unaffected).
   for (const [k, v] of Object.entries(cors)) {
     headers.set(k, v);
   }
