@@ -1540,7 +1540,14 @@ export default function ProviderDetailPage() {
                     onConfirm: async () => {
                       setConfirmState(null);
                       try {
-                        const res = await fetch(`/api/provider-nodes/${providerId}`, { method: "DELETE" });
+                        // X-Confirm-Cascade: server-side echo of the modal
+                        // confirmation. The DELETE cascades to every bound
+                        // providerConnection via deleteProviderConnectionsByProvider(id);
+                        // without the header the server returns 412.
+                        const res = await fetch(`/api/provider-nodes/${providerId}`, {
+                          method: "DELETE",
+                          headers: { "X-Confirm-Cascade": "true" },
+                        });
                         if (res.ok) {
                           router.push("/dashboard/providers");
                         }

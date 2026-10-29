@@ -126,13 +126,30 @@ export async function PUT(request, { params }) {
 
 // DELETE /api/provider-nodes/[id] - Delete provider node and its connections
 // Finding #7 CRITICAL: cascading delete — one request wipes every connection
-// bound to the node via deleteProviderConnectionsByProvider(id) at :121.
-// Route-level requireAuth is the minimum defence-in-depth; a future
-// confirmation-token / soft-delete would be stronger.
+// bound to the node via deleteProviderConnectionsByProvider(id).
+//
+// Defence-in-depth (2 layers):
+//   1. requireAuth — blocks unauthenticated callers (Finding #7 baseline)
+//   2. X-Confirm-Cascade header — requires the caller to explicitly
+//      acknowledge the cascade. The dashboard UI already shows a
+//      confirmation dialog before firing the DELETE; this header is the
+//      server-side echo of that acknowledgement. A future refactor that
+//      loses the dialog, or a programmatic client that doesn't know
+//      about the cascade, will be rejected with 412 Precondition Failed
+//      rather than silently wiping every bound connection.
 export async function DELETE(request, { params }) {
   try {
     if (!(await requireAuth(request))) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    if (request.headers.get("x-confirm-cascade") !== "true") {
+      return NextResponse.json(
+        {
+          error: "Cascade confirmation required",
+          hint: "Deleting a provider node also deletes every connection bound to it. Re-issue the request with header X-Confirm-Cascade: true to confirm.",
+        },
+        { status: 412 }
+      );
     }
     const { id } = await params;
     const node = await getProviderNodeById(id);
