@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
+import { corsOptionsResponse } from "@/shared/utils/corsOptions.js";
 
+// CORS_HEADERS retained for the GET response (Phase 2 will remove this).
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, OPTIONS",
@@ -44,6 +46,6 @@ export async function GET() {
   }
 }
 
-export async function OPTIONS() {
-  return new NextResponse(null, { status: 204, headers: CORS_HEADERS });
+export async function OPTIONS(request) {
+  return corsOptionsResponse(request, "GET, OPTIONS");
 }

@@ -3,14 +3,8 @@ import { handleSearch } from "@/sse/handlers/search.js";
 /**
  * Handle CORS preflight
  */
-export async function OPTIONS() {
-  return new Response(null, {
-    headers: {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "POST, OPTIONS",
-      "Access-Control-Allow-Headers": "*"
-    }
-  });
+export async function OPTIONS(request) {
+  return corsOptionsResponse(request, "POST, OPTIONS");
 }
 
 /**

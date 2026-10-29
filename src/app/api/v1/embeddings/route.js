@@ -1,16 +1,11 @@
 import { handleEmbeddings } from "@/sse/handlers/embeddings.js";
+import { corsOptionsResponse } from "@/shared/utils/corsOptions.js";
 
 /**
  * Handle CORS preflight
  */
-export async function OPTIONS() {
-  return new Response(null, {
-    headers: {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "POST, OPTIONS",
-      "Access-Control-Allow-Headers": "*"
-    }
-  });
+export async function OPTIONS(request) {
+  return corsOptionsResponse(request, "POST, OPTIONS");
 }
 
 /**

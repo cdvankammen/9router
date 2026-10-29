@@ -1,4 +1,5 @@
 import { buildModelsList } from "../route.js";
+import { corsOptionsResponse } from "@/shared/utils/corsOptions.js";
 import { getKeyAccessContext, filterModelsListForKey } from "@/sse/services/keyAccess.js";
 
 // URL slug → service kind(s). `web` covers both webSearch and webFetch.
@@ -13,14 +14,8 @@ const KIND_SLUG_MAP = {
 
 const LLM_KIND = "llm";
 
-export async function OPTIONS() {
-  return new Response(null, {
-    headers: {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET, OPTIONS",
-      "Access-Control-Allow-Headers": "*",
-    },
-  });
+export async function OPTIONS(request) {
+  return corsOptionsResponse(request, "GET, OPTIONS");
 }
 
 function json(data, options = {}) {

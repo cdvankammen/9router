@@ -1,13 +1,8 @@
 import { handleVideoGet } from "@/sse/handlers/videoGeneration.js";
+import { corsOptionsResponse } from "@/shared/utils/corsOptions.js";
 
-export async function OPTIONS() {
-  return new Response(null, {
-    headers: {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET, OPTIONS",
-      "Access-Control-Allow-Headers": "*",
-    },
-  });
+export async function OPTIONS(request) {
+  return corsOptionsResponse(request, "GET, OPTIONS");
 }
 
 /** GET /v1/videos/{request_id} - poll async video job status (xAI Grok Imagine) */

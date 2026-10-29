@@ -1,3 +1,6 @@
+import { corsOptionsResponse } from "@/shared/utils/corsOptions.js";
+
+// CORS_HEADERS retained for the POST response (Phase 2 will remove this).
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
@@ -5,10 +8,11 @@ const CORS_HEADERS = {
 };
 
 /**
- * Handle CORS preflight
+ * Handle CORS preflight — delegates to shared helper which honors
+ * settings.corsAllowedOrigins (CORS rollout 2026-10-29).
  */
-export async function OPTIONS() {
-  return new Response(null, { headers: CORS_HEADERS });
+export async function OPTIONS(request) {
+  return corsOptionsResponse(request, "POST, OPTIONS");
 }
 
 function countValueChars(value) {

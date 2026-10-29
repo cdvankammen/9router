@@ -1,16 +1,12 @@
 import { PROVIDER_MODELS } from "@/shared/constants/models";
+import { corsOptionsResponse } from "@/shared/utils/corsOptions.js";
 
 /**
- * Handle CORS preflight
+ * Handle CORS preflight — delegates to shared helper which honors
+ * settings.corsAllowedOrigins (CORS rollout 2026-10-29).
  */
-export async function OPTIONS() {
-  return new Response(null, {
-    headers: {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET, OPTIONS",
-      "Access-Control-Allow-Headers": "*"
-    }
-  });
+export async function OPTIONS(request) {
+  return corsOptionsResponse(request, "GET, OPTIONS");
 }
 
 /**

@@ -1,4 +1,5 @@
 import { AI_PROVIDERS } from "@/shared/constants/providers";
+import { corsOptionsResponse } from "@/shared/utils/corsOptions.js";
 
 // Provider → internal voices API. Edge/local-device share the generic endpoint.
 const PROVIDER_API = {
@@ -9,10 +10,8 @@ const PROVIDER_API = {
   "local-device": (origin) => `${origin}/api/media-providers/tts/voices?provider=local-device`,
 };
 
-export async function OPTIONS() {
-  return new Response(null, {
-    headers: { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "GET, OPTIONS" },
-  });
+export async function OPTIONS(request) {
+  return corsOptionsResponse(request, "GET, OPTIONS");
 }
 
 // GET /v1/audio/voices?provider={p}[&lang=xx]

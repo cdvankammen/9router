@@ -1,5 +1,6 @@
 import { handleChat } from "@/sse/handlers/chat.js";
 import { initTranslators } from "open-sse/translator/index.js";
+import { corsOptionsResponse } from "@/shared/utils/corsOptions.js";
 
 let initialized = false;
 
@@ -10,14 +11,8 @@ async function ensureInitialized() {
   }
 }
 
-export async function OPTIONS() {
-  return new Response(null, {
-    headers: {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-      "Access-Control-Allow-Headers": "*"
-    }
-  });
+export async function OPTIONS(request) {
+  return corsOptionsResponse(request, "GET, POST, OPTIONS");
 }
 
 /**

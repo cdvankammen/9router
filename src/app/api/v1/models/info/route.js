@@ -1,4 +1,5 @@
 import { PROVIDER_MODELS } from "open-sse/config/providerModels.js";
+import { corsOptionsResponse } from "@/shared/utils/corsOptions.js";
 import { AI_PROVIDERS, ALIAS_TO_ID } from "@/shared/constants/providers";
 import { getModelKind } from "@/shared/constants/models";
 
@@ -76,10 +77,8 @@ function lookup(fullId, requestedKind) {
   return null;
 }
 
-export async function OPTIONS() {
-  return new Response(null, {
-    headers: { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "GET, OPTIONS" },
-  });
+export async function OPTIONS(request) {
+  return corsOptionsResponse(request, "GET, OPTIONS");
 }
 
 // GET /v1/models/info?id={alias}/{modelId} — metadata for a single model

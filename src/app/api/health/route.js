@@ -1,15 +1,17 @@
 import { NextResponse } from "next/server";
+import { corsOptionsResponse, withCorsHeaders } from "@/shared/utils/corsOptions.js";
 
-const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, OPTIONS",
-  "Access-Control-Allow-Headers": "*",
-};
-
-export async function GET() {
-  return NextResponse.json({ ok: true }, { headers: CORS_HEADERS });
+// CORS pilot (2026-10-29): /api/health uses the shared helper so it
+// honors settings.corsAllowedOrigins instead of hardcoding wildcard.
+// GET uses withCorsHeaders so the response still carries CORS headers;
+// OPTIONS delegates entirely to corsOptionsResponse.
+export async function GET(request) {
+  return withCorsHeaders(
+    request,
+    NextResponse.json({ ok: true })
+  );
 }
 
-export async function OPTIONS() {
-  return new NextResponse(null, { status: 204, headers: CORS_HEADERS });
+export async function OPTIONS(request) {
+  return corsOptionsResponse(request, "GET, OPTIONS");
 }

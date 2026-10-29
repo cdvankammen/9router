@@ -1,16 +1,12 @@
 import { handleFetch } from "@/sse/handlers/fetch.js";
+import { corsOptionsResponse } from "@/shared/utils/corsOptions.js";
 
 /**
- * Handle CORS preflight
+ * Handle CORS preflight — delegates to the shared helper which consults
+ * settings.corsAllowedOrigins. CORS pilot (2026-10-29).
  */
-export async function OPTIONS() {
-  return new Response(null, {
-    headers: {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "POST, OPTIONS",
-      "Access-Control-Allow-Headers": "*"
-    }
-  });
+export async function OPTIONS(request) {
+  return corsOptionsResponse(request, "POST, OPTIONS");
 }
 
 /**

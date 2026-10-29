@@ -1,13 +1,8 @@
 import { handleVideoCreate } from "@/sse/handlers/videoGeneration.js";
+import { corsOptionsResponse } from "@/shared/utils/corsOptions.js";
 
-export async function OPTIONS() {
-  return new Response(null, {
-    headers: {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "POST, OPTIONS",
-      "Access-Control-Allow-Headers": "*",
-    },
-  });
+export async function OPTIONS(request) {
+  return corsOptionsResponse(request, "POST, OPTIONS");
 }
 
 /** POST /v1/videos/extensions - async video extension (xAI Grok Imagine) */

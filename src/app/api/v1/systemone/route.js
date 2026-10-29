@@ -1,4 +1,5 @@
 import { handleSystemone } from "@/sse/handlers/systemone.js";
+import { corsOptionsResponse } from "@/shared/utils/corsOptions.js";
 
 /**
  * Handle CORS preflight
