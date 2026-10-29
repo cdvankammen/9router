@@ -222,7 +222,7 @@ export default function Sidebar({ onClose }) {
                         : "text-text-muted hover:bg-surface-2 hover:text-text-main"
                     )}
                   >
-                    <span className="material-symbols-outlined text-[16px]">{kind.icon}</span>
+                    <span className="material-symbols-outlined text-[16px]" aria-hidden="true">{kind.icon}</span>
                     <span className="text-sm">{kind.label}</span>
                   </Link>
                 ))}
@@ -237,7 +237,7 @@ export default function Sidebar({ onClose }) {
                       : "text-text-muted hover:bg-surface-2 hover:text-text-main"
                   )}
                 >
-                  <span className="material-symbols-outlined text-[16px]">{COMBINED_WEB_ITEM.icon}</span>
+                  <span className="material-symbols-outlined text-[16px]" aria-hidden="true">{COMBINED_WEB_ITEM.icon}</span>
                   <span className="text-sm">{COMBINED_WEB_ITEM.label}</span>
                 </Link>
               </div>
@@ -256,6 +256,7 @@ export default function Sidebar({ onClose }) {
                 )}
               >
                 <span
+                  aria-hidden="true"
                   className={cn(
                     "material-symbols-outlined text-[18px]",
                     isActive(item.href) ? "fill-1" : "group-hover:text-primary transition-colors"
@@ -283,6 +284,7 @@ export default function Sidebar({ onClose }) {
                   )}
                 >
                   <span
+                    aria-hidden="true"
                     className={cn(
                       "material-symbols-outlined text-[18px]",
                       isActive(item.href) ? "fill-1" : "group-hover:text-primary transition-colors"
@@ -307,6 +309,7 @@ export default function Sidebar({ onClose }) {
               )}
             >
               <span
+                aria-hidden="true"
                 className={cn(
                   "material-symbols-outlined text-[18px]",
                   isActive("/dashboard/profile") ? "fill-1" : "group-hover:text-primary transition-colors"
@@ -350,7 +353,7 @@ export default function Sidebar({ onClose }) {
           ) : (
             <div className="text-center p-8">
               <div className="flex items-center justify-center size-16 rounded-full bg-red-500/20 text-red-500 mx-auto mb-4">
-                <span className="material-symbols-outlined text-[32px]">power_off</span>
+                <span className="material-symbols-outlined text-[32px]" aria-hidden="true">power_off</span>
               </div>
               <h2 className="text-xl font-semibold text-white mb-2">Server Disconnected</h2>
               <p className="text-text-muted mb-6">The proxy server has been stopped.</p>
@@ -375,7 +378,7 @@ function ManualUpdatePanel({ latestVersion, installCmd, copied, onCopyAndShutdow
     <div className="w-full max-w-lg rounded-xl bg-neutral-900/95 border border-white/10 p-6 text-white">
       <div className="flex items-center gap-3 mb-4">
         <div className="flex items-center justify-center size-11 rounded-full bg-amber-500/20 text-amber-400">
-          <span className="material-symbols-outlined text-[24px]">content_copy</span>
+          <span className="material-symbols-outlined text-[24px]" aria-hidden="true">content_copy</span>
         </div>
         <div>
           <h2 className="text-lg font-semibold">Update 9Router{latestVersion ? ` to v${latestVersion}` : ""}</h2>
