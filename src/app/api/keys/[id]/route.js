@@ -32,6 +32,13 @@ function maskKey(fullKey) {
 // GET /api/keys/[id] - Get single key (masked, same as list)
 export async function GET(request, { params }) {
   try {
+    // IDOR sweep (2026-10-29): route-level requireAuth as defence-in-depth.
+    // Although the response masks the key value, UUID enumeration still
+    // exposes key metadata (name, access scope, timestamps, last-used)
+    // to any unauthenticated caller on the LAN.
+    if (!(await requireAuth(request))) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     const { id } = await params;
     const key = await getApiKeyById(id);
     if (!key) {

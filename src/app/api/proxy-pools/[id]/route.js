@@ -53,6 +53,12 @@ function countBoundConnections(connections = [], proxyPoolId) {
 // GET /api/proxy-pools/[id] - Get proxy pool
 export async function GET(request, { params }) {
   try {
+    // IDOR sweep (2026-10-29): route-level requireAuth as defence-in-depth.
+    // Proxy pool records expose upstream proxy hostnames, credentials
+    // references, and routing targets — SSRF-via-stored-config surface.
+    if (!(await requireAuth(request))) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     const { id } = await params;
     const proxyPool = await getProxyPoolById(id);
 

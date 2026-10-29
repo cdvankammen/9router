@@ -63,8 +63,16 @@ function shouldMergeProviderSpecificData(existing, incoming, hasLegacyProxy, has
 }
 
 // GET /api/providers/[id] - Get single connection
+// IDOR sweep (2026-10-29): route-level requireAuth as defence-in-depth,
+// matching the PUT/DELETE guards. The response includes masked apiKey,
+// proxyUrl, baseUrl, OAuth credential references, and providerSpecificData
+// — sensitive connection state that should not leak on a middleware
+// regression from ALWAYS_PROTECTED back to PROTECTED_API_PATHS.
 export async function GET(request, { params }) {
   try {
+    if (!(await requireAuth(request))) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     const { id } = await params;
     const connection = await getProviderConnectionById(id);
 

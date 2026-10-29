@@ -9,6 +9,12 @@ const VALID_NAME_REGEX = /^[a-zA-Z0-9_.\-]+$/;
 // GET /api/combos/[id] - Get combo by ID
 export async function GET(request, { params }) {
   try {
+    // IDOR sweep (2026-10-29): route-level requireAuth as defence-in-depth,
+    // matching the PUT/DELETE guards. Combo records contain provider/model
+    // routing configuration including fallback chain targets.
+    if (!(await requireAuth(request))) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     const { id } = await params;
     const combo = await getComboById(id);
     

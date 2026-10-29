@@ -63,6 +63,12 @@ async function readOverrides() {
  */
 export async function GET(request, { params }) {
   try {
+    // IDOR sweep (2026-10-29): route-level requireAuth as defence-in-depth.
+    // Provider overrides contain model-cap overrides, context-window limits,
+    // and per-provider tuning that should not be enumerable by unauthed peers.
+    if (!(await requireAuth(request))) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     const { id } = await params;
     // URL may use an alias (gcli, cc…) — key everything by canonical registry id
     const canonical = resolveProviderAlias(id);

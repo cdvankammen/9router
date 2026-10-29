@@ -181,6 +181,60 @@ Zero console errors, zero duplicate IDs, zero page errors on both hosts.
 
 ---
 
+## Stage 8 — IDOR sweep remainder (2026-10-29)
+
+**Scope:** Full audit of all `/api/.../[id]` route handlers for route-level `requireAuth` defence-in-depth, per Finding #7 commentary: *"PROTECTED_API_PATHS… on the documented default open-by-choice deployment… every network peer could hit them unauthenticated."*
+
+### Routes fixed (8 GET handlers)
+
+| Route | Priority | Risk if middleware regresses | Commit |
+|-------|----------|------------------------------|--------|
+| `src/app/api/messages/[id]/route.js` GET | P0 | Exposes captured prompts, provider responses, Authorization/Bearer headers forwarded upstream, embedded API keys | PENDING |
+| `src/app/api/messages/[id]/export/route.js` GET | P0 | Exports full record as JSON/Markdown/curl; curl format includes target URL and body | PENDING |
+| `src/app/api/providers/[id]/route.js` GET | P1 | Exposes connection state (masked apiKey, proxyUrl, baseUrl, OAuth refs, providerSpecificData) | PENDING |
+| `src/app/api/providers/[id]/models/route.js` GET | P1 | Side-effect: runs refreshGoogleToken / refreshCodexToken on GET (credential-adjacent outbound calls) | PENDING |
+| `src/app/api/combos/[id]/route.js` GET | P2 | Exposes combo routing config including fallback chain targets | PENDING |
+| `src/app/api/providers/[id]/overrides/route.js` GET | P2 | Exposes model-cap overrides, context-window limits, per-provider tuning | PENDING |
+| `src/app/api/proxy-pools/[id]/route.js` GET | P2 | Exposes upstream proxy hostnames, credential references, routing targets (SSRF-via-stored-config surface) | PENDING |
+| `src/app/api/keys/[id]/route.js` GET | P2 | UUID enumeration leaks masked-key metadata (name, access scope, timestamps, last-used) despite value masking | PENDING |
+
+### Routes intentionally NOT modified
+
+- `src/app/api/v1/videos/[id]/route.js` — public LLM data-plane by design (LLM API key auth inside handler)
+- `src/app/api/messages/[id]/actions/route.js` POST — already gated (commit 27ff0cfa)
+- `src/app/api/messages/[id]/annotations/route.js` — already gated (commit 27ff0cfa follow-up)
+- `src/app/api/provider-nodes/[id]/route.js` PUT/DELETE — already gated (commit 24f497b6 middleware promotion)
+- `src/app/api/providers/[id]/test/route.js` POST — already gated
+- `src/app/api/providers/[id]/test-models/route.js` POST — already gated
+- `src/app/api/proxy-pools/[id]/test/route.js` POST — already gated
+
+### Regression tests
+
+`tests/unit/idor-route-auth.test.js` — **24 tests** (6 routes × 4 auth scenarios):
+
+1. Unauthenticated request → 401, data-layer NOT called (proves gate fires before data access)
+2. Valid CLI token (`x-9r-cli-token`) → passes through
+3. Valid dashboard JWT (`auth_token` cookie) → passes through
+4. Wrong CLI token → 401, data-layer NOT called
+
+Pattern follows the proven `shutdown-route-auth.test.js` template with `vi.hoisted` + `vi.mock` and `@/` alias imports.
+
+### Security property proven
+
+The rejection-path tests assert `expect(mocks[route.dataMock]).not.toHaveBeenCalled()` — this proves the `requireAuth` guard fires BEFORE any data access, so a future middleware regression that reverts these routes from `ALWAYS_PROTECTED` back to `PROTECTED_API_PATHS` would not leak data; the route-level gate catches it.
+
+### Open follow-ups (deferred to next wave)
+
+- `src/app/api/usage/[connectionId]/route.js` — verify auth state
+- `src/app/api/usage/[connectionId]/claude-reset/route.js` — verify auth state
+- `src/app/api/usage/[connectionId]/codex-reset-credits/route.js` — verify auth state
+- `src/app/api/headroom/proxy/[...path]/route.js` — SSRF-sensitive, needs separate review
+- `src/app/api/oauth/[provider]/[action]/route.js` — OAuth flow, high value
+- `src/app/api/mcp/[plugin]/message/route.js` and `/sse/route.js` — MCP transport
+- Cascading DELETE confirmation token on `/api/provider-nodes/[id]` — UX friction tradeoff, deferred
+
+---
+
 ## Transcript Sweeps
 
 | Session | Size | Hits | Result |

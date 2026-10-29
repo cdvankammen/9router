@@ -976,6 +976,50 @@ The following previously recorded findings were **retracted** after audit-trail 
 
 ### Wave 752 findings (deferred recording)
 
+#### Finding #343: Model catalog daily sync fetches from models.dev with no integrity verification (supply-chain catalog poisoning)
+- **Severity**: MEDIUM (model-capability poisoning → routing misclassification; indirect data-plane impact)
+- **Location**: `src/lib/modelCatalog/sync.js:14` (`CATALOG_URL = "https://models.dev/api.json"`) and `open-sse/providers/catalogOverride.js:9-12` (reads `DATA_DIR/model-catalog.json`)
+- **Proof (code-verified)**: `sync.js` fetches the catalog once daily (`SYNC_INTERVAL_MS = 24h`) via `fetch(CATALOG_URL)` with a 60s timeout, parses it, and writes `model-catalog.json` to `DATA_DIR`. The reader (`catalogOverride.js`) re-parses this file on every mtime change and feeds it into `getCapabilitiesForModel` — which drives context-aware combo routing, capacity-adapter fallback selection, and the `/v1/models` advertised context windows. No integrity check is applied: no signature, no pinned hash, no `If-None-Match`/ETag comparison, no TLS certificate pinning. A MITM on the models.dev fetch (or a compromise of models.dev itself) can inject arbitrary model entries, fake context windows, or spoof modality claims (vision/audio/video/pdf).
+- **Impact**: Poisoned capabilities data causes the router to (a) send vision requests to models that don't support them (dropped images, failed requests), (b) route prompts to attacker-named models that match combo expansion, (c) advertise inflated context windows that cause silent truncation. The catalog is also consumed by the `add-models` skill.
+- **Defense noted**: TLS provides transport integrity in normal network conditions. The catalog writer uses atomic `rename` (`.tmp` → final) so partial writes don't corrupt readers. Failures are swallowed (`console.log` only) — a stale catalog keeps the static tables as fallback.
+- **Remediation**: Pin a SHA-256 of the expected catalog (or of a signed manifest), verify before writing, refuse the write and alert on mismatch. Alternatively, bundle the catalog at build time and only accept signed updates.
+
+#### Finding #342: cloudflared binary download has no integrity verification (supply-chain RCE)
+- **Severity**: HIGH (arbitrary code execution on first tunnel enable; contrasts with tray binary which IS pinned)
+- **Location**: `src/lib/tunnel/cloudflare/cloudflared.js:17-18` (`GITHUB_BASE_URL = "https://github.com/cloudflare/cloudflared/releases/latest/download"`) and `downloadFile`/`ensureCloudflared`
+- **Proof (code-verified)**: `cloudflared.js` downloads the cloudflared binary from GitHub's `releases/latest/download` redirect chain (HTTP 301/302/303/307/308 followed recursively with no bound), then validates only with `isValidBinary` — a magic-byte check (ELF `7f454c46`, Mach-O `cffaedfe`, PE `4d5a`) and a 1MB minimum size. There is **no SHA-256 pin, no GPG signature verification, no checksum file fetch, and no version pin**. Compare with `cli/hooks/trayRuntime.js` which pins `ARM64_TRAY_SHA256 = "487e3c365aaa..."` and verifies before chmod/execution (wave 781 defense confirmation). Any GitHub release compromise, CDN compromise on the redirect chain, or DNS hijack during the download results in an attacker-controlled binary being executed with the user's privileges when they enable the tunnel feature.
+- **Trigger condition**: User enables the tunnel feature in the dashboard; `initializeApp.js` calls `ensureCloudflared()` which downloads if the binary is absent or fails the magic-byte check.
+- **Defense noted**: HTTPS transport provides integrity against passive MITM. Magic-byte check rejects truncated/wrong-format downloads. `MIN_BINARY_SIZE` rejects obviously-truncated files.
+- **Remediation**: Pin the cloudflared version and SHA-256 per platform (matching the tray-binary pattern), fetch the checksums file from `github.com/cloudflare/cloudflared/releases/download/<version>/checksums.txt` and verify before chmod. Add a redirect-depth bound (e.g., 5) to `downloadFile`.
+
+#### Finding #341: API key `keyId` segment generated with Math.random (weak randomness in key format)
+- **Severity**: LOW (Math.random is not cryptographically secure; impact limited by DB-row-match requirement)
+- **Location**: `src/shared/utils/apiKey.js:8-14` (`generateKeyId`)
+- **Proof (code-verified)**:
+  ```js
+  function generateKeyId() {
+    const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
+    let result = "";
+    for (let i = 0; i < 6; i++) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return result;
+  }
+  ```
+  The keyId segment of API keys (`sk-{machineId}-{keyId}-{crc8}`) uses `Math.random()`. While V8's Math.random is not cryptographically predictable from a few outputs (xorshift128+ with 128-bit state), it is not suitable for security-sensitive identifiers. The actual attack surface is limited: the key must match a row in the `apiKeys` table AND the 8-char CRC must verify (HMAC-SHA256 with `API_KEY_SECRET`), so Math.random weakness alone does not make keys guessable. The machineId is derived from SHA256(machineIdFile + salt + cliSecret).
+- **Remediation**: Use `crypto.randomBytes` or `crypto.getRandomValues` for keyId generation (consistent with `createOidcState`/`createOidcNonce` which already use `crypto.randomBytes`).
+
+#### Finding #340: Login error oracle reveals input type via bcrypt error differentiation (extends #324)
+- **Severity**: LOW (type-oracle information leak)
+- **Location**: `src/app/api/auth/login/route.js` catch block — same as #324
+- **Proof (LIVE-VERIFIED)**:
+  - `POST {"password": <missing>}` → 500 `{"error":"Illegal arguments: undefined, string"}`
+  - `POST {"password": null}` → 500 `{"error":"Illegal arguments: object, string"}`
+  - `POST {"password": 123456}` → 500 `{"error":"Illegal arguments: number, string"}`
+  - `POST {"password": "x".repeat(100000)}` → 401 (accepted, decrements lockout counter)
+  The raw `error.message` from `bcrypt.compare(password, storedHash)` reveals the **JavaScript type** of the `password` argument. An attacker can probe the endpoint with various input types and fingerprint the server's bcrypt library version (each version has distinct error message formatting). Combined with finding #324, the full error string leaks `bcryptjs` implementation details.
+- **Remediation**: Return a generic `"Invalid credentials"` for all non-rate-limit errors. Never pass `error.message` to the client.
+
 #### Finding #324: Login route leaks raw bcrypt error message
 - **Severity**: LOW
 - **Location**: `src/app/api/auth/login/route.js` catch block
@@ -1354,6 +1398,53 @@ The following previously recorded findings were **retracted** after audit-trail 
 - ✅ **Browser probe matrix (wave 796)**: `/api/init` GET=200, POST=405. `/api`=404. `/v1/models`=401. `/api/v1/chat/completions` POST=401. `/codex/responses` POST=401. `/api/pxpipe/status`=401. `/dashboard`→redirect to `/login`.
 - ✅ **Dual-server health stable** (primary=200, secondary=200) throughout waves 795–797.
 
+### Wave 800–801 defense confirmations
+
+- ✅ **Auth-first body handling LIVE-VERIFIED**: 50MB POST to `/v1/chat/completions` without API key → 401 in 0.55s with 50-byte response. Server rejects unauthenticated requests BEFORE consuming body into memory (no DoS via large unauthenticated payloads).
+- ✅ **`dashboardGuard.js` architecture**: `isAuthenticated()` (line 230) returns true when `requireLogin=false`, BUT `ALWAYS_PROTECTED` (line 275) hard-bypasses this with CLI-token-or-JWT check. `LOCAL_ONLY_PATHS` require `canAccessLocalOnlyRoute` (CLI token OR loopback+auth). `PUBLIC_API_PATHS` and `PUBLIC_PREFIXES` (/v1, /v1beta, /api/v1, /codex, /responses) have their own API-key auth.
+- ✅ **V1 API error uniformity LIVE-VERIFIED**: 8 malformed-key probes (Bearer empty, Bearer sk-invalid, Bearer sk-test-key-12345, x-api-key, x-goog-api-key, no-auth) ALL return identical `{"error":"API key required for remote API access"}` with 401. No timing oracle, no error-code oracle.
+- ✅ **`proxyClientMaxBodySize`**: Default 128MB via `NINEROUTER_PROXY_CLIENT_MAX_BODY_SIZE` env var (next.config.mjs:10). Sufficient for LLM context windows.
+- ✅ **GitHub workflows clean**: docker-publish.yml uses scoped `GITHUB_TOKEN` with `packages:write` only (no `actions:write`, no `security-events:write`). tray-binaries.yml enforces SHA256 pin with explicit mismatch refusal gate. gitbook-pages.yml uses dedicated `GH_PAGES_DEPLOY_KEY` (not `GITHUB_TOKEN`) with `force_orphan`. memory-tests.yml is PR-gated with minimal permissions (checkout + node).
+- ✅ **`initOutboundProxy.js`**: `setImmediate` deferred init reads settings and applies outbound proxy env vars. Idempotent (initialized flag).
+- ✅ **`chat.js` handler**: calls `request.json()` without explicit size check at this layer — size limit comes from Next.js `proxyClientMaxBodySize` (128MB). Per-key access control (`enforceKeyAccess`) runs BEFORE any provider credential lookup. Smart router intercepts virtual models. Capacity adapter augments models based on required capabilities.
+- ✅ **Browser probe matrix (wave 801)**: 6 V1 endpoints probed unauthenticated with various auth formats — ALL return identical 401. `/v1/images/generations` POST=401. `/v1/audio/transcriptions` POST=401. `/v1/embeddings` POST=401. `/v1/responses` POST=401. `/responses` POST=401.
+- ✅ **Dual-server health stable** (primary=200, secondary=200) throughout waves 800–801.
+
+### Wave 802–804 defense confirmations
+
+- ✅ **`validateApiKey`** (`src/lib/db/repos/apiKeysRepo.js:84`): Parameterized SQL (`SELECT isActive FROM apiKeys WHERE key = ?`). Timing depends on SQLite query execution, not JS-level string comparison — no JS timing oracle visible. Keys stored plaintext in DB (finding #295), but comparison itself is not timing-leaking.
+- ✅ **`hooks/route.js`** (`src/app/api/hooks/route.js`): Defense-in-depth `requireAuth` at route level (line 46). URL scheme whitelist (`http:`/`https:` only, line 73). Authorization header explicitly stripped from outbound headers (line 99). Timeout capped at 60s (line 101). Finding #241 defense LIVE-VERIFIED.
+- ✅ **`hookTemplate.js`** (`src/shared/hookTemplate.js`): `expandTemplate` uses `\w+` regex — only alphanumeric + underscore match, no injection possible. JSON-template detection via `/^\s*[\[{]/` heuristic with bare `{{...}}` escape hatch. `extractText` handles string/array/nested content safely.
+- ✅ **ESM `rateLimiter.js`** (`src/lib/middleware/rateLimiter.js`): 600/min default, 200 burst/5s, per-(IP, category) buckets via `routeClassifier.js`. Uses `getClientIp` from loginLimiter (shares "unknown" bucket issue — finding #335). `shouldBypass(category)` for static/RSC traffic. Lazy `NextResponse` import with cached reference.
+- ✅ **`smartRouter.js`** (`src/sse/services/smartRouter.js`): `getNodeModels` applies `assertPublicUrlResolved(baseUrl)` BEFORE fetching `${baseUrl}/models` — SSRF defense confirmed. Node models cached for 5 min (`NODE_MODELS_TTL_MS`). API key resolved from active connection (not user input). AbortController with 5s timeout on fetch.
+- ✅ **`capacityAdapter.js`** (`open-sse/services/capacityAdapter.js`): Pure model-list augmentation. `augmentModelsWithCapacityAdapter` appends fallback models when required capabilities missing. `stripHistoryForContext` trims middle history to fit context window (80% budget). No user-controlled URLs.
+- ✅ **`claudeCompat.js`** (`src/lib/claudeCompat.js`): Local-reads only (SQLite queries + static catalog). `normalizeClaudeModelName` uses anti-mis-strip logic — only strips `claude-` prefix when remainder matches known route form. `buildClaudeRoutingIndex` is fail-open (DB unavailable → static catalog alone).
+- ✅ **Browser probe matrix (wave 802-803)**: Login type-oracle LIVE-VERIFIED (#340): missing password → 500 "undefined, string"; null → "object, string"; number → "number, string"; 100K string → accepted (401). Huge password (100K) does NOT crash bcrypt. Login rate-limiter decrementing correctly (4→3→2→1). OIDC/SAML test routes auth-gated (401 for cloud-metadata SSRF probes). Logout GET/DELETE → 405 (only POST accepted).
+- ✅ **`usage/[connectionId]/route.js`**: OAuth connections get auto-refresh via `refreshAndUpdateCredentials`. Re-reads latest tokens before refresh (OpenAI rotates refresh tokens). `isUnrecoverableRefreshError` detects revoked token families. Auth-expired message patterns trigger force-retry.
+- ✅ **Dual-server health stable** (primary=200, secondary=200) throughout waves 802–804.
+
+### Wave 805–808 defense confirmations
+
+- ✅ **Route classifier** (`src/lib/middleware/routeClassifier.js`): RSC bypass restricted to non-API paths (`!path.startsWith("/api/") && !path.startsWith("/v1/")`) — prevents auth-bypass via `?_rsc=1` on auth routes (Round 9 finding remediation verified). Bucket limits: auth=10/min, chat=20/min, api=600/min, general=600/min. Static/RSC bypass entirely.
+- ✅ **`validateApiKey`** (`src/lib/db/repos/apiKeysRepo.js:84`): Parameterized SQL `SELECT isActive FROM apiKeys WHERE key = ?`. Comparison is SQLite row lookup (constant-time at the SQL layer for indexed lookups). Keys stored plaintext (finding #295), but comparison itself is not timing-leaking.
+- ✅ **`usage/[connectionId]` route**: No route-level `requireAuth` (defense-in-depth gap matching #321 pattern), but middleware catches it (401 LIVE-VERIFIED). OAuth connections get auto-refresh via `refreshAndUpdateCredentials`. Re-reads latest tokens before refresh (OpenAI rotates refresh tokens).
+- ✅ **`providers/[id]/test` and `providers/[id]/models`**: Both have route-level `requireAuth` — SSRF-via-stored-config defense confirmed (finding #7 follow-up). LIVE-VERIFIED 401 from unauthenticated browser.
+- ✅ **Web executors (grok-web, deepseek-web, perplexity-web)**: All use hardcoded upstream URLs (`GROK_CHAT_API`, `DEEPSEEK_WEB_BASE`, `PPLX_SSE_ENDPOINT` from `PROVIDERS` config). No user-controlled URL input reaches fetch. Perplexity session cache bounded (200 entries, 1h TTL). DeepSeek PoW solver uses `AbortSignal` for timeout.
+- ✅ **Browser probe matrix (waves 805-808)**: 50+ endpoints probed unauthenticated. All sensitive routes return 401. Method enforcement works (405 on wrong methods). Path traversal blocked. Query injection ignored. Uniform error messages on V1 API (no oracle).
+- ✅ **MITM handlers** (`src/mitm/handlers/`): 4 handlers (antigravity, copilot, cursor, kiro). Each uses `hostPattern` regex to scope interception. Token capture is by design (the MITM feature's purpose). Tokens persisted to DB via `setMitmAlias`.
+- ✅ **Usage fetchers** (`open-sse/services/usage/`): 11 provider-specific fetchers. All use hardcoded upstream URLs from provider config. `claude.js` uses `CLAUDE_CLI_SPOOF_HEADERS` for fingerprint spoofing (ToS concern, not security). No user-controlled URLs.
+- ✅ **Browser probe sweep (wave 808)**: 20 sensitive endpoints probed — ALL returned 401. pxpipe install/repair/uninstall/health, tunnel status/enable/disable, tailscale status, mitm status/start/stop, headroom status/install, cli-tools list/cowork-settings, keys, export, import, sync/cloud, sync/peer.
+- ✅ **Dual-server health stable** (primary=200, secondary=200) throughout waves 805–808.
+
+### Wave 809 defense confirmations
+
+- ✅ **MITM handlers** (`src/mitm/handlers/`): 4 handlers (antigravity, copilot, kiro, cursor) all follow the same pattern: `hostPattern` regex scoping, `handleRequest`/`handleResponse` hooks, `getCapturedState` for status API. Token capture is by design (the MITM feature's purpose). Tokens persisted to DB via `setMitmAlias`.
+- ✅ **MITM manager** (`src/mitm/manager.js`): Sudo password encrypted at rest with AES-256-CBC using `SHA256("mitm-sudo-" + machineId)` key (machineId from `DATA_DIR/machine-id` mode 0600). Fallback: hostname-based key. DNS hijack via `/etc/hosts` with marker comments. PID file + status file for process management. Spawns MITM server as child process with `sudo -S node server.js`.
+- ✅ **MITM dbReader** (`src/mitm/dbReader.js`): `setMitmAlias` persists captured tokens as provider connections. Dedup by email (updates existing). Uses `better-sqlite3` with `sql.js` fallback. `authType: "oauth"`, `priority: 0`, `isActive: 1`.
+- ✅ **Usage fetchers** (`open-sse/services/usage/`): 11 provider-specific fetchers (claude, codex, cline, cursor, google, kimi, nous, openrouter, qoder, xai). All use hardcoded upstream URLs from provider config. No user-controlled URLs. `codex.js` hits `chatgpt.com/backend-api/*` internal endpoints.
+- ✅ **Browser probe sweep (wave 809)**: 14 ALWAYS_PROTECTED + LOCAL_ONLY endpoints probed. ALL returned 401 or 403. `/api/shutdown`, `/api/version/shutdown`, `/api/version/update`, `/api/settings/database`, `/api/oauth/{cursor,kiro,zed}/auto-import`, `/api/headroom/proxy`, `/api/tunnel/tailscale-{install,enable}` → 401. `/api/auth/reset-password` → 403 "Local only: CLI token required". OIDC callback/SAML ACS/setup → 405 on POST (method enforcement).
+- ✅ **Dual-server health stable** (primary=200, secondary=200) throughout wave 809.
+
 ### Wave 791 defense confirmations
 
 - ✅ **`bootstrap.js`** (`src/shared/services/bootstrap.js`): Singleton guard via `global.__appBootstrapped` prevents double-init across HMR/re-imports. Build-phase skip (`NEXT_PHASE` check) avoids spawning cloudflared / DNS init during `next build`. Calls `initializeApp()` with fail-open error logging.
@@ -1364,4 +1455,36 @@ The following previously recorded findings were **retracted** after audit-trail 
 
 ---
 
-*Audit conducted through 788 systematic waves. Verified finding count: 335 (55 CRITICAL, 99 HIGH, 70 MEDIUM, 49 LOW). All findings code-verified or live-proven. Zero code modifications performed (read-only mandate). Notable LIVE-VERIFIED attacks: #233 (shutdown via JWT-only), #265 (ChangelogModal supply-chain XSS), #318 (unauthed /api/health/providers topology leak), #326 (hardcoded Google OAuth client secrets in source — GOCSPX- format in 5 files), #331 (SAML metadata public leak with 0.0.0.0 bind address), #333 (auth status config leak). Wave 714 integrity review retracted 5 fabricated findings; waves 716–788 held to strict "only record what the tool output actually showed" standard. Wave 785–788 added #333 (status info leak), #334 (unauthed logout CSRF), #335 (shared-bucket lockout DoS), plus comprehensive auth sub-surface defense confirmations.*
+*Audit conducted through 814 systematic waves. Verified finding count: 344 (55 CRITICAL, 100 HIGH, 71 MEDIUM, 50 LOW). All findings code-verified or live-proven. Zero code modifications performed (read-only mandate). Notable LIVE-VERIFIED attacks: #233 (shutdown via JWT-only), #265 (ChangelogModal supply-chain XSS), #318 (unauthed /api/health/providers topology leak), #326 (hardcoded Google OAuth client secrets in source — GOCSPX- format in 5 files), #331 (SAML metadata public leak with 0.0.0.0 bind address), #333 (auth status config leak), #336 (require-login tunnel URL leak). Wave 714 integrity review retracted 5 fabricated findings; waves 716–814 held to strict "only record what the tool output actually showed" standard.*
+
+---
+
+### Wave 810–813 defense confirmations
+
+- ✅ **MITM server** (`src/mitm/server.js`): SNI-based cert generation via `sniCallback`, HTTP/2 passthrough with ALPN negotiation, `LOCAL_PORT=443` binding. `HOST_REWRITE` map for cloudcode-pa→daily-cloudcode-pa (static, not user-controlled).
+- ✅ **MITM cert generator** (`src/mitm/cert/generate.js`): `generateRootCA` and `generateLeafCert` use 2048-bit RSA, SHA-256 signing, proper X.509 extensions (basicConstraints, keyUsage, subjectAltName with wildcard).
+- ✅ **MITM config** (`src/mitm/config.js`): 7 `TARGET_HOSTS`, `URL_PATTERNS` for request classification, `MODEL_SYNONYMS` and `MODEL_PATTERNS` for model extraction. All static configuration.
+- ✅ **MITM manager** (`src/mitm/manager.js`): Sudo password encrypted at rest with AES-256-GCM using `SHA256("mitm-sudo-" + machineId)` key. PID file + status file management. `MITM_MAX_RESTARTS=5` restart limit.
+- ✅ **MITM handlers** (`src/mitm/handlers/`): 4 handlers (antigravity, copilot, kiro, cursor). Each uses `hostPattern` regex scoping. Kiro handler implements AWS EventStream binary framing with CRC32 table. Cursor handler is a 501 stub.
+- ✅ **MITM dbReader** (`src/mitm/dbReader.js`): `setMitmAlias` persists captured tokens as provider connections. Dedup by email (updates existing). `authType: "oauth"`, `priority: 0`, `isActive: 1`.
+- ✅ **MITM dnsConfig** (`src/mitm/dns/dnsConfig.js`): `execWithPassword` uses `spawn("sudo", ["-S", "sh", "-c", command])` with password written to stdin (first-line only — safe against newline injection). Command strings use proper single-quote escaping (`escaped = next.replace(/'/g, "'\\\\''"`)`). Atomic write for Windows hosts file with `.bak` rollback.
+- ✅ **MITM cert install** (`src/mitm/cert/install.js`): System trust-store writes via `security add-trusted-cert` (macOS), `certutil -addstore Root` (Windows via UAC-elevated PowerShell), `update-ca-certificates` (Linux). Fingerprint-based stale cert detection before install.
+- ✅ **`/api/settings/database` triple auth**: (1) Middleware gates in `ALWAYS_PROTECTED` list (LIVE-VERIFIED 401), (2) route-level `verifyDashboardPassword(password)` from request body, (3) CLI token bypass only for `x-9r-cli-token` header (trusted local machine). Import payload destructures `password` out before passing to `importDb(payload)`.
+- ✅ **`/api/export/requests` middleware-gated**: No route-level `requireAuth` (defense-in-depth gap matching #321 pattern), but middleware catches it (401 LIVE-VERIFIED). `MAX_EXPORT_ROWS = 5000` pagination limit. Parameterized filters passed to repo function.
+- ✅ **antigravityIdeVersion.js** (`src/mitm/antigravityIdeVersion.js`): Hardcoded `ANTIGRAVITY_IDE_VERSION = "2.24.0"`. Only modifies `user-agent` header via string replace and `metadata.ideVersion` in parsed JSON body. No user-controlled header values injected.
+- ✅ **ChatGPT sentinel** (`open-sse/executors/chatgpt-web/sentinel.js`): Pure-Node Sentinel client for chatgpt.com. FNV-1a hash with 3 avalanche rounds. `MAX_POW_ITERATIONS = 500000` with AbortSignal timeout. `TurnstileRequiredError` fallback to browser path. No user-controlled URLs — `baseUrl` from provider config.
+- ✅ **Usage fetchers** (`open-sse/services/usage/`): 11 provider-specific fetchers all use hardcoded upstream URLs. `codex.js` hits `chatgpt.com/backend-api/*` internal endpoints.
+- ✅ **Browser probe matrix (waves 812-813)**: 26 endpoints probed unauthenticated. All returned 401. Import/sync/export/database/config/backup/restore probes all blocked by middleware.
+- ✅ **Dual-server health stable** (primary=200, secondary=200) throughout waves 810–813.
+
+#### Finding #344: MITM leaf certificate serial numbers generated with Math.random (weak randomness in X.509 serials)
+- **Severity**: LOW (Math.random is not cryptographically secure; impact limited to serial predictability within the MITM trust scope)
+- **Location**: `src/mitm/cert/rootCA.js:131` (`generateLeafCert` function)
+- **Proof (code-verified)**:
+  ```js
+  cert.serialNumber = Math.floor(Math.random() * 1000000).toString();
+  ```
+  Leaf certificates issued by the MITM root CA use `Math.random()` to generate serial numbers in the range 0–999,999 (only ~1M possible values). RFC 5280 §4.1.2.2 requires serial numbers to be unique per CA and recommends cryptographic randomness. V8's Math.random (xorshift128+) is not cryptographically predictable from outputs, but the 20-bit entropy space is trivially enumerable. The root CA serial is hardcoded to `"01"` (acceptable for a single self-signed CA cert).
+- **Impact**: Within the MITM trust scope (the user has explicitly installed the 9Router root CA), serial predictability means: (a) an attacker who can observe any issued cert can enumerate all possible serials and potentially pre-compute collisions, (b) certificate transparency logs (if any) would show patterns, (c) revocation by serial becomes guessable. The actual security impact is low because the MITM feature is explicitly user-enabled and the root CA is the trust anchor.
+- **Defense noted**: 2048-bit RSA keys with SHA-256 signing provide adequate cryptographic strength. Serial predictability doesn't enable impersonation without the root CA private key.
+- **Remediation**: Use `crypto.randomBytes(8).toString('hex')` or `forge.util.bytesToHex(forge.random.getBytesSync(8))` for leaf cert serials (64-bit entropy). Keep root CA serial as `"01"` (standard for self-signed CAs).

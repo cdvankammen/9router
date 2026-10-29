@@ -1,0 +1,10 @@
+id: 4efa60a4-c32e-42d2-a43a-712a1dde4eb4
+cwd: /Users/chris/Documents/GitHub/9router
+branch: v5-vscode-works
+agent: GitHub Copilot Chat
+created: 2026-09-15T18:17:59.890Z
+updated: 2026-10-27T10:36:23.119Z
+summary: so where are we at on the following "yes that is correct and make sure you do it in a way that you are being aware of the things that we have done and the improvments of their system. i need you to focus on gettting all of the fundimental code (origin brought in completely first. then we will focus on bug fixing after that)
+also you should always alawys always alays and i say always be using the visual testing, and the dom testing and always the code testing (meaning as live testing / checking and running manually functions your self to get all the testing per each tiny part you can as instucted if not more than that!!!! You should have tested the visual interface 10000's of times by now if you have not then youneed to make sure to include this in your plans of work everywher you can to make sure you are doing it)
+
+i need you to use multiple models to get opinions as well on the incomming code, becuase they may have made bug fixes on these we originally were trying tof xi as well....

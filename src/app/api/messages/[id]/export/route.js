@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getRequestDetailById } from "@/lib/usageDb";
 import { buildCurl, buildMarkdown } from "@/shared/messageFormats";
+import { requireAuth } from "@/lib/auth/requireAuth";
 
 /**
  * GET /api/messages/:id/export?format=json|markdown|curl
@@ -9,10 +10,23 @@ import { buildCurl, buildMarkdown } from "@/shared/messageFormats";
  * - json: normalized full record (importable)
  * - markdown: role-styled transcript (prompt / completion / thinking / error)
  * - curl: reconstructed curl command with auth placeholder
+ *
+ * Security (IDOR sweep 2026-10-29): route-level requireAuth as defence-in-
+ * depth. The json export returns the full captured record verbatim
+ * (prompts, responses, forwarded Authorization headers, embedded API
+ * keys). The curl format reconstructs the upstream call including the
+ * target URL and body — useful to an attacker even with the auth header
+ * replaced by a placeholder. The markdown transcript preserves thinking
+ * blocks that may contain provider-side reasoning about secrets. A
+ * middleware regression would otherwise expose all three formats to any
+ * unauthenticated peer.
  */
 
 export async function GET(request, { params }) {
   try {
+    if (!(await requireAuth(request))) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     const { id } = await params;
     const { searchParams } = new URL(request.url);
     const format = searchParams.get("format") || "json";
