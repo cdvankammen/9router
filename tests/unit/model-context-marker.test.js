@@ -51,4 +51,41 @@ describe("model context marker", () => {
   it("tolerates a non-string model", () => {
     expect(stripModelContextMarker(undefined)).toEqual({ model: undefined, contextMarker: null });
   });
+
+  // Extended patterns: other clients (Kilo, Cline, etc.) append tier markers
+  // like [200k], [500k], [128k] — same client-side annotation pattern.
+  it("strips a [200k] tier marker", () => {
+    expect(stripModelContextMarker("claude-sonnet-4.5[200k]")).toEqual({
+      model: "claude-sonnet-4.5",
+      contextMarker: "200k",
+    });
+  });
+
+  it("strips a [500k] tier marker", () => {
+    expect(stripModelContextMarker("claude-opus-5[500k]")).toEqual({
+      model: "claude-opus-5",
+      contextMarker: "500k",
+    });
+  });
+
+  it("strips a [128k] tier marker with uppercase K", () => {
+    expect(stripModelContextMarker("gpt-5[128K]")).toEqual({
+      model: "gpt-5",
+      contextMarker: "128k",
+    });
+  });
+
+  it("strips marker with trailing whitespace", () => {
+    expect(stripModelContextMarker("claude-opus-5[1m]  ")).toEqual({
+      model: "claude-opus-5",
+      contextMarker: "1m",
+    });
+  });
+
+  it("leaves a mid-name bracket alone when no trailing marker", () => {
+    expect(stripModelContextMarker("weird[200k]name")).toEqual({
+      model: "weird[200k]name",
+      contextMarker: null,
+    });
+  });
 });
