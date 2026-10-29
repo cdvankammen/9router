@@ -1,11 +1,4 @@
-import { corsOptionsResponse } from "@/shared/utils/corsOptions.js";
-
-// CORS_HEADERS retained for the POST response (Phase 2 will remove this).
-const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "*"
-};
+import { corsOptionsResponse, withCorsHeaders } from "@/shared/utils/corsOptions.js";
 
 /**
  * Handle CORS preflight — delegates to shared helper which honors
@@ -81,18 +74,18 @@ export async function POST(request) {
   try {
     body = await request.json();
   } catch {
-    return new Response(JSON.stringify({ error: "Invalid JSON body" }), {
+    return withCorsHeaders(request, new Response(JSON.stringify({ error: "Invalid JSON body" }), {
       status: 400,
-      headers: { "Content-Type": "application/json", ...CORS_HEADERS }
-    });
+      headers: { "Content-Type": "application/json" }
+    }));
   }
 
   const inputTokens = estimateAnthropicInputTokens(body);
 
-  return new Response(JSON.stringify({
+  return withCorsHeaders(request, new Response(JSON.stringify({
     input_tokens: inputTokens
   }), {
-    headers: { "Content-Type": "application/json", ...CORS_HEADERS }
-  });
+    headers: { "Content-Type": "application/json" }
+  }));
 }
 

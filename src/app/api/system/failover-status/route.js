@@ -1,12 +1,5 @@
 import { NextResponse } from "next/server";
-import { corsOptionsResponse } from "@/shared/utils/corsOptions.js";
-
-// CORS_HEADERS retained for the GET response (Phase 2 will remove this).
-const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, OPTIONS",
-  "Access-Control-Allow-Headers": "*",
-};
+import { corsOptionsResponse, withCorsHeaders } from "@/shared/utils/corsOptions.js";
 
 // L2 failover proxy port. The proxy is a SEPARATE process (cli/failover-proxy.cjs)
 // that owns the client-facing port and routes to local/peer nodes. This route
@@ -15,7 +8,7 @@ const FAILOVER_PORT = Number(process.env.FAILOVER_PROXY_PORT) || 20140;
 const STATUS_PATH = "/api/failover-status";
 const TIMEOUT_MS = 3000;
 
-export async function GET() {
+export async function GET(request) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
   try {
@@ -25,22 +18,21 @@ export async function GET() {
       headers: { Accept: "application/json" },
     });
     if (!res.ok) {
-      return NextResponse.json(
+      return withCorsHeaders(request, NextResponse.json(
         { ok: false, error: `failover proxy responded ${res.status}` },
-        { status: 502, headers: CORS_HEADERS }
-      );
+        { status: 502 }
+      ));
     }
     const body = await res.json();
-    return NextResponse.json(
-      { ok: true, port: FAILOVER_PORT, ...body },
-      { headers: CORS_HEADERS }
-    );
+    return withCorsHeaders(request, NextResponse.json(
+      { ok: true, port: FAILOVER_PORT, ...body }
+    ));
   } catch (err) {
     const detail = err?.name === "AbortError" ? "timeout" : err?.message || String(err);
-    return NextResponse.json(
+    return withCorsHeaders(request, NextResponse.json(
       { ok: false, error: `failover proxy unreachable: ${detail}` },
-      { status: 503, headers: CORS_HEADERS }
-    );
+      { status: 503 }
+    ));
   } finally {
     clearTimeout(timer);
   }
