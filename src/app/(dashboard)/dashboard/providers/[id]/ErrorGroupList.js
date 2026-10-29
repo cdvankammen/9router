@@ -76,31 +76,23 @@ function ErrorGroupRow({ group, showModel }) {
     setDrillDownLoading(true);
     setShowDrillDown(true);
     try {
-      // Fetch individual error records for this group
+      // Fetch the individual requestDetails rows for this group. The flat
+      // list (no view=errors) returns one record per failed request — each
+      // entry is the full requestDetails.data blob with connectionId,
+      // timestamp, latency, response.error, etc. COALESCE'd 'unknown' values
+      // from the group cannot be used as SQL filters (NULL != 'unknown'),
+      // so skip those params.
       const params = new URLSearchParams({
-        view: "errors",
-        provider: group.provider,
-        model: group.model,
-        errorCategory: group.errorCategory,
+        status: "error",
         pageSize: "20",
       });
+      if (group.provider && group.provider !== "unknown") params.set("provider", group.provider);
+      if (group.model && group.model !== "unknown") params.set("model", group.model);
+      if (group.errorCategory && group.errorCategory !== "unknown") params.set("errorCategory", group.errorCategory);
       const res = await fetch(`/api/messages?${params}`);
       const data = await res.json();
-      if (res.ok && data.errors && data.errors.length > 0) {
-        // Get the detail records for the first few errors
-        const detailPromises = data.errors.slice(0, 10).map(async (err) => {
-          if (!err.detailId) return null;
-          try {
-            const detailRes = await fetch(`/api/messages/${err.detailId}`);
-            if (detailRes.ok) {
-              const detail = await detailRes.json();
-              return detail;
-            }
-          } catch {}
-          return null;
-        });
-        const details = await Promise.all(detailPromises);
-        setDrillDownRecords(details.filter(Boolean));
+      if (res.ok && Array.isArray(data.messages)) {
+        setDrillDownRecords(data.messages);
       }
     } catch (err) {
       console.error("Failed to load drill-down:", err);
