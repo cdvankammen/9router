@@ -8,6 +8,9 @@ const originalDataDir = process.env.DATA_DIR;
 async function setupDb() {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "9router-model-routing-"));
   process.env.DATA_DIR = tempDir;
+  // Clear the driver's global adapter singleton so this per-test db never
+  // reuses an adapter bound to a previous run's DATA_DIR (see db-driver-chain).
+  delete global._dbAdapter;
   vi.resetModules();
 
   const { createProviderNode } = await import("@/models/index.js");
@@ -17,6 +20,8 @@ async function setupDb() {
     createProviderNode,
     getModelInfo,
     cleanup() {
+      try { global._dbAdapter?.instance?.close?.(); } catch {}
+      delete global._dbAdapter;
       fs.rmSync(tempDir, { recursive: true, force: true });
     },
   };

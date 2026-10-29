@@ -41,6 +41,9 @@ beforeAll(async () => {
   tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "9router-conv-keyset-"));
   process.env.DATA_DIR = tempDir;
   process.env.ENABLE_REQUEST_LOGS = "true";
+  // Clear the driver's global adapter singleton so this suite never reuses
+  // an adapter bound to a previous suite's DATA_DIR (see db-driver-chain).
+  delete global._dbAdapter;
   const { initDb, updateSettings } = await import("@/lib/db/index.js");
   await initDb();
   // batchSize=1 → saveRequestDetail flushes immediately (buffered writer)

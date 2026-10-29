@@ -19,6 +19,9 @@ beforeAll(async () => {
   tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "9router-export-"));
   process.env.DATA_DIR = tempDir;
   process.env.ENABLE_REQUEST_LOGS = "true"; // force observability on for this test
+  // Clear the driver's global adapter singleton so this suite never reuses
+  // an adapter bound to a previous suite's DATA_DIR (see db-driver-chain).
+  delete global._dbAdapter;
   const { initDb, saveRequestDetail, updateSettings } = await import("@/lib/db/index.js");
   await initDb();
   await updateSettings({ observabilityBatchSize: 1, observabilityMaxRecords: 1000 });
@@ -26,6 +29,8 @@ beforeAll(async () => {
 });
 
 afterAll(() => {
+  try { global._dbAdapter?.instance?.close?.(); } catch {}
+  delete global._dbAdapter;
   delete process.env.ENABLE_REQUEST_LOGS;
   if (tempDir) fs.rmSync(tempDir, { recursive: true, force: true });
   if (originalDataDir === undefined) delete process.env.DATA_DIR;

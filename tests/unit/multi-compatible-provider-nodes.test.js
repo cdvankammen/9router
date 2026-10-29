@@ -8,6 +8,9 @@ const originalDataDir = process.env.DATA_DIR;
 async function setup() {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "9router-multi-provider-"));
   process.env.DATA_DIR = tempDir;
+  // Clear the driver's global adapter singleton so this per-test context never
+  // reuses an adapter bound to a previous run's DATA_DIR (see db-driver-chain).
+  delete global._dbAdapter;
   vi.resetModules();
   vi.doMock("next/server", () => ({
     NextResponse: {
@@ -35,6 +38,8 @@ async function setup() {
     createConnection,
     getProviderConnections,
     cleanup() {
+      try { global._dbAdapter?.instance?.close?.(); } catch {}
+      delete global._dbAdapter;
       fs.rmSync(tempDir, { recursive: true, force: true });
     },
   };

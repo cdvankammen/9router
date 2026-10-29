@@ -44,6 +44,9 @@ beforeAll(async () => {
   tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "9router-error-inbox-"));
   process.env.DATA_DIR = tempDir;
   process.env.ENABLE_REQUEST_LOGS = "true";
+  // Clear the driver's global adapter singleton so this suite never reuses
+  // an adapter bound to a previous suite's DATA_DIR (see db-driver-chain).
+  delete global._dbAdapter;
   barrel = await import("@/lib/db/index.js");
   await barrel.initDb();
   // batchSize=1 → saveRequestDetail flushes immediately (buffered writer)
@@ -122,6 +125,8 @@ beforeAll(async () => {
 });
 
 afterAll(() => {
+  try { global._dbAdapter?.instance?.close?.(); } catch {}
+  delete global._dbAdapter;
   delete process.env.ENABLE_REQUEST_LOGS;
   if (tempDir) fs.rmSync(tempDir, { recursive: true, force: true });
   if (originalDataDir === undefined) delete process.env.DATA_DIR;
