@@ -1,5 +1,5 @@
 import { AI_PROVIDERS } from "@/shared/constants/providers";
-import { corsOptionsResponse } from "@/shared/utils/corsOptions.js";
+import { corsOptionsResponse, withCorsHeaders } from "@/shared/utils/corsOptions.js";
 
 // Provider → internal voices API. Edge/local-device share the generic endpoint.
 const PROVIDER_API = {
@@ -23,10 +23,10 @@ export async function GET(request) {
     const lang = searchParams.get("lang");
 
     if (!provider || !PROVIDER_API[provider]) {
-      return Response.json(
+      return withCorsHeaders(request, Response.json(
         { error: { message: `provider must be one of: ${Object.keys(PROVIDER_API).join(", ")}`, type: "invalid_request_error" } },
-        { status: 400, headers: { "Access-Control-Allow-Origin": "*" } },
-      );
+        { status: 400 },
+      ));
     }
 
     const baseUrl = PROVIDER_API[provider](origin);
@@ -34,10 +34,10 @@ export async function GET(request) {
     const res = await fetch(url, { cache: "no-store", signal: AbortSignal.timeout(10000) });
     const data = await res.json();
     if (!res.ok || data.error) {
-      return Response.json(
+      return withCorsHeaders(request, Response.json(
         { error: { message: data.error || `Upstream ${res.status}`, type: "server_error" } },
-        { status: res.status, headers: { "Access-Control-Allow-Origin": "*" } },
-      );
+        { status: res.status },
+      ));
     }
 
     // Internal API shape: { voices } when lang filter, else { byLang, languages }
@@ -55,13 +55,11 @@ export async function GET(request) {
       model: `${alias}/${v.id}`,
     }));
 
-    return Response.json({ object: "list", data: data_out }, {
-      headers: { "Access-Control-Allow-Origin": "*" },
-    });
+    return withCorsHeaders(request, Response.json({ object: "list", data: data_out }));
   } catch (err) {
-    return Response.json(
+    return withCorsHeaders(request, Response.json(
       { error: { message: err.message || "Failed", type: "server_error" } },
-      { status: 502, headers: { "Access-Control-Allow-Origin": "*" } },
-    );
+      { status: 502 },
+    ));
   }
 }

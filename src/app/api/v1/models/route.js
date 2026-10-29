@@ -1,5 +1,5 @@
 import { PROVIDER_MODELS, PROVIDER_ID_TO_ALIAS, getModelKind } from "@/shared/constants/models";
-import { corsOptionsResponse } from "@/shared/utils/corsOptions.js";
+import { corsOptionsResponse, withCorsHeaders } from "@/shared/utils/corsOptions.js";
 import {
   ALIAS_TO_ID,
   AI_PROVIDERS,
@@ -684,9 +684,7 @@ export async function GET(request) {
     // Deterministic alphabetical order by the final (possibly rewritten) id.
     data = [...data].sort((a, b) => (a.id || "").localeCompare(b.id || ""));
 
-    return Response.json({ object: "list", data }, {
-      headers: { "Access-Control-Allow-Origin": "*" },
-    });
+    return withCorsHeaders(request, Response.json({ object: "list", data }));
   } catch (error) {
     console.log("Error fetching models:", error);
     return Response.json(

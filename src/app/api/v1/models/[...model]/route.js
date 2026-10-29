@@ -1,5 +1,5 @@
 import { buildModelsList } from "../route.js";
-import { corsOptionsResponse } from "@/shared/utils/corsOptions.js";
+import { corsOptionsResponse, withCorsHeaders } from "@/shared/utils/corsOptions.js";
 import { getKeyAccessContext, filterModelsListForKey } from "@/sse/services/keyAccess.js";
 
 // URL slug → service kind(s). `web` covers both webSearch and webFetch.
@@ -18,14 +18,14 @@ export async function OPTIONS(request) {
   return corsOptionsResponse(request, "GET, OPTIONS");
 }
 
-function json(data, options = {}) {
-  return Response.json(data, {
+async function json(request, data, options = {}) {
+  const base = Response.json(data, {
     ...options,
     headers: {
-      "Access-Control-Allow-Origin": "*",
       ...options.headers,
     },
   });
+  return withCorsHeaders(request, base);
 }
 
 /**
@@ -43,7 +43,7 @@ export async function GET(request, { params }) {
 
     if (kindFilter) {
       const data = await filterModelsListForKey(keyAccess, await buildModelsList(kindFilter));
-      return json({ object: "list", data });
+      return json(request, { object: "list", data });
     }
 
     // Match the same LLM catalog exposed by GET /v1/models. A catch-all
@@ -52,7 +52,7 @@ export async function GET(request, { params }) {
     const matchedModel = models.find((candidate) => candidate.id === identifier);
 
     if (!matchedModel) {
-      return json(
+      return json(request,
         {
           error: {
             message: `The model '${identifier}' does not exist or you do not have access to it.`,
@@ -64,10 +64,10 @@ export async function GET(request, { params }) {
       );
     }
 
-    return json(matchedModel);
+    return json(request, matchedModel);
   } catch (error) {
     console.log("Error fetching model:", error);
-    return json(
+    return json(request,
       { error: { message: error.message, type: "server_error" } },
       { status: 500 },
     );
