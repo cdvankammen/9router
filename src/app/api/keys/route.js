@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getApiKeys, createApiKey } from "@/lib/localDb";
 import { getConsistentMachineId } from "@/shared/utils/machineId";
+import { requireAuth } from "@/lib/auth/requireAuth";
 
 export const dynamic = "force-dynamic";
 
@@ -15,8 +16,16 @@ function maskKey(fullKey) {
 }
 
 // GET /api/keys - List API keys (masked)
-export async function GET() {
+export async function GET(request) {
   try {
+    // Finding #7 follow-up (2026-10-29): route-level requireAuth on the list
+    // endpoint. Even though key VALUES are masked, the response leaks every
+    // key's UUID, name, access scope, timestamps, and last-used metadata to
+    // any unauthenticated LAN peer on requireLogin=false deployments. This
+    // data is useful for targeted IDOR probes against the [id] routes.
+    if (!(await requireAuth(request))) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     const keys = await getApiKeys();
     const maskedKeys = keys.map(k => ({ ...k, key: maskKey(k.key) }));
     return NextResponse.json({ keys: maskedKeys });
@@ -29,6 +38,12 @@ export async function GET() {
 // POST /api/keys - Create new API key
 export async function POST(request) {
   try {
+    // Defence-in-depth: symmetric with GET/PUT/DELETE on [id]. Creating a key
+    // is a privileged mutation — any unauthenticated peer could mint gateway
+    // credentials on open deployments.
+    if (!(await requireAuth(request))) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     const body = await request.json();
     const { name } = body;
 
