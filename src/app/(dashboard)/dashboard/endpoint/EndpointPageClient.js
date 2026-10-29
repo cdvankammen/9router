@@ -32,6 +32,10 @@ export default function APIPageClient({ machineId }) {
   const [hasPassword, setHasPassword] = useState(true);
  const [tunnelDashboardAccess, setTunnelDashboardAccess] = useState(false);
 
+  // CORS allowlist (newline-separated in UI, array in DB). Empty = wildcard *.
+  const [corsAllowedOrigins, setCorsAllowedOrigins] = useState("");
+  const [corsSaving, setCorsSaving] = useState(false);
+
  // Cloudflare Tunnel state
   const [tunnelChecking, setTunnelChecking] = useState(true);
   const [tunnelEnabled, setTunnelEnabled] = useState(false);
@@ -205,6 +209,7 @@ export default function APIPageClient({ machineId }) {
         setRequireLogin(settingsData.requireLogin !== false);
         setHasPassword(settingsData.hasPassword || false);
         setTunnelDashboardAccess(settingsData.tunnelDashboardAccess || false);
+        setCorsAllowedOrigins((settingsData.corsAllowedOrigins || []).join("\n"));
       }
       if (statusRes.ok) {
         const data = await statusRes.json();
@@ -243,6 +248,40 @@ export default function APIPageClient({ machineId }) {
       if (updated) setRequireApiKey(value);
     } catch (error) {
       console.log("Error updating requireApiKey:", error);
+    }
+  };
+
+  // Parse newline/comma-separated origins, trim, drop empties. Basic URL-shape
+  // check (scheme://host) so a typo like `localhost:3000` is caught before save.
+  const parseCorsOrigins = (raw) => {
+    return raw
+      .split(/[\n,]+/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+  };
+
+  const handleCorsSave = async () => {
+    const origins = parseCorsOrigins(corsAllowedOrigins);
+    const bad = origins.find((o) => !/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\/[^\s/]+$/.test(o) && o !== "*");
+    if (bad) {
+      setConfirmState({
+        title: "Invalid origin",
+        message: `"${bad}" is not a valid origin.\n\nExpected format: scheme://host (e.g. https://app.example.com or http://localhost:3000).\nUse "*" alone to allow all origins, or leave empty for legacy wildcard behavior.`,
+        onConfirm: () => setConfirmState(null),
+        confirmLabel: "OK",
+      });
+      return;
+    }
+    setCorsSaving(true);
+    try {
+      const updated = await useSettingsStore.getState().patchSettings({ corsAllowedOrigins: origins });
+      if (updated) {
+        setCorsAllowedOrigins(origins.join("\n"));
+      }
+    } catch (error) {
+      console.log("Error updating corsAllowedOrigins:", error);
+    } finally {
+      setCorsSaving(false);
     }
   };
 
@@ -1100,6 +1139,49 @@ export default function APIPageClient({ machineId }) {
             ))}
           </div>
         )}
+      </Card>
+
+      {/* CORS Allowlist */}
+      <Card>
+        <div className="mb-4">
+          <h2 className="text-lg font-semibold flex items-center gap-2">
+            <span className="material-symbols-outlined text-primary">language</span>
+            CORS Allowed Origins
+          </h2>
+          <p className="text-sm text-text-muted mt-1">
+            Browser origins allowed to call this gateway. Leave empty for legacy wildcard behavior
+            (any website can call with the user's API key). Add one origin per line to restrict.
+          </p>
+        </div>
+
+        <div className="flex flex-col gap-3">
+          <textarea
+            value={corsAllowedOrigins}
+            onChange={(e) => setCorsAllowedOrigins(e.target.value)}
+            placeholder={"https://myapp.example.com\nhttp://localhost:3000"}
+            rows={4}
+            className="w-full px-3 py-2 rounded border border-border bg-input text-sm font-mono placeholder:text-text-muted/50 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary resize-y"
+          />
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              onClick={handleCorsSave}
+              disabled={corsSaving}
+              icon={corsSaving ? "progress_activity" : "save"}
+            >
+              {corsSaving ? "Saving..." : "Save"}
+            </Button>
+            <p className="text-xs text-text-muted">
+              {parseCorsOrigins(corsAllowedOrigins).length === 0
+                ? "Empty → wildcard * (all origins allowed)"
+                : `${parseCorsOrigins(corsAllowedOrigins).length} origin(s) — non-matching browser origins will be blocked`}
+            </p>
+          </div>
+          <p className="text-xs text-text-muted">
+            Tip: pair this with "Require API key" for defense-in-depth. Non-browser clients (curl,
+            SDKs) are unaffected — they don't send the Origin header.
+          </p>
+        </div>
       </Card>
 
       {/* Add Key Modal */}
