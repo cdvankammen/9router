@@ -81,7 +81,9 @@ export async function POST(request, { params }) {
     const body = await request.json();
 
     if (isGeminiNativeTtsRequest(model, body)) {
-      return await forwardGeminiNativeRequest(request, body, model, action);
+      // forwardGeminiNativeRequest returns bare Response.json on auth/credential/
+      // fetch error paths — wrap here so withCorsHeaders is the single authority.
+      return withCorsHeaders(request, await forwardGeminiNativeRequest(request, body, model, action));
     }
 
     // Streaming is determined by URL action suffix:
@@ -112,10 +114,10 @@ export async function POST(request, { params }) {
     }
   } catch (error) {
     console.log("Error handling Gemini request:", error);
-    return Response.json(
+    return withCorsHeaders(request, Response.json(
       { error: { message: error.message, code: 500 } },
       { status: 500 }
-    );
+    ));
   }
 }
 
