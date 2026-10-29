@@ -1,3 +1,29 @@
+# Unreleased (v5-vscode-works, 2026-10-29)
+
+## Security
+- **CORS**: move CORS authority to a single `withCorsHeaders` wrapper at the app layer, strip all `Access-Control-Allow-Origin: *` wildcards from 18 `open-sse/` files (29 sites), and wrap 15 `/v1/*` routes plus the v1beta Gemini native forwarder. The wrapper strips upstream CORS headers before applying the allowlist (`settings.corsAllowedOrigins`) so the engine can never leak wildcards through the dashboard's allowlist (`c2b184a1`, `5d3dfddc`)
+- **CORS UI**: add a `corsAllowedOrigins` allowlist editor to the Endpoint dashboard page (`b735c92d`, `9d4d2cf2`)
+- **SSRF**: guard the suggested-models catalog fetch against SSRF and require auth (`b6a1ddc1`)
+- **CLI Tools**: add `requireAuth` as the first statement in every `/api/cli-tools/*` handler — 72 handlers across 27 route files (including `all-statuses`, `antigravity-mitm` + nested `alias`, `cowork-mcp-registry` before its cache-hit early return, `jcode-settings` GET). Closes a Finding #7 gap where the IDOR sweep missed this entire directory family; on `requireLogin=false` deployments, LAN peers could enumerate installed CLI tools, exfiltrate stored API keys in plaintext, write arbitrary content to `~/.claude/`, `~/.openclaw/`, `~/.codex/`, and control DNS hijacking via the antigravity-mitm routes (`44556bd9`)
+- **Keys**: add route-level `requireAuth` to `GET /api/keys` (list, previously leaked UUID/name/access-scope/timestamps metadata) and `POST /api/keys` (previously allowed unauthenticated key minting). The `[id]` route was already gated from the IDOR sweep (`d9b7eb89`)
+- **Credential mutations**: gate `POST /api/analyze-error` (uses stored provider credentials + captured request data) and `POST /api/claude-compat/write-claude-settings` (writes `~/.claude/settings.json`, could inject `ANTHROPIC_BASE_URL`); add `/api/headroom/restart` and `/api/headroom/extras` to `LOCAL_ONLY_PATHS` to match the existing `start`/`stop`/`proxy` restriction — `extras` runs `pip install` and was the only ungated process-spawning endpoint (`e661a9ca`)
+- **Cascade confirmation**: require `X-Confirm-Cascade: true` on `DELETE /api/provider-nodes/[id]` as a defence-in-depth layer on top of `requireAuth`. Missing or wrong value → 412 Precondition Failed with a hint. The dashboard's `ConfirmModal`/`confirm()` callers and the CLI client (`deleteProviderNode`) now send the header. Prevents silent cascading wipe of every bound connection if a future refactor loses the confirmation dialog (`48d64c8c`)
+- **MITM**: replace `require("child_process").execSync("net session >nul 2>&1")` with a module-level `import { execFileSync }` + `execFileSync("net", ["session"], ...)` in the Windows admin check — eliminates a command-injection surface and an inline `require` that bypassed module-level import analysis (`f9139208`)
+- **Sidebar**: remove the `9Remote` (HOT) and `9English` external marketing links from the admin sidebar — external promo does not belong in a security console (`3a0bf347`)
+
+## Fixes
+- **Routing**: generalize the model context marker regex in `open-sse/utils/modelMarkers.js` from `\[1m\]$/i` to `\[(\d+[kKmM]?)\]\s*$/` so clients that append `[200k]`, `[500k]`, `[128k]` (Kilo, Cline, etc.) strip cleanly the same way Claude Code's `[1m]` does. Capture group extracts the inner value directly (`7a6b85a5`)
+- **Error Inbox**: `ErrorGroupList` drill-down now fetches the flat `status=error` list instead of `view=errors` groups + N+1 `/api/messages/[id]` lookups. The old pattern returned empty drill-downs for any group with a COALESCE'd `"unknown"` field because `NULL != 'unknown'` in SQL (`2ef7bce5`)
+- **Profile page**: `Database Location` now renders the server-resolved `settings.dataFile` (from `DATA_DIR` / `DATA_FILE`), with the previous hardcoded `~/.9router/db/data.sqlite` as a graceful fallback for cached responses. The hardcoded string was wrong when `DATA_DIR` env was set or on Windows (`9fa14ce1`)
+- **Tests**: clear `global._dbAdapter` in `beforeAll` and close+delete it in `afterAll` for `db-sqlite-vs-lowdb`, `db-concurrent`, and `db-benchmark` — the same cleanup pattern 8 other robust db suites already use. Fixes the intermittent `providerConnections: CRUD + reorder by priority` flake where a stale adapter bound to a previous suite's deleted `DATA_DIR` leaked through `driver.js`'s `if (!global._dbAdapter)` guard when vitest reused a worker (`25c560c3`)
+
+## Accessibility
+- **Sidebar**: add `aria-hidden="true"` to all 11 material-icon spans in `Sidebar.js` (navItems/systemItems/debugItems loops, Media Providers sub-items, Settings link, power_off/content_copy overlays) — ligature names (`api`, `dns`, `layers`, `hub`, `terminal`) were exposed to screen readers as visible text (`50bbe8e2`)
+- **Profile page**: add `aria-hidden="true"` to all 12 material-icon spans (theme switcher, section headers, SAML guide, SAML metadata download, Local/Remote mode card) (`a32e9487`)
+
+## UI
+- **Sidebar**: change the Providers icon from `dns` (semantically DNS ≠ upstream LLM providers) to `cloud` (better represents remote API services) (`a32e9487`)
+
 # v0.5.111 (2026-10-26)
 
 ## Features
