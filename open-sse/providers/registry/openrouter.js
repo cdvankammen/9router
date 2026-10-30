@@ -74,4 +74,10 @@ export default {
   },
   modelsFetcher: { url: "https://openrouter.ai/api/v1/models", type: "openrouter-free" },
   passthroughModels: true,
+  // Capability flags — USAGE_SUPPORTED_PROVIDERS / USAGE_APIKEY_PROVIDERS are
+  // derived from these. Restored 2026-10-30: upstream merge dropped the block.
+  features: {
+    usage: true,
+    usageApikey: true,
+  },
 };

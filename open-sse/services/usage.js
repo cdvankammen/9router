@@ -2,6 +2,12 @@
  * Usage Fetcher - Get usage data from provider APIs
  */
 
+// Sentinel key for the generic custom-usage handler (usageUrl-declared nodes).
+// Never a real provider id, so it cannot collide with registry entries.
+// Restored 2026-10-30: upstream merge dropped this const, causing a
+// ReferenceError in getUsageForProvider when hasCustomUsageUrl was true.
+const CUSTOM_USAGE_MARKER = "__custom_usage__";
+
 import { getGitHubUsage } from "./usage/github.js";
 import { getGeminiUsage, getAntigravityUsage } from "./usage/google.js";
 import { getClaudeUsage, consumeClaudeResetGrant } from "./usage/claude.js";
@@ -21,6 +27,9 @@ import { getGroqUsage } from "./usage/groq.js";
 import { getZedUsage } from "./usage/zed.js";
 import { getXiaomiMimoUsage } from "./usage/xiaomi-mimo.js";
 import { getCursorUsage } from "./usage/cursor.js";
+import { getOpenRouterUsage } from "./usage/openrouter.js";
+import { getTraeUsage } from "./usage/trae.js";
+import { getCustomUsage } from "./usage/custom.js";
 import { resolveQoderCredentials } from "./qoderModels.js";
 import { getGlmUsage } from "./usage/glm.js";
 import { getCommandCodeUsage } from "./usage/commandcode.js";
@@ -69,6 +78,13 @@ const USAGE_HANDLERS = {
   "xiaomi-mimo": (c) => getXiaomiMimoUsage(c.accessToken, c.providerSpecificData, c.proxyOptions),
   commandcode: (c) => getCommandCodeUsage(c.apiKey, c.proxyOptions),
   cursor: (c) => getCursorUsage(c.accessToken, c.providerSpecificData, c.proxyOptions),
+  openrouter: (c) => getOpenRouterUsage(c.apiKey, c.proxyOptions),
+  trae: (c) => getTraeUsage(c.accessToken, c.providerSpecificData, c.proxyOptions),
+  // Generic user-declared usage endpoint on custom provider nodes
+  // (usageUrl + usageAuthMode on providerSpecificData). Handled before the
+  // registry lookup so any connection with a declared usageUrl works.
+  // Restored 2026-10-30: upstream merge dropped the CUSTOM_USAGE_MARKER sentinel.
+  [CUSTOM_USAGE_MARKER]: (c) => getCustomUsage(c),
 };
 
 // Qoder intl/CN share one usage path: PATs must be exchanged to a job token
