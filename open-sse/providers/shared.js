@@ -89,6 +89,10 @@ const ANTHROPIC_BETA_WHITELIST = new Set([
   ANTHROPIC_BETA_REDACT_THINKING,
 ]);
 
+// SECURITY (Finding #306): merge client-supplied anthropic-beta flags with the
+// server-side whitelist. Unknown flags are silently dropped to prevent attackers
+// from injecting future/unknown beta flags that unlock gated features or change
+// billing.
 export function mergeAnthropicBeta(...values) {
   const flags = values.flatMap((v) => (typeof v === "string" ? v.split(",") : [])).map((f) => f.trim()).filter(Boolean);
   // Intersect with whitelist - unknown flags are silently dropped.
