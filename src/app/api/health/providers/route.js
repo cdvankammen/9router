@@ -3,6 +3,7 @@ import { getProviderConnections } from "@/lib/db/repos/connectionsRepo.js";
 import { getOrphanConnections } from "@/lib/db/repos/connectionsRepo.js";
 import { getEarliestModelLockUntil } from "open-sse/services/accountFallback.js";
 import { getCredentialExpiryMs } from "open-sse/services/oauthCredentialManager.js";
+import { requireAuth } from "@/lib/auth/requireAuth";
 
 /**
  * GET /api/health/providers
@@ -14,7 +15,19 @@ import { getCredentialExpiryMs } from "open-sse/services/oauthCredentialManager.
  *
  * Never exposes secrets — apiKey/refreshToken are omitted.
  */
-export async function GET() {
+export async function GET(request) {
+  // SECURITY (Finding #318): route-level requireAuth as defense-in-depth.
+  // The middleware gate covers this when requireLogin=true (the documented
+  // default), but on requireLogin=false deployments this endpoint was
+  // LIVE-VERIFIED leaking the full provider topology — connection IDs,
+  // provider names, auth types, and health status — to unauthenticated LAN
+  // peers. The topology is exactly the data an attacker needs to plan
+  // targeted phishing or credential-stuffing against the operator's
+  // upstream accounts. Auth check fires BEFORE the DB access so
+  // unauthenticated probes don't trigger any DB work.
+  if (!(await requireAuth(request))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   try {
     const connections = await getProviderConnections();
 

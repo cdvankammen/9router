@@ -3,13 +3,19 @@ import crypto from "crypto";
 const API_KEY_SECRET = process.env.API_KEY_SECRET || "endpoint-proxy-api-key-secret";
 
 /**
- * Generate 6-char random keyId
+ * Generate 6-char random keyId.
+ * SECURITY (Finding #341): MUST use CSPRNG. The V8 xorshift128+ PRNG is
+ * predictable after ~2 observations — an attacker who sees one recently
+ * minted keyId could enumerate the remaining keys in the same generation
+ * window. crypto.randomBytes(6) gives 48 bits of entropy; mod 36 over 6
+ * chars has ~0.1% bias per char, negligible for a display identifier.
  */
 function generateKeyId() {
   const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
+  const bytes = crypto.randomBytes(6);
   let result = "";
   for (let i = 0; i < 6; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
+    result += chars[bytes[i] % chars.length];
   }
   return result;
 }
