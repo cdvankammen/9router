@@ -1,12 +1,27 @@
 import { GITLAB_CONFIG } from "../constants/oauth.js";
+import { assertHostNotLinkLocalResolved } from "@/shared/utils/ssrfGuard.js";
 
 // GitLab Duo - Authorization Code Flow with PKCE
 // Supports two login modes via loginMode metadata: "oauth" (default) or "pat"
+//
+// SECURITY (#287 / #253): baseUrl is user-supplied via the OAuth modal and
+// is used to build both the browser redirect AND the server-side token +
+// user-info fetches. Without validation, `http://169.254.169.254` would make
+// the server GET cloud metadata and leak it in the tokens._user field.
+// We use assertHostNotLinkLocalResolved (the softer variant) so self-hosted
+// GitLab instances at RFC1918 addresses still work.
+async function assertGitLabHostSafe(baseUrl) {
+  const host = new URL(baseUrl).hostname;
+  await assertHostNotLinkLocalResolved(host);
+}
+
 const gitlab = {
   config: GITLAB_CONFIG,
   flowType: "authorization_code_pkce",
-  buildAuthUrl: (config, redirectUri, state, codeChallenge, meta = {}) => {
+  buildAuthUrl: async (config, redirectUri, state, codeChallenge, meta = {}) => {
     const baseUrl = meta.baseUrl || config.defaultBaseUrl;
+    // Guard runs before any user-controlled URL is emitted into the redirect.
+    await assertGitLabHostSafe(baseUrl);
     const clientId = meta.clientId || "";
     const params = new URLSearchParams({
       client_id: clientId,
@@ -21,6 +36,8 @@ const gitlab = {
   },
   exchangeToken: async (config, code, redirectUri, codeVerifier, state, meta = {}) => {
     const baseUrl = meta.baseUrl || config.defaultBaseUrl;
+    // Guard runs before any server-side fetch to the user-supplied host.
+    await assertGitLabHostSafe(baseUrl);
     const clientId = meta.clientId || "";
     const clientSecret = meta.clientSecret || "";
     const body = new URLSearchParams({
