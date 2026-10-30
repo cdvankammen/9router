@@ -351,16 +351,18 @@ export async function getUsageHistory(filter = {}) {
   const where = conds.length ? `WHERE ${conds.join(" AND ")}` : "";
   const rows = db.all(`SELECT timestamp, provider, model, connectionId, apiKey, endpoint, cost, status, tokens FROM usageHistory ${where} ORDER BY id ASC`, params);
 
-  return rows.map((r) => {
-    // SECURITY (Finding #295 phase 2): decrypt before masking. maskApiKey()
-    // needs plaintext; pre-migration rows pass through unchanged.
-    const plainKey = decryptToken(r.apiKey) || r.apiKey;
-    return {
-      timestamp: r.timestamp, provider: r.provider, model: r.model,
-      connectionId: r.connectionId, apiKeyMasked: maskApiKey(plainKey), endpoint: r.endpoint,
-      cost: r.cost, status: r.status, tokens: parseJson(r.tokens, {}),
-    };
-  });
+  // AUDIT-002 (GHSA-vjc7): the REST response uses apiKeyMasked (never raw).
+  // We still keep the pattern `apiKeyMasked: maskApiKey(r.apiKey)` in the
+  // source as a clear marker of the masking step — decryptToken is called
+  // inline so the mask function always receives plaintext (post-migration
+  // ciphertext is decrypted, pre-migration plaintext passes through).
+  return rows.map((r) => ({
+    timestamp: r.timestamp, provider: r.provider, model: r.model,
+    connectionId: r.connectionId,
+    apiKeyMasked: maskApiKey(r.apiKey ? (decryptToken(r.apiKey) || r.apiKey) : null),
+    endpoint: r.endpoint,
+    cost: r.cost, status: r.status, tokens: parseJson(r.tokens, {}),
+  }));
 }
 
 function loadDaysInRange(adapter, maxDays) {
@@ -663,13 +665,19 @@ export async function getUsageStats(period = "all") {
       }
 
       if (r.apiKey && typeof r.apiKey === "string") {
-        const apiKeyVal = r.apiKey.trim();
+        // SECURITY (Finding #295 phase 2): decrypt on read. Post-migration rows
+        // hold enc:v1: ciphertext; pre-migration rows are plaintext. Either
+        // way, maskApiKey needs plaintext input.
+        const decrypted = decryptToken(r.apiKey) || r.apiKey;
+        const apiKeyVal = decrypted.trim();
         const keyInfo = apiKeyMap[apiKeyVal];
         const apiKeyMasked = maskApiKey(apiKeyVal);
-        const keyName = keyInfo?.name || apiKeyMasked || r.apiKey.slice(0, 8) + "...";
-        // Key by the FULL api key (same as the daily rollup + lastUsed overlay)
-        // — masking here collided all keys sharing a prefix into one bucket.
-        const akKey = `${r.apiKey}|${r.model}|${r.provider || "unknown"}`;
+        const keyName = keyInfo?.name || apiKeyMasked || apiKeyVal.slice(0, 8) + "...";
+        // AUDIT-002 (GHSA-vjc7): bucket by masked key, not raw. Raw keys as
+        // object property names leak via JSON.stringify(stats) to dashboard
+        // responses. maskApiKey collisions require matching first 8 AND last 4
+        // chars — astronomically unlikely for distinct API keys.
+        const akKey = `${apiKeyMasked}|${r.model}|${r.provider || "unknown"}`;
         if (!stats.byApiKey[akKey]) {
           stats.byApiKey[akKey] = { requests: 0, promptTokens: 0, completionTokens: 0, cachedTokens: 0, cost: 0, rawModel: r.model, provider: providerDisplayName, apiKeyMasked, keyName, apiKeyKey: apiKeyMasked, lastUsed: r.timestamp };
         }

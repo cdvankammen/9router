@@ -14,7 +14,13 @@ export async function GET(request) {
 
   try {
     const keys = await getApiKeys();
-    return NextResponse.json({ keys });
+    // SECURITY: never return plaintext keys to the dashboard. Mask each key
+    // so a compromised browser extension / XSS cannot exfiltrate the full
+    // credential. The full key is only available at creation time (POST
+    // response) — after that it is stored encrypted and only the mask is
+    // shown.
+    const maskedKeys = keys.map((k) => ({ ...k, key: maskKey(k.key) }));
+    return NextResponse.json({ keys: maskedKeys });
   } catch (error) {
     console.log("Error fetching keys:", error);
     return NextResponse.json({ error: "Failed to fetch keys" }, { status: 500 });
