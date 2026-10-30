@@ -29,6 +29,11 @@ product
 .DS_Store
 *.pem
 
+# Agent working directory — contains sensitive operational files (JWT minting
+# scripts using real host secrets, recovered chat transcripts, audit docs,
+# screenshots). Must never be committed.
+.agent/
+
 # debug
 npm-debug.log*
 yarn-debug.log*
