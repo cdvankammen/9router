@@ -43,6 +43,12 @@ vi.mock("@/lib/network/proxyTest", () => ({
   testProxyUrl: mocks.testProxyUrl,
 }));
 
+// Route-level requireAuth gate (IDOR sweep ea55c64c) — bypass for unit tests
+// that exercise the model-discovery path, not the auth path.
+vi.mock("@/lib/auth/requireAuth", () => ({
+  requireAuth: async () => true,
+}));
+
 const originalFetch = global.fetch;
 const { POST: validateProvider } = await import("../../src/app/api/providers/validate/route.js");
 const { testSingleConnection } = await import("../../src/app/api/providers/[id]/test/testUtils.js");
