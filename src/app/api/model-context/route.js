@@ -17,9 +17,20 @@ export const revalidate = 0;
 
 const HEADERS = { "Cache-Control": "no-store" };
 
+// SECURITY (Finding #257): cap contextWindow overrides to a sane ceiling.
+// Without this, a dashboard user (or LAN peer on open deployments) could
+// set contextWindow=999999999999 on a model, which propagates into
+// client-visible /v1/models output and can trick downstream clients into
+// allocating unbounded buffers, sending oversized payloads that upstream
+// providers reject with opaque 400s, or mis-budgeting token spend. The
+// ceiling is generous — 10x the largest shipping model window in 2026 —
+// so legitimate frontier models pass through while garbage values don't.
+const CONTEXT_WINDOW_CEILING = 10_000_000;
+
 function sanitizeContextWindow(value) {
   const n = Number(value);
   if (!Number.isInteger(n) || n <= 0) return null;
+  if (n > CONTEXT_WINDOW_CEILING) return CONTEXT_WINDOW_CEILING;
   return n;
 }
 
