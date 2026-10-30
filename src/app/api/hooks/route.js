@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getRequestDetailById } from "@/lib/usageDb";
 import { buildHookContext, expandTemplate, extractText } from "@/shared/hookTemplate";
 import { requireAuth } from "@/lib/auth/requireAuth";
+import { assertPublicUrlResolved } from "@/shared/utils/ssrfGuard.js";
 
 /**
  * POST /api/hooks
@@ -63,6 +64,23 @@ export async function POST(request) {
     }
     if (parsedUrl.protocol !== "http:" && parsedUrl.protocol !== "https:") {
       return NextResponse.json({ error: "Only http/https URLs are allowed" }, { status: 400 });
+    }
+
+    // SECURITY (#241): SSRF guard — resolve the hostname and reject link-local,
+    // loopback, and cloud-metadata IPs (169.254.169.254, 100.100.100.200, etc.).
+    // Without this, an authenticated attacker with a webhook URL of
+    // `http://169.254.169.254/latest/meta-data/` could exfiltrate captured
+    // request bodies (with API keys) through the outbound POST.
+    // assertPublicUrlResolved is the async DNS-aware variant — it resolves
+    // the host before checking, so `http://attacker.example.com/` that
+    // resolves to 127.0.0.1 still fails.
+    try {
+      await assertPublicUrlResolved(url, { allowLoopback: false });
+    } catch (err) {
+      return NextResponse.json(
+        { error: "Webhook URL resolves to a disallowed host", detail: err.message },
+        { status: 400 }
+      );
     }
 
     const detail = await getRequestDetailById(messageId);
