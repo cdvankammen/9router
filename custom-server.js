@@ -3,6 +3,11 @@ const path = require("path");
 const fs = require("fs");
 const crypto = require("crypto");
 const { pathToFileURL } = require("url");
+// SECURITY (Finding #289): per-IP sliding-window rate limiter. The CLI variant
+// (cli/app/custom-server.js) already wires this in; the root custom-server.js
+// used by `npm start` / standalone builds did not, leaving /v1/* and dashboard
+// endpoints with no TCP-layer budget. Loopback IPs bypass (local tool usage).
+const { checkLimit } = require("./custom-server.rate-limiter");
 
 const origCreate = http.createServer.bind(http);
 
@@ -100,6 +105,27 @@ http.createServer = (...args) => {
     }
     if (!res.getHeader("referrer-policy")) {
       res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+    }
+
+    // ── Inbound rate limiting (per-IP sliding window) ──────────────────────
+    // SECURITY (Finding #289): apply the same budget the CLI variant enforces.
+    // `ip` is derived from the TCP socket above (unspoofable — XFF stripped
+    // unless the peer is a verified loopback reverse proxy), so an attacker
+    // cannot rotate their bucket via X-Forwarded-For. Loopback IPs bypass
+    // (local tool usage); static/RSC framework traffic bypasses (Finding #16).
+    const rl = checkLimit(ip, req.url, req.method);
+    if (!rl.allowed) {
+      res.writeHead(429, {
+        "Content-Type": "application/json",
+        "Retry-After": String(rl.retryAfter),
+        "X-RateLimit-Limit": "see custom-server.rate-limiter",
+      });
+      res.end(JSON.stringify({
+        error: "Too Many Requests",
+        retryAfter: rl.retryAfter,
+        message: "Rate limit exceeded. Retry after " + rl.retryAfter + " seconds.",
+      }));
+      return;
     }
 
     return handler(req, res);
