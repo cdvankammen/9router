@@ -2,8 +2,9 @@
 
 Cross-reference between `.agent/SECURITY_AUDIT_WAVE_674.md` (the audit doc) and the actual codebase state on branch `v5-vscode-works`.
 
-**Last updated:** 2026-10-30 (session 26, commit cb8cc13c — force-track operational docs; all SHAs are post-filter-repo)
-**Branch:** v5-vscode-works @ cb8cc13c, pushed to `fork` (cdvankammen/9router)
+**Last updated:** 2026-10-30 (session 26, commit ee8b106c — GAP-P1-25 + GAP-P3-30 + GAP-P2-20 + iflow mock fix; all SHAs are post-filter-repo)
+**Branch:** v5-vscode-works @ ee8b106c, pushed to `fork` (cdvankammen/9router)
+**mini4 production:** BUILD_ID `cFuvmbIblzDToqSFDDLMI`, PID 41624, port 20128, health=ok, encryption 4/4 intact
 
 ## How to read this document
 
@@ -29,6 +30,7 @@ Cross-reference between `.agent/SECURITY_AUDIT_WAVE_674.md` (the audit doc) and 
 | #219/#220 OIDC origin poisoning | DEFENDED | `custom-server.js` strips x-forwarded-host at edge |
 | #287 GitLab OAuth SSRF | FIXED | `assertGitLabHostSafe` (oauth/providers/gitlab.js:13) |
 | #289 rate-limit gap | FIXED | `custom-server.rate-limiter.js` wired into root custom-server.js |
+| sec-3673 WAL checkpoint stall | FIXED | `TRUNCATE` → `PASSIVE` in all 3 adapters (26a1d80f) |
 | #295 API keys plaintext SQLite | FIXED + DEPLOYED + PROVEN (mini4 2026-10-30) | Code: Phase 1 (5b165dc7) `apiKeys.key`+`keyHash`. Phase 2 (4ee331ab) `usageHistory.apiKey`+`apiKeyHash`. `providerConnections.data` already encrypted (#296). `requestDetails` headers DEFENDED by `sanitizeHeaders()`. **Live production proof (both tables)**: mini4 v0.5.112 standalone deploy (BUILD_ID x4d-vSns4TaW_Arl9f7AY), schema=8. apiKeys: 4/4 rows `enc:v1:`, decrypt-on-read verified via `/api/keys` returning masked plaintext. usageHistory: LIVE DB proof — `encryptToken()` → `enc:v1:90b9e432d0c90655bfc05f76:2a1933ae...` inserted into production `data.sqlite`, `hashApiKey()` → SHA-256 `965361e75056929b...` verified, `decryptToken()` round-trip returned exact plaintext, test row cleaned up. Unit tests: 4/4 pass (encrypt-at-rest, hash-for-dedup, NULL handling, decrypt-then-mask). 0 regressions vs baseline. |
 | #300 TLS rejectUnauthorized | WONTFIX | Product IS a MITM proxy |
 
@@ -98,6 +100,19 @@ Cross-reference between `.agent/SECURITY_AUDIT_WAVE_674.md` (the audit doc) and 
 | Status | Evidence |
 |--------|----------|
 | FIXED | `maskApiKey()` bucket keys in all 3 paths (usageRepo.js:98, 578, 655, commit e2bf16bf) |
+
+## Cherry-picked reliability gaps (session 26)
+
+| Gap | Status | Evidence |
+|-----|--------|----------|
+| GAP-P1-25 provider validation timeouts | FIXED | 22 `AbortSignal.timeout(8000)` added (fc3ddbe7, cherry-pick of d0b9e29e) |
+| GAP-P2-20 gitlab-pat timeout | FIXED | `AbortSignal.timeout(10000)` added (31785669, cherry-pick of d787cc5f) |
+| GAP-P2-21 iflow cookie timeout | DEFENDED | Source already had `AbortSignal.timeout(15000)` — test mock fixed (ee8b106c) |
+| GAP-P3-30 translator alert() | FIXED | 9 `alert()` → toast notifications (0e1ab3a1, cherry-pick of 31619bb1) |
+| GAP-P1-05 onRequestSuccess guard | DEFENDED | Guard + test already in HEAD |
+| GAP-P2-ERR silent catch blocks | DEFENDED | 20/20 tests pass — fix already merged |
+| #3714 suggested-models SSRF | DEFENDED | `fetchPublic` already guards (suggested-models/route.js:76) |
+| GAP-P1-17 headerSanitizer | ARCHITECTURAL | Module exists at `src/lib/middleware/headerSanitizer.js` but is never imported outside its own barrel export. `custom-server.js` already strips the dangerous headers at the TCP socket boundary (lines 68-80). Operator decision: is the middleware-layer redundancy worth the wiring cost? |
 
 ## Findings needing investigation (no clear status)
 
