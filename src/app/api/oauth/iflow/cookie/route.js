@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createProviderConnection } from "@/models";
+import { requireAuth } from "@/lib/auth/requireAuth";
 
 /**
  * iFlow Cookie-Based Authentication
@@ -7,6 +8,11 @@ import { createProviderConnection } from "@/models";
  * Body: { cookie: "BXAuth=xxx; ..." }
  */
 export async function POST(request) {
+  // SECURITY (#254): route-level requireAuth. This endpoint writes a
+  // user-supplied iFlow cookie into the providerConnections pool.
+  if (!(await requireAuth(request))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   try {
     const { cookie } = await request.json();
 
