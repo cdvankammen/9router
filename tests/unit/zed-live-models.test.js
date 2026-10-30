@@ -33,6 +33,12 @@ vi.mock("open-sse/utils/proxyFetch.js", () => ({
   default: async (url, options) => stub.nativeFetch(url, options),
 }));
 
+// Route-level requireAuth gate (IDOR sweep ea55c64c) — bypass for unit tests
+// that exercise the model-resolution path, not the auth path.
+vi.mock("@/lib/auth/requireAuth", () => ({
+  requireAuth: async () => true,
+}));
+
 stub.catalog = {
   models: [
     {

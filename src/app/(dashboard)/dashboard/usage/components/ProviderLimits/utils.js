@@ -776,6 +776,24 @@ export function parseQuotaData(provider, data) {
         }
         break;
 
+      case "trae":
+        // Trae entitlement packs (Basic Usage / Bonus Usage / On-Demand Usage).
+        // Forward explicit remainingPercentage + unlimited so entitlement rows
+        // render % correctly (used/total are absolute counts, not percentages).
+        if (data.quotas) {
+          Object.entries(data.quotas).forEach(([name, quota]) => {
+            normalizedQuotas.push({
+              name,
+              used: quota.used || 0,
+              total: quota.total || 0,
+              resetAt: quota.resetAt || null,
+              remainingPercentage: quota.remainingPercentage,
+              unlimited: quota.unlimited,
+            });
+          });
+        }
+        break;
+
       case "minimax-code":
       case "minimax-code-global":
         // Service already returns dashboard-shaped rows: a credits balance
@@ -793,24 +811,29 @@ export function parseQuotaData(provider, data) {
               message: quota.message,
               isCreditBalance: quota.isCreditBalance,
               currency: quota.currency,
+              unlimited: quota.unlimited,
             });
           });
         }
         break;
 
       default:
-        // Generic fallback for unknown providers
+        // Generic fallback for unknown providers (incl. custom usageUrl nodes:
+        // openai-compatible-*, anthropic-compatible-*, custom-embedding-*).
         if (data.quotas) {
           Object.entries(data.quotas).forEach(([name, quota]) => {
             normalizedQuotas.push({
               name: quota.name || name,
               used: quota.used || 0,
               total: quota.total || 0,
+              remaining: quota.remaining,
+              remainingPercentage: quota.remainingPercentage,
               percentage: quota.percentage,
               colorPercentage: quota.colorPercentage,
               percentageIsUsed: quota.percentageIsUsed === true,
               resetAt: quota.resetAt || null,
               emptyMessage: quota.emptyMessage || null,
+              unlimited: quota.unlimited,
             });
           });
         }

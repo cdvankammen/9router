@@ -1,18 +1,34 @@
 import { NextResponse } from "next/server";
 import { deleteProviderConnectionsByProvider, deleteProviderNode, getProviderConnections, getProviderNodeById, updateProviderConnection, updateProviderNode } from "@/models";
+import { assertPublicUrlResolved } from "@/shared/utils/ssrfGuard.js";
+import { canonicalEndpoint, openAIEndpoints } from "../endpointUrls.js";
 import { requireAuth } from "@/lib/auth/requireAuth";
 
+const BEARER_AUTH = { combined: true, header: "Authorization", scheme: "bearer" };
+const ANTHROPIC_AUTH = { combined: true, header: "x-api-key", scheme: "raw", anthropicVersion: true };
+
+// Optional user-facing usage/quota endpoint fields for custom nodes.
+const USAGE_AUTH_MODES = ["bearer", "header", "none"];
+function normalizeUsageFields(body) {
+  if (!("usageUrl" in body)) return {};
+  const usageUrl = typeof body.usageUrl === "string" ? body.usageUrl.trim() : "";
+  const usageAuthMode = USAGE_AUTH_MODES.includes(body.usageAuthMode) ? body.usageAuthMode : "bearer";
+  return { usageUrl, usageAuthMode };
+}
+
 // PUT /api/provider-nodes/[id] - Update provider node
+// Finding #7 (2026-10-26): route-level requireAuth as defence-in-depth.
+// PUT propagates to every connection bound to the node via
+// Promise.all(connections.map(updateProviderConnection)) at :94-108, so one
+// unauthenticated request rewrites many connections' baseUrl/transports.
 export async function PUT(request, { params }) {
-    // IDOR sweep (2026-10-29): route-level requireAuth as defence-in-depth.
+  try {
     if (!(await requireAuth(request))) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-
-  try {
     const { id } = await params;
     const body = await request.json();
-    const { name, prefix, apiType, baseUrl } = body;
+    const { name, prefix, apiType, baseUrl, openaiUrl, anthropicUrl, supportsResponses } = body;
     const node = await getProviderNodeById(id);
 
     if (!node) {
@@ -32,11 +48,29 @@ export async function PUT(request, { params }) {
       return NextResponse.json({ error: "Invalid OpenAI compatible API type" }, { status: 400 });
     }
 
-    if (!baseUrl?.trim()) {
+    let transports = node.transports;
+    let nextBaseUrl = baseUrl;
+    if (node.type === "multi-compatible") {
+      const openai = openAIEndpoints(openaiUrl);
+      const messagesEndpoint = canonicalEndpoint(anthropicUrl, "/messages");
+
+      if (!openai.chatUrl || !messagesEndpoint) {
+        return NextResponse.json({ error: "OpenAI and Anthropic endpoint URLs are required" }, { status: 400 });
+      }
+
+      nextBaseUrl = openai.baseUrl;
+      transports = [
+        { format: "openai", baseUrl: openai.chatUrl, auth: BEARER_AUTH },
+        { format: "claude", baseUrl: messagesEndpoint, auth: ANTHROPIC_AUTH },
+        ...(supportsResponses ? [{ format: "openai-responses", baseUrl: openai.responsesUrl, auth: BEARER_AUTH }] : []),
+      ];
+    }
+
+    if (!nextBaseUrl?.trim()) {
       return NextResponse.json({ error: "Base URL is required" }, { status: 400 });
     }
 
-    let sanitizedBaseUrl = baseUrl.trim();
+    let sanitizedBaseUrl = nextBaseUrl.trim();
     
     // Sanitize Base URL for Anthropic Compatible
     if (node.type === "anthropic-compatible") {
@@ -58,23 +92,63 @@ export async function PUT(request, { params }) {
       name: name.trim(),
       prefix: prefix.trim(),
       baseUrl: sanitizedBaseUrl,
+      ...(node.type === "multi-compatible" ? { transports } : {}),
+      ...normalizeUsageFields(body),
     };
 
     if (node.type === "openai-compatible") {
       updates.apiType = apiType;
     }
 
+    // SECURITY (#239 / #252): same URL validation as POST. A PATCH with
+    // `baseUrl: "http://169.254.169.254/"` would replace the stored upstream
+    // and intercept every subsequent chat request through that node.
+    const urlFields = ["baseUrl", "openaiUrl", "anthropicUrl", "usageUrl"];
+    for (const field of urlFields) {
+      const v = updates[field];
+      if (typeof v === "string" && v) {
+        try {
+          await assertPublicUrlResolved(v, { allowLoopback: false });
+        } catch (err) {
+          return NextResponse.json(
+            { error: `Provider node ${field} URL resolves to a disallowed host`, detail: err.message },
+            { status: 400 }
+          );
+        }
+      }
+    }
+    // Also validate transports[].baseUrl if supplied (multi-compatible nodes
+    // store per-format endpoints in this array).
+    if (Array.isArray(updates.transports)) {
+      for (let i = 0; i < updates.transports.length; i++) {
+        const t = updates.transports[i];
+        if (t && typeof t === "object" && typeof t.baseUrl === "string" && t.baseUrl) {
+          try {
+            await assertPublicUrlResolved(t.baseUrl, { allowLoopback: false });
+          } catch (err) {
+            return NextResponse.json(
+              { error: `Provider node transports[${i}].baseUrl resolves to a disallowed host`, detail: err.message },
+              { status: 400 }
+            );
+          }
+        }
+      }
+    }
+
     const updated = await updateProviderNode(id, updates);
 
     const connections = await getProviderConnections({ provider: id });
+    const usageFields = normalizeUsageFields(body);
     await Promise.all(connections.map((connection) => (
       updateProviderConnection(connection.id, {
         providerSpecificData: {
           ...(connection.providerSpecificData || {}),
           prefix: prefix.trim(),
-          apiType: node.type === "openai-compatible" ? apiType : undefined,
+          apiType: node.type === "openai-compatible" ? apiType : node.type === "multi-compatible" ? "chat" : undefined,
           baseUrl: sanitizedBaseUrl,
           nodeName: updated.name,
+          ...(node.type === "multi-compatible" ? { transports } : {}),
+          ...usageFields,
         }
       })
     )));
@@ -87,13 +161,32 @@ export async function PUT(request, { params }) {
 }
 
 // DELETE /api/provider-nodes/[id] - Delete provider node and its connections
+// Finding #7 CRITICAL: cascading delete — one request wipes every connection
+// bound to the node via deleteProviderConnectionsByProvider(id).
+//
+// Defence-in-depth (2 layers):
+//   1. requireAuth — blocks unauthenticated callers (Finding #7 baseline)
+//   2. X-Confirm-Cascade header — requires the caller to explicitly
+//      acknowledge the cascade. The dashboard UI already shows a
+//      confirmation dialog before firing the DELETE; this header is the
+//      server-side echo of that acknowledgement. A future refactor that
+//      loses the dialog, or a programmatic client that doesn't know
+//      about the cascade, will be rejected with 412 Precondition Failed
+//      rather than silently wiping every bound connection.
 export async function DELETE(request, { params }) {
-    // IDOR sweep (2026-10-29): route-level requireAuth as defence-in-depth.
+  try {
     if (!(await requireAuth(request))) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-
-  try {
+    if (request.headers.get("x-confirm-cascade") !== "true") {
+      return NextResponse.json(
+        {
+          error: "Cascade confirmation required",
+          hint: "Deleting a provider node also deletes every connection bound to it. Re-issue the request with header X-Confirm-Cascade: true to confirm.",
+        },
+        { status: 412 }
+      );
+    }
     const { id } = await params;
     const node = await getProviderNodeById(id);
 
