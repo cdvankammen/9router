@@ -6,8 +6,12 @@ import { createErrorResult, unavailableResponse } from "open-sse/utils/error.js"
 const betaFlags = (headers) => (headers["Anthropic-Beta"] || "").split(",").map((s) => s.trim()).filter(Boolean);
 
 describe("mergeAnthropicBeta", () => {
-  it("unions and dedupes comma lists, ignoring blanks", () => {
-    expect(mergeAnthropicBeta("a,b", " b , c ,", undefined, "")).toBe("a,b,c");
+  it("unions and dedupes comma lists, ignoring blanks (whitelisted flags only)", () => {
+    // Finding #306: whitelist silently drops unknown flags — use real whitelisted flags
+    expect(mergeAnthropicBeta("context-management-2025-06-27", " fast-mode-2026-02-01 , structured-outputs-2025-12-15 ,", undefined, "")).toBe("context-management-2025-06-27,fast-mode-2026-02-01,structured-outputs-2025-12-15");
+  });
+  it("drops unknown flags per the whitelist", () => {
+    expect(mergeAnthropicBeta("context-management-2025-06-27,safeguards-2026-09-01")).toBe("context-management-2025-06-27");
   });
 });
 
@@ -19,28 +23,29 @@ describe("DefaultExecutor.buildHeaders() forwards client anthropic-beta", () => 
     ({ DefaultExecutor } = await import("open-sse/executors/default.js"));
   });
 
-  it("keeps unknown client flags alongside the pinned set on claude", () => {
+  it("forwards whitelisted client flags alongside the pinned set on claude", () => {
+    // Finding #306: client flags are intersected with the whitelist before merging
     const executor = new DefaultExecutor("claude");
-    const rawHeaders = { "anthropic-beta": "safeguards-2026-09-01,context-1m-2025-08-07" };
+    const rawHeaders = { "anthropic-beta": "advanced-tool-use-2025-11-20,effort-2025-11-24" };
     const flags = betaFlags(executor.buildHeaders({ apiKey: "k", rawHeaders }, true, undefined, "claude-opus-5"));
-    expect(flags).toContain("safeguards-2026-09-01");
-    expect(flags).toContain("context-1m-2025-08-07");
+    expect(flags).toContain("advanced-tool-use-2025-11-20");
+    expect(flags).toContain("effort-2025-11-24");
     expect(flags).toContain("context-management-2025-06-27");
     expect(new Set(flags).size).toBe(flags.length);
   });
 
-  it("forwards client flags on anthropic-compatible Claude models", () => {
+  it("forwards whitelisted client flags on anthropic-compatible Claude models", () => {
     const executor = new DefaultExecutor("anthropic-compatible-custom");
-    const creds = { apiKey: "k", rawHeaders: { "anthropic-beta": "safeguards-2026-09-01" }, providerSpecificData: { baseUrl: "https://gw.example.com/v1" } };
+    const creds = { apiKey: "k", rawHeaders: { "anthropic-beta": "fast-mode-2026-02-01" }, providerSpecificData: { baseUrl: "https://gw.example.com/v1" } };
     const flags = betaFlags(executor.buildHeaders(creds, true, undefined, "claude-sonnet-5"));
-    expect(flags).toContain("safeguards-2026-09-01");
+    expect(flags).toContain("fast-mode-2026-02-01");
     expect(flags).not.toContain("claude-code-20250219");
   });
 
-  it("forwards client flags on the anthropic provider", () => {
+  it("forwards whitelisted client flags on the anthropic provider", () => {
     const executor = new DefaultExecutor("anthropic");
-    const flags = betaFlags(executor.buildHeaders({ apiKey: "k", rawHeaders: { "anthropic-beta": "safeguards-2026-09-01" } }, true, undefined, "claude-sonnet-5"));
-    expect(flags).toContain("safeguards-2026-09-01");
+    const flags = betaFlags(executor.buildHeaders({ apiKey: "k", rawHeaders: { "anthropic-beta": "structured-outputs-2025-12-15" } }, true, undefined, "claude-sonnet-5"));
+    expect(flags).toContain("structured-outputs-2025-12-15");
   });
 });
 
