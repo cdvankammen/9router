@@ -32,14 +32,17 @@ export async function createNodeSqliteAdapter(filePath) {
     return stmt;
   }
 
-  // Periodic WAL checkpoint to keep -wal/-shm small
+  // Periodic WAL checkpoint to keep -wal/-shm small.
+  // SECURITY (sec-3673): PASSIVE not TRUNCATE — TRUNCATE blocks concurrent
+  // readers for the checkpoint duration, causing event-loop stalls every 60s
+  // under load. PASSIVE checkpoints are non-blocking.
   const checkpointTimer = setInterval(() => {
-    try { db.exec("PRAGMA wal_checkpoint(TRUNCATE)"); } catch {}
+    try { db.exec("PRAGMA wal_checkpoint(PASSIVE)"); } catch {}
   }, CHECKPOINT_INTERVAL_MS);
   if (typeof checkpointTimer.unref === "function") checkpointTimer.unref();
 
   function gracefulClose() {
-    try { db.exec("PRAGMA wal_checkpoint(TRUNCATE)"); } catch {}
+    try { db.exec("PRAGMA wal_checkpoint(PASSIVE)"); } catch {}
     try { stmtCache.clear(); } catch {}
     try { db.close(); } catch {}
   }
@@ -48,6 +51,16 @@ export async function createNodeSqliteAdapter(filePath) {
   process.once("SIGINT", () => { onShutdown(); process.exit(0); });
   process.once("SIGTERM", () => { onShutdown(); process.exit(0); });
 
+  // node:sqlite returns rows with a null prototype. Next.js RSC serialization
+  // rejects null-prototype objects ("Only plain objects ... can be passed to
+  // Client Components"), and JSON.stringify drops their keys entirely. Normalize
+  // to plain objects so every consumer (repos, RSC pages, API routes) sees the
+  // same shape as better-sqlite3 / sql.js rows.
+  function toPlain(row) {
+    if (row === null || row === undefined) return row;
+    return { ...row };
+  }
+
   return {
     driver: "node:sqlite",
     run(sql, params = []) {
@@ -55,10 +68,10 @@ export async function createNodeSqliteAdapter(filePath) {
       return { changes: Number(r.changes ?? 0), lastInsertRowid: Number(r.lastInsertRowid ?? 0) };
     },
     get(sql, params = []) {
-      return prepare(sql).get(...params);
+      return toPlain(prepare(sql).get(...params));
     },
     all(sql, params = []) {
-      return prepare(sql).all(...params);
+      return prepare(sql).all(...params).map(toPlain);
     },
     exec(sql) { return db.exec(sql); },
     transaction(fn) {
@@ -74,7 +87,7 @@ export async function createNodeSqliteAdapter(filePath) {
         throw e;
       }
     },
-    checkpoint() { try { db.exec("PRAGMA wal_checkpoint(TRUNCATE)"); } catch {} },
+    checkpoint() { try { db.exec("PRAGMA wal_checkpoint(PASSIVE)"); } catch {} },
     close() {
       clearInterval(checkpointTimer);
       gracefulClose();
