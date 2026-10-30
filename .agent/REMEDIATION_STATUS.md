@@ -8,6 +8,10 @@ Cross-reference between `.agent/SECURITY_AUDIT_WAVE_674.md` (the audit doc) and 
 
 **Session 26 rounds 4-6 (commits 9260bcf7, bfdb843b, ff33ec14, bec11852, plus round-6 tailscale bin-cache fix):** 3 server-side silent-catch fixes + anthropic-gateway-passthrough test fix + 4 test-file hardening fixes + GAP-P2-15 extension to tailscale `bgRefreshBin()`. All pushed to fork; mini4 redeploy pending host availability.
 
+## GAP-P2-19 — headroom/pxpipe PATH-injection (FIXED)
+
+`src/lib/headroom/detect.js::findHeadroomBinary()` and `findPython310()` used `which headroom` / `execSync(\`${candidate} --version\`)` with `env: { ...process.env, PATH: EXTENDED_PATH }`. `src/lib/pxpipe/install.js::findNpm()` used `which npm` with the same pattern. Both spread `process.env.PATH` into the child env, allowing a crafted `.env` to poison binary resolution — the returned path was then used as argv[0] in execFileSync/spawn calls. Fixed with filesystem-only probing of the static EXTRA_BINS list. `findPython310()` additionally rejects bare-name candidates and uses execFileSync.
+
 ## GAP-P2-17 — cli-tools `which <tool>` cluster — FIXED
 
 New shared helper `src/lib/cliTools/cliBinProbe.js` (filesystem-only probing of known CLI install locations) + 17 per-tool `check*Installed()` wrappers. All 18 routes under `src/app/api/cli-tools/*/route.js` that previously used `execAsync("which <tool>")` / `where <tool>` now call the helper. `grok-build-settings` was already fixed at GAP-P2-16.
