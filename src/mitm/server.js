@@ -35,6 +35,11 @@ const handlers = {
 
 // ── SSL / SNI ─────────────────────────────────────────────────
 
+// SECURITY (Finding #310): cap the SNI cert cache. Without a bound, an attacker
+// who probes distinct SNIs grows the Map and the underlying SecureContext objects
+// indefinitely (memory + disk via generate.js writes). TARGET_HOSTS is small
+// (7 domains) so 64 entries gives headroom for aliases while capping abuse.
+const MITM_CERT_CACHE_MAX = 64;
 const certCache = new Map();
 let rootCAPem;
 
@@ -47,6 +52,11 @@ function sniCallback(servername, cb) {
       key: certData.key,
       cert: `${certData.cert}\n${rootCAPem}`
     });
+    // Evict oldest entry when cache is full (Map iteration order = insertion order)
+    if (certCache.size >= MITM_CERT_CACHE_MAX) {
+      const oldest = certCache.keys().next().value;
+      certCache.delete(oldest);
+    }
     certCache.set(servername, ctx);
     cb(null, ctx);
   } catch (e) {
@@ -87,10 +97,24 @@ async function resolveTargetIP(hostname) {
   return cachedTargetIPs[hostname].ip;
 }
 
+// SECURITY (Finding #309): bound inbound body size to prevent memory-exhaustion
+// DoS. 16MB accommodates the largest legitimate LLM payloads (image+text combos,
+// long audio transcripts) while capping the blast radius of a malicious client.
+const MITM_MAX_BODY_BYTES = 16 * 1024 * 1024;
+
 function collectBodyRaw(req) {
   return new Promise((resolve, reject) => {
     const chunks = [];
-    req.on("data", chunk => chunks.push(chunk));
+    let total = 0;
+    req.on("data", chunk => {
+      total += chunk.length;
+      if (total > MITM_MAX_BODY_BYTES) {
+        req.destroy();
+        reject(new Error(`MITM body exceeds ${MITM_MAX_BODY_BYTES} bytes`));
+        return;
+      }
+      chunks.push(chunk);
+    });
     req.on("end", () => resolve(Buffer.concat(chunks)));
     req.on("error", reject);
   });
@@ -379,7 +403,11 @@ try {
   process.exit(1);
 }
 
-server.listen(LOCAL_PORT, () => log(`🚀 Server ready on :${LOCAL_PORT}`));
+// SECURITY (Finding #308): bind loopback only. The MITM proxy installs itself
+// into the system trust store (finding #314); binding 0.0.0.0 would expose the
+// TLS interceptor to every host on the LAN and allow remote attackers to route
+// traffic through this machine's CA-signed certs.
+server.listen(LOCAL_PORT, "127.0.0.1", () => log(`🚀 Server ready on 127.0.0.1:${LOCAL_PORT}`));
 
 server.on("error", (e) => {
   if (e.code === "EADDRINUSE") err(`Port ${LOCAL_PORT} already in use`);

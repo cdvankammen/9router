@@ -81,12 +81,15 @@ function generateRootCA() {
   // Self-sign the certificate
   cert.sign(keys.privateKey, forge.md.sha256.create());
 
-  // Save to disk
+  // Save to disk — private key at 0600 (owner-only), cert at 0644 (readable)
   const privateKeyPem = forge.pki.privateKeyToPem(keys.privateKey);
   const certPem = forge.pki.certificateToPem(cert);
 
-  fs.writeFileSync(ROOT_CA_KEY_PATH, privateKeyPem);
-  fs.writeFileSync(ROOT_CA_CERT_PATH, certPem);
+  // SECURITY (Finding #312): root CA private key MUST be owner-only readable.
+  // Default umask 022 would produce 0644 (world-readable), allowing any local
+  // user to sign arbitrary leaf certs and impersonate any TARGET_HOSTS domain.
+  fs.writeFileSync(ROOT_CA_KEY_PATH, privateKeyPem, { mode: 0o600 });
+  fs.writeFileSync(ROOT_CA_CERT_PATH, certPem, { mode: 0o644 });
 
   console.log("✅ Root CA generated successfully");
   return { key: ROOT_CA_KEY_PATH, cert: ROOT_CA_CERT_PATH };

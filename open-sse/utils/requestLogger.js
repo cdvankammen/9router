@@ -69,25 +69,41 @@ function writeJsonFile(sessionPath, filename, data) {
   }
 }
 
-// Mask sensitive data in headers (DISABLED - keep full token for testing)
+// SECURITY (Finding #275): Mask sensitive headers before they hit the request
+// log files on disk. The previous version was disabled with the annotation
+// "keep full token for testing" — that left bearer tokens, API keys, and
+// session cookies in cleartext in LOGS_DIR/*.json, readable by any local user
+// with access to the 9router process's working directory.
+//
+// The mask preserves the first 10 and last 5 characters of any value longer
+// than 20 bytes, which is enough to identify a rotated key family without
+// leaking the secret itself. Empty/short values pass through unchanged.
+const SENSITIVE_HEADER_PATTERNS = [
+  "authorization",
+  "x-api-key",
+  "x-goog-api-key",
+  "anthropic-api-key",
+  "cookie",
+  "proxy-authorization",
+  "token",
+];
+
+function maskSensitiveValue(value) {
+  if (typeof value !== "string") return value;
+  if (value.length <= 20) return value;
+  return `${value.slice(0, 10)}...${value.slice(-5)} (${value.length} chars)`;
+}
+
 function maskSensitiveHeaders(headers) {
   if (!headers) return {};
-  return { ...headers };
-  
-  // Old masking code (disabled):
-  // const masked = { ...headers };
-  // const sensitiveKeys = ["authorization", "x-api-key", "cookie", "token"];
-  // 
-  // for (const key of Object.keys(masked)) {
-  //   const lowerKey = key.toLowerCase();
-  //   if (sensitiveKeys.some(sk => lowerKey.includes(sk))) {
-  //     const value = masked[key];
-  //     if (value && value.length > 20) {
-  //       masked[key] = value.slice(0, 10) + "..." + value.slice(-5);
-  //     }
-  //   }
-  // }
-  // return masked;
+  const masked = { ...headers };
+  for (const key of Object.keys(masked)) {
+    const lowerKey = key.toLowerCase();
+    if (SENSITIVE_HEADER_PATTERNS.some((p) => lowerKey.includes(p))) {
+      masked[key] = maskSensitiveValue(masked[key]);
+    }
+  }
+  return masked;
 }
 
 // No-op logger when logging is disabled
