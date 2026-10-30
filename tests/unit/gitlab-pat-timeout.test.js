@@ -21,11 +21,17 @@ vi.mock("next/headers", () => ({
   headers: vi.fn(() => ({ get: vi.fn() })),
 }));
 
+// Mock requireAuth to always pass — these tests validate the route logic,
+// not the auth gate (which has its own test suite).
+vi.mock("@/lib/auth/requireAuth", () => ({
+  requireAuth: vi.fn(() => Promise.resolve(true)),
+}));
+
 // Override global fetch with our mock
 vi.stubGlobal("fetch", mocks.fetchImpl);
 
 const { POST } = await import(
-  "../../../src/app/api/oauth/gitlab/pat/route.js"
+  "@/app/api/oauth/gitlab/pat/route.js"
 );
 
 function makeRequest(body) {

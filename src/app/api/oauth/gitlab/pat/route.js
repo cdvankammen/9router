@@ -54,6 +54,7 @@ export async function POST(request) {
     // Verify token by fetching current user
     const userRes = await fetch(`${base}/api/v4/user`, {
       headers: { "Private-Token": token.trim(), Accept: "application/json" },
+      signal: AbortSignal.timeout(10000),
     });
 
     if (!userRes.ok) {
@@ -85,6 +86,13 @@ export async function POST(request) {
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("GitLab PAT auth error:", error);
+    // Detect network timeout (AbortError) and return a clear message
+    if (error?.name === "AbortError" || error?.name === "TimeoutError") {
+      return NextResponse.json(
+        { error: "GitLab token verification timeout: the GitLab instance did not respond within 10 seconds" },
+        { status: 504 }
+      );
+    }
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
