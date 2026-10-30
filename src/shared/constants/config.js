@@ -8,8 +8,15 @@ export const APP_CONFIG = {
 };
 
 // GitHub configuration
+// SECURITY (#265): Pin CHANGELOG.md URL to a specific commit SHA so any future
+// master commit to CHANGELOG.md cannot inject arbitrary HTML into the
+// ChangelogModal (supply-chain XSS vector). Bump this SHA when updating the
+// changelog — the deliberate friction is the point.
+// Last verified: 2026-10-29 at v0.5.112 release.
+const CHANGELOG_COMMIT_SHA = "1fe586bb1cf35e1ed0cb2150a8ef7d1db040b21d";
+
 export const GITHUB_CONFIG = {
-  changelogUrl: "https://raw.githubusercontent.com/decolua/9router/refs/heads/master/CHANGELOG.md",
+  changelogUrl: `https://raw.githubusercontent.com/decolua/9router/${CHANGELOG_COMMIT_SHA}/CHANGELOG.md`,
   donateUrl: "https://9router.com/api/donate",
 };
 
