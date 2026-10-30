@@ -38,6 +38,7 @@
 
 ## UX
 - **Translator page alert() → toast** (GAP-P3-30): replaced all 9 blocking `alert()` calls in `translator/page.js` with the Zustand notification store (`useNotificationStore`): 8 error paths use `notify.error()`, 1 validation path uses `notify.warning()`. Non-blocking toasts instead of modal alerts that freeze the UI thread (0e1ab3a1).
+- **ConnectionsCard silent error swallows → toast** (GAP-P2-28): replaced 7 `console.log` error swallows in `ConnectionsCard.js` catch blocks with `notify.error()` toast notifications. Users now get visible feedback when connection operations (load, save strategy, reorder, delete, toggle, proxy update, save API key, update connection) fail. Also surfaces non-ok HTTP response bodies where applicable (22b1bb0c).
 
 ## Fixes
 - **Routing**: generalize the model context marker regex in `open-sse/utils/modelMarkers.js` from `\[1m\]$/i` to `\[(\d+[kKmM]?)\]\s*$/` so clients that append `[200k]`, `[500k]`, `[128k]` (Kilo, Cline, etc.) strip cleanly the same way Claude Code's `[1m]` does. Capture group extracts the inner value directly (f93f4adb)
