@@ -49,7 +49,7 @@ describe("Finding #321: GET /api/usage/[connectionId] requires auth", () => {
     expect(body.error).toBe("Unauthorized");
   });
 
-  it("source-level: route imports requireAuth and gates before DB access", () => {
+  it("source-level: route imports requireAuth and gates before DB access in GET", () => {
     const fs = require("node:fs");
     const path = require("node:path");
     const src = fs.readFileSync(
@@ -58,9 +58,16 @@ describe("Finding #321: GET /api/usage/[connectionId] requires auth", () => {
     );
     expect(src).toMatch(/import\s+\{[^}]*requireAuth[^}]*\}\s+from\s+["']@\/lib\/auth\/requireAuth["']/);
     expect(src).toMatch(/Finding\s+#321/);
-    // requireAuth check must appear BEFORE getProviderConnectionById call.
-    const authIdx = src.indexOf("requireAuth(request)");
-    const dbIdx = src.indexOf("getProviderConnectionById");
+    // Within the GET handler body (after "export async function GET"),
+    // the requireAuth(request) call must appear before the first
+    // getProviderConnectionById call inside that handler. The helper
+    // function refreshAndUpdateCredentials above GET also references
+    // getProviderConnectionById, so we scope to the GET handler body.
+    const getStart = src.indexOf("export async function GET");
+    expect(getStart).toBeGreaterThan(-1);
+    const body = src.slice(getStart);
+    const authIdx = body.indexOf("requireAuth(request)");
+    const dbIdx = body.indexOf("getProviderConnectionById");
     expect(authIdx).toBeGreaterThan(-1);
     expect(dbIdx).toBeGreaterThan(-1);
     expect(authIdx).toBeLessThan(dbIdx);
