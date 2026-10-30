@@ -110,6 +110,7 @@ Cross-reference between `.agent/SECURITY_AUDIT_WAVE_674.md` (the audit doc) and 
 | GAP-P2-21 iflow cookie timeout | DEFENDED | Source already had `AbortSignal.timeout(15000)` — test mock fixed (ee8b106c) |
 | GAP-P3-30 translator alert() | FIXED | 9 `alert()` → toast notifications (0e1ab3a1, cherry-pick of 31619bb1) |
 | GAP-P2-28 ConnectionsCard errors | FIXED | 7 `console.log` → `notify.error()` toasts (22b1bb0c) |
+| GAP-P1-12 Cursor auto-import symlink | FIXED | `validateCursorDbPath()` realpath + prefix guard (9ed94dd3) |
 | GAP-P1-05 onRequestSuccess guard | DEFENDED | Guard + test already in HEAD |
 | GAP-P2-ERR silent catch blocks | DEFENDED | 20/20 tests pass — fix already merged |
 | #3714 suggested-models SSRF | DEFENDED | `fetchPublic` already guards (suggested-models/route.js:76) |
