@@ -10,14 +10,17 @@ import { requireAuth } from "@/lib/auth/requireAuth";
  * POST /api/providers/[id]/test-models
  * id = connectionId — used only to resolve provider + model list.
  * Actual requests go through the internal endpoint that matches each model kind.
+ *
+ * Finding #7 (2026-10-26): route-level requireAuth — fans out internal
+ * requests that ride stored OAuth/API-key credentials (refreshGoogleToken,
+ * refreshCodexToken etc. in /api/providers/[id]/models). An unauthenticated
+ * peer could force credential use against any connection whose UUID they know.
  */
 export async function POST(request, { params }) {
-    // IDOR sweep (2026-10-29): route-level requireAuth as defence-in-depth.
+  try {
     if (!(await requireAuth(request))) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-
-  try {
     const { id } = await params;
     const connection = await getProviderConnectionById(id);
     if (!connection) {
