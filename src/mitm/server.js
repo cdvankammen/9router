@@ -35,18 +35,33 @@ const handlers = {
 
 // ── SSL / SNI ─────────────────────────────────────────────────
 
+// SECURITY (Finding #310): bound cert cache size to prevent unbounded memory
+// growth when the proxy handles many distinct SNI hosts over its lifetime.
+// 64 entries accommodates heavy multi-tool usage while keeping the working
+// set predictable; evicts oldest (LRU via Map insertion order) on overflow.
+const MITM_CERT_CACHE_MAX = 64;
 const certCache = new Map();
 let rootCAPem;
 
 function sniCallback(servername, cb) {
   try {
-    if (certCache.has(servername)) return cb(null, certCache.get(servername));
+    if (certCache.has(servername)) {
+      // Touch on hit: re-insert at end so Map iteration order stays LRU.
+      const cached = certCache.get(servername);
+      certCache.delete(servername);
+      certCache.set(servername, cached);
+      return cb(null, cached);
+    }
     const certData = getCertForDomain(servername);
     if (!certData) return cb(new Error(`Failed to generate cert for ${servername}`));
     const ctx = require("tls").createSecureContext({
       key: certData.key,
       cert: `${certData.cert}\n${rootCAPem}`
     });
+    if (certCache.size >= MITM_CERT_CACHE_MAX) {
+      const oldest = certCache.keys().next().value;
+      certCache.delete(oldest);
+    }
     certCache.set(servername, ctx);
     cb(null, ctx);
   } catch (e) {
@@ -87,10 +102,24 @@ async function resolveTargetIP(hostname) {
   return cachedTargetIPs[hostname].ip;
 }
 
+// SECURITY (Finding #309): bound inbound body size to prevent memory-exhaustion
+// DoS. 16MB accommodates the largest legitimate LLM payloads (image+text combos,
+// long audio transcripts) while capping the blast radius of a malicious client.
+const MITM_MAX_BODY_BYTES = 16 * 1024 * 1024;
+
 function collectBodyRaw(req) {
   return new Promise((resolve, reject) => {
     const chunks = [];
-    req.on("data", chunk => chunks.push(chunk));
+    let total = 0;
+    req.on("data", chunk => {
+      total += chunk.length;
+      if (total > MITM_MAX_BODY_BYTES) {
+        req.destroy();
+        reject(new Error(`MITM body exceeds ${MITM_MAX_BODY_BYTES} bytes`));
+        return;
+      }
+      chunks.push(chunk);
+    });
     req.on("end", () => resolve(Buffer.concat(chunks)));
     req.on("error", reject);
   });
@@ -379,7 +408,12 @@ try {
   process.exit(1);
 }
 
-server.listen(LOCAL_PORT, () => log(`🚀 Server ready on :${LOCAL_PORT}`));
+// SECURITY (Finding #308): bind loopback only. MITM is a local dev proxy and
+// must never accept connections from other hosts on the LAN — doing so would
+// let any peer on the network route traffic through the proxy and reuse its
+// signing CA (finding #314); binding 0.0.0.0 would expose the proxy to the
+// entire system trust store.
+server.listen(LOCAL_PORT, "127.0.0.1", () => log(`🚀 Server ready on 127.0.0.1:${LOCAL_PORT}`));
 
 server.on("error", (e) => {
   if (e.code === "EADDRINUSE") err(`Port ${LOCAL_PORT} already in use`);

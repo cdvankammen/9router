@@ -271,3 +271,111 @@ At the current rate (~50 tests recovered per round), reaching the 35-test baseli
 3. **Focus on security-critical only** — prioritize Category B Finding-* guards (security regressions), defer Category A (test bugs)
 
 All security-critical SSRF/auth restorations are complete (rounds 1-3). The remaining Category B items are defense-in-depth hardening, not critical vulnerabilities.
+
+## Round 6 — usage.js ReferenceError + registry features (2026-10-30)
+
+### Stage 1 (code-level) — runtime-critical fixes
+
+| File | What was restored | Strategy |
+|---|---|---|
+| `open-sse/services/usage.js` | `const CUSTOM_USAGE_MARKER = "__custom_usage__"` (declared but referenced → ReferenceError on every usage call with custom usageUrl) + imports `getCustomUsage`, `getOpenRouterUsage`, `getTraeUsage` + 3 USAGE_HANDLERS entries | Surgical insert |
+| `open-sse/providers/registry/openrouter.js` | `features: { usage: true, usageApikey: true }` block | Surgical append |
+
+### Stage 2 (behavior/DOM)
+
+Test Files: 65 failed / 441 passed → Tests: **151 failed / 5067 passed** (from 170 → 151, 19 recovered).
+
+### Honest correction
+
+Round-5 commit (cd677a7e) claimed to add the `CUSTOM_USAGE_MARKER` dispatch but the const definition + imports + handler entries were never inserted — `replace_string_in_file` calls silently failed due to oldString mismatch. Round 6 fixes the runtime crash this caused.
+
+## Round 7 — parseQuotaData + xiaomi timing-safe + provider-nodes SSRF (2026-10-30)
+
+### Stage 1 (code-level) — verbatim restores + surgical patches
+
+| File | What was restored | Upstream delta | Strategy |
+|---|---|---|---|
+| `src/app/api/provider-nodes/route.js` | `assertNodeUrlSafe` SSRF guard + `multi-compatible` handler + `endpointUrls`/`ssrfGuard` imports | 110 lines (only upstream's `anthropic-compatible` which our version subsumes) | Verbatim from 07c16dab |
+| `src/app/api/provider-nodes/validate/route.js` | multi-compatible validation probes | 218 lines (upstream added `fetchWithTimeout`/`isValidUrl`/`getErrorMessage` helpers + `anthropic-compatible`) | Verbatim (pre-rebase had all helpers) |
+| `src/app/api/provider-nodes/[id]/route.js` | multi-compatible PUT transport rebuild + SSRF guard | 107 lines | Verbatim from 07c16dab |
+| `src/app/api/oauth/xiaomi-mimo/api-key/route.js` | `import crypto from "node:crypto"` + `safeKeyMatch()` with `timingSafeEqual` + length-early-return (Finding #323) | 143 lines | Verbatim from 07c16dab |
+| `src/lib/db/repos/nodesRepo.js` | `transports: data.transports` in `createProviderNode` | 1 line | Surgical insert |
+| `src/app/(dashboard)/.../ProviderLimits/utils.js` | `case "trae"` + `remaining`/`remainingPercentage`/`unlimited` in default case + `unlimited` in minimax-code | 0 upstream delta | Surgical insert |
+| `tests/unit/zed-live-models.test.js` | `vi.mock("@/lib/auth/requireAuth", ...)` bypass | 0 upstream delta | Surgical insert |
+
+### Stage 2 (behavior/DOM)
+
+Test Files: 59 failed → Tests: **129 failed / 5089 passed** (22 recovered this round).
+
+### Stage 3 (production/visual)
+
+Deferred — mini4 DOWN.
+
+## Round 8 — ConnectionsCard + ModelsCard notification-store wiring (2026-10-30)
+
+### Stage 1 (code-level) — surgical patches (NOT verbatim — upstream had 509/296 line deltas)
+
+| File | What was restored | Strategy |
+|---|---|---|
+| `src/app/(dashboard)/.../ConnectionsCard.js` | `import { useNotificationStore }` + `const notify = useNotificationStore()` + 7 `console.log` → `notify.error()` in catch blocks (GAP-P2-28) | Surgical: add import + hook + replace 7 catch blocks |
+| `src/app/(dashboard)/.../ModelsCard.js` | Same pattern, 5 catch blocks (GAP-P2-29) | Surgical |
+
+### Stage 2 (behavior/DOM)
+
+Test Files: 58 failed → Tests: **122 failed / 5096 passed** (7 recovered).
+
+### Honest correction
+
+The `const notify = useNotificationStore()` hook insertion failed silently in round 8 — oldString did not match actual component bodies (ConnectionsCard had `proxyPools` state I missed; ModelsCard had `useCopyToClipboard` between the component signature and first useState).
+
+## Round 9 — complete notification-store hook wiring (2026-10-30)
+
+### Stage 1 (code-level)
+
+Follow-up to round 8: fixed the hook insertion with exact current-source matches. Also converted the ConnectionsCard reorder catch block from silent `catch { await fetch_(); }` to `notify.error` + refetch.
+
+### Stage 2 (behavior/DOM)
+
+Test Files: 56 failed → Tests: **119 failed / 5099 passed** (3 recovered, total 10 across rounds 8-9).
+
+**Connections-card-error-toast: 5/5 pass. Models-card-notification: 5/5 pass.**
+
+## Round 10 — MITM cert+server hardening + login gate + Cloudflare timeout (2026-10-30, in progress)
+
+### Stage 1 (code-level) — surgical patches (upstream has 179/409/318 line deltas on these files, verbatim NOT safe)
+
+| File | What was restored | Finding |
+|---|---|---|
+| `src/mitm/cert/rootCA.js` | `import crypto` + `generateSerialHex()` CSPRNG + `cert.serialNumber = generateSerialHex()` (was hardcoded "01" on root + `Math.random()` on leaf) + `fs.writeFileSync(..., { mode: 0o600 })` on private key | #312 (key perms), #344 (CSPRNG serials) |
+| `src/mitm/server.js` | `MITM_MAX_BODY_BYTES = 16 * 1024 * 1024` + body bound check in `collectBodyRaw` + `MITM_CERT_CACHE_MAX = 64` with LRU eviction + `server.listen(LOCAL_PORT, "127.0.0.1", ...)` loopback bind | #308 (loopback bind), #309 (body bound), #310 (cert cache cap) |
+| `src/app/login/page.js` | `initialPasswordSet` state + gate `hasPassword === false && initialPasswordSet === false` on the 123456 hint | #293 |
+| `src/app/api/auth/status/route.js` | `initialPasswordSet: !!process.env.INITIAL_PASSWORD` in success + catch response paths | #293 mirror |
+| `src/app/api/proxy-pools/cloudflare-deploy/route.js` | `CLOUDFLARE_API_TIMEOUT_MS = 30_000` + `signal: AbortSignal.timeout(...)` on upload/enableSubdomain/getSubdomain (3 calls) + non-fatal try/catch on enableSubdomain | GAP-P2-22 |
+
+### Stage 2 (behavior/DOM) — TBD after patches land
+
+Expected recovery: mitm-cert-serial (4) + mitm-security-hardening (3 remaining) + login-default-password-hint (1 remaining) + cloudflare-deploy-fetch-timeout (4) = up to 12 tests.
+
+### Stage 3 (production/visual)
+
+Deferred — mini4 DOWN.
+
+### Campaign cumulative state (through round 9)
+
+| Round | Commit | Tests failed | Recovered |
+|---|---|---|---|
+| Pre-repair (post-merge 2f8b50ee) | — | 441 | — |
+| Round 1 (SSRF + computeCost) | e360d5ce | 355 | 86 |
+| Round 2 (8 modules + parseModel) | 4d9fc242 | 285 | 70 |
+| Round 2.5 (combo-CAR call site) | 14c0bc29 | 283 | 2 |
+| Round 3 (6 modules + 2 surgical) | fae688eb | 203 | 80 |
+| Round 4 (migration 008 + iflow) | c3fc096a | 193 | 10 |
+| Round 5 (registry + kiro + usage dispatch) | cd677a7e | 170 | 23 |
+| Round 6 (usage.js ReferenceError) | db1b5dad | 151 | 19 |
+| Round 7 (parseQuotaData + xiaomi + provider-nodes) | 71598788 | 129 | 22 |
+| Round 8 (UI cards partial) | 2cb4c32b | 122 | 7 |
+| Round 9 (UI cards complete) | db78c649 | 119 | 3 |
+| Round 10 (MITM + login + CF) | TBD | TBD | TBD |
+| Pre-rebase baseline (07c16dab) | — | 35 | — |
+
+**Gap to baseline after round 9: 119 - 35 = 84 regressions still outstanding.**

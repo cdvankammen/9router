@@ -36,6 +36,11 @@ export async function GET() {
       samlConfigured: isSamlConfigured(settings),
       samlLoginLabel: (settings.samlLoginLabel || "Sign in with SAML SSO").trim() || "Sign in with SAML SSO",
       hasPassword: !!settings.password,
+      // SECURITY (Finding #293): mirror INITIAL_PASSWORD env so the login UI
+      // can suppress the stock '123456' hint when the operator pinned a
+      // custom initial password. When set, the advertised default is wrong
+      // and would mislead anyone looking at the login screen.
+      initialPasswordSet: !!process.env.INITIAL_PASSWORD,
       displayName,
       loginMethod,
       authenticated: !!session,
@@ -56,6 +61,10 @@ export async function GET() {
       samlConfigured: false,
       samlLoginLabel: "Sign in with SAML SSO",
       hasPassword: false,
+      // SECURITY (Finding #293): mirror the live value so the login UI gate
+      // keeps the '123456' hint suppressed even in the degraded (DB-down)
+      // response path.
+      initialPasswordSet: !!process.env.INITIAL_PASSWORD,
       displayName: "Password user",
       loginMethod: "Password",
       authenticated: false,
