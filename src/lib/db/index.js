@@ -95,6 +95,12 @@ export async function exportDb() {
   return out;
 }
 
+// SECURITY (Finding #317 / exfil chain #9): keys that MUST NOT be restored
+// from a backup / import payload. A crafted backup carrying
+// `password: <evil-hash>` or `mitmSudoEncrypted: <evil-ciphertext>` would
+// silently overwrite the operator's credentials.
+const IMPORT_PROTECTED_KEYS = ["password", "mitmSudoEncrypted"];
+
 export async function importDb(payload) {
   if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
     throw new Error("Invalid database payload");
@@ -111,9 +117,11 @@ export async function importDb(payload) {
     db.run(`DELETE FROM combos`);
     db.run(`DELETE FROM kv WHERE scope IN ('modelAliases', 'customModels', 'mitmAlias', 'pricing')`);
 
-    // Settings
+    // Settings — SECURITY (Finding #317): strip smuggled protected keys
     if (payload.settings) {
-      db.run(`INSERT INTO settings(id, data) VALUES(1, ?) ON CONFLICT(id) DO UPDATE SET data = excluded.data`, [stringifyJson(payload.settings)]);
+      const cleaned = { ...payload.settings };
+      for (const key of IMPORT_PROTECTED_KEYS) delete cleaned[key];
+      db.run(`INSERT INTO settings(id, data) VALUES(1, ?) ON CONFLICT(id) DO UPDATE SET data = excluded.data`, [stringifyJson(cleaned)]);
     }
 
     for (const c of payload.providerConnections || []) {

@@ -50,13 +50,30 @@ export async function POST(request) {
       }
     }
 
+    // GAP-P1-14: FIRST-RUN SETUP GATE — for any NON-SSO install with no
+    // stored hash AND no INITIAL_PASSWORD, reject login from ANY origin.
+    // The hardcoded "123456" default must NEVER be accepted remotely.
+    // This is a state condition on the install, NOT a per-IP credential
+    // failure, so no recordFail() is applied here.
+    const setupRequired = !storedHash && !process.env.INITIAL_PASSWORD;
+    if (setupRequired) {
+      return NextResponse.json(
+        {
+          success: false,
+          setupRequired: true,
+          error: "No password is configured yet. Create one to finish first-run setup.",
+        },
+        { status: 403, headers: NO_STORE_HEADERS }
+      );
+    }
+
     let isValid = false;
     if (storedHash) {
       isValid = await bcrypt.compare(password, storedHash);
-    } else {
-      // Use env var or default
-      const initialPassword = process.env.INITIAL_PASSWORD || "123456";
-      isValid = password === initialPassword;
+    } else if (process.env.INITIAL_PASSWORD) {
+      // No stored hash but INITIAL_PASSWORD set: operator-declared bootstrap
+      // password — honored only because it is explicit, never a hardcoded fallback.
+      isValid = password === process.env.INITIAL_PASSWORD;
     }
 
     if (isValid) {
@@ -106,6 +123,14 @@ export async function POST(request) {
       { status: 401 }
     );
   } catch (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    // SECURITY (Finding #324/#340): swallow the raw error.message into a
+    // uniform response. bcrypt.compare can throw on a corrupt stored hash
+    // ("Invalid salt", "data and hash must be strings"), and leaking
+    // error.message to the client discloses password-storage internals.
+    console.error("[auth/login] unexpected error:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500, headers: NO_STORE_HEADERS }
+    );
   }
 }

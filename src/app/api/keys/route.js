@@ -5,6 +5,14 @@ import { requireAuth } from "@/lib/auth/requireAuth";
 
 export const dynamic = "force-dynamic";
 
+// Mask API keys server-side to prevent credential leakage to unauthenticated
+// LAN peers (e.g. when requireLogin=false). Shows first 6 + last 4 chars with
+// bullet fill. The full key is returned only on POST (create).
+function maskKey(fullKey) {
+  if (!fullKey || fullKey.length <= 10) return fullKey || "";
+  return fullKey.slice(0, 6) + "\u2022".repeat(fullKey.length - 10) + fullKey.slice(-4);
+}
+
 // GET /api/keys - List API keys
 export async function GET(request) {
   // IDOR sweep (2026-10-29): route-level requireAuth as defence-in-depth.
