@@ -32,14 +32,17 @@ export async function createNodeSqliteAdapter(filePath) {
     return stmt;
   }
 
-  // Periodic WAL checkpoint to keep -wal/-shm small
+  // Periodic WAL checkpoint to keep -wal/-shm small.
+  // SECURITY (sec-3673): PASSIVE not TRUNCATE — TRUNCATE blocks concurrent
+  // readers for the checkpoint duration, causing event-loop stalls every 60s
+  // under load. PASSIVE checkpoints are non-blocking.
   const checkpointTimer = setInterval(() => {
-    try { db.exec("PRAGMA wal_checkpoint(TRUNCATE)"); } catch {}
+    try { db.exec("PRAGMA wal_checkpoint(PASSIVE)"); } catch {}
   }, CHECKPOINT_INTERVAL_MS);
   if (typeof checkpointTimer.unref === "function") checkpointTimer.unref();
 
   function gracefulClose() {
-    try { db.exec("PRAGMA wal_checkpoint(TRUNCATE)"); } catch {}
+    try { db.exec("PRAGMA wal_checkpoint(PASSIVE)"); } catch {}
     try { stmtCache.clear(); } catch {}
     try { db.close(); } catch {}
   }
@@ -84,7 +87,7 @@ export async function createNodeSqliteAdapter(filePath) {
         throw e;
       }
     },
-    checkpoint() { try { db.exec("PRAGMA wal_checkpoint(TRUNCATE)"); } catch {} },
+    checkpoint() { try { db.exec("PRAGMA wal_checkpoint(PASSIVE)"); } catch {} },
     close() {
       clearInterval(checkpointTimer);
       gracefulClose();

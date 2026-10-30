@@ -20,13 +20,16 @@ export async function createBunSqliteAdapter(filePath) {
     return stmt;
   }
 
+  // SECURITY (sec-3673): PASSIVE not TRUNCATE — TRUNCATE acquires exclusive
+  // lock that blocks concurrent readers for checkpoint duration, causing
+  // event-loop stalls every 60s under load. PASSIVE is non-blocking.
   const checkpointTimer = setInterval(() => {
-    try { db.exec("PRAGMA wal_checkpoint(TRUNCATE)"); } catch {}
+    try { db.exec("PRAGMA wal_checkpoint(PASSIVE)"); } catch {}
   }, CHECKPOINT_INTERVAL_MS);
   if (typeof checkpointTimer.unref === "function") checkpointTimer.unref();
 
   function gracefulClose() {
-    try { db.exec("PRAGMA wal_checkpoint(TRUNCATE)"); } catch {}
+    try { db.exec("PRAGMA wal_checkpoint(PASSIVE)"); } catch {}
     try { stmtCache.clear(); } catch {}
     try { db.close(); } catch {}
   }
@@ -53,7 +56,7 @@ export async function createBunSqliteAdapter(filePath) {
       const tx = db.transaction(fn);
       return tx();
     },
-    checkpoint() { try { db.exec("PRAGMA wal_checkpoint(TRUNCATE)"); } catch {} },
+    checkpoint() { try { db.exec("PRAGMA wal_checkpoint(PASSIVE)"); } catch {} },
     close() {
       clearInterval(checkpointTimer);
       gracefulClose();
