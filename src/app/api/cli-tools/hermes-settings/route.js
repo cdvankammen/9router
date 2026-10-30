@@ -91,17 +91,6 @@ const checkHermesInstalled = async () => {
   return installed;
 };
 
-// Legacy stub — kept for any dead branches that still call through.
-const checkHermesInstalledLegacy = async () => {
-  try {
-    await fs.access(resolveHermesHome(null).configPath);
-    return true;
-  } catch {
-      return false;
-    }
-  }
-};
-
 import { requireAuth } from "@/lib/auth/requireAuth";
 
 export async function GET(request) {

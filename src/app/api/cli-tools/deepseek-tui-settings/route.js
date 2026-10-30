@@ -71,16 +71,6 @@ const checkDeepSeekInstalled = async () => {
     return installed;
 };
 
-const _legacyCheckDeepSeekInstalled = async () => {
-    try {
-        await fs.access(getDeepSeekConfigPath());
-        return true;
-        } catch {
-            return false;
-        }
-    }
-};
-
 const readConfigToml = async () => {
     try {
         return await fs.readFile(getDeepSeekConfigPath(), "utf-8");
