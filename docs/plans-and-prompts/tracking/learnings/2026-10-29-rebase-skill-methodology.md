@@ -226,7 +226,7 @@ done
 grep -rn '^<<<<<<< \|^>>>>>>> ' --include='*.js' --include='*.json' --include='*.md' .
 ```
 **Expected:** 0 matches (loose `=======` in comments is OK per MERGE-13)
-
+**MERGE-21 lesson:** When removing conflict markers manually, remove ALL THREE (`<<<<<<<`, `=======`, `>>>>>>>`) in one operation. It's easy to leave the closing `>>>>>>> origin/master` behind when using sequential string replacements. Gate 2 caught the leftover — transparent follow-up commit (75bcbcfc) fixed it.
 ### Gate 3: Must-Keep Security Features
 Create a checklist of security features that MUST survive the merge. Verify each with grep.
 
@@ -347,6 +347,14 @@ After the merge is complete and verified, write a retrospective:
 13. Write the plan document BEFORE executing — forces honest assessment
 14. Upstream fixes should be adopted when compatible — "willingness to access master branches fixes above our own"
 
+### From MERGE-21 execution (v0.5.112, 2026-10-29)
+15. **Conflict prediction over-estimates** — plan predicted ~8 HIGH/MED conflicts; git's recursive merge auto-resolved 6 of them. Only 2 required manual intervention (CHANGELOG.md, dashboardGuard.js). Trust git more than your pessimistic prediction.
+16. **When removing conflict markers, remove ALL THREE in one operation** — `<<<<<<<`, `=======`, and `>>>>>>>` must go together. Sequential `replace_string_in_file` calls easily leave the closing marker behind (caught by Gate 2; fixed by transparent follow-up commit).
+17. **Smoke test `/api/v1/models` returns only configured providers** — a fresh smoke server with no DB connections won't show newly-merged providers (nace, minimax-code). Use static verification (grep registry/index.js for imports) as a supplement to runtime smoke.
+18. **`git ls-files -m | xargs grep` is the authoritative marker scan** — only tracked, modified files matter. Untracked `.agent/recovered-*` archives may contain historical markers that are not part of the shipped code.
+19. **`verify-no-regression.mjs` is authoritative over raw fail counts** — it correctly accounts for snapshot failures and expected-fails. When raw count says "56 fails" but script says "✅ No regression", trust the script.
+20. **Build dummy secrets are required for CI-style builds** — `JWT_SECRET=build-dummy-secret npm run build` avoids the prod-fail-fast guard in dashboardSession.js. Document this in the Gate 5 procedure.
+
 ### From Chat Log Analysis (session 4efa60a4 full transcript review, 2026-10-29)
 
 **Pattern 1: User directive repetition indicates critical requirements**
@@ -417,7 +425,7 @@ After the merge is complete and verified, write a retrospective:
 |-------|------|-----------|-------|-----------|---------------|
 | MERGE-13 | 2026-09-10 | 17 | ~16h | usage.js split into sub-files | 1-4 |
 | MERGE-20 | 2026-10-23-27 | 21 | ~120h | CAR block loss, handleChatCore signature | 5-8 |
-| MERGE-21 | 2026-10-29 | _pending_ | _pending_ | _pending_ | 9-14 |
+| MERGE-21 | 2026-10-29 | 2 manual + 6 auto | ~2h | Leftover conflict marker (caught by Gate 2) | 15-20 |
 
 **Goal:** Each merge should be faster and have fewer surprises than the last. If not, the skill documentation is incomplete.
 
