@@ -1,18 +1,20 @@
 import { NextResponse } from "next/server";
 import { getSettings } from "@/lib/localDb";
 
+// SECURITY (Finding #336): this route is explicitly PUBLIC (listed in
+// `PUBLIC_API_PATHS` at src/dashboardGuard.js:44) because the login page
+// needs `requireLogin` to decide setup-vs-login form. The previous response
+// also leaked `tunnelDashboardAccess`, `tunnelUrl`, and `tailscaleUrl` —
+// exact public hostnames of tunneled/tailnet deployments — to any
+// unauthenticated LAN peer. The login page (src/app/login/page.js) does
+// NOT consume those fields; the dashboard components that do
+// (ToolDetailClient, JcodeToolCard, DroidToolCard) fetch from the
+// auth-gated /api/settings route. Return only what the login page needs.
 export async function GET() {
   try {
     const settings = await getSettings();
     const requireLogin = settings.requireLogin !== false;
-    const tunnelDashboardAccess = settings.tunnelDashboardAccess !== false;
-    // SECURITY (Finding #336): do NOT echo tunnelUrl / tailscaleUrl here.
-    // This endpoint is served to the UNAUTHENTICATED login page — any visitor
-    // can fetch it. Exposing internal tunnel URLs (tailscale hostname,
-    // cloudflare tunnel UUID) gives an attacker the direct bypass path past
-    // the login gate. The authenticated /api/settings endpoint still serves
-    // these for dashboard display once logged in.
-    return NextResponse.json({ requireLogin, tunnelDashboardAccess });
+    return NextResponse.json({ requireLogin });
   } catch (error) {
     return NextResponse.json({ requireLogin: true }, { status: 200 });
   }

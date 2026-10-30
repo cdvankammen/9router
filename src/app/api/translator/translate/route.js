@@ -6,6 +6,43 @@ import { getModelInfo } from "@/sse/services/model.js";
 import { getProviderConnections } from "@/lib/localDb.js";
 import { getExecutor } from "open-sse/executors/index.js";
 
+// SECURITY (Finding #337): redact credential-bearing headers before they
+// reach the authenticated dashboard client. The translator step-3 response
+// returns the URL + headers the executor would use to hit the upstream
+// provider — Authorization: Bearer sk-..., x-api-key: sk-ant-..., etc.
+// An authenticated dashboard user could otherwise iterate every configured
+// provider and dump every stored API key, OAuth access token, and copilot
+// token. The /send route rebuilds credentials from the DB server-side, so
+// it never depends on these headers — they are for human debugging only.
+//
+// Mirrors SENSITIVE_HEADER_PATTERNS in open-sse/utils/requestLogger.js —
+// keep the two lists in sync.
+const REDACT_HEADER_PATTERNS = [
+  "authorization",
+  "x-api-key",
+  "x-goog-api-key",
+  "anthropic-api-key",
+  "cookie",
+  "proxy-authorization",
+  "token",
+];
+function redactSensitiveHeaders(headers) {
+  if (!headers || typeof headers !== "object") return headers;
+  const out = { ...headers };
+  for (const key of Object.keys(out)) {
+    const lower = key.toLowerCase();
+    if (REDACT_HEADER_PATTERNS.some((p) => lower.includes(p))) {
+      const v = out[key];
+      if (typeof v === "string" && v.length > 10) {
+        out[key] = `${v.slice(0, 6)}...${v.slice(-4)} (${v.length} chars, redacted)`;
+      } else if (typeof v === "string") {
+        out[key] = "[redacted]";
+      }
+    }
+  }
+  return out;
+}
+
 export async function POST(request) {
   try {
     const { step, body } = await request.json();
@@ -77,7 +114,11 @@ export async function POST(request) {
         const headers = executor.buildHeaders(credentials, stream);
         const finalBody = executor.transformRequest(model, translated, stream, credentials);
 
-        return NextResponse.json({ success: true, result: { url, headers, body: finalBody } });
+        // SECURITY (Finding #337): redact before returning to the dashboard
+        // client. The full credentials stay server-side in `credentials` and
+        // are used by executor.buildUrl/buildHeaders — only the response
+        // JSON that crosses the wire is masked.
+        return NextResponse.json({ success: true, result: { url, headers: redactSensitiveHeaders(headers), body: finalBody } });
       }
 
       default:
