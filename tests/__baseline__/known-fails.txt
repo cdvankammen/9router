@@ -7,9 +7,10 @@ tests/unit/claude-header-forwarding.test.js :: proxyAwareFetch — api.anthropic
 # GAP-P1-12 cherry-pick (9ed94dd3) fixed 5 of 8 cursor auto-import tests.
 # 3 remaining failures are test-mock gaps (realpath mock doesn't fully satisfy
 # validateCursorDbPath happy-path for token extraction tests).
-tests/unit/oauth-cursor-auto-import.test.js :: GET /api/oauth/cursor/auto-import extracts tokens using exact keys
-tests/unit/oauth-cursor-auto-import.test.js :: GET /api/oauth/cursor/auto-import unwraps JSON-encoded string values
-tests/unit/oauth-cursor-auto-import.test.js :: GET /api/oauth/cursor/auto-import accepts symlink that resolves within allowed Cursor directory
+# (Removed 2026-10-30 session 26): all 10 oauth-cursor-auto-import tests now pass.
+# CLI fallback strategy is mocked via child_process.execFile with util.promisify.custom;
+# better-sqlite3 native binding is unavailable in the test env, so the CLI path is the
+# one exercised. GAP-P1-12 (validateCursorDbPath) provides the symlink/traversal guard.
 tests/unit/openai-to-claude.test.js :: openaiToClaudeResponse omits empty Read pages tool argument before emitting Claude input deltas
 tests/unit/translator-request-normalization.test.js :: request normalization claudeToOpenAIRequest flattens text-only content arrays into string
 tests/unit/translator-request-normalization.test.js :: request normalization filterToOpenAIFormat flattens text-only arrays to string

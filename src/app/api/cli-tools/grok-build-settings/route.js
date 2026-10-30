@@ -2,8 +2,6 @@
 
 import { NextResponse } from "next/server";
 import { resolveCliApiKey } from "../resolveApiKey.js";
-import { exec } from "child_process";
-import { promisify } from "util";
 import fs from "fs/promises";
 import path from "path";
 import os from "os";
@@ -15,26 +13,32 @@ import {
   resetGrokBuildConfig,
 } from "@/lib/grokBuildConfig";
 
-const execAsync = promisify(exec);
-
 const getGrokDir = () => path.join(os.homedir(), ".grok");
 const getGrokConfigPath = () => path.join(getGrokDir(), "config.toml");
 const getGrokBinPath = () => path.join(getGrokDir(), "bin", "grok");
 
+// GAP-P2-16: filesystem-only grok detection — no shell invocation, no PATH
+// dependency. A crafted .env with PATH=/tmp/evil:$PATH would previously
+// execute an arbitrary binary via execAsync("which grok").
+const GROK_BIN_CANDIDATES_MAC = [
+  "/opt/homebrew/bin/grok",
+  "/usr/local/bin/grok",
+];
+
 const checkGrokInstalled = async () => {
-  try {
-    const isWindows = os.platform() === "win32";
-    await execAsync(isWindows ? "where grok" : "which grok", { windowsHide: true });
-    return true;
-  } catch {
-    for (const candidate of [getGrokBinPath(), getGrokConfigPath()]) {
-      try {
-        await fs.access(candidate);
-        return true;
-      } catch { /* try next */ }
-    }
-    return false;
+  const isWindows = os.platform() === "win32";
+  // Filesystem probe: user-local install dir, platform-specific global bins
+  const localCandidates = [getGrokBinPath(), getGrokConfigPath()];
+  const globalCandidates = isWindows
+    ? []
+    : GROK_BIN_CANDIDATES_MAC;
+  for (const candidate of [...localCandidates, ...globalCandidates]) {
+    try {
+      await fs.access(candidate);
+      return true;
+    } catch { /* try next */ }
   }
+  return false;
 };
 
 const readConfigToml = async () => {
