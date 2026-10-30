@@ -77,9 +77,21 @@ export function selectAnthropicBeta(model = "", body = null) {
   return flags.join(",");
 }
 
+// SECURITY (Finding #306): Whitelist of known Anthropic beta flags. Client-supplied
+// anthropic-beta headers are intersected with this set before merging into upstream
+// requests. Without a whitelist, an attacker can inject arbitrary beta flags —
+// including future/unknown flags that unlock gated features or change billing.
+const ANTHROPIC_BETA_WHITELIST = new Set([
+  ...ANTHROPIC_BETA_BASE,
+  ...ANTHROPIC_BETA_HEAVY_AGENT,
+  ANTHROPIC_BETA_REDACT_THINKING,
+]);
+
 export function mergeAnthropicBeta(...values) {
   const flags = values.flatMap((v) => (typeof v === "string" ? v.split(",") : [])).map((f) => f.trim()).filter(Boolean);
-  return [...new Set(flags)].join(",");
+  // Intersect with whitelist — unknown flags are silently dropped.
+  const allowed = flags.filter((f) => ANTHROPIC_BETA_WHITELIST.has(f));
+  return [...new Set(allowed)].join(",");
 }
 
 // Shared baseUrls

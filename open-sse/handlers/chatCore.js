@@ -177,8 +177,31 @@ export async function handleChatCore({ body, modelInfo, credentials, log, onCred
   const clientTool = detectClientTool(clientRawRequest?.headers || {}, body);
   const passthrough = isNativePassthrough(clientTool, provider);
 
-  // Expose raw client headers to translators/executors for session-id resolution
-  if (credentials) credentials.rawHeaders = clientRawRequest?.headers || {};
+  // SECURITY (Finding #305): Expose a sanitized allowlist of client headers to
+  // translators/executors — NOT the full request header bag. Forwarding raw
+  // headers enabled header injection into upstream provider calls: session-fixation
+  // via x-session-id, project targeting via x-opencode-project, and arbitrary
+  // header injection. The allowlist covers exactly what consumers actually read:
+  // session-id resolution (5 keys), anthropic-beta merge, user-agent for client
+  // detection, x-opencode-* for fingerprinting, and auth headers for identity
+  // keying. Everything else (cookie, host, referer, origin, x-forwarded-*, custom
+  // x-9r-* headers, etc.) is stripped at this chokepoint.
+  if (credentials) {
+    const ALLOWED_HEADER_KEYS = new Set([
+      "user-agent",
+      "anthropic-beta",
+      "x-session-id", "session-id", "session_id", "x-amp-thread-id",
+      "x-claude-code-session-id",
+      "x-opencode-client", "x-opencode-project",
+      "authorization", "x-api-key",
+    ]);
+    const raw = clientRawRequest?.headers || {};
+    const sanitized = {};
+    for (const [k, v] of Object.entries(raw)) {
+      if (ALLOWED_HEADER_KEYS.has(k.toLowerCase())) sanitized[k] = v;
+    }
+    credentials.rawHeaders = sanitized;
+  }
 
   // SECURITY (Finding #304): Apply modality/prefetch sanitization on ALL paths
   // including native passthrough. Without this, an attacker spoofing a native
