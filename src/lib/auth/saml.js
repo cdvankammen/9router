@@ -145,15 +145,23 @@ export async function validateSamlResponse(request, body, expectedRequestId, set
     throw new Error("Missing SAMLResponse parameter in assertion POST body");
   }
 
-  // Parse response XML to inspect InResponseTo for replay protection
-  if (expectedRequestId) {
-    const xml = Buffer.from(rawSamlResponse, "base64").toString("utf8");
-    const match = xml.match(/InResponseTo=["']([^"']+)["']/i);
-    const inResponseTo = match ? match[1] : null;
+  // Parse response XML to inspect InResponseTo for replay protection.
+  // Finding #332: the check used to be skipped when expectedRequestId was falsy
+  // (e.g. missing saml_state cookie), which accepted any validly-signed
+  // unsolicited assertion — a login-CSRF / session-fixation vector.
+  // The check is now mandatory: the /api/auth/saml/start flow always sets the
+  // saml_state cookie with the request ID, so a missing cookie means the
+  // assertion was not solicited by this browser session.
+  if (!expectedRequestId) {
+    throw new Error("SAML InResponseTo check failed: no pending authentication request (missing saml_state cookie)");
+  }
 
-    if (!inResponseTo || inResponseTo !== expectedRequestId) {
-      throw new Error(`InResponseTo mismatch: expected ${expectedRequestId}, received ${inResponseTo || "none"}`);
-    }
+  const xml = Buffer.from(rawSamlResponse, "base64").toString("utf8");
+  const match = xml.match(/InResponseTo=["']([^"']+)["']/i);
+  const inResponseTo = match ? match[1] : null;
+
+  if (!inResponseTo || inResponseTo !== expectedRequestId) {
+    throw new Error(`InResponseTo mismatch: expected ${expectedRequestId}, received ${inResponseTo || "none"}`);
   }
 
   const result = await samlInstance.validatePostResponseAsync({ SAMLResponse: rawSamlResponse });
