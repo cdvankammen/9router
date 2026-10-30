@@ -435,3 +435,64 @@ Deferred — mini4 DOWN.
 | Pre-rebase baseline (07c16dab) | — | 35 | — |
 
 **Gap to baseline after round 11: 81 - 35 = 46 regressions still outstanding.**
+
+## Round 12 — tunnel CSPRNG + audio timeout + MCP timing-safe + usage auth + SAML base + TLS default-deny (2026-10-30)
+
+### Stage 1 (code-level) — surgical patches + verbatim restores
+
+| File | What was restored | Upstream delta | Strategy |
+|---|---|---|---|
+| `src/lib/tunnel/shared/state.js` | `generateShortId()` CSPRNG (crypto.randomBytes) + Finding #327 comment | 0 | Verbatim |
+| `src/app/api/v1/audio/voices/route.js` | `AbortSignal.timeout(10000)` on voices fetch (GAP-P2-19) | 74 | Surgical |
+| `src/app/api/mcp/[plugin]/sse/route.js` | `hasValidCliToken` import + Finding #322 comment | 0 | Surgical |
+| `src/app/api/mcp/[plugin]/message/route.js` | Same pattern | 0 | Surgical |
+| `src/app/api/usage/[connectionId]/route.js` | NextResponse import + Finding #321 comment | 0 | Surgical |
+| `src/app/api/auth/saml/metadata/route.js` | `getSamlBaseUrl` (Finding #331 — prevents 0.0.0.0 leak) | 0 | Surgical |
+| `open-sse/utils/proxyFetch.js` | Default-deny TLS fallback + allowInsecureTls opt-in (Row 42) | 483 | Surgical |
+| `tests/unit/cowork-mcp-ssrf-guard.test.js` | requireAuth mock bypass | 0 | Surgical |
+| `src/lib/db/repos/usageRepo.js` | tokenEncryption import (partial — encryption wiring pending) | 821 | Surgical |
+
+### Stage 2 (behavior/DOM)
+
+Test results (targeted):
+- tunnel-shortid-csprng: 3 fail → **3/3 pass**
+- audio-voices-timeout: 2 fail → **3/3 pass**
+- mcp-timing-safe: 2 fail → **4/4 pass**
+- mcp-auth: 2 fail → **8/8 pass**
+- usage-get-requireauth: 2 fail → **2/2 pass**
+- saml-metadata-route: 3 fail → **3/3 pass**
+- proxy-fetch-tls-default-deny: 3 fail → **3/3 pass**
+- cowork-mcp-ssrf-guard: 3 fail → TBD (mock landed)
+- security-usage-encryption: 2 fail → TBD (import landed, wiring pending)
+
+Full suite: **64 failed / 5154 passed** (17 recovered this round).
+
+### Stage 3 (production/visual)
+
+Deferred — mini4 DOWN.
+
+### Honest correction
+
+cowork-mcp-ssrf-guard test was failing because the route's requireAuth gate (added 2026-10-29 OpenClaw audit) fires before the SSRF check, returning 401 instead of 400. Test needs requireAuth mock to exercise the SSRF path specifically.
+
+### Campaign cumulative state (through round 12)
+
+| Round | Commit | Tests failed | Recovered |
+|---|---|---|---|
+| Pre-repair (post-merge 2f8b50ee) | — | 441 | — |
+| Round 1 (SSRF + computeCost) | e360d5ce | 355 | 86 |
+| Round 2 (8 modules + parseModel) | 4d9fc242 | 285 | 70 |
+| Round 2.5 (combo-CAR call site) | 14c0bc29 | 283 | 2 |
+| Round 3 (6 modules + 2 surgical) | fae688eb | 203 | 80 |
+| Round 4 (migration 008 + iflow) | c3fc096a | 193 | 10 |
+| Round 5 (registry + kiro + usage dispatch) | cd677a7e | 170 | 23 |
+| Round 6 (usage.js ReferenceError) | db1b5dad | 151 | 19 |
+| Round 7 (parseQuotaData + xiaomi + provider-nodes) | 71598788 | 129 | 22 |
+| Round 8 (UI cards partial) | 2cb4c32b | 122 | 7 |
+| Round 9 (UI cards complete) | db78c649 | 119 | 3 |
+| Round 10 (MITM + login + CF) | 97926540 | 105 | 14 |
+| Round 11 (CORS + iflow + vercel + executor + migrate) | 9ca65917 | 81 | 24 |
+| Round 12 (tunnel + audio + MCP + usage + SAML + TLS) | TBD | 64 | 17 |
+| Pre-rebase baseline (07c16dab) | — | 35 | — |
+
+**Gap to baseline after round 12: 64 - 35 = 29 regressions still outstanding.**
