@@ -160,6 +160,8 @@ describe("Kiro external_idp (CLIProxyAPI) import and refresh", () => {
         return connection;
       }),
     }));
+    // SECURITY (#254): route-level requireAuth — mock as authenticated.
+    vi.doMock("@/lib/auth/requireAuth", () => ({ requireAuth: vi.fn(async () => true) }));
 
     const { POST } = await import("../../src/app/api/oauth/kiro/import-cli-proxy/route.js");
     const accessToken = makeJwt({

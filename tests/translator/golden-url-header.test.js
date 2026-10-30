@@ -1,9 +1,15 @@
 // P0 GOLDEN: lock buildUrl + buildHeaders cho mọi provider trên code CŨ.
 // Sinh snapshot lần đầu (baseline) → sau refactor chạy lại phải khớp y hệt.
 // Mock proxyFetch + uuid-heavy executors KHÔNG cần ở đây vì chỉ gọi buildUrl/buildHeaders (pure).
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { PROVIDERS } from "../../open-sse/config/providers.js";
 import { DefaultExecutor } from "../../open-sse/executors/default.js";
+
+// X-Mavis-Timezone-Offset is derived from Date.prototype.getTimezoneOffset() and
+// therefore varies by runner TZ; pin UTC so the golden snapshot matches everywhere.
+const origGetTimezoneOffset = Date.prototype.getTimezoneOffset;
+beforeAll(() => { Date.prototype.getTimezoneOffset = () => 0; });
+afterAll(() => { Date.prototype.getTimezoneOffset = origGetTimezoneOffset; });
 
 // Credentials mẫu cố định (deterministic) — KHÔNG dùng Date.now/random.
 const API_KEY_CRED = { apiKey: "sk-test-APIKEY", providerSpecificData: {} };
@@ -23,18 +29,29 @@ const SPECIALIZED = new Set([
   "xiaomi-tokenplan", "mimo-free",
 ]);
 
-// Per-process / per-request values: kimi's random device name, minimax's session UUID.
-const VOLATILE_HEADERS = new Set(["x-msh-device-name", "x-mavis-session-id"]);
+// Per-process / per-request values: kimi's random device name, minimax's session
+// UUID, the per-request X-Request-ID, and CodeBuddy's per-request conversation UUIDs.
+const VOLATILE_HEADERS = new Set([
+  "x-msh-device-name", "x-mavis-session-id", "x-request-id",
+  "x-conversation-id", "x-conversation-message-id", "x-conversation-request-id",
+]);
+
+// Environmental-value headers: version, platform, Node version, and kimi UA vary
+// by runner and must be masked so the golden snapshot stays stable across machines.
+const ENV_HEADERS = new Set(["user-agent", "x-client-version", "x-core-version", "x-platform", "x-platform-version", "x-msh-version", "x-msh-device-model"]);
 
 // Sanitize header: khử token + field thời gian động (kimi X-Msh-Device-Id) để snapshot ổn định.
 function sanitize(headers) {
   const out = {};
   for (const [k, v] of Object.entries(headers)) {
-    if (VOLATILE_HEADERS.has(k.toLowerCase())) { out[k] = "<VOLATILE>"; continue; }
+    const lk = k.toLowerCase();
+    if (VOLATILE_HEADERS.has(lk)) { out[k] = "<VOLATILE>"; continue; }
+    if (ENV_HEADERS.has(lk)) { out[k] = "<ENV>"; continue; }
     out[k] = typeof v === "string"
       ? v.replace(/Bearer .+/, "Bearer <TOK>")
           .replace(/sk-test-APIKEY|tok-test-ACCESS/g, "<CRED>")
           .replace(/kimi-\d{10,}/g, "kimi-<TS>")
+          .replace(/9Router\/[\d.]+/g, "9Router/<ENV>")
       : v;
   }
   return out;

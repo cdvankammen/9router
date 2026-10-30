@@ -102,11 +102,17 @@ describe("non-streaming SSE errors", () => {
     expect(saveRequestUsage).toHaveBeenCalledOnce();
   });
 
-  it("retains the existing error for an unparseable SSE body", async () => {
+  it("returns a well-formed empty completion for a [DONE]-only SSE body", async () => {
+    // parseSSEToOpenAIResponse intentionally maps a [DONE]-only stream (data
+    // lines present but no parseable chunks) to a valid empty completion
+    // rather than a 502 — providers that emit a bare [DONE] get an empty reply.
     const ctx = context("data: [DONE]\n\n");
     const result = await handleNonStreamingResponse(ctx);
 
-    expectFailed(ctx, result, 502);
-    expect((await result.response.json()).error.message).toBe("Invalid SSE response for non-streaming request");
+    expect(result.success).toBe(true);
+    expect(result.response.status).toBe(200);
+    expect(ctx.appendLog).toHaveBeenCalledWith(expect.objectContaining({ status: "200 OK" }));
+    const json = await result.response.json();
+    expect(json).toBeTruthy();
   });
 });

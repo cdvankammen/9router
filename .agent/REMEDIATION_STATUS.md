@@ -4,7 +4,9 @@ Cross-reference between `.agent/SECURITY_AUDIT_WAVE_674.md` (the audit doc) and 
 
 **Last updated:** 2026-10-30 (session 26, commit 94f38245 — GAP-P2-15 brew + GAP-P2-16 grok shell-injection + GAP-P2-03 embeddings + cursor CLI mock; all SHAs post-filter-repo)
 **Branch:** v5-vscode-works @ 94f38245, pushed to `fork` (cdvankammen/9router)
-**mini4 production:** BUILD_ID `dsE4k7oLlEMTmURF7-5JP`, PID 59204, port 20128, health=ok, apiKeys 4/4 encrypted
+**mini4 production:** BUILD_ID `ny4ReSehIv6m7yqRD4YdX`, PID 59941, port 20128, health=ok, apiKeys 4/4 encrypted
+
+**Session 26 round 4 (commit 9260bcf7):** 3 server-side silent-catch fixes shipped — `requestDetailsRepo.js` timer flush, `modelCatalog/sync.js` catalog reinstall, `antigravity.js` OAuth onboarding poll. All proven on mini4 source disk.
 **Test suite:** 52 failed / 5185 passed (was 63/5151 at session start = 11 fewer failures, 34 more passing)
 
 ## Commits this session (cherry-picked from unmerged branches + original fixes)
