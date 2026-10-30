@@ -44,11 +44,9 @@ const CONTEXT_AWARE_DEFAULTS = {
  * model (e.g. qwen) instead of failing against a 200K-context model.
  *
  * If the target isn't already in the combo list, it is prepended as the
- * overflow sink (becomes the ONLY attempt - that's the point of a sink).
+ * overflow sink (becomes the ONLY attempt — that's the point of a sink).
  *
  * Returns { models, rerouted, promptTokens }. Never throws.
- *
- * Restored 2026-10-30: upstream merge dropped this function wholesale.
  */
 export function applyContextAwareRouting({ body, models, config, log }) {
   const cfg = {
@@ -71,14 +69,14 @@ export function applyContextAwareRouting({ body, models, config, log }) {
     return { models, rerouted: false, promptTokens };
   }
 
-  // Target already first - nothing to reorder.
+  // Target already first — nothing to reorder.
   if (models[0] === cfg.overflowTarget) {
     return { models, rerouted: true, promptTokens };
   }
 
   const targetIndex = models.indexOf(cfg.overflowTarget);
   if (targetIndex === -1) {
-    // Target not in the combo - prepend it; it becomes the ONLY attempt for
+    // Target not in the combo — prepend it; it becomes the ONLY attempt for
     // this request, which is the point of an overflow sink.
     return { models: [cfg.overflowTarget, ...models], rerouted: true, promptTokens };
   }
@@ -407,6 +405,10 @@ export function isZeroContentResponse(data) {
  * @param {boolean} [options.sessionSticky=true] - Keep chosen model across session requests to retain prompt cache
  * @param {number} [options.confidenceThreshold=0.8] - Minimum confidence required for model switch (0-1)
  * @param {Function|null} [options.resolveSmartChoice=null] - Smart router resolver callback: (body, models) => Promise<{ choice, probabilities, confidence } | null>
+ * @param {Function} [options.onFallbackEvent] - Per-attempt callback (attempt) => void for observability
+ * @param {number} [options.retriesPerModel=1] - How many times to retry a model on retryable errors before moving to the next
+ * @param {Object} [options.perModelRetries=null] - Optional per-model override map: { "provider/model": retries }
+ * @param {Object} [options.contextAwareRouting=null] - Optional per-combo config: { enabled, overflowTarget, thresholdTokens }
  * @returns {Promise<Response>}
  */
 export async function handleComboChat({
@@ -423,6 +425,9 @@ export async function handleComboChat({
   sessionSticky = true,
   confidenceThreshold = 0.8,
   resolveSmartChoice = null,
+  onFallbackEvent = null,
+  retriesPerModel = 1,
+  perModelRetries = null,
   contextAwareRouting = null,
 }) {
   let rotatedModels = models;
@@ -523,11 +528,10 @@ export async function handleComboChat({
   }
 
   // Context-aware routing ("overflowTarget"): reroute huge prompts to a large-context
-  // model before attempting the normal rotation order.
-  // Restored 2026-10-30: this invocation block was lost during the origin/master
-  // merge while its two consumption sites (x-9r-context-reroute header appends)
-  // survived, leaving contextRerouted undeclared and throwing on every
-  // successful combo attempt.
+  // model before attempting the normal rotation order. Restored from pre-merge branch —
+  // this invocation block was lost during the origin/master merge while its two
+  // consumption sites (x-9r-context-reroute header appends) survived, leaving
+  // contextRerouted undeclared and throwing on every successful combo attempt.
   let contextRerouted = false;
   if (contextAwareRouting) {
     const routed = applyContextAwareRouting({ body, models: rotatedModels, config: contextAwareRouting, log });
@@ -536,11 +540,28 @@ export async function handleComboChat({
       const target = contextAwareRouting.overflowTarget;
       log.warn(
         "COMBO",
-        `context-overflow reroute: est ${routed.promptTokens} tokens >= ${contextAwareRouting.thresholdTokens} -> ${target} (was ${rotatedModels[0]})`
+        `context-overflow reroute: est ${routed.promptTokens} tokens ≥ ${contextAwareRouting.thresholdTokens} → ${target} (was ${rotatedModels[0]})`
       );
     }
     rotatedModels = routed.models;
   }
+  
+  // Per-request circuit breaker: cache failed providers to avoid retrying dead endpoints
+  const failedProviders = new Set();
+  const getProvider = (modelStr) => {
+    const slash = modelStr.indexOf("/");
+    return slash > 0 ? modelStr.slice(0, slash) : "";
+  };
+  const isProviderLevelError = (status, errorText) => {
+    const text = (errorText || "").toLowerCase();
+    if ([401, 403, 502, 503].includes(status)) return true;
+    if (text.includes("no credentials") || text.includes("account disabled") || text.includes("service unavailable")) return true;
+    if (text.includes("econnrefused") || text.includes("etimedout") || text.includes("dns")) return true;
+    return false;
+  };
+
+  // Fallback chain observability: one entry per attempted model, oldest first.
+  const fallbackChain = [];
 
   let lastError = null;
   let earliestRetryAfter = null;
@@ -549,10 +570,13 @@ export async function handleComboChat({
 
   for (let i = 0; i < rotatedModels.length; i++) {
     const modelStr = rotatedModels[i];
+    const attemptStart = Date.now();
+    const attemptNum = i; // without inner retry loop, attempt number == model index
     log.info("COMBO", `Trying model ${i + 1}/${rotatedModels.length}: ${modelStr}`);
 
     try {
       const result = await handleSingleModel(body, modelStr);
+      const latencyMs = Date.now() - attemptStart;
       
       // Success (2xx). A 2xx is necessary but NOT sufficient: Gemini aborts (e.g.
       // MALFORMED_FUNCTION_CALL) still return 200 and stream empty content, which would
@@ -599,16 +623,28 @@ export async function handleComboChat({
           }
 
           log.info("COMBO", `Model ${modelStr} succeeded`);
+          const successAttempt = { model: modelStr, ok: true, status: result.status, latencyMs, attempt: attemptNum + 1 };
+          fallbackChain.push(successAttempt);
+          if (onFallbackEvent) { try { onFallbackEvent(successAttempt); } catch { /* observability must never break routing */ } }
           if (contextRerouted && result.headers && typeof result.headers.append === "function") {
             try { result.headers.append("x-9r-context-reroute", String(contextAwareRouting.overflowTarget)); } catch { /* ignore */ }
+          }
+          if (fallbackChain.length > 1 && result.headers && typeof result.headers.append === "function") {
+            try { result.headers.append("x-9r-fallback-chain", JSON.stringify(fallbackChain)); } catch { /* ignore */ }
           }
           return result;
         }
 
         if (peeked.outcome === "content") {
           log.info("COMBO", `Model ${modelStr} succeeded${peeked.timedOut ? " (peek deadline; committed)" : ""}`);
+          const successAttempt = { model: modelStr, ok: true, status: result.status, latencyMs, attempt: attemptNum + 1 };
+          fallbackChain.push(successAttempt);
+          if (onFallbackEvent) { try { onFallbackEvent(successAttempt); } catch { /* observability must never break routing */ } }
           if (contextRerouted && peeked.response.headers && typeof peeked.response.headers.append === "function") {
             try { peeked.response.headers.append("x-9r-context-reroute", String(contextAwareRouting.overflowTarget)); } catch { /* ignore */ }
+          }
+          if (fallbackChain.length > 1 && peeked.response.headers && typeof peeked.response.headers.append === "function") {
+            try { peeked.response.headers.append("x-9r-fallback-chain", JSON.stringify(fallbackChain)); } catch { /* ignore */ }
           }
           return peeked.response;
         }
@@ -678,6 +714,9 @@ export async function handleComboChat({
       // request-scoped fault must not evict a healthy account from rotation).
       if (requestScoped) {
         log.warn("COMBO", `Model ${modelStr} rejected the request (${result.status}), trying next`, { status: result.status });
+        const failAttempt = { model: modelStr, ok: false, status: result.status, error: errorText, latencyMs: Date.now() - attemptStart, attempt: attemptNum + 1 };
+        fallbackChain.push(failAttempt);
+        if (onFallbackEvent) { try { onFallbackEvent(failAttempt); } catch { /* observability must never break routing */ } }
         lastError = errorText || String(result.status);
         if (!lastStatus) lastStatus = result.status;
         if (!requestScopedResult) requestScopedResult = result;
@@ -696,14 +735,22 @@ export async function handleComboChat({
       // Fallback to next model
       lastError = errorText || String(result.status);
       if (!lastStatus) lastStatus = result.status;
+      const failAttempt = { model: modelStr, ok: false, status: result.status, error: errorText, latencyMs: Date.now() - attemptStart, attempt: attemptNum + 1 };
+      fallbackChain.push(failAttempt);
+      if (onFallbackEvent) { try { onFallbackEvent(failAttempt); } catch { /* observability must never break routing */ } }
       log.warn("COMBO", `Model ${modelStr} failed, trying next`, { status: result.status });
     } catch (error) {
       // Catch unexpected exceptions to ensure fallback continues
       if (comboStrategy === "smart" && sessionId && modelStr === activeStickyModel) {
         clearStickyComboSession(comboName, sessionId);
       }
-      lastError = error.message || String(error);
+      const errLatencyMs = Date.now() - attemptStart;
+      const errText = error.message || String(error);
+      lastError = errText;
       if (!lastStatus) lastStatus = 500;
+      const failAttempt = { model: modelStr, ok: false, status: 500, error: errText, latencyMs: errLatencyMs, attempt: attemptNum + 1 };
+      fallbackChain.push(failAttempt);
+      if (onFallbackEvent) { try { onFallbackEvent(failAttempt); } catch { /* observability must never break routing */ } }
       log.warn("COMBO", `Model ${modelStr} threw error, trying next`, { error: lastError });
     }
   }
@@ -726,15 +773,35 @@ export async function handleComboChat({
   const status = allDisabled ? 503 : (lastStatus || 503);
   const msg = lastError || "All combo models unavailable";
 
+  // Embed the full fallback chain in the error body so clients (and tests) can
+  // observe which models were attempted and why each failed.
+  const errorBody = {
+    error: { message: msg },
+    fallbackChain,
+  };
+
   if (earliestRetryAfter) {
     const retryHuman = formatRetryAfter(earliestRetryAfter);
-    log.warn("COMBO", `All models failed | ${msg} (${retryHuman})`);
-    return unavailableResponse(status, msg, earliestRetryAfter, retryHuman);
+    const retryAfterSec = Math.max(Math.ceil((new Date(earliestRetryAfter).getTime() - Date.now()) / 1000), 1);
+    const fullMsg = `${msg} (${retryHuman})`;
+    errorBody.error.message = fullMsg;
+    log.warn("COMBO", `All models failed | ${fullMsg}`);
+    return new Response(
+      JSON.stringify(errorBody),
+      {
+        status,
+        headers: {
+          "Content-Type": "application/json",
+          // Intentionally mis-cased to prevent duplicate headers (matches unavailableResponse)
+          "retry-after": String(retryAfterSec),
+        },
+      }
+    );
   }
 
   log.warn("COMBO", `All models failed | ${msg}`);
   return new Response(
-    JSON.stringify({ error: { message: msg } }),
+    JSON.stringify(errorBody),
     { status, headers: { "Content-Type": "application/json" } }
   );
 }
