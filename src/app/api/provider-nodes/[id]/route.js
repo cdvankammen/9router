@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { deleteProviderConnectionsByProvider, deleteProviderNode, getProviderConnections, getProviderNodeById, updateProviderConnection, updateProviderNode } from "@/models";
+import { assertPublicUrlResolved } from "@/shared/utils/ssrfGuard.js";
 import { canonicalEndpoint, openAIEndpoints } from "../endpointUrls.js";
 import { requireAuth } from "@/lib/auth/requireAuth";
 
@@ -97,6 +98,41 @@ export async function PUT(request, { params }) {
 
     if (node.type === "openai-compatible") {
       updates.apiType = apiType;
+    }
+
+    // SECURITY (#239 / #252): same URL validation as POST. A PATCH with
+    // `baseUrl: "http://169.254.169.254/"` would replace the stored upstream
+    // and intercept every subsequent chat request through that node.
+    const urlFields = ["baseUrl", "openaiUrl", "anthropicUrl", "usageUrl"];
+    for (const field of urlFields) {
+      const v = updates[field];
+      if (typeof v === "string" && v) {
+        try {
+          await assertPublicUrlResolved(v, { allowLoopback: false });
+        } catch (err) {
+          return NextResponse.json(
+            { error: `Provider node ${field} URL resolves to a disallowed host`, detail: err.message },
+            { status: 400 }
+          );
+        }
+      }
+    }
+    // Also validate transports[].baseUrl if supplied (multi-compatible nodes
+    // store per-format endpoints in this array).
+    if (Array.isArray(updates.transports)) {
+      for (let i = 0; i < updates.transports.length; i++) {
+        const t = updates.transports[i];
+        if (t && typeof t === "object" && typeof t.baseUrl === "string" && t.baseUrl) {
+          try {
+            await assertPublicUrlResolved(t.baseUrl, { allowLoopback: false });
+          } catch (err) {
+            return NextResponse.json(
+              { error: `Provider node transports[${i}].baseUrl resolves to a disallowed host`, detail: err.message },
+              { status: 400 }
+            );
+          }
+        }
+      }
     }
 
     const updated = await updateProviderNode(id, updates);

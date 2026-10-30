@@ -3,8 +3,30 @@ import { createProviderNode, getProviderNodes } from "@/models";
 import { OPENAI_COMPATIBLE_PREFIX, ANTHROPIC_COMPATIBLE_PREFIX, CUSTOM_EMBEDDING_PREFIX } from "@/shared/constants/providers";
 import { generateId } from "@/shared/utils";
 import { canonicalEndpoint, openAIEndpoints } from "./endpointUrls.js";
+import { assertPublicUrlResolved } from "@/shared/utils/ssrfGuard.js";
 
 export const dynamic = "force-dynamic";
+
+// SECURITY (#239 / #252): validate user-supplied provider-node URLs before
+// storing them. Provider nodes are upstream servers that the runtime fetches
+// from on every chat request — without validation, an authenticated attacker
+// with dashboard PATCH access could create a node with
+// `baseUrl: "http://169.254.169.254/"` and intercept every downstream chat
+// request (with API keys, prompts, responses) or trigger cloud-metadata
+// SSRF from the server. Uses assertPublicUrlResolved (strict variant —
+// loopback not allowed) because provider upstreams should be public
+// internet endpoints, not local services.
+//
+// Empty/undefined URLs pass through — each node type has its own defaults
+// applied after validation.
+async function assertNodeUrlSafe(url, label) {
+  if (!url || typeof url !== "string") return;
+  try {
+    await assertPublicUrlResolved(url, { allowLoopback: false });
+  } catch (err) {
+    throw new Error(`Provider node ${label} URL resolves to a disallowed host: ${err.message}`);
+  }
+}
 
 const OPENAI_COMPATIBLE_DEFAULTS = {
   baseUrl: "https://api.openai.com/v1",
@@ -57,6 +79,18 @@ export async function POST(request) {
 
     // Determine type
     const nodeType = type || "openai-compatible";
+
+    // SECURITY (#239 / #252): validate every user-supplied URL before any
+    // further processing. A URL like http://169.254.169.254/latest/meta-data/
+    // would otherwise be stored and fetched on every chat request.
+    try {
+      await assertNodeUrlSafe(baseUrl, "baseUrl");
+      await assertNodeUrlSafe(openaiUrl, "openaiUrl");
+      await assertNodeUrlSafe(anthropicUrl, "anthropicUrl");
+      if (body.usageUrl) await assertNodeUrlSafe(body.usageUrl, "usageUrl");
+    } catch (err) {
+      return NextResponse.json({ error: err.message }, { status: 400 });
+    }
 
     if (nodeType === "multi-compatible") {
       const openai = openAIEndpoints(openaiUrl);
