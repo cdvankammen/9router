@@ -3,6 +3,38 @@
  * Used by: /api/export/requests (manual export) and markdownLog.js (auto-flush).
  */
 
+// SECURITY (#298): Redact sensitive fields from request/response objects
+// before writing to markdown. The auto-flush writes to ~/.9router/logs/ on
+// disk — without redaction, API keys, bearer tokens, and authorization
+// headers end up in files that may be world-readable.
+//
+// Key matching is case-insensitive. Redaction is recursive (handles nested
+// objects like request.headers or response.error.details).
+const REDACT_KEYS = new Set([
+  "authorization", "proxy-authorization", "cookie", "set-cookie",
+  "x-api-key", "x-goog-api-key", "api-key", "apikey", "api_key",
+  "access_token", "accesstoken", "refresh_token", "refreshtoken",
+  "token", "secret", "client_secret", "clientsecret",
+  "password", "passwd", "pass",
+  "private-token", "private_token",
+  "x-session-id", "x-9r-cli-token",
+]);
+
+function redactSecrets(value, depth = 0) {
+  if (depth > 10 || value == null) return value;
+  if (typeof value !== "object") return value;
+  if (Array.isArray(value)) return value.map(v => redactSecrets(v, depth + 1));
+  const out = {};
+  for (const [k, v] of Object.entries(value)) {
+    if (REDACT_KEYS.has(k.toLowerCase()) && typeof v === "string" && v) {
+      out[k] = "[REDACTED]";
+    } else {
+      out[k] = redactSecrets(v, depth + 1);
+    }
+  }
+  return out;
+}
+
 /** Render request details as a markdown report grouped by conversation. */
 export function renderRequestsMarkdown(details) {
   const lines = [];
@@ -54,22 +86,38 @@ export function renderRequestsMarkdown(details) {
         lines.push(`**Error:** ${typeof error === "string" ? error : JSON.stringify(error)}`);
       }
 
-      if (row.request?.messages?.length) {
-        lines.push("");
-        lines.push("<details><summary>Request messages</summary>");
-        lines.push("");
-        lines.push("```json");
-        lines.push(JSON.stringify(row.request.messages, null, 2));
-        lines.push("```");
-        lines.push("</details>");
+      if (row.request && typeof row.request === "object") {
+        // SECURITY (#298): redact auth headers, API keys, tokens before export
+        const safeRequest = redactSecrets(row.request);
+        if (safeRequest?.messages?.length) {
+          lines.push("");
+          lines.push("<details><summary>Request messages</summary>");
+          lines.push("");
+          lines.push("```json");
+          lines.push(JSON.stringify(safeRequest.messages, null, 2));
+          lines.push("```");
+          lines.push("</details>");
+        }
+        // Include redacted headers if present (useful for debugging, safe to export)
+        if (safeRequest.headers && Object.keys(safeRequest.headers).length > 0) {
+          lines.push("");
+          lines.push("<details><summary>Request headers</summary>");
+          lines.push("");
+          lines.push("```json");
+          lines.push(JSON.stringify(safeRequest.headers, null, 2));
+          lines.push("```");
+          lines.push("</details>");
+        }
       }
 
       if (row.providerResponse && typeof row.providerResponse === "object") {
+        // SECURITY (#298): redact tokens/secrets that may appear in provider responses
+        const safeResponse = redactSecrets(row.providerResponse);
         lines.push("");
         lines.push("<details><summary>Provider response</summary>");
         lines.push("");
         lines.push("```json");
-        lines.push(JSON.stringify(row.providerResponse, null, 2));
+        lines.push(JSON.stringify(safeResponse, null, 2));
         lines.push("```");
         lines.push("</details>");
       }
