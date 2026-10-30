@@ -2,6 +2,10 @@ import { EventEmitter } from "events";
 import { getAdapter } from "../driver.js";
 import { parseJson, stringifyJson } from "../helpers/jsonCol.js";
 import { getMeta, setMeta } from "../helpers/metaStore.js";
+// SECURITY (Finding #295 phase 2): usageHistory.apiKey is encrypted at rest.
+// Static import (no dynamic import()) so the functions are available inside
+// the better-sqlite3 sync transaction callback in saveRequestUsage.
+import { encryptToken, decryptToken, hashApiKey } from "../tokenEncryption.js";
 
 function maskApiKey(key) {
   if (!key || typeof key !== "string") return null;

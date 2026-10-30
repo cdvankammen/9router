@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { sendToChild, findPlugin } from "@/lib/mcp/stdioSseBridge";
-import { requireAuth } from "@/lib/auth/requireAuth";
+// SECURITY (Finding #322): use hasValidCliToken (timing-safe crypto comparison)
+// instead of plain string equality for CLI token auth. Prevents timing side-channel
+// that would leak token length to an attacker making repeated requests.
+import { requireAuth, hasValidCliToken } from "@/lib/auth/requireAuth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

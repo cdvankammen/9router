@@ -1,12 +1,17 @@
 // Ensure proxyFetch is loaded to patch globalThis.fetch
 import "open-sse/index.js";
 
+import { NextResponse } from "next/server";
 import { getProviderConnectionById, updateProviderConnection } from "@/lib/localDb";
 import { getUsageForProvider } from "open-sse/services/usage.js";
 import { isUnrecoverableRefreshError } from "open-sse/services/tokenRefresh.js";
 import { getExecutor } from "open-sse/executors/index.js";
 import { resolveConnectionProxyConfig } from "@/lib/network/connectionProxy";
 import { USAGE_APIKEY_PROVIDERS } from "@/shared/constants/providers";
+// SECURITY (Finding #321): route-level requireAuth as defence-in-depth.
+// GET /api/usage/[connectionId] exposes per-connection quota data including
+// masked API keys and usage counts — unauthenticated iteration of connection
+// ids would leak the account's provider topology.
 import { requireAuth } from "@/lib/auth/requireAuth";
 
 // Detect auth-expired messages returned by usage providers instead of throwing

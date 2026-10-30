@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import crypto from "node:crypto";
 import { DATA_DIR } from "@/lib/dataDir.js";
 
 const TUNNEL_DIR = path.join(DATA_DIR, "tunnel");
@@ -31,9 +32,15 @@ export function clearState() {
 }
 
 export function generateShortId() {
+  // SECURITY (Finding #327): tunnel shortId forms part of the public tunnel
+  // URL (https://r<shortId>.abc-tunnel.us). The V8 xorshift128+ PRNG is
+  // predictable after ~2 observations, so an attacker who observed one
+  // recently-minted shortId could enumerate the remaining tunnels in the
+  // same generation window and hijack/intercept traffic. Use CSPRNG.
+  const bytes = crypto.randomBytes(SHORT_ID_LENGTH);
   let result = "";
   for (let i = 0; i < SHORT_ID_LENGTH; i++) {
-    result += SHORT_ID_CHARS.charAt(Math.floor(Math.random() * SHORT_ID_CHARS.length));
+    result += SHORT_ID_CHARS[bytes[i] % SHORT_ID_CHARS.length];
   }
   return result;
 }

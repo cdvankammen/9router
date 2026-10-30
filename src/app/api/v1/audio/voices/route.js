@@ -32,7 +32,10 @@ export async function GET(request) {
 
     const baseUrl = PROVIDER_API[provider](origin);
     const url = lang ? `${baseUrl}${baseUrl.includes("?") ? "&" : "?"}lang=${encodeURIComponent(lang)}` : baseUrl;
-    const res = await fetch(url, { cache: "no-store" });
+    // GAP-P2-19: bound the upstream voices fetch so a slow/hanging provider
+    // can't pin the handler indefinitely. 10s accommodates cold-start latency
+    // while surfacing a clear timeout error if the API is unreachable.
+    const res = await fetch(url, { cache: "no-store", signal: AbortSignal.timeout(10000) });
     const data = await res.json();
     if (!res.ok || data.error) {
       return Response.json(
