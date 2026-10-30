@@ -31,12 +31,15 @@ describe("Finding #336: /api/settings/require-login does not leak topology", () 
     expect(body).not.toHaveProperty("tunnelDashboardAccess");
   });
 
-  it("error response also omits tunnel/tailscale fields", async () => {
+  it("error response also omits tunnel/tailscale fields (fails closed to 200)", async () => {
     const { getSettings } = await import("@/lib/localDb");
     getSettings.mockRejectedValueOnce(new Error("db error"));
     const req = new Request("http://localhost/api/settings/require-login");
     const res = await GET(req);
-    expect(res.status).toBe(500);
+    // The source catches the error and returns 200 with {requireLogin: true}
+    // (fail-closed: require login when DB is unavailable). Correct security
+    // behavior — the login page needs to render regardless.
+    expect(res.status).toBe(200);
     const body = await res.json();
     expect(body).toHaveProperty("requireLogin", true);
     expect(body).not.toHaveProperty("tunnelUrl");
