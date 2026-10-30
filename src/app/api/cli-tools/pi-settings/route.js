@@ -5,10 +5,7 @@ import { resolveCliApiKey } from "../resolveApiKey.js";
 import fs from "fs/promises";
 import path from "path";
 import os from "os";
-import { exec } from "child_process";
-import { promisify } from "util";
-
-const execAsync = promisify(exec);
+import { checkPiInstalled as checkPiInstalledProbe } from "@/lib/cliTools/cliBinProbe.js";
 
 const getPiModelsJsonPath = () => {
   const agentPath = path.join(os.homedir(), ".pi", "agent", "models.json");
@@ -17,25 +14,10 @@ const getPiModelsJsonPath = () => {
 
 const getPiDir = () => path.dirname(getPiModelsJsonPath());
 
+// SECURITY (GAP-P2-17): filesystem-only install detection (no PATH lookup).
 const checkPiInstalled = async () => {
-  const isWindows = os.platform() === "win32";
-  try {
-    const command = isWindows ? "where pi" : "which pi";
-    await execAsync(command, { windowsHide: true });
-    return true;
-  } catch {
-    try {
-      await fs.access(getPiModelsJsonPath());
-      return true;
-    } catch {
-      try {
-        await fs.access(path.join(os.homedir(), ".pi", "models.json"));
-        return true;
-      } catch {
-        return false;
-      }
-    }
-  }
+  const { installed } = await checkPiInstalledProbe();
+  return installed;
 };
 
 const has9RouterConfig = (settings) => {

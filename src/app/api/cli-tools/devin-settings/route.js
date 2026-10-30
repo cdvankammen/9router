@@ -1,62 +1,24 @@
 "use server";
 
 import { NextResponse } from "next/server";
-import { exec } from "child_process";
-import { promisify } from "util";
+import { execFileSync } from "child_process";
 import fs from "fs/promises";
 import path from "path";
 import os from "os";
+import { checkDevinInstalled as checkDevinInstalledProbe } from "@/lib/cliTools/cliBinProbe.js";
 
-const execAsync = promisify(exec);
-
-// Mirror the executor's resolveDevinBin discovery so the dashboard's status
-// matches what the runtime actually spawns.
-const candidateDevinPaths = () => {
-  const home = os.homedir();
-  const isWin = os.platform() === "win32";
-  const localAppData = process.env.LOCALAPPDATA || path.join(home, "AppData", "Local");
-  // Mirror resolveDevinBin in the executor — cover installer + common
-  // package-manager locations so detection matches runtime resolution.
-  return isWin
-    ? [
-      path.join(localAppData, "devin", "cli", "bin", "devin.exe"),
-      path.join(home, ".local", "bin", "devin.exe"),
-      path.join(home, "scoop", "shims", "devin.exe"),
-      path.join(localAppData, "Programs", "devin", "devin.exe"),
-    ]
-    : [
-      path.join(home, ".local", "share", "devin", "bin", "devin"),
-      path.join(home, ".devin", "bin", "devin"),
-      path.join(home, ".local", "bin", "devin"),
-      "/opt/homebrew/bin/devin",
-      "/usr/local/bin/devin",
-      "/usr/bin/devin",
-    ];
-};
-
+// SECURITY (GAP-P2-17): filesystem-only install detection via cliBinProbe.
 const checkDevinInstalled = async () => {
-  // 1. PATH lookup
-  try {
-    const isWindows = os.platform() === "win32";
-    const command = isWindows ? "where devin" : "which devin";
-    await execAsync(command, { windowsHide: true });
-    return { installed: true, source: "path" };
-  } catch {
-    // fall through to filesystem probes
-  }
-  // 2. Known installer paths
-  for (const candidate of candidateDevinPaths()) {
-    try {
-      await fs.access(candidate);
-      return { installed: true, source: candidate };
-    } catch { /* keep probing */ }
-  }
-  return { installed: false, source: null };
+  const { installed, source } = await checkDevinInstalledProbe();
+  return { installed, source };
 };
 
+// Version read uses absolute path from detection (no PATH lookup).
 const readDevinVersion = async () => {
+  const { installed, source } = await checkDevinInstalled();
+  if (!installed || !source) return null;
   try {
-    const { stdout } = await execAsync("devin --version", { windowsHide: true });
+    const stdout = execFileSync(source, ["--version"], { windowsHide: true, timeout: 3000, encoding: "utf8" });
     return stdout.trim().split("\n")[0] || null;
   } catch {
     return null;

@@ -5,35 +5,16 @@ import { resolveCliApiKey } from "../resolveApiKey.js";
 import fs from "fs/promises";
 import path from "path";
 import os from "os";
-import { exec } from "child_process";
-import { promisify } from "util";
-
-const execAsync = promisify(exec);
+import { checkOmpInstalled as checkOmpInstalledProbe } from "@/lib/cliTools/cliBinProbe.js";
 
 const PROVIDER_ID = "9router";
 const getOmpDir = () => path.join(os.homedir(), ".omp", "agent");
-const getOmpDbPath = () => path.join(getOmpDir(), "agent.db");
 const getOmpModelsYmlPath = () => path.join(getOmpDir(), "models.yml");
 
+// SECURITY (GAP-P2-17): filesystem-only install detection.
 const checkOmpInstalled = async () => {
-  const isWindows = os.platform() === "win32";
-  try {
-    const command = isWindows ? "where omp" : "which omp";
-    await execAsync(command, { windowsHide: true });
-    return true;
-  } catch {
-    try {
-      await fs.access(getOmpDbPath());
-      return true;
-    } catch {
-      try {
-        await fs.access(getOmpModelsYmlPath());
-        return true;
-      } catch {
-        return false;
-      }
-    }
-  }
+  const { installed } = await checkOmpInstalledProbe();
+  return installed;
 };
 
 const readModelsYml = async () => {

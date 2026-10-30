@@ -5,29 +5,16 @@ import { resolveCliApiKey } from "../resolveApiKey.js";
 import fs from "fs/promises";
 import path from "path";
 import os from "os";
-import { exec } from "child_process";
-import { promisify } from "util";
 import { parseTOML, stringifyTOML } from "confbox";
-
-const execAsync = promisify(exec);
+import { checkCodewhaleInstalled as checkCodewhaleInstalledProbe } from "@/lib/cliTools/cliBinProbe.js";
 
 const getCodewhaleDir = () => path.join(os.homedir(), ".codewhale");
 const getCodewhaleConfigPath = () => path.join(getCodewhaleDir(), "config.toml");
 
+// SECURITY (GAP-P2-17): filesystem-only install detection.
 const checkCodewhaleInstalled = async () => {
-  const isWindows = os.platform() === "win32";
-  try {
-    const command = isWindows ? "where codewhale" : "which codewhale";
-    await execAsync(command, { windowsHide: true });
-    return true;
-  } catch {
-    try {
-      await fs.access(getCodewhaleConfigPath());
-      return true;
-    } catch {
-      return false;
-    }
-  }
+  const { installed } = await checkCodewhaleInstalledProbe();
+  return installed;
 };
 
 const has9RouterConfig = (content) => {

@@ -1,8 +1,6 @@
 "use server";
 
 import { NextResponse } from "next/server";
-import { exec } from "child_process";
-import { promisify } from "util";
 import fs from "fs/promises";
 import os from "os";
 
@@ -29,7 +27,7 @@ import {
 } from "./hermesYaml.js";
 import { resolveHermesHome, listProfiles, dirExists } from "./hermesProfiles.js";
 
-const execAsync = promisify(exec);
+import { checkHermesInstalled as checkHermesInstalledProbe } from "@/lib/cliTools/cliBinProbe.js";
 
 const PROVIDER_NAME = "9router";
 const API_KEY_ENV = "OPENAI_API_KEY";
@@ -87,17 +85,18 @@ const writeHomeEnv = async (home, apiKey) => {
   await fs.writeFile(home.envPath, env);
 };
 
+// SECURITY (GAP-P2-17): filesystem-only install detection.
 const checkHermesInstalled = async () => {
+  const { installed } = await checkHermesInstalledProbe();
+  return installed;
+};
+
+// Legacy stub — kept for any dead branches that still call through.
+const checkHermesInstalledLegacy = async () => {
   try {
-    const isWindows = os.platform() === "win32";
-    const command = isWindows ? "where hermes" : "which hermes";
-    await execAsync(command, { windowsHide: true });
+    await fs.access(resolveHermesHome(null).configPath);
     return true;
   } catch {
-    try {
-      await fs.access(resolveHermesHome(null).configPath);
-      return true;
-    } catch {
       return false;
     }
   }

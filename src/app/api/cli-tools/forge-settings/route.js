@@ -5,29 +5,16 @@ import { resolveCliApiKey } from "../resolveApiKey.js";
 import fs from "fs/promises";
 import path from "path";
 import os from "os";
-import { exec } from "child_process";
-import { promisify } from "util";
 import { parseTOML, stringifyTOML } from "confbox";
-
-const execAsync = promisify(exec);
+import { checkForgeInstalled as checkForgeInstalledProbe } from "@/lib/cliTools/cliBinProbe.js";
 
 const getForgeDir = () => path.join(os.homedir(), ".forge");
 const getForgeConfigPath = () => path.join(getForgeDir(), "config.toml");
 
+// SECURITY (GAP-P2-17): filesystem-only install detection (no PATH lookup).
 const checkForgeInstalled = async () => {
-  const isWindows = os.platform() === "win32";
-  try {
-    const command = isWindows ? "where forge" : "which forge";
-    await execAsync(command, { windowsHide: true });
-    return true;
-  } catch {
-    try {
-      await fs.access(getForgeConfigPath());
-      return true;
-    } catch {
-      return false;
-    }
-  }
+  const { installed } = await checkForgeInstalledProbe();
+  return installed;
 };
 
 const has9RouterConfig = (content) => {

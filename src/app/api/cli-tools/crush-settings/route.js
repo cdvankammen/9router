@@ -5,10 +5,7 @@ import { resolveCliApiKey } from "../resolveApiKey.js";
 import fs from "fs/promises";
 import path from "path";
 import os from "os";
-import { exec } from "child_process";
-import { promisify } from "util";
-
-const execAsync = promisify(exec);
+import { checkCrushInstalled as checkCrushInstalledProbe } from "@/lib/cliTools/cliBinProbe.js";
 
 const getCrushConfigPath = () => {
   const configDir = process.env.XDG_CONFIG_HOME || path.join(os.homedir(), ".config");
@@ -17,20 +14,10 @@ const getCrushConfigPath = () => {
 
 const getCrushDir = () => path.dirname(getCrushConfigPath());
 
+// SECURITY (GAP-P2-17): filesystem-only install detection.
 const checkCrushInstalled = async () => {
-  const isWindows = os.platform() === "win32";
-  try {
-    const command = isWindows ? "where crush" : "which crush";
-    await execAsync(command, { windowsHide: true });
-    return true;
-  } catch {
-    try {
-      await fs.access(getCrushConfigPath());
-      return true;
-    } catch {
-      return false;
-    }
-  }
+  const { installed } = await checkCrushInstalledProbe();
+  return installed;
 };
 
 const has9RouterConfig = (settings) => {

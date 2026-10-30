@@ -1,35 +1,21 @@
 "use server";
 
 import { NextResponse } from "next/server";
-import { exec } from "child_process";
-import { promisify } from "util";
 import fs from "fs/promises";
 import path from "path";
 import os from "os";
-
-const execAsync = promisify(exec);
+import { checkClineInstalled } from "@/lib/cliTools/cliBinProbe.js";
 
 const getDataDir = () => path.join(os.homedir(), ".cline", "data");
 const getGlobalStatePath = () => path.join(getDataDir(), "globalState.json");
 const getSecretsPath = () => path.join(getDataDir(), "secrets.json");
 
+// SECURITY (GAP-P2-17): filesystem-only install detection. The previous
+// `which cline` resolved via process.env.PATH — a crafted `.env` could
+// inject a malicious binary into the lookup.
 const checkInstalled = async () => {
-  try {
-    const isWindows = os.platform() === "win32";
-    const command = isWindows ? "where cline" : "which cline";
-    const env = isWindows
-      ? { ...process.env, PATH: `${process.env.APPDATA}\\npm;${process.env.PATH}` }
-      : process.env;
-    await execAsync(command, { windowsHide: true, env });
-    return true;
-  } catch {
-    try {
-      await fs.access(getGlobalStatePath());
-      return true;
-    } catch {
-      return false;
-    }
-  }
+  const { installed } = await checkClineInstalled();
+  return installed;
 };
 
 const readJson = async (filePath) => {

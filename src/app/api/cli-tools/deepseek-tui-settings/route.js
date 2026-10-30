@@ -2,13 +2,10 @@
 
 import { NextResponse } from "next/server";
 import { resolveCliApiKey } from "../resolveApiKey.js";
-import { exec } from "child_process";
-import { promisify } from "util";
 import fs from "fs/promises";
 import path from "path";
 import os from "os";
-
-const execAsync = promisify(exec);
+import { checkDeepseekTuiInstalled as checkDeepseekTuiInstalledProbe } from "@/lib/cliTools/cliBinProbe.js";
 
 const PROVIDER_NAME = "9router";
 
@@ -68,16 +65,16 @@ model = "${model}"
 const DEFAULT_CONFIG = `provider = "deepseek"
 `;
 
+// SECURITY (GAP-P2-17): filesystem-only install detection (no PATH lookup).
 const checkDeepSeekInstalled = async () => {
+    const { installed } = await checkDeepseekTuiInstalledProbe();
+    return installed;
+};
+
+const _legacyCheckDeepSeekInstalled = async () => {
     try {
-        const isWindows = os.platform() === "win32";
-        const command = isWindows ? "where deepseek" : "which deepseek";
-        await execAsync(command, { windowsHide: true });
+        await fs.access(getDeepSeekConfigPath());
         return true;
-    } catch {
-        try {
-            await fs.access(getDeepSeekConfigPath());
-            return true;
         } catch {
             return false;
         }
