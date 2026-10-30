@@ -4,7 +4,7 @@ Cross-reference between `.agent/SECURITY_AUDIT_WAVE_674.md` (the audit doc) and 
 
 **Last updated:** 2026-10-30 (session 26, commit 94f38245 — GAP-P2-15 brew + GAP-P2-16 grok shell-injection + GAP-P2-03 embeddings + cursor CLI mock; all SHAs post-filter-repo)
 **Branch:** v5-vscode-works @ 94f38245, pushed to `fork` (cdvankammen/9router)
-**mini4 production:** BUILD_ID `Xy9Za8BcDe7FgHi6JkLmN`, PID 55012, port 20128, health=ok, encryption 4/4 intact
+**mini4 production:** BUILD_ID `dsE4k7oLlEMTmURF7-5JP`, PID 59204, port 20128, health=ok, apiKeys 4/4 encrypted
 **Test suite:** 52 failed / 5185 passed (was 63/5151 at session start = 11 fewer failures, 34 more passing)
 
 ## Commits this session (cherry-picked from unmerged branches + original fixes)
