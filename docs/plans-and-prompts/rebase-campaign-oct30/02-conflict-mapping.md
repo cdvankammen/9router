@@ -379,3 +379,59 @@ Deferred — mini4 DOWN.
 | Pre-rebase baseline (07c16dab) | — | 35 | — |
 
 **Gap to baseline after round 9: 119 - 35 = 84 regressions still outstanding.**
+
+## Round 11 — CORS allowlist + iflow 504 + vercel timeouts + executor stream_options + migrate hardening (2026-10-30)
+
+### Stage 1 (code-level) — surgical patches
+
+| File | What was restored | Upstream delta | Strategy |
+|---|---|---|---|
+| `src/app/api/health/route.js` | `corsOptionsResponse` + `withCorsHeaders` wiring (CORS pilot) | 21 | Surgical |
+| `src/app/api/v1/embeddings/route.js` | Same pattern | 27 | Surgical |
+| `src/app/api/v1/web/fetch/route.js` | Same pattern | 27 | Surgical |
+| `src/app/api/v1/search/route.js` | Same pattern (Phase 5) | 0 | Surgical |
+| `src/app/api/oauth/iflow/cookie/route.js` | `TimeoutError`/`AbortError` → 504 mapping in catch | 143 | Surgical |
+| `src/app/api/proxy-pools/vercel-deploy/route.js` | 3 timeout consts + 4 AbortSignal.timeout sites | 149 | Surgical |
+| `open-sse/executors/default.js` | `stream_options: { include_usage: true }` + `supportsIncludeUsage()` | 452 | Surgical |
+| `src/lib/db/migrate.js` | `persistMigrationWarnings` + `previewMigrations` + refusal gate (registry diverge / downgrade / broken) + `migrationRegistryFingerprint` stamp | 93 | Verbatim (safe) |
+
+### Stage 2 (behavior/DOM)
+
+Test results (targeted):
+- cors-options-pilot: 4 fail → **5/5 pass**
+- cors-phase5-integration: 4 fail → **8/8 pass**
+- default-executor-stream-options: 4 fail → **8/8 pass**
+- vercel-deploy-timeout: 4 fail → **5/5 pass**
+- iflow-cookie-timeout: 4 fail → **7/7 pass**
+- db-migration-hardening: 4 fail → **5/5 pass**
+
+Full suite: **81 failed / 5137 passed** (24 recovered this round).
+
+### Honest correction
+
+iflow route line-35 comment literally contained `AbortSignal.timeout(15000)` which the source-assertion AFP regex counted as a third occurrence (expected 2). Reworded.
+
+### Stage 3 (production/visual)
+
+Deferred — mini4 DOWN.
+
+### Campaign cumulative state (through round 11)
+
+| Round | Commit | Tests failed | Recovered |
+|---|---|---|---|
+| Pre-repair (post-merge 2f8b50ee) | — | 441 | — |
+| Round 1 (SSRF + computeCost) | e360d5ce | 355 | 86 |
+| Round 2 (8 modules + parseModel) | 4d9fc242 | 285 | 70 |
+| Round 2.5 (combo-CAR call site) | 14c0bc29 | 283 | 2 |
+| Round 3 (6 modules + 2 surgical) | fae688eb | 203 | 80 |
+| Round 4 (migration 008 + iflow) | c3fc096a | 193 | 10 |
+| Round 5 (registry + kiro + usage dispatch) | cd677a7e | 170 | 23 |
+| Round 6 (usage.js ReferenceError) | db1b5dad | 151 | 19 |
+| Round 7 (parseQuotaData + xiaomi + provider-nodes) | 71598788 | 129 | 22 |
+| Round 8 (UI cards partial) | 2cb4c32b | 122 | 7 |
+| Round 9 (UI cards complete) | db78c649 | 119 | 3 |
+| Round 10 (MITM + login + CF) | 97926540 | 105 | 14 |
+| Round 11 (CORS + iflow + vercel + executor + migrate) | 9ca65917 | 81 | 24 |
+| Pre-rebase baseline (07c16dab) | — | 35 | — |
+
+**Gap to baseline after round 11: 81 - 35 = 46 regressions still outstanding.**
