@@ -6,6 +6,7 @@ import {
   deleteProviderConnection,
 } from "@/models";
 import { toProviderConnectionResponse, usesAwsCredentialForm } from "@/lib/providerConnectionResponse";
+import { requireAuth } from "@/lib/auth/requireAuth";
 
 function normalizeProxyConfig(body = {}) {
   const hasAnyProxyField =
@@ -62,6 +63,11 @@ function shouldMergeProviderSpecificData(existing, incoming, hasLegacyProxy, has
 
 // GET /api/providers/[id] - Get single connection
 export async function GET(request, { params }) {
+    // IDOR sweep (2026-10-29): route-level requireAuth as defence-in-depth.
+    if (!(await requireAuth(request))) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
   try {
     const { id } = await params;
     const connection = await getProviderConnectionById(id);
@@ -79,6 +85,11 @@ export async function GET(request, { params }) {
 
 // PUT /api/providers/[id] - Update connection
 export async function PUT(request, { params }) {
+    // IDOR sweep (2026-10-29): route-level requireAuth as defence-in-depth.
+    if (!(await requireAuth(request))) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
   try {
     const { id } = await params;
     const body = await request.json();
@@ -170,6 +181,11 @@ export async function PUT(request, { params }) {
 
 // DELETE /api/providers/[id] - Delete connection
 export async function DELETE(request, { params }) {
+    // IDOR sweep (2026-10-29): route-level requireAuth as defence-in-depth.
+    if (!(await requireAuth(request))) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
   try {
     const { id } = await params;
 

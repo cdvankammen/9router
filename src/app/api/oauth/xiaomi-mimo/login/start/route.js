@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { request as httpRequest } from "node:http";
 import { beginSession, encodeSessionCookie, rewriteMimoBases, absorbSetCookies as absorbResponseCookies, originOf, loginUpstreamFetch, SESSION_COOKIE } from "@/lib/mimoLoginSession";
+import { requireAuth } from "@/lib/auth/requireAuth";
 
 /**
  * POST /api/oauth/xiaomi-mimo/login/start
@@ -69,6 +70,11 @@ async function hop(sess, url, ua) {
 }
 
 export async function POST(request) {
+    // IDOR sweep (2026-10-29): route-level requireAuth as defence-in-depth.
+    if (!(await requireAuth(request))) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
   try {
     let region = "cn";
     try {

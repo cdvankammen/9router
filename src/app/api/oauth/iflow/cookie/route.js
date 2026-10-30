@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createProviderConnection } from "@/models";
+import { requireAuth } from "@/lib/auth/requireAuth";
 
 /**
  * iFlow Cookie-Based Authentication
@@ -7,6 +8,11 @@ import { createProviderConnection } from "@/models";
  * Body: { cookie: "BXAuth=xxx; ..." }
  */
 export async function POST(request) {
+    // IDOR sweep (2026-10-29): route-level requireAuth as defence-in-depth.
+    if (!(await requireAuth(request))) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
   try {
     const { cookie } = await request.json();
 

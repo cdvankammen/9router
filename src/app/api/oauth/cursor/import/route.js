@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { CursorService } from "@/lib/oauth/services/cursor";
 import { createProviderConnection } from "@/models";
+import { requireAuth } from "@/lib/auth/requireAuth";
 
 /**
  * POST /api/oauth/cursor/import
@@ -11,6 +12,11 @@ import { createProviderConnection } from "@/models";
  * - machineId: string - Machine ID from storage.serviceMachineId
  */
 export async function POST(request) {
+    // IDOR sweep (2026-10-29): route-level requireAuth as defence-in-depth.
+    if (!(await requireAuth(request))) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
   try {
     const { accessToken, machineId } = await request.json();
 
@@ -74,7 +80,12 @@ export async function POST(request) {
  * GET /api/oauth/cursor/import
  * Get instructions for importing Cursor token
  */
-export async function GET() {
+export async function GET(request) {
+    // IDOR sweep (2026-10-29): route-level requireAuth as defence-in-depth.
+    if (!(await requireAuth(request))) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
   const cursorService = new CursorService();
   const instructions = cursorService.getTokenStorageInstructions();
 

@@ -1,9 +1,15 @@
 import { NextResponse } from "next/server";
 import { FILTERS } from "./filters.js";
+import { requireAuth } from "@/lib/auth/requireAuth";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request) {
+    // IDOR sweep (2026-10-29): route-level requireAuth as defence-in-depth.
+    if (!(await requireAuth(request))) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
   const { searchParams } = new URL(request.url);
   const url = searchParams.get("url");
   const type = searchParams.get("type");

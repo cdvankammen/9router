@@ -64,3 +64,49 @@ export function isNativePassthrough(clientTool, provider) {
     : provider;
   return nativeProviders.includes(normalizedProvider);
 }
+
+/**
+ * Detect IDE from User-Agent (M3).
+ * Returns one of: "vscode" | "jetbrains" | "neovim" | "zed" | "warp" | "terminal" | null
+ * @param {string} ua - Lowercase User-Agent string
+ */
+export function detectIDE(ua) {
+  if (!ua || typeof ua !== "string") return null;
+  const lower = ua.toLowerCase();
+
+  // VS Code (including Cursor, GitHub Codespaces, etc.)
+  if (lower.includes("vscode") || lower.includes("code ") || lower.includes("github-codespaces")) {
+    return "vscode";
+  }
+
+  // JetBrains IDEs (IntelliJ, PyCharm, WebStorm, etc.)
+  if (lower.includes("jetbrains") || lower.includes("intellij") || lower.includes("pycharm") ||
+      lower.includes("webstorm") || lower.includes("rider") || lower.includes("goland") ||
+      lower.includes("clion") || lower.includes("datagrip") || lower.includes("rubymine") ||
+      lower.includes("phpstorm")) {
+    return "jetbrains";
+  }
+
+  // Neovim
+  if (lower.includes("neovim") || lower.includes("nvim")) {
+    return "neovim";
+  }
+
+  // Zed (already caught as client tool, but also an IDE)
+  if (lower.includes("zed")) {
+    return "zed";
+  }
+
+  // Warp (terminal)
+  if (lower.includes("warp")) {
+    return "warp";
+  }
+
+  // Generic terminal (curl, wget, httpie, etc. — no IDE)
+  if (lower.includes("curl") || lower.includes("wget") || lower.includes("httpie") ||
+      lower.includes("axios") || lower.includes("node-fetch") || lower.includes("undici")) {
+    return "terminal";
+  }
+
+  return null;
+}

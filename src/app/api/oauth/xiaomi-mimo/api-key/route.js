@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createProviderConnection } from "@/models";
+import { requireAuth } from "@/lib/auth/requireAuth";
 
 /**
  * POST /api/oauth/xiaomi-mimo/api-key
@@ -9,6 +10,11 @@ import { createProviderConnection } from "@/models";
  * Body: { apiKey, uid?, baseUrl? }
  */
 export async function POST(request) {
+    // IDOR sweep (2026-10-29): route-level requireAuth as defence-in-depth.
+    if (!(await requireAuth(request))) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
   try {
     const { apiKey, uid, baseUrl, mimoPassToken, mimoUserId, mimoCUserId, region } = await request.json();
 

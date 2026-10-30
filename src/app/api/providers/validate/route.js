@@ -13,6 +13,7 @@ import {
   isNousApiKeyAccepted,
 } from "open-sse/services/nous.js";
 import { normalizeProviderId } from "@/lib/providerNormalization";
+import { assertNotLinkLocalResolved } from "@/shared/utils/ssrfGuard.js";
 
 // Probe a webSearch/webFetch provider using its searchConfig/fetchConfig.
 // Returns true if API key is accepted (status !== 401 && !== 403).

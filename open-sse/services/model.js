@@ -21,6 +21,21 @@ const BUILTIN_MODEL_ALIASES = {
   "grok-build": "gcli/grok-build",
 };
 
+// Beta context-window markers like [1m] or [200k] appended to model names.
+// Stripped before parsing so model resolution doesn't accidentally eat
+// legitimate model-name characters.
+const BETA_MARKER_RE = /\[(\d+[km])\]$/i;
+
+export function stripBetaMarker(modelStr) {
+  if (!modelStr || typeof modelStr !== "string") return { cleaned: modelStr, betaMarker: null };
+  const m = modelStr.match(BETA_MARKER_RE);
+  if (!m) return { cleaned: modelStr, betaMarker: null };
+  return {
+    cleaned: modelStr.slice(0, -m[0].length),
+    betaMarker: m[1].toLowerCase(), // e.g. "1m", "200k"
+  };
+}
+
 /**
  * Resolve provider alias to provider ID
  */

@@ -1,8 +1,14 @@
 import { NextResponse } from "next/server";
 import { deleteProviderConnectionsByProvider, deleteProviderNode, getProviderConnections, getProviderNodeById, updateProviderConnection, updateProviderNode } from "@/models";
+import { requireAuth } from "@/lib/auth/requireAuth";
 
 // PUT /api/provider-nodes/[id] - Update provider node
 export async function PUT(request, { params }) {
+    // IDOR sweep (2026-10-29): route-level requireAuth as defence-in-depth.
+    if (!(await requireAuth(request))) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
   try {
     const { id } = await params;
     const body = await request.json();
@@ -82,6 +88,11 @@ export async function PUT(request, { params }) {
 
 // DELETE /api/provider-nodes/[id] - Delete provider node and its connections
 export async function DELETE(request, { params }) {
+    // IDOR sweep (2026-10-29): route-level requireAuth as defence-in-depth.
+    if (!(await requireAuth(request))) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
   try {
     const { id } = await params;
     const node = await getProviderNodeById(id);

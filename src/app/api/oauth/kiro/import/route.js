@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { KiroService } from "@/lib/oauth/services/kiro";
 import { createProviderConnection } from "@/models";
+import { requireAuth } from "@/lib/auth/requireAuth";
 
 /**
  * POST /api/oauth/kiro/import
@@ -9,6 +10,11 @@ import { createProviderConnection } from "@/models";
  * token can be refreshed via the regional AWS OIDC endpoint.
  */
 export async function POST(request) {
+    // IDOR sweep (2026-10-29): route-level requireAuth as defence-in-depth.
+    if (!(await requireAuth(request))) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
   try {
     const { refreshToken, clientId, clientSecret, region, authMethod, profileArn } = await request.json();
 

@@ -1,9 +1,15 @@
 import { registerSession, unregisterSession, findPlugin } from "@/lib/mcp/stdioSseBridge";
+import { requireAuth } from "@/lib/auth/requireAuth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET(request, { params }) {
+    // IDOR sweep (2026-10-29): route-level requireAuth as defence-in-depth.
+    if (!(await requireAuth(request))) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
   const { plugin } = await params;
   if (!findPlugin(plugin)) {
     return new Response(`Unknown plugin: ${plugin}`, { status: 404 });

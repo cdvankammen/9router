@@ -1,8 +1,14 @@
 import { NextResponse } from "next/server";
 import { testSingleConnection } from "./testUtils.js";
+import { requireAuth } from "@/lib/auth/requireAuth";
 
 // POST /api/providers/[id]/test - Test connection
 export async function POST(request, { params }) {
+    // IDOR sweep (2026-10-29): route-level requireAuth as defence-in-depth.
+    if (!(await requireAuth(request))) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
   try {
     const { id } = await params;
     const result = await testSingleConnection(id);

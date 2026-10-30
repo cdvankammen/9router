@@ -1,12 +1,18 @@
 import { NextResponse } from "next/server";
 import { getComboById, updateCombo, deleteCombo, getComboByName } from "@/lib/localDb";
 import { resetComboRotation } from "open-sse/services/combo.js";
+import { requireAuth } from "@/lib/auth/requireAuth";
 
 // Validate combo name: only a-z, A-Z, 0-9, -, _
 const VALID_NAME_REGEX = /^[a-zA-Z0-9_.\-]+$/;
 
 // GET /api/combos/[id] - Get combo by ID
 export async function GET(request, { params }) {
+    // IDOR sweep (2026-10-29): route-level requireAuth as defence-in-depth.
+    if (!(await requireAuth(request))) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
   try {
     const { id } = await params;
     const combo = await getComboById(id);
@@ -24,6 +30,11 @@ export async function GET(request, { params }) {
 
 // PUT /api/combos/[id] - Update combo
 export async function PUT(request, { params }) {
+    // IDOR sweep (2026-10-29): route-level requireAuth as defence-in-depth.
+    if (!(await requireAuth(request))) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
   try {
     const { id } = await params;
     const body = await request.json();
@@ -62,6 +73,11 @@ export async function PUT(request, { params }) {
 
 // DELETE /api/combos/[id] - Delete combo
 export async function DELETE(request, { params }) {
+    // IDOR sweep (2026-10-29): route-level requireAuth as defence-in-depth.
+    if (!(await requireAuth(request))) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
   try {
     const { id } = await params;
     const prev = await getComboById(id);

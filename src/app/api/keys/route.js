@@ -1,11 +1,17 @@
 import { NextResponse } from "next/server";
 import { getApiKeys, createApiKey } from "@/lib/localDb";
 import { getConsistentMachineId } from "@/shared/utils/machineId";
+import { requireAuth } from "@/lib/auth/requireAuth";
 
 export const dynamic = "force-dynamic";
 
 // GET /api/keys - List API keys
-export async function GET() {
+export async function GET(request) {
+  // IDOR sweep (2026-10-29): route-level requireAuth as defence-in-depth.
+  if (!(await requireAuth(request))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   try {
     const keys = await getApiKeys();
     return NextResponse.json({ keys });
@@ -17,6 +23,11 @@ export async function GET() {
 
 // POST /api/keys - Create new API key
 export async function POST(request) {
+    // IDOR sweep (2026-10-29): route-level requireAuth as defence-in-depth.
+    if (!(await requireAuth(request))) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
   try {
     const body = await request.json();
     const { name } = body;

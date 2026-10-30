@@ -1,9 +1,15 @@
 import { NextResponse } from "next/server";
 import { deleteApiKey, getApiKeyById, updateApiKey } from "@/lib/localDb";
 import { validateKeyAccessInput } from "@/shared/utils/keyAccess.js";
+import { requireAuth } from "@/lib/auth/requireAuth";
 
 // GET /api/keys/[id] - Get single key
 export async function GET(request, { params }) {
+    // IDOR sweep (2026-10-29): route-level requireAuth as defence-in-depth.
+    if (!(await requireAuth(request))) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
   try {
     const { id } = await params;
     const key = await getApiKeyById(id);
@@ -19,6 +25,11 @@ export async function GET(request, { params }) {
 
 // PUT /api/keys/[id] - Update key
 export async function PUT(request, { params }) {
+    // IDOR sweep (2026-10-29): route-level requireAuth as defence-in-depth.
+    if (!(await requireAuth(request))) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
   try {
     const { id } = await params;
     const body = await request.json();
@@ -48,6 +59,11 @@ export async function PUT(request, { params }) {
 
 // DELETE /api/keys/[id] - Delete API key
 export async function DELETE(request, { params }) {
+    // IDOR sweep (2026-10-29): route-level requireAuth as defence-in-depth.
+    if (!(await requireAuth(request))) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
   try {
     const { id } = await params;
 

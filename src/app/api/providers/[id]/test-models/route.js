@@ -4,6 +4,7 @@ import { getProviderModels, PROVIDER_ID_TO_ALIAS } from "open-sse/config/provide
 import { isOpenAICompatibleProvider, isAnthropicCompatibleProvider } from "@/shared/constants/providers";
 import { UPDATER_CONFIG } from "@/shared/constants/config";
 import { pingModelByKind } from "@/app/api/models/test/ping";
+import { requireAuth } from "@/lib/auth/requireAuth";
 
 /**
  * POST /api/providers/[id]/test-models
@@ -11,6 +12,11 @@ import { pingModelByKind } from "@/app/api/models/test/ping";
  * Actual requests go through the internal endpoint that matches each model kind.
  */
 export async function POST(request, { params }) {
+    // IDOR sweep (2026-10-29): route-level requireAuth as defence-in-depth.
+    if (!(await requireAuth(request))) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
   try {
     const { id } = await params;
     const connection = await getProviderConnectionById(id);

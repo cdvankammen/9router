@@ -15,6 +15,7 @@ import { resolveZedModels } from "open-sse/shared/zedAuth.js";
 import { resolveClineModels, resolveClinepassModels } from "open-sse/services/clinepassModels.js";
 import { NOUS_MODELS_URL, normalizeNousModels } from "open-sse/services/nous.js";
 import codexProvider from "open-sse/providers/registry/codex.js";
+import { requireAuth } from "@/lib/auth/requireAuth";
 
 const GEMINI_CLI_MODELS_URL = "https://cloudcode-pa.googleapis.com/v1internal:fetchAvailableModels";
 
@@ -545,6 +546,11 @@ const PROVIDER_MODELS_CONFIG = {
  * GET /api/providers/[id]/models - Get models list from provider
  */
 export async function GET(request, { params }) {
+    // IDOR sweep (2026-10-29): route-level requireAuth as defence-in-depth.
+    if (!(await requireAuth(request))) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
   try {
     const { id } = await params;
     const connection = await getProviderConnectionById(id);

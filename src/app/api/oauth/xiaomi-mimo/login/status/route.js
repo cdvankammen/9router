@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { sessionFromRequest, readSessionIdentity, attachSessionCookie } from "@/lib/mimoLoginSession";
+import { requireAuth } from "@/lib/auth/requireAuth";
 
 /**
  * GET /api/oauth/xiaomi-mimo/login/status?state=...
@@ -9,6 +10,11 @@ import { sessionFromRequest, readSessionIdentity, attachSessionCookie } from "@/
  * session works, then returns the identity for the client to persist.
  */
 export async function GET(request) {
+    // IDOR sweep (2026-10-29): route-level requireAuth as defence-in-depth.
+    if (!(await requireAuth(request))) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
   const url = new URL(request.url);
   const state = url.searchParams.get("state") || "";
   const sess = sessionFromRequest(request);

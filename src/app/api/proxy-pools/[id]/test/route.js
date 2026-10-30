@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getProxyPoolById, updateProxyPool } from "@/models";
 import { testProxyUrl } from "@/lib/network/proxyTest";
 import { fetch as undiciFetch } from "undici";
+import { requireAuth } from "@/lib/auth/requireAuth";
 
 async function testVercelRelay(relayUrl, timeoutMs = 10000) {
   const controller = new AbortController();
@@ -35,6 +36,11 @@ async function testVercelRelay(relayUrl, timeoutMs = 10000) {
 
 // POST /api/proxy-pools/[id]/test - Test proxy pool entry
 export async function POST(request, { params }) {
+    // IDOR sweep (2026-10-29): route-level requireAuth as defence-in-depth.
+    if (!(await requireAuth(request))) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
   try {
     const { id } = await params;
     const proxyPool = await getProxyPoolById(id);

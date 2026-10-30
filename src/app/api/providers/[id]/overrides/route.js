@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getSettings, updateSettings } from "@/lib/localDb";
 import { PROVIDERS } from "open-sse/config/providers.js";
 import { resolveProviderAlias } from "open-sse/services/model.js";
+import { requireAuth } from "@/lib/auth/requireAuth";
 
 export const dynamic = "force-dynamic";
 
@@ -67,6 +68,11 @@ async function readOverrides() {
  * GET /api/providers/[id]/overrides — user override for this provider
  */
 export async function GET(request, { params }) {
+    // IDOR sweep (2026-10-29): route-level requireAuth as defence-in-depth.
+    if (!(await requireAuth(request))) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
   try {
     const { id } = await params;
     // URL may use an alias (gcli, cc…) — key everything by canonical registry id
@@ -89,6 +95,11 @@ export async function GET(request, { params }) {
  * Empty payload clears the override.
  */
 export async function PUT(request, { params }) {
+    // IDOR sweep (2026-10-29): route-level requireAuth as defence-in-depth.
+    if (!(await requireAuth(request))) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
   try {
     const { id } = await params;
     const canonical = resolveProviderAlias(id);
