@@ -2,9 +2,28 @@
 
 Cross-reference between `.agent/SECURITY_AUDIT_WAVE_674.md` (the audit doc) and the actual codebase state on branch `v5-vscode-works`.
 
-**Last updated:** 2026-10-30 (session 26, commit ee8b106c — GAP-P1-25 + GAP-P3-30 + GAP-P2-20 + iflow mock fix; all SHAs are post-filter-repo)
-**Branch:** v5-vscode-works @ ee8b106c, pushed to `fork` (cdvankammen/9router)
-**mini4 production:** BUILD_ID `cFuvmbIblzDToqSFDDLMI`, PID 41624, port 20128, health=ok, encryption 4/4 intact
+**Last updated:** 2026-10-30 (session 26, commit 94f38245 — GAP-P2-15 brew + GAP-P2-16 grok shell-injection + GAP-P2-03 embeddings + cursor CLI mock; all SHAs post-filter-repo)
+**Branch:** v5-vscode-works @ 94f38245, pushed to `fork` (cdvankammen/9router)
+**mini4 production:** BUILD_ID `jfcqymIlYeQ1B-7Lwc9-T`, PID 45690, port 20128, health=ok, encryption 4/4 intact
+**Test suite:** 52 failed / 5185 passed (was 63/5151 at session start = 11 fewer failures, 34 more passing)
+
+## Commits this session (cherry-picked from unmerged branches + original fixes)
+
+| SHA | Description |
+|-----|-------------|
+| `26a1d80f` | WAL checkpoint TRUNCATE→PASSIVE across all 3 adapters (sec-3673) |
+| `fc3ddbe7` | 22 `AbortSignal.timeout(8000)` in provider validation (GAP-P1-25) |
+| `0e1ab3a1` | 9 `alert()` → toast in translator page (GAP-P3-30) |
+| `31785669` | `AbortSignal.timeout(10000)` on gitlab-pat fetch (GAP-P2-20) |
+| `ee8b106c` | iflow test requireAuth mock fix |
+| `5d6df842`→`31785669` (amend) | gitlab-pat test requireAuth mock fix |
+| `22b1bb0c` | 7 `console.log` → `notify.error()` in ConnectionsCard (GAP-P2-28) |
+| `a99de239` | embeddings usage persistence `.catch(() => {})` → `log.warn` (GAP-P2-03) |
+| `0c3fdb09` | imageGeneration + systemone same persistence pattern |
+| `9ed94dd3` | Cursor auto-import `validateCursorDbPath()` realpath guard (GAP-P1-12) |
+| `5983f780` | tailscale brew `execSync("which brew")` → filesystem `brewPath.js` (GAP-P2-15) |
+| `6b1ed4f1` | cursor auto-import test: mock CLI fallback (`child_process.execFile` + `util.promisify.custom`) |
+| `94f38245` | grok-build-settings `execAsync("which grok")` → filesystem detection (GAP-P2-16) |
 
 ## How to read this document
 
