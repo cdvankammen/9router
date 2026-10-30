@@ -86,7 +86,14 @@ export async function getUsageForProvider(connection, proxyOptions = null, optio
     ...(projectId ? { projectId } : {}),
   };
 
-  const handler = USAGE_HANDLERS[provider];
+  // Custom provider nodes may declare a user-facing usage URL (usageUrl +
+  // usageAuthMode). The explicit field IS the capability declaration — route
+  // to the generic fetcher whenever it is set, regardless of registry entry.
+  const hasCustomUsageUrl = Boolean(
+    providerSpecificData?.usageUrl && typeof providerSpecificData.usageUrl === "string" && providerSpecificData.usageUrl.trim()
+  );
+
+  const handler = hasCustomUsageUrl ? USAGE_HANDLERS[CUSTOM_USAGE_MARKER] : USAGE_HANDLERS[provider];
   if (!handler) return { message: `Usage API not implemented for ${provider}` };
   return await handler({
     provider,
