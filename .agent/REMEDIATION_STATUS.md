@@ -8,12 +8,13 @@ Cross-reference between `.agent/SECURITY_AUDIT_WAVE_674.md` (the audit doc) and 
 
 **Session 26 rounds 4-6 (commits 9260bcf7, bfdb843b, ff33ec14, bec11852, plus round-6 tailscale bin-cache fix):** 3 server-side silent-catch fixes + anthropic-gateway-passthrough test fix + 4 test-file hardening fixes + GAP-P2-15 extension to tailscale `bgRefreshBin()`. All pushed to fork; mini4 redeploy pending host availability.
 
-## GAP-P2-17 — cli-tools `which <tool>` cluster (open, follow-up)
+## GAP-P2-17 — cli-tools `which <tool>` cluster — FIXED
 
-18 routes under `src/app/api/cli-tools/*/route.js` use `execAsync("which <tool>")` (or `where <tool>` on Windows) to detect CLI installs, spreading `process.env` or `process.env.PATH` into the child env. Same PATH-injection class as GAP-P2-15 (brew) and the tailscale `bgRefreshBin()` fix. Catalogued, not yet remediated — the cluster should be fixed as one pass with a shared `cliBinProbe()` helper that does filesystem-only candidate probing.
+New shared helper `src/lib/cliTools/cliBinProbe.js` (filesystem-only probing of known CLI install locations) + 17 per-tool `check*Installed()` wrappers. All 18 routes under `src/app/api/cli-tools/*/route.js` that previously used `execAsync("which <tool>")` / `where <tool>` now call the helper. `grok-build-settings` was already fixed at GAP-P2-16.
 
-Affected routes:
-`claude-settings`, `cline-settings`, `codewhale-settings`, `codex-settings`, `crush-settings`, `devin-settings`, `droid-settings`, `forge-settings`, `hermes-settings`, `jcode-settings`, `kilo-settings`, `omp-settings`, `openclaw-settings`, `opencode-settings`, `pi-settings`, `smelt-settings`, `deepseek-tui-settings`, `grok-build-settings` (already fixed — GAP-P2-16, 94f38245).
+Routes converted: `claude-settings`, `cline-settings`, `codex-settings`, `codewhale-settings`, `crush-settings`, `deepseek-tui-settings`, `devin-settings`, `droid-settings`, `forge-settings`, `hermes-settings`, `jcode-settings`, `kilo-settings`, `omp-settings`, `openclaw-settings`, `opencode-settings`, `pi-settings`, `smelt-settings`.
+
+Test suite unchanged at 35 failed / 5203 passed.
 
 `devin-settings` already has a filesystem-only `candidateDevinPaths()` fallback; the other 16 routes need the same treatment, with the `which` call removed entirely.
 **Test suite:** 35 failed / 5203 passed / 14 expected fail / 98 skipped (was 63/5151 at session start = 28 fewer failures, 52 more passing; all 35 remaining are catalogued in `tests/__baseline__/known-fails.txt`)
