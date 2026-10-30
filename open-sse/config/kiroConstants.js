@@ -477,3 +477,16 @@ function containsTagInText(text) {
   return text.includes("<thinking_mode>enabled</thinking_mode>")
     || text.includes("<thinking_mode>interleaved</thinking_mode>");
 }
+
+// ─── Payload-size caps (Kiro upstream limit) ───────────────────────────────
+// Hard ceiling on the serialized request body sent to Kiro. The upstream
+// API rejects payloads over ~1MB with a non-recoverable error; we surface
+// a cleaner failure by truncating tool-result content in the RTK layer
+// (open-sse/rtk/) and tagging what was dropped with these notices.
+// Restored 2026-10-30: the upstream merge wholesale-dropped these consts
+// along with the rest of our session-25 Kiro size-cap work.
+export const KIRO_MAX_PAYLOAD_BYTES = 900 * 1024;
+export const KIRO_TRUNCATION_NOTICE =
+  "\n\n[truncated: content exceeded the upstream request size limit]";
+export const KIRO_IMAGE_DROP_NOTICE =
+  "\n\n[an attached image was dropped: the request exceeded the upstream size limit]";

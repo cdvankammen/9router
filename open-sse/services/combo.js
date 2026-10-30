@@ -7,6 +7,7 @@ import { unavailableResponse } from "../utils/error.js";
 import { getCapabilitiesForModel } from "../providers/capabilities.js";
 import { parseModel } from "./model.js";
 import { extractTextContent } from "../translator/formats/gemini.js";
+import { estimatePromptTokens } from "../utils/tokenEstimate.js";
 import { peekStreamForContent, reconstructStream, isNoRetryFinish } from "./emptyFailover.js";
 import {
   getStickyComboModel,
@@ -28,6 +29,63 @@ async function peekComboResponse(result, log) {
     headers: result.headers,
   });
   return { outcome: peeked.outcome, finishReason: peeked.finishReason, timedOut: peeked.timedOut, response };
+}
+
+const CONTEXT_AWARE_DEFAULTS = {
+  enabled: false,
+  overflowTarget: null,   // model id to reroute to when prompt exceeds threshold
+  thresholdTokens: 200000, // prompts at/over this many estimated tokens reroute
+};
+
+/**
+ * Context-aware routing ("overflowTarget"): when a request's estimated prompt
+ * size exceeds the combo's configured threshold, float the overflowTarget to
+ * the FRONT of the attempt list so the big prompt goes to a large-context
+ * model (e.g. qwen) instead of failing against a 200K-context model.
+ *
+ * If the target isn't already in the combo list, it is prepended as the
+ * overflow sink (becomes the ONLY attempt - that's the point of a sink).
+ *
+ * Returns { models, rerouted, promptTokens }. Never throws.
+ *
+ * Restored 2026-10-30: upstream merge dropped this function wholesale.
+ */
+export function applyContextAwareRouting({ body, models, config, log }) {
+  const cfg = {
+    ...CONTEXT_AWARE_DEFAULTS,
+    ...(config && typeof config === "object" ? config : {}),
+  };
+  if (!cfg.enabled || !cfg.overflowTarget || !Array.isArray(models) || models.length === 0) {
+    return { models, rerouted: false, promptTokens: 0 };
+  }
+
+  let promptTokens = 0;
+  try {
+    promptTokens = estimatePromptTokens(body);
+  } catch (e) {
+    if (log?.warn) log.warn("COMBO", "context-aware routing: token estimate failed, skipping", { error: e?.message || String(e) });
+    return { models, rerouted: false, promptTokens: 0 };
+  }
+
+  if (promptTokens < cfg.thresholdTokens) {
+    return { models, rerouted: false, promptTokens };
+  }
+
+  // Target already first - nothing to reorder.
+  if (models[0] === cfg.overflowTarget) {
+    return { models, rerouted: true, promptTokens };
+  }
+
+  const targetIndex = models.indexOf(cfg.overflowTarget);
+  if (targetIndex === -1) {
+    // Target not in the combo - prepend it; it becomes the ONLY attempt for
+    // this request, which is the point of an overflow sink.
+    return { models: [cfg.overflowTarget, ...models], rerouted: true, promptTokens };
+  }
+
+  // Move the target to the front, keep the rest in original order.
+  const next = [cfg.overflowTarget, ...models.slice(0, targetIndex), ...models.slice(targetIndex + 1)];
+  return { models: next, rerouted: true, promptTokens };
 }
 
 // Hard capabilities = input modalities; missing one drops request data (e.g. image

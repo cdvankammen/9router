@@ -77,6 +77,36 @@ export async function PATCH(request) {
       }
     }
 
+    // SECURITY (Finding #316): block link-local / cloud-metadata outbound proxy
+    // targets. Tailscale CGNAT (100.64/10), RFC1918 private ranges, and loopback
+    // are intentionally permitted — legitimate outbound proxies run on LAN or
+    // loopback. 169.254.169.254 (AWS/GCP/Azure metadata) and 169.254.170.2 (ECS
+    // task metadata) are blocked — letting them through would tunnel every
+    // outbound provider call (OAuth refresh, webhooks, quota ping) through the
+    // metadata endpoint and leak credentials to an attacker.
+    if (
+      Object.prototype.hasOwnProperty.call(body, "outboundProxyUrl") &&
+      typeof body.outboundProxyUrl === "string" &&
+      body.outboundProxyUrl.trim()
+    ) {
+      try {
+        // Extract hostname for the scheme-agnostic host check — socks5:
+        // proxies are legitimate here, so we cannot use assertNotLinkLocalResolved
+        // (which enforces http/https only). URL parsing is safe because
+        // applyOutboundProxyEnv below rejects malformed URLs on its own.
+        const parsedProxy = new URL(body.outboundProxyUrl);
+        await assertHostNotLinkLocalResolved(parsedProxy.hostname);
+      } catch (err) {
+        return NextResponse.json(
+          {
+            error: `outboundProxyUrl rejected: ${err.message}`,
+            hint: "Link-local (169.254.0.0/16), cloud-metadata (169.254.169.254, 169.254.170.2), and fe80::/10 targets are blocked. RFC1918 private ranges and loopback proxies are permitted.",
+          },
+          { status: 400 },
+        );
+      }
+    }
+
     const settings = await updateSettings(body);
 
     // Apply outbound proxy settings immediately (no restart required)

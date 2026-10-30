@@ -495,8 +495,32 @@ async function socksFetch(url, init, proxyUrl) {
   });
 }
 
+// SECURITY (Finding #320): The session cookie carrying proxyUrl is unsigned —
+// an attacker can forge it. On requireLogin:false deployments the proxy.js
+// middleware gate passes without dashboard auth, so a forged cookie with
+// proxyUrl=http://169.254.169.254/ would SSRF the server to cloud metadata
+// endpoints. The only legitimate proxy source is probeLocalHttpProxy() in
+// login/start/route.js, which always returns http://127.0.0.1:<port>. Any
+// other host is a forged cookie — reject it here before the proxy hop.
+// DNS-rebinding safe: we check the literal host string, never resolve it.
+const LOOPBACK_PROXY_HOSTS = new Set(["127.0.0.1", "::1", "localhost", "[::1]"]);
+function assertLoopbackProxyUrl(rawUrl) {
+  let parsed;
+  try { parsed = new URL(rawUrl); } catch { return false; }
+  // http / socks5 / socks5h / socks4 / socks4a — all legitimate proxy schemes.
+  if (!/^(https?|socks[45]h?):$/i.test(parsed.protocol)) return false;
+  return LOOPBACK_PROXY_HOSTS.has(parsed.hostname);
+}
+
 async function loginFetch(url, init, sessionProxyUrl = null) {
   if (!sessionProxyUrl) return fetch(url, init); // direct — no agent machinery needed
+  // SECURITY (Finding #320): drop forged proxy URLs silently — falling
+  // through to direct fetch preserves the upstream request without giving
+  // an attacker an egress hop. Logged so operators can spot abuse attempts.
+  if (!assertLoopbackProxyUrl(sessionProxyUrl)) {
+    console.log(`${new Date().toISOString().slice(11,23)} [mimo-login] SSRF guard: rejecting non-loopback proxyUrl (${sessionProxyUrl.slice(0, 40)})`);
+    return fetch(url, init);
+  }
   const proxyOptions = { enabled: true, url: sessionProxyUrl };
   try {
     if (/^socks/i.test(sessionProxyUrl)) return await socksFetch(url, init, sessionProxyUrl);
@@ -524,6 +548,7 @@ export const loginUpstreamFetch = (url, init, sess = null) => loginFetch(url, in
 async function fetchUpstream(sess, url, init, cookieValue) {
   const headers = new Headers(init.headers);
   if (cookieValue) headers.set("Cookie", cookieValue);
+  // loginFetch enforces loopback-only proxyUrl (Finding #320).
   return loginFetch(url, { ...init, headers, redirect: "manual", signal: AbortSignal.timeout(20000) }, sess?.proxyUrl || null);
 }
 

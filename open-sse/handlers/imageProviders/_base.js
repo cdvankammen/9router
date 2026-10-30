@@ -3,6 +3,12 @@
 export const POLL_INTERVAL_MS = 1500;
 export const POLL_TIMEOUT_MS = 120000;
 
+// Hard ceiling on bytes consumed by urlToBase64. A malicious or buggy provider
+// returning a multi-GB payload would otherwise exhaust process memory. 16 MB
+// is generous for any real generated image (most are <4 MB). Restored
+// 2026-10-30: upstream merge dropped this const wholesale.
+export const MAX_IMAGE_FETCH_BYTES = 16 * 1024 * 1024;
+
 export const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // Map OpenAI size to provider-specific aspect ratio

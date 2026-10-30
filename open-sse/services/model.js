@@ -48,8 +48,15 @@ export function resolveProviderAlias(aliasOrId) {
  */
 export function parseModel(modelStr) {
   if (!modelStr) {
-    return { provider: null, model: null, isAlias: false, providerAlias: null };
+    return { provider: null, model: null, isAlias: false, providerAlias: null, betaMarker: null };
   }
+
+  // Strip beta context-window markers before any further parsing (#3690).
+  // Restored 2026-10-30: upstream merge dropped the stripBetaMarker call and
+  // the betaMarker field from all return shapes, regressing parseModel to
+  // leave [1m]/[200k] markers attached to the model id.
+  const { cleaned, betaMarker } = stripBetaMarker(modelStr);
+  modelStr = cleaned;
 
   // Check if standard format: provider/model or alias/model
   if (modelStr.includes("/")) {
@@ -57,7 +64,7 @@ export function parseModel(modelStr) {
     const providerOrAlias = modelStr.slice(0, firstSlash);
     const model = modelStr.slice(firstSlash + 1);
     const provider = resolveProviderAlias(providerOrAlias);
-    return { provider, model, isAlias: false, providerAlias: providerOrAlias };
+    return { provider, model, isAlias: false, providerAlias: providerOrAlias, betaMarker };
   }
 
   // Alias format (model alias, not provider alias)
@@ -66,6 +73,7 @@ export function parseModel(modelStr) {
     model: modelStr,
     isAlias: true,
     providerAlias: null,
+    betaMarker,
   };
 }
 

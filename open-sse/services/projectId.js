@@ -27,6 +27,60 @@ const PENDING_TTL_MS = 2 * 60 * 1000;
 /** How often the background sweep runs (10 min). */
 const CLEANUP_INTERVAL_MS = 10 * 60 * 1000;
 
+// --- Retry backoff (project onboarding) ------------------------------------
+/** Base delay for exponential backoff between onboardUser retries (1s). */
+export const ONBOARD_BACKOFF_BASE_MS = 1000;
+
+/** Upper cap for a single backoff delay, before jitter (10s). */
+export const ONBOARD_BACKOFF_CAP_MS = 10 * 1000;
+
+/** Maximum random jitter added to each backoff delay (0.5s), avoids thundering herd. */
+export const ONBOARD_BACKOFF_JITTER_MS = 500;
+
+/**
+ * Compute the backoff delay for a given attempt (1-indexed).
+ * Exponential growth: base * 2^(attempt-1), capped at ONBOARD_BACKOFF_CAP_MS,
+ * plus random jitter in [0, ONBOARD_BACKOFF_JITTER_MS) to decorrelate concurrent
+ * onboarders (avoids thundering-herd retries hitting the API in lockstep).
+ * Exported for testing; `random` is injectable for deterministic schedules.
+ *
+ * Restored 2026-10-30: upstream merge dropped these 4 exports wholesale.
+ */
+export function onboardBackoffDelay(attempt, random = Math.random) {
+    const exponent = Math.max(0, (attempt || 1) - 1);
+    const exponential = ONBOARD_BACKOFF_BASE_MS * Math.pow(2, exponent);
+    const capped = Math.min(exponential, ONBOARD_BACKOFF_CAP_MS);
+    return capped + Math.floor(random() * ONBOARD_BACKOFF_JITTER_MS);
+}
+
+/**
+ * Sleep for `ms`, resolving early if `signal` is aborted.
+ * Resolves (rather than rejects) on abort - callers re-check signal.aborted.
+ * This keeps the retry loop responsive to connection teardown instead of
+ * sleeping through a fixed delay after the connection is already gone.
+ *
+ * Restored 2026-10-30: upstream merge dropped this helper wholesale.
+ *
+ * @param {number}      ms
+ * @param {AbortSignal} [signal]
+ * @returns {Promise<void>}
+ */
+function abortableSleep(ms, signal) {
+    return new Promise(resolve => {
+        if (signal?.aborted) return resolve();
+        let timerId;
+        const onAbort = () => {
+            clearTimeout(timerId);
+            resolve();
+        };
+        signal?.addEventListener("abort", onAbort, { once: true });
+        timerId = setTimeout(() => {
+            signal?.removeEventListener("abort", onAbort);
+            resolve();
+        }, ms);
+    });
+}
+
 let _cleanupTimer = null;
 
 /** Run one sweep immediately: evict stale cache entries and abort orphaned pending fetches. */
@@ -204,7 +258,6 @@ async function onboardUser(accessToken, tierID, externalSignal, endpoints, provi
     const reqBody = { tierId: tierID, metadata: LOAD_CODE_ASSIST_METADATA };
     const headers = provider === "antigravity" ? ANTIGRAVITY_LOAD_CODE_ASSIST_HEADERS : LOAD_CODE_ASSIST_HEADERS;
     const MAX_ATTEMPTS = Number(process.env.ONBOARD_MAX_ATTEMPTS) || 2;
-    const BASE_RETRY_DELAY_MS = Number(process.env.ONBOARD_RETRY_DELAY_MS) || 12_000;
 
     for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
         // Bail out immediately if the connection was removed
@@ -242,10 +295,11 @@ async function onboardUser(accessToken, tierID, externalSignal, endpoints, provi
                 throw new Error("onboardUser done but no project_id in response");
             }
 
-            // Server not done yet – wait and retry with jitter
-            const jitter = Math.floor(Math.random() * 5000);
-            console.log(`[ProjectId] Onboard attempt ${attempt}/${MAX_ATTEMPTS}: not done yet, waiting...`);
-            await new Promise(resolve => setTimeout(resolve, BASE_RETRY_DELAY_MS + jitter));
+            // Server not done yet – wait and retry with exponential backoff
+            const delayMs = onboardBackoffDelay(attempt);
+            console.log(`[ProjectId] Onboard attempt ${attempt}/${MAX_ATTEMPTS}: not done yet, waiting ${delayMs}ms (exponential backoff)...`);
+            await abortableSleep(delayMs, externalSignal);
+            if (externalSignal?.aborted) return null;
 
         } catch (error) {
             clearTimeout(timeoutId);
@@ -258,10 +312,11 @@ async function onboardUser(accessToken, tierID, externalSignal, endpoints, provi
                 console.warn(`[ProjectId] onboardUser failed after ${MAX_ATTEMPTS} attempts: ${error.message}`);
                 return null;
             }
-            // Wait with jitter before retrying
-            const jitter = Math.floor(Math.random() * 5000);
-            console.warn(`[ProjectId] onboardUser attempt ${attempt} failed: ${error.message}, retrying...`);
-            await new Promise(resolve => setTimeout(resolve, BASE_RETRY_DELAY_MS + jitter));
+            // Exponential backoff before retrying
+            const delayMs = onboardBackoffDelay(attempt);
+            console.warn(`[ProjectId] onboardUser attempt ${attempt} failed: ${error.message}, retrying in ${delayMs}ms (exponential backoff)...`);
+            await abortableSleep(delayMs, externalSignal);
+            if (externalSignal?.aborted) return null;
         } finally {
             clearTimeout(timeoutId);
             externalSignal?.removeEventListener("abort", forwardAbort);
