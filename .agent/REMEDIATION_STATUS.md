@@ -2,8 +2,8 @@
 
 Cross-reference between `.agent/SECURITY_AUDIT_WAVE_674.md` (the audit doc) and the actual codebase state on branch `v5-vscode-works`.
 
-**Last updated:** 2026-10-30 (session 26, commit a796766a — CHANGELOG stale-SHA cleanup; all SHAs are post-filter-repo)
-**Branch:** v5-vscode-works @ a796766a, pushed to `fork` (cdvankammen/9router)
+**Last updated:** 2026-10-30 (session 26, commit cb8cc13c — force-track operational docs; all SHAs are post-filter-repo)
+**Branch:** v5-vscode-works @ cb8cc13c, pushed to `fork` (cdvankammen/9router)
 
 ## How to read this document
 

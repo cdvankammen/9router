@@ -1,6 +1,6 @@
 # Operator Handoff — 2026-10-30
 
-**Branch**: v5-vscode-works @ a796766a — pushed to `fork` (cdvankammen/9router). History was rewritten via `git filter-repo` (stripped 166MB+226MB routing-tree blobs, redacted a Slack webhook placeholder flagged by push protection), so all pre-rewrite SHAs in older docs are stale. The `origin` remote was removed by filter-repo then re-added; `fork` is the push target. Latest commits: a796766a (CHANGELOG stale-SHA fix), ad8bbd1d (worktrees cleanup), 156bbe1f (worktree pointer update).
+**Branch**: v5-vscode-works @ cb8cc13c — pushed to `fork` (cdvankammen/9router). History was rewritten via `git filter-repo` (stripped 166MB+226MB routing-tree blobs, redacted a Slack webhook placeholder flagged by push protection), so all pre-rewrite SHAs in older docs are stale. The `origin` remote was removed by filter-repo then re-added; `fork` is the push target. Latest commits: cb8cc13c (force-track handoff docs), a796766a (CHANGELOG stale-SHA fix), ad8bbd1d (worktrees cleanup).
 **Session**: 26 (security hardening + skill consolidation)
 
 ## What's done (proven)
