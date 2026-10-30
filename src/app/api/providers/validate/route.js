@@ -126,6 +126,7 @@ export async function POST(request) {
         }
         const res = await fetch(modelsUrl, {
           headers: { "Authorization": `Bearer ${apiKey}` },
+          signal: AbortSignal.timeout(8000),
         });
         isValid = res.ok;
         return NextResponse.json({
@@ -150,6 +151,7 @@ export async function POST(request) {
         }
         const modelsRes = await fetch(`${baseUrl}/models`, {
           headers: { "Authorization": `Bearer ${apiKey}` },
+          signal: AbortSignal.timeout(8000),
         });
         if (modelsRes.ok) {
           return NextResponse.json({ valid: true });
@@ -163,6 +165,7 @@ export async function POST(request) {
           method: "POST",
           headers: { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json" },
           body: JSON.stringify({ model: "test", input: "ping" }),
+          signal: AbortSignal.timeout(8000),
         });
         // 401/403 = bad key; anything else (including 400 "model not found") means key works
         isValid = embedRes.status !== 401 && embedRes.status !== 403;
@@ -207,6 +210,7 @@ export async function POST(request) {
             max_tokens: 1,
             messages: [{ role: "user", content: "test" }],
           }),
+          signal: AbortSignal.timeout(8000),
         });
 
         // 400/529 still confirms key accepted; only 401/403 = bad key
@@ -232,6 +236,7 @@ export async function POST(request) {
             messages: [{ role: "user", content: "test" }],
             max_tokens: 1,
           }),
+          signal: AbortSignal.timeout(8000),
         });
         isValid = cfRes.status !== 401 && cfRes.status !== 403 && cfRes.status !== 404;
         return NextResponse.json({
@@ -261,6 +266,7 @@ export async function POST(request) {
             messages: [{ role: "user", content: "test" }],
             max_tokens: 1,
           }),
+          signal: AbortSignal.timeout(8000),
         });
         isValid = azureRes.status !== 401 && azureRes.status !== 403;
         return NextResponse.json({
@@ -297,6 +303,7 @@ export async function POST(request) {
         case "openai":
           const openaiRes = await fetch("https://api.openai.com/v1/models", {
             headers: { "Authorization": `Bearer ${apiKey}` },
+            signal: AbortSignal.timeout(8000),
           });
           isValid = openaiRes.ok;
           break;
@@ -304,6 +311,7 @@ export async function POST(request) {
         case "vercel-ai-gateway":
           const vercelAiGatewayRes = await fetch("https://ai-gateway.vercel.sh/v1/models", {
             headers: { "Authorization": `Bearer ${apiKey}` },
+            signal: AbortSignal.timeout(8000),
           });
           isValid = vercelAiGatewayRes.ok;
           break;
@@ -321,18 +329,20 @@ export async function POST(request) {
               max_tokens: 1,
               messages: [{ role: "user", content: "test" }],
             }),
+            signal: AbortSignal.timeout(8000),
           });
           isValid = anthropicRes.status !== 401;
           break;
 
         case "gemini":
-          const geminiRes = await fetch(`https://generativelanguage.googleapis.com/v1/models?key=${apiKey}`);
+          const geminiRes = await fetch(`https://generativelanguage.googleapis.com/v1/models?key=${apiKey}`, { signal: AbortSignal.timeout(8000) });
           isValid = geminiRes.ok;
           break;
 
         case "openrouter":
           const openrouterRes = await fetch("https://openrouter.ai/api/v1/models", {
             headers: { "Authorization": `Bearer ${apiKey}` },
+            signal: AbortSignal.timeout(8000),
           });
           isValid = openrouterRes.ok;
           break;
@@ -369,6 +379,7 @@ export async function POST(request) {
               method: "POST",
               headers: { "Authorization": `Bearer ${apiKey}`, "content-type": "application/json" },
               body: JSON.stringify({ model: testModel, max_tokens: 1, messages: [{ role: "user", content: "test" }] }),
+              signal: AbortSignal.timeout(8000),
             });
             isValid = res.status !== 401 && res.status !== 403;
           } else {
@@ -382,6 +393,7 @@ export async function POST(request) {
                 ...(cfg.headers || {}),
               },
               body: JSON.stringify({ model: testModel, max_tokens: 1, messages: [{ role: "user", content: "test" }] }),
+              signal: AbortSignal.timeout(8000),
             });
             // 400 = model resolution error but auth passed (e.g. agentrouter "no available channel")
             isValid = res.status !== 401 && res.status !== 403;
@@ -401,6 +413,7 @@ export async function POST(request) {
               max_tokens: 1,
               messages: [{ role: "user", content: "test" }],
             }),
+            signal: AbortSignal.timeout(8000),
           });
           isValid = res.status !== 401 && res.status !== 403;
           break;
@@ -460,6 +473,7 @@ export async function POST(request) {
               max_tokens: 1,
               stream: false,
             }),
+            signal: AbortSignal.timeout(8000),
           });
           isValid = res.status !== 401 && res.status !== 403;
           break;
@@ -477,6 +491,7 @@ export async function POST(request) {
             method: "POST",
             headers: buildCommandCodeHeaders({ apiKey, sessionId: payload.threadId }),
             body: JSON.stringify(payload),
+            signal: AbortSignal.timeout(8000),
           });
           isValid = res.status !== 401 && res.status !== 403;
           break;
@@ -485,6 +500,7 @@ export async function POST(request) {
         case "deepgram": {
           const res = await fetch("https://api.deepgram.com/v1/projects", {
             headers: { "Authorization": `Token ${apiKey}` },
+            signal: AbortSignal.timeout(8000),
           });
           isValid = res.ok;
           break;
@@ -502,6 +518,7 @@ export async function POST(request) {
               messages: [{ role: "user", content: "test" }],
               max_tokens: 10,
             }),
+            signal: AbortSignal.timeout(8000),
           });
           // Returns 401 for invalid key, 200 for valid, 400 for malformed
           isValid = res.status === 200 || res.status === 400;
@@ -519,7 +536,7 @@ export async function POST(request) {
             // Raw key: probe Vertex — 404 means key is valid (model just doesn't exist), 401 means invalid key
             const probeRes = await fetch(
               `https://aiplatform.googleapis.com/v1/publishers/google/models/__probe__:generateContent?key=${apiKey}`,
-              { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" }
+              { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}", signal: AbortSignal.timeout(8000) }
             );
             isValid = probeRes.status !== 401 && probeRes.status !== 403;
           }
@@ -533,7 +550,7 @@ export async function POST(request) {
           } else {
             const probeRes = await fetch(
               `https://aiplatform.googleapis.com/v1/publishers/google/models/__probe__:generateContent?key=${apiKey}`,
-              { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" }
+              { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}", signal: AbortSignal.timeout(8000) }
             );
             isValid = probeRes.status !== 401 && probeRes.status !== 403;
           }
@@ -553,6 +570,7 @@ export async function POST(request) {
           const spanId = randomHex(8);
           const res = await fetch("https://grok.com/rest/app-chat/conversations/new", {
             method: "POST",
+            signal: AbortSignal.timeout(8000),
             headers: {
               Accept: "*/*",
               "Accept-Encoding": "gzip, deflate, br, zstd",
@@ -602,6 +620,7 @@ export async function POST(request) {
           const tz = typeof Intl !== "undefined" ? Intl.DateTimeFormat().resolvedOptions().timeZone : "UTC";
           const res = await fetch("https://www.perplexity.ai/rest/sse/perplexity_ask", {
             method: "POST",
+            signal: AbortSignal.timeout(8000),
             headers: {
               "Content-Type": "application/json",
               Accept: "text/event-stream",

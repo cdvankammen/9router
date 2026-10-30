@@ -10,11 +10,20 @@
 
 import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from "vitest";
 import { readFileSync } from "fs";
-import { join } from "path";
+import { dirname, join } from "path";
+import { fileURLToPath } from "url";
 
+const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROUTE_PATH = join(
-  process.cwd(),
-  "src/app/api/providers/validate/route.js"
+  __dirname,
+  "..",
+  "..",
+  "src",
+  "app",
+  "api",
+  "providers",
+  "validate",
+  "route.js"
 );
 
 describe("Provider Validation - AbortSignal.timeout coverage", () => {
