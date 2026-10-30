@@ -172,3 +172,22 @@ These findings from the audit doc have no SECURITY annotation or fix commit on t
 3. Read the actual file and look for the defense
 4. Run the relevant test: `cd tests && npx vitest run unit/<finding-name>.test.js`
 
+
+## Rebase campaign round 3 (2026-10-30)
+
+Merge commit 2f8b50ee wholesale-dropped 6 more modules beyond rounds 1-2.
+All restored via 3-stage protocol (see docs/plans-and-prompts/rebase-campaign-oct30/02-conflict-mapping.md).
+
+**Verbatim restorations:**
+- src/lib/db/schema.js (message_facets, conversationId, SCHEMA_VERSION=8)
+- src/lib/db/migrations/index.js (full m001..m008 registry + validation)
+- src/app/api/shutdown/route.js (CLI-token + JWT dual auth)
+- src/lib/auth/oidc.js (validateOidcConfigForSave)
+- open-sse/utils/clientDetector.js (trusted x-9r-* headers + 7 more client detections)
+- src/lib/db/repos/settingsRepo.js (boardColumns + MAP_REPLACE_KEYS + deepMergeNested)
+
+**Surgical patches:**
+- open-sse/handlers/chatCore.js: ALLOWED_HEADER_KEYS (Finding 305)
+- open-sse/providers/shared.js: ANTHROPIC_BETA_WHITELIST (Finding 306)
+
+**Cumulative rebase-repair impact:** 441 -> TBD failures across 3 rounds.

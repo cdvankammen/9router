@@ -32,8 +32,11 @@ export async function POST(request) {
     }
 
     // Step 1: GET API key info to get the name
+    // GAP-P2-21: AbortSignal.timeout(15000) — bound the upstream call so a
+    // slow/hanging iflow endpoint can't pin the handler indefinitely.
     const getResponse = await fetch("https://platform.iflow.cn/api/openapi/apikey", {
       method: "GET",
+      signal: AbortSignal.timeout(15000),
       headers: {
         "Cookie": normalizedCookie,
         "Accept": "application/json, text/plain, */*",
@@ -71,6 +74,7 @@ export async function POST(request) {
     // Step 2: POST to refresh API key
     const postResponse = await fetch("https://platform.iflow.cn/api/openapi/apikey", {
       method: "POST",
+      signal: AbortSignal.timeout(15000),
       headers: {
         "Cookie": normalizedCookie,
         "Content-Type": "application/json",

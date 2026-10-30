@@ -65,15 +65,24 @@ const migration = {
         [lastId, BATCH]
       );
       if (!rows.length) break;
-      const update = db.prepare(`UPDATE usageHistory SET apiKey = ?, apiKeyHash = ? WHERE id = ?`);
-      const tx = db.transaction((batch) => {
-        for (const row of batch) {
-          const hash = hashApiKey(row.apiKey);
-          const encrypted = encryptToken(row.apiKey);
-          if (encrypted) update.run(encrypted, hash, row.id);
+      // Adapter-portable batch update: use db.run() (adapter-level API) for
+      // each row. The node:sqlite adapter's transaction() is synchronous (calls
+      // fn() immediately, returns its result, not a wrapper), so the
+      // better-sqlite3 pattern of `const tx = db.transaction(fn); tx(args)`
+      // does not work here. Each UPDATE is atomic; the migration is idempotent
+      // (re-runs skip rows already starting with "enc:v1:"), so partial batch
+      // completion is safe.
+      for (const row of rows) {
+        const hash = hashApiKey(row.apiKey);
+        const encrypted = encryptToken(row.apiKey);
+        if (encrypted) {
+          try {
+            db.run(`UPDATE usageHistory SET apiKey = ?, apiKeyHash = ? WHERE id = ?`, [encrypted, hash, row.id]);
+          } catch (e) {
+            console.warn(`[migration 008] row ${row.id} encrypt failed: ${e?.message || e}`);
+          }
         }
-      });
-      tx(rows);
+      }
       transformed += rows.length;
       lastId = rows[rows.length - 1].id;
       if (rows.length < BATCH) break;
