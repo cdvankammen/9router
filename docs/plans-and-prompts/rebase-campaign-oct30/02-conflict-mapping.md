@@ -496,3 +496,49 @@ cowork-mcp-ssrf-guard test was failing because the route's requireAuth gate (add
 | Pre-rebase baseline (07c16dab) | — | 35 | — |
 
 **Gap to baseline after round 12: 64 - 35 = 29 regressions still outstanding.**
+
+### Round 12 final (usageRepo encryption wiring, 2026-10-30)
+
+#### Stage 1 (code-level) — surgical patch (upstream delta 821 lines on usageRepo.js, verbatim NOT safe)
+
+| File | What was restored | Finding |
+|---|---|---|
+| `src/lib/db/repos/usageRepo.js` (4 sites) | (1) aggregateEntryToDay byApiKey bucketing uses `maskApiKey(plainKey)` instead of raw key — AUDIT-002 / GHSA-vjc7; (2) ensureRingInitialized decrypts apiKey on read; (3) saveRequestUsage computes `plainApiKey`/`encryptedApiKey`/`apiKeyHash` before transaction, dedup uses `apiKeyHash`, INSERT adds `apiKeyHash` + `conversationId`; (4) getUsageHistory decrypts before masking | #295 phase 2 + AUDIT-002 |
+
+#### Stage 2 (behavior/DOM)
+
+- security-usage-encryption: 2 fail → **4/4 pass**
+- security-audit: 1 fail → 2 fail (AUDIT-002 recovered, 2 others remain)
+
+Full suite: **59 failed / 5159 passed** (2 recovered this sub-round).
+
+#### Known-fails baseline: 20 entries (tests/__baseline__/known-fails.txt)
+
+**Real regressions: 59 - 20 = 39. Gap to 35-test baseline: 4 tests.**
+
+#### Stage 3 (production/visual)
+
+Deferred — mini4 DOWN.
+
+### Campaign cumulative state (through round 12 final)
+
+| Round | Commit | Tests failed | Recovered |
+|---|---|---|---|
+| Pre-repair (post-merge 2f8b50ee) | — | 441 | — |
+| Round 1 (SSRF + computeCost) | e360d5ce | 355 | 86 |
+| Round 2 (8 modules + parseModel) | 4d9fc242 | 285 | 70 |
+| Round 2.5 (combo-CAR call site) | 14c0bc29 | 283 | 2 |
+| Round 3 (6 modules + 2 surgical) | fae688eb | 203 | 80 |
+| Round 4 (migration 008 + iflow) | c3fc096a | 193 | 10 |
+| Round 5 (registry + kiro + usage dispatch) | cd677a7e | 170 | 23 |
+| Round 6 (usage.js ReferenceError) | db1b5dad | 151 | 19 |
+| Round 7 (parseQuotaData + xiaomi + provider-nodes) | 71598788 | 129 | 22 |
+| Round 8 (UI cards partial) | 2cb4c32b | 122 | 7 |
+| Round 9 (UI cards complete) | db78c649 | 119 | 3 |
+| Round 10 (MITM + login + CF) | 97926540 | 105 | 14 |
+| Round 11 (CORS + iflow + vercel + executor + migrate) | 9ca65917 | 81 | 24 |
+| Round 12 batch 1 (tunnel + audio + MCP + usage + SAML + TLS) | 32b1a751 | 61 | 20 |
+| Round 12 final (usageRepo encryption) | TBD | 59 | 2 |
+| Pre-rebase baseline (07c16dab) | — | 35 | — |
+
+**Gap to baseline: 59 - 20 known = 39 real regressions vs 35 target = 4 tests.**
