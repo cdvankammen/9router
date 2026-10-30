@@ -126,7 +126,16 @@ export async function importDb(payload) {
 
     // Settings
     if (payload.settings) {
-      db.run(`INSERT INTO settings(id, data) VALUES(1, ?) ON CONFLICT(id) DO UPDATE SET data = excluded.data`, [stringifyJson(payload.settings)]);
+      // SECURITY (Finding #317 / exfil chain #9): strip PROTECTED_SETTING_KEYS
+      // before writing. A crafted backup can smuggle `password`,
+      // `mitmSudoEncrypted`, or any future protected key past the route-layer
+      // defense (src/app/api/settings/route.js). Defense-in-depth at the db
+      // layer closes the import-side bypass. Mirrors the keys list at
+      // src/app/api/settings/route.js:20 — keep in sync.
+      const IMPORT_PROTECTED_KEYS = ["password", "mitmSudoEncrypted"];
+      const cleaned = { ...payload.settings };
+      for (const key of IMPORT_PROTECTED_KEYS) delete cleaned[key];
+      db.run(`INSERT INTO settings(id, data) VALUES(1, ?) ON CONFLICT(id) DO UPDATE SET data = excluded.data`, [stringifyJson(cleaned)]);
     }
 
     for (const c of payload.providerConnections || []) {
