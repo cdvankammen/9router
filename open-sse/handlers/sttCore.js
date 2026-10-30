@@ -111,10 +111,18 @@ async function transcribeGemini(cfg, file, model, token, formData) {
     : "Generate a transcript of the speech. Return only the transcribed text, no commentary.";
   if (typeof lang === "string" && lang.trim()) promptText += ` Language: ${lang.trim()}.`;
 
-  const url = `${cfg.baseUrl}/${model}:generateContent?key=${token}`;
+  // SECURITY (#291): pass the Gemini API key via header, not URL query string.
+  // URL query strings are logged by proxies, CDNs, server access logs, and
+  // browser history (CWE-598). Gemini accepts x-goog-api-key as an alternative
+  // to ?key= for REST calls. WebSocket transports (geminiLiveStt.js) still
+  // require ?key= because the WS upgrade handshake has no header channel.
+  const url = `${cfg.baseUrl}/${model}:generateContent`;
   const res = await fetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      "x-goog-api-key": token,
+    },
     body: JSON.stringify({
       contents: [{ parts: [{ text: promptText }, { inline_data: { mime_type: mime, data: b64 } }] }],
     }),
