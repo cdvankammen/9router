@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import crypto from "node:crypto";
 import { createProviderConnection } from "@/models";
 
 /**
@@ -62,10 +63,19 @@ export async function POST(request) {
     // Dedup: same uid, same key, or same session identity+region
     const { getProviderConnections, updateProviderConnection } = await import("@/models");
     const normRegion = (typeof region === "string" && region) || undefined;
+    // SECURITY (Finding #323): timing-safe comparison for stored API key.
+    // Plain === on secrets leaks match length via timing side-channel.
+    const safeKeyMatch = (stored, candidate) => {
+      if (!stored || !candidate) return false;
+      const a = Buffer.from(String(stored), "utf8");
+      const b = Buffer.from(String(candidate), "utf8");
+      if (a.length !== b.length) return false;
+      return crypto.timingSafeEqual(a, b);
+    };
     const existing = (await getProviderConnections()).find(
       (c) => c.provider === "xiaomi-mimo" && (
         (uid && c.email === `${uid}@xiaomi`) ||
-        (key && c.accessToken === key) ||
+        (key && safeKeyMatch(c.accessToken, key)) ||
         (sessionOnly && mimoUserId &&
           c.providerSpecificData?.mimoUserId === mimoUserId &&
           (normRegion ? (c.providerSpecificData?.region || "cn") === normRegion : true))
