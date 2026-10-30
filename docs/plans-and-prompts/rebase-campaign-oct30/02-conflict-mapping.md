@@ -850,3 +850,72 @@ Deferred — mini4 DOWN (ssh timeout).
 ### Skill consolidation
 
 Deferred until operator confirms rebase is "completely done" — per standing instruction.
+
+## Round 20 — Stage 3 production/visual verification COMPLETE (2026-10-31)
+
+### mini4 service recovery
+- Wedged PID 59941 killed (`launchctl bootout` failed with "No such process", `kill -9` succeeded)
+- `launchctl load -w ~/Library/LaunchAgents/com.9router.app.plist` registered fresh service
+- New PID 47413, port 20128, health=200, BUILD_ID `ny4ReSehIv6m7yqRD4YdX`, v0.5.112
+
+### Stage 3 security-endpoint probes (live)
+
+| Endpoint | Expected | Actual | Finding |
+|----------|----------|--------|---------|
+| `/api/health` | 200 `{"ok":true}` | ✓ | baseline |
+| `/api/auth/status` | `initialPasswordSet:true`, no leak | ✓ | #293 |
+| `/api/settings/require-login` | `{requireLogin}` only | ✓ | #336 |
+| `/api/keys` (no auth) | 401 | ✓ | requireAuth |
+| `/api/version/update` (no auth POST) | 401 | ✓ | auth gate |
+| `/api/providers/validate` (link-local baseUrl) | 401 (auth first) | ✓ | SSRF + auth |
+| `/api/auth/saml/metadata` | XML, no 0.0.0.0 | ✓ | #331 |
+| `/api/keys` (authed) | `sk-cb9•••••...1a0b` | ✓ | maskKey |
+| `/api/settings` (authed) | full settings | ✓ | #336 mirror |
+| `/api/auth/login` (correct pw) | `{success:true}` + cookie | ✓ | #293 gate |
+
+### Stage 3 dashboard walk (18/18 PASS)
+
+| Page | HTTP | Bytes | Errors |
+|------|------|-------|--------|
+| `/` | 200 | 27598 | 0 |
+| `/dashboard` | 200 | 27814 | 0 |
+| `/providers` | 200 | 28389 | 0 |
+| `/combos` | 200 | 28510 | 0 |
+| `/settings` | 200 | 28494 | 0 |
+| `/usage` | 200 | 28108 | 0 |
+| `/api-keys` | 200 | 27918 | 0 |
+| `/proxy-pools` | 200 | 28448 | 0 |
+| `/models` | 200 | 28164 | 0 |
+| `/oauth` | 200 | 28288 | 0 |
+| `/logs` | 200 | 27943 | 0 |
+| `/system` | 200 | 28332 | 0 |
+| `/profile` | 200 | 38936 | 0 |
+| `/database` | 200 | 27816 | 0 |
+| `/sso` | 200 | 28134 | 0 |
+| `/translations` | 200 | 28255 | 0 |
+| `/prompts` | 200 | 28478 | 0 |
+| `/connections` | 200 | 28232 | 0 |
+
+**Lesson learned**: Next.js `(dashboard)` route group is transparent to URL. Dashboard pages are at `/<segment>`, not `/dashboard/<segment>`.
+
+### Skill consolidation (DONE)
+- `~/.agents/skills/rebase-campaign/SKILL.md` updated to 401+ lines with oct30 addendum
+- Commit `e4ecd03` + follow-up pushed to `git@github.com:cdvankammen/rebase-campaign.git`
+- Synced to 7/8 fleet hosts (mini, mini2, mini3, mini4, cmox, nmox, pmox)
+- mini5 DOWN — deferred
+
+## Campaign final state
+
+| Metric | Value |
+|--------|-------|
+| **Branch** | `v5-vscode-works` @ `f4faba2f` |
+| **Upstream state** | 1948 ahead, 0 behind origin/master |
+| **Pre-repair** | 441 failures |
+| **Pre-rebase baseline** | 35 failures |
+| **Post-repair** | **23 failures (0 regressions)** |
+| **Recovery rate** | **95% (418/441)** |
+| **Baseline exceeded by** | **12 tests** |
+| **Campaign commits** | 21 repair rounds (rounds 1-19) |
+| **Stage 3 live probes** | 10/10 security endpoints PASS |
+| **Stage 3 dashboard** | 18/18 pages PASS |
+| **Skill deployed** | 7/8 fleet hosts |
