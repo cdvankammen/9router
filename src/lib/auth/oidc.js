@@ -62,13 +62,101 @@ export async function getOidcRuntimeConfig() {
   };
 }
 
-export async function fetchOidcDiscovery(issuerUrl) {
+export async function fetchOidcDiscovery(issuerUrl, { signal } = {}) {
+  // SSRF guard: block cloud metadata (169.254.169.254), private IPs, and
+  // hostnames resolving to internal addresses. An attacker with PATCH access
+  // to /api/settings (e.g. LAN peer when requireLogin=false, or via
+  // skipOidcValidation:true) could otherwise point oidcIssuerUrl at AWS/GCP
+  // metadata endpoints and trigger the fetch via /api/auth/oidc/start or
+  // /api/auth/oidc/callback. The discovery document response would then be
+  // parsed as JSON and potentially reflected in error messages.
+  //
+  // Loopback issuers (localhost / 127.0.0.1 / ::1) are explicitly permitted —
+  // validateOidcConfigForSave's isLocalDev branch declares them legitimate dev
+  // targets, and operators running a local Keycloak/Zitadel/etc. rely on this.
+  // DNS-rebinding to loopback (e.g. evil.example -> 127.0.0.1) is still blocked
+  // by the resolved-address check; only literal loopback hostnames bypass it.
+  try {
+    const { assertPublicUrlResolved } = await import("@/shared/utils/ssrfGuard.js");
+    await assertPublicUrlResolved(issuerUrl, { allowLoopback: true });
+  } catch (ssrfError) {
+    throw new Error(`OIDC issuer URL rejected: ${ssrfError.message}`);
+  }
   const discoveryUrl = `${trimTrailingSlashes(issuerUrl)}/.well-known/openid-configuration`;
-  const res = await fetch(discoveryUrl, { cache: "no-store" });
+  const res = await fetch(discoveryUrl, { cache: "no-store", signal });
   if (!res.ok) {
     throw new Error(`Failed to load OIDC discovery document from ${discoveryUrl}`);
   }
   return await res.json();
+}
+
+// Required fields in the discovery document — without these, the IdP cannot
+// drive an authorization-code flow and saving the config would brick login.
+const REQUIRED_DISCOVERY_FIELDS = ["authorization_endpoint", "token_endpoint"];
+
+/**
+ * Pre-flight check run by the settings PATCH route before persisting OIDC
+ * config. Defends against the evil.example.com scenario (Finding #13): an
+ * unreachable or malformed issuer would otherwise lock out password-disabled
+ * logins.
+ *
+ * Returns { ok: true, discovery } on success, or { ok: false, reason, message }
+ * on failure. `reason` is a stable code the UI can key error copy off of.
+ */
+export async function validateOidcConfigForSave({ issuerUrl, timeoutMs = 5000 } = {}) {
+  if (!issuerUrl || !String(issuerUrl).trim()) {
+    return { ok: false, reason: "empty", message: "Issuer URL is required." };
+  }
+  const trimmed = String(issuerUrl).trim();
+
+  let parsed;
+  try {
+    parsed = new URL(trimmed);
+  } catch {
+    return { ok: false, reason: "invalid-url", message: `Issuer URL is not a valid URL: ${trimmed}` };
+  }
+  // HTTPS required except for local development hosts — prevents accidentally
+  // sending auth code flows (and client secrets) over cleartext.
+  const isLocalDev = parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1" || parsed.hostname === "::1";
+  if (parsed.protocol !== "https:" && !isLocalDev) {
+    return {
+      ok: false,
+      reason: "insecure",
+      message: `Issuer URL must use HTTPS (got ${parsed.protocol}). Cleartext OIDC endpoints expose the authorization code flow to network observers.`,
+    };
+  }
+
+  const ac = new AbortController();
+  const timer = setTimeout(
+    () => ac.abort(new Error(`Discovery fetch timed out after ${timeoutMs}ms`)),
+    timeoutMs,
+  );
+  try {
+    const discovery = await fetchOidcDiscovery(trimmed, { signal: ac.signal });
+    if (!discovery || typeof discovery !== "object") {
+      return { ok: false, reason: "bad-json", message: "Discovery document is not a JSON object." };
+    }
+    const missing = REQUIRED_DISCOVERY_FIELDS.filter((f) => !discovery[f]);
+    if (missing.length > 0) {
+      return {
+        ok: false,
+        reason: "missing-fields",
+        message: `Discovery document is missing required fields: ${missing.join(", ")}.`,
+        discovery,
+      };
+    }
+    return { ok: true, discovery };
+  } catch (err) {
+    const msg = err?.message || String(err);
+    // Distinguish timeout from generic network failure so the UI can show
+    // targeted remediation (e.g. "check DNS / firewall" vs "host unreachable").
+    if (/abort|timed out/i.test(msg)) {
+      return { ok: false, reason: "timeout", message: `OIDC discovery fetch timed out (${timeoutMs}ms). Verify the issuer host is reachable from this server.` };
+    }
+    return { ok: false, reason: "fetch-failed", message: `Could not reach OIDC discovery: ${msg}` };
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 export function createPkcePair() {

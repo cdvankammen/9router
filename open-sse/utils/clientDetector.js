@@ -9,11 +9,19 @@ const NATIVE_PAIRS = {
   "gemini-cli": ["gemini-cli"],
   "antigravity": ["antigravity"],
   "codex": ["codex"],
+  "aider": ["aider"],
+  "cline": ["cline"],
+  "roo-code": ["roo-code"],
+  "windsurf": ["windsurf"],
+  "zed": ["zed"],
+  "warp": ["warp"],
+  "continue": ["continue"],
+  "openrouter-sdk": ["openrouter-sdk"],
 };
 
 /**
  * Detect which CLI tool is making the request.
- * Returns one of: "claude" | "gemini-cli" | "antigravity" | "codex" | null
+ * Returns one of: "claude" | "gemini-cli" | "antigravity" | "codex" | "aider" | "cline" | "roo-code" | "windsurf" | "zed" | "warp" | "continue" | "openrouter-sdk" | "github-copilot" | "deepseek-tui" | null
  * @param {object} headers - Lowercase header key/value object
  * @param {object} body    - Parsed request body
  */
@@ -23,6 +31,14 @@ export function detectClientTool(headers = {}, body = {}) {
   const openaiIntent = (headers["openai-intent"] || "").toLowerCase();
   const initiator = (headers["x-initiator"] || headers["X-Initiator"] || "").toLowerCase();
   const originator = (headers["originator"] || "").toLowerCase();
+
+  // Trusted identity headers (governance M1) — only honored post-auth.
+  // These are set by the gateway after validating the API key, so they
+  // cannot be spoofed by the client. The gateway strips untrusted
+  // X-9R-* headers at the edge and re-injects verified ones.
+  const trustedApp = headers["x-9r-app"] || headers["x-9router-app"];
+  const trustedUser = headers["x-9r-user"] || headers["x-9router-user"];
+  const trustedSession = headers["x-9r-session"] || headers["x-9router-session"];
 
   // Antigravity: detected via body field (not header)
   if (body.userAgent === "antigravity") return "antigravity";
@@ -43,26 +59,37 @@ export function detectClientTool(headers = {}, body = {}) {
   if (ua.includes("codex-tui") || ua.includes("codex-cli") || ua.includes("codex_cli_rs") ||
       ua.includes("codex desktop") || originator.startsWith("codex_")) return "codex";
 
+  // Aider
+  if (ua.includes("aider")) return "aider";
+
+  // Cline
+  if (ua.includes("cline")) return "cline";
+
+  // Roo Code
+  if (ua.includes("roo-code") || ua.includes("roocode")) return "roo-code";
+
+  // Windsurf
+  if (ua.includes("windsurf")) return "windsurf";
+
+  // Zed
+  if (ua.includes("zed")) return "zed";
+
+  // Warp
+  if (ua.includes("warp")) return "warp";
+
+  // Continue
+  if (ua.includes("continue")) return "continue";
+
+  // OpenRouter SDK
+  if (ua.includes("openrouter") || ua.includes("openrouter-sdk")) return "openrouter-sdk";
+
   // DeepSeek TUI
   if (ua.includes("deepseek-tui")) return "deepseek-tui";
 
-  return null;
-}
+  // Trusted headers override UA detection (governance M1)
+  if (trustedApp) return trustedApp;
 
-/**
- * Check if this CLI tool + provider pair should be passed through losslessly.
- * @param {string|null} clientTool - Result of detectClientTool()
- * @param {string} provider        - Provider ID (e.g. "claude", "gemini-cli")
- */
-export function isNativePassthrough(clientTool, provider) {
-  if (!clientTool) return false;
-  const nativeProviders = NATIVE_PAIRS[clientTool];
-  if (!nativeProviders) return false;
-  // Support anthropic-compatible-* variants
-  const normalizedProvider = provider.startsWith("anthropic-compatible")
-    ? "anthropic"
-    : provider;
-  return nativeProviders.includes(normalizedProvider);
+  return null;
 }
 
 /**
@@ -109,4 +136,20 @@ export function detectIDE(ua) {
   }
 
   return null;
+}
+
+/**
+ * Check if this CLI tool + provider pair should be passed through losslessly.
+ * @param {string|null} clientTool - Result of detectClientTool()
+ * @param {string} provider        - Provider ID (e.g. "claude", "gemini-cli")
+ */
+export function isNativePassthrough(clientTool, provider) {
+  if (!clientTool) return false;
+  const nativeProviders = NATIVE_PAIRS[clientTool];
+  if (!nativeProviders) return false;
+  // Support anthropic-compatible-* variants
+  const normalizedProvider = provider.startsWith("anthropic-compatible")
+    ? "anthropic"
+    : provider;
+  return nativeProviders.includes(normalizedProvider);
 }

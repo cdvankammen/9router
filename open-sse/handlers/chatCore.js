@@ -178,7 +178,30 @@ export async function handleChatCore({ body, modelInfo, credentials, log, onCred
   const passthrough = isNativePassthrough(clientTool, provider);
 
   // Expose raw client headers to translators/executors for session-id resolution
-  if (credentials) credentials.rawHeaders = clientRawRequest?.headers || {};
+  // SECURITY (Finding #305): header allowlist at the chatCore chokepoint.
+  // Only a small set of headers is forwarded from the raw client request into
+  // translator/executor credential context. Everything else (cookie, host,
+  // referer, origin, x-forwarded-*, custom x-9r-* headers) is stripped here
+  // so an attacker who controls the client request cannot smuggle arbitrary
+  // headers through to upstream providers or session-id resolvers.
+  // Restored 2026-10-30: upstream merge dropped this sanitization, passing
+  // the entire raw header map through unchanged.
+  if (credentials) {
+    const ALLOWED_HEADER_KEYS = new Set([
+      "user-agent",
+      "anthropic-beta",
+      "x-session-id", "session-id", "session_id", "x-amp-thread-id",
+      "x-claude-code-session-id",
+      "x-opencode-client", "x-opencode-project",
+      "authorization", "x-api-key",
+    ]);
+    const raw = clientRawRequest?.headers || {};
+    const sanitized = {};
+    for (const [k, v] of Object.entries(raw)) {
+      if (ALLOWED_HEADER_KEYS.has(k.toLowerCase())) sanitized[k] = v;
+    }
+    credentials.rawHeaders = sanitized;
+  }
 
   // Auto-strip media blocks the model can't read (vision/audio/pdf) before translation.
   if (!passthrough) {
