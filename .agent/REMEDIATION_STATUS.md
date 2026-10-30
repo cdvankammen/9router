@@ -6,7 +6,16 @@ Cross-reference between `.agent/SECURITY_AUDIT_WAVE_674.md` (the audit doc) and 
 **Branch:** v5-vscode-works @ 94f38245, pushed to `fork` (cdvankammen/9router)
 **mini4 production:** BUILD_ID `ny4ReSehIv6m7yqRD4YdX` (last successful deploy); host was down at session end — round-5 deploy (9260bcf7 + ff33ec14 + bec11852) queued for when mini4 returns.
 
-**Session 26 rounds 4-5 (commits 9260bcf7, bfdb843b, ff33ec14, bec11852):** 3 server-side silent-catch fixes + anthropic-gateway-passthrough test fix + 4 test-file hardening fixes. All pushed to fork; mini4 redeploy pending host availability.
+**Session 26 rounds 4-6 (commits 9260bcf7, bfdb843b, ff33ec14, bec11852, plus round-6 tailscale bin-cache fix):** 3 server-side silent-catch fixes + anthropic-gateway-passthrough test fix + 4 test-file hardening fixes + GAP-P2-15 extension to tailscale `bgRefreshBin()`. All pushed to fork; mini4 redeploy pending host availability.
+
+## GAP-P2-17 — cli-tools `which <tool>` cluster (open, follow-up)
+
+18 routes under `src/app/api/cli-tools/*/route.js` use `execAsync("which <tool>")` (or `where <tool>` on Windows) to detect CLI installs, spreading `process.env` or `process.env.PATH` into the child env. Same PATH-injection class as GAP-P2-15 (brew) and the tailscale `bgRefreshBin()` fix. Catalogued, not yet remediated — the cluster should be fixed as one pass with a shared `cliBinProbe()` helper that does filesystem-only candidate probing.
+
+Affected routes:
+`claude-settings`, `cline-settings`, `codewhale-settings`, `codex-settings`, `crush-settings`, `devin-settings`, `droid-settings`, `forge-settings`, `hermes-settings`, `jcode-settings`, `kilo-settings`, `omp-settings`, `openclaw-settings`, `opencode-settings`, `pi-settings`, `smelt-settings`, `deepseek-tui-settings`, `grok-build-settings` (already fixed — GAP-P2-16, 94f38245).
+
+`devin-settings` already has a filesystem-only `candidateDevinPaths()` fallback; the other 16 routes need the same treatment, with the `which` call removed entirely.
 **Test suite:** 35 failed / 5203 passed / 14 expected fail / 98 skipped (was 63/5151 at session start = 28 fewer failures, 52 more passing; all 35 remaining are catalogued in `tests/__baseline__/known-fails.txt`)
 
 ## Commits this session (cherry-picked from unmerged branches + original fixes)
