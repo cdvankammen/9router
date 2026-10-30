@@ -3,6 +3,12 @@ import { getAdapter } from "./driver.js";
 import { stringifyJson, parseJson } from "./helpers/jsonCol.js";
 import { keyAccessFromColumns, keyAccessToColumns, validateKeyAccessInput } from "@/shared/utils/keyAccess.js";
 import { KEY_ACCESS_UNRESTRICTED } from "@/shared/constants/keyAccess.js";
+// SECURITY (Finding #295): apiKeys.key is encrypted at rest. Import statically
+// so we can (a) re-encrypt on importDb inside a sync transaction and
+// (b) decrypt on exportDb so backups stay portable across machines
+// (the encryption key is derived from machine-id; a backup restored on a
+// different host must contain plaintext so that host can re-encrypt).
+import { encryptToken, decryptToken, hashApiKey } from "./tokenEncryption.js";
 
 // Settings
 export {
@@ -92,7 +98,20 @@ export async function exportDb() {
     providerConnections: db.all(`SELECT * FROM providerConnections`).map((r) => ({ ...parseJson(r.data, {}), id: r.id, provider: r.provider, authType: r.authType, name: r.name, email: r.email, priority: r.priority, isActive: r.isActive === 1, createdAt: r.createdAt, updatedAt: r.updatedAt })),
     providerNodes: db.all(`SELECT * FROM providerNodes`).map((r) => ({ ...parseJson(r.data, {}), id: r.id, type: r.type, name: r.name, createdAt: r.createdAt, updatedAt: r.updatedAt })),
     proxyPools: db.all(`SELECT * FROM proxyPools`).map((r) => ({ ...parseJson(r.data, {}), id: r.id, isActive: r.isActive === 1, testStatus: r.testStatus, createdAt: r.createdAt, updatedAt: r.updatedAt })),
-    apiKeys: db.all(`SELECT * FROM apiKeys`).map((r) => ({ id: r.id, key: r.key, name: r.name, machineId: r.machineId, isActive: r.isActive === 1, createdAt: r.createdAt, access: keyAccessFromColumns(r.accessRestricted, r.accessAllow) })),
+    // SECURITY (Finding #295): decrypt keys before export. Backups MUST
+    // contain plaintext so they are portable across machines (the encryption
+    // key is derived from machine-id + salt; importing on a different host
+    // would otherwise produce undecryptable rows). The importer re-encrypts
+    // with the new host's key inside importDb below.
+    apiKeys: db.all(`SELECT * FROM apiKeys`).map((r) => ({
+      id: r.id,
+      key: decryptToken(r.key) || r.key,
+      name: r.name,
+      machineId: r.machineId,
+      isActive: r.isActive === 1,
+      createdAt: r.createdAt,
+      access: keyAccessFromColumns(r.accessRestricted, r.accessAllow),
+    })),
     combos: db.all(`SELECT * FROM combos`).map((r) => ({ id: r.id, name: r.name, kind: r.kind, models: parseJson(r.models, []), createdAt: r.createdAt, updatedAt: r.updatedAt })),
     modelAliases: {},
     customModels: [],
@@ -169,9 +188,18 @@ export async function importDb(payload) {
         access = checked.value;
       }
       const cols = keyAccessToColumns(access);
+      // SECURITY (Finding #295): encrypt key at rest + store hash for lookup.
+      // importDb receives plaintext keys from backup files (exportDb decrypts
+      // before writing — see above); the repo layer decrypts on read.
+      // Pass-through for already-encrypted values (enc:v1: prefix) so a
+      // same-host re-import of an already-encrypted backup is idempotent.
+      const encryptedKey = (k.key && encryptToken(k.key)) || k.key || null;
+      // Hash must be computed from the PLAINTEXT key (hashApiKey handles
+      // enc:v1: passthrough internally, but import payloads are plaintext).
+      const keyHash = k.key ? hashApiKey(k.key) : null;
       db.run(
-        `INSERT OR REPLACE INTO apiKeys(id, key, name, machineId, isActive, createdAt, accessRestricted, accessAllow) VALUES(?, ?, ?, ?, ?, ?, ?, ?)`,
-        [k.id, k.key, k.name || null, k.machineId || null, k.isActive === false ? 0 : 1, k.createdAt || new Date().toISOString(), cols.accessRestricted, cols.accessAllow]
+        `INSERT OR REPLACE INTO apiKeys(id, key, name, machineId, isActive, createdAt, accessRestricted, accessAllow, keyHash) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [k.id, encryptedKey, k.name || null, k.machineId || null, k.isActive === false ? 0 : 1, k.createdAt || new Date().toISOString(), cols.accessRestricted, cols.accessAllow, keyHash]
       );
     }
     for (const c of payload.combos || []) {

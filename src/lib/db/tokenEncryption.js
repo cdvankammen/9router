@@ -72,6 +72,25 @@ export function isEncryptedToken(value) {
   return typeof value === "string" && value.startsWith(PREFIX);
 }
 
+// SECURITY (Finding #295): deterministic hash for API key lookup.
+// The apiKeys table encrypts the key column (random IV → different ciphertext
+// each time), so equality lookups (`WHERE key = ?`) can't work on encrypted
+// values. This hash provides a stable, secret-independent lookup key.
+// SHA-256 + dedicated salt prevents rainbow-table reversal of the hash to
+// the original key even if the DB file leaks.
+const API_KEY_HASH_SALT = "9router-apikey-hash-v1";
+
+/**
+ * Compute a deterministic SHA-256 hash of a plaintext API key.
+ * Used for equality lookups (validateApiKey, getApiKeyByKey) when the
+ * key column is encrypted at rest.
+ * Returns null for falsy input.
+ */
+export function hashApiKey(plaintext) {
+  if (!plaintext || typeof plaintext !== "string") return null;
+  return crypto.createHash("sha256").update(API_KEY_HASH_SALT + plaintext).digest("hex");
+}
+
 // SECURITY (#296): sensitive field names inside providerSpecificData that
 // must be encrypted at rest. Case-insensitive match on the key.
 const SENSITIVE_PSD_KEYS = new Set([
