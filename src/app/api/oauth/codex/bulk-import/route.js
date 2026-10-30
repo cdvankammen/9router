@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createProviderConnection } from "@/models";
 import { extractCodexAccountInfo } from "@/lib/oauth/providers";
+import { requireAuth } from "@/lib/auth/requireAuth";
 
 /**
  * POST /api/oauth/codex/bulk-import
@@ -17,6 +18,13 @@ import { extractCodexAccountInfo } from "@/lib/oauth/providers";
  * Tokens are NEVER echoed back in the response.
  */
 export async function POST(request) {
+  // SECURITY (#254): route-level requireAuth. Bulk-import writes many
+  // user-supplied Codex tokens into the connection pool in one call.
+  // Without auth, a LAN peer could flood the pool with attacker-controlled
+  // accounts (each getting MAX(priority)+1, so ordering is preserved).
+  if (!(await requireAuth(request))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   let body;
   try {
     body = await request.json();

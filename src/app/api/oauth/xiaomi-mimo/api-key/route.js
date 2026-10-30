@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import crypto from "node:crypto";
 import { createProviderConnection } from "@/models";
+import { requireAuth } from "@/lib/auth/requireAuth";
 
 /**
  * POST /api/oauth/xiaomi-mimo/api-key
@@ -10,6 +11,14 @@ import { createProviderConnection } from "@/models";
  * Body: { apiKey, uid?, baseUrl? }
  */
 export async function POST(request) {
+  // SECURITY (#254): route-level requireAuth. This endpoint writes a
+  // user-supplied MiMo API key into the providerConnections pool AND
+  // makes an outbound fetch to validate it (SSRF surface already guarded
+  // by assertLoopbackProxyUrl in mimoLoginSession.js, but auth is the
+  // defense-in-depth layer). Also creates a MiMo login session.
+  if (!(await requireAuth(request))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   try {
     const { apiKey, uid, baseUrl, mimoPassToken, mimoUserId, mimoCUserId, region } = await request.json();
 

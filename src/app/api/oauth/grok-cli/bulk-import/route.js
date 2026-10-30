@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createProviderConnection } from "@/models";
 import { decodeXaiIdTokenEmail, extractEmailFromAccessToken } from "@/lib/oauth/providerHelpers";
+import { requireAuth } from "@/lib/auth/requireAuth";
 
 /**
  * POST /api/oauth/grok-cli/bulk-import
@@ -19,6 +20,11 @@ import { decodeXaiIdTokenEmail, extractEmailFromAccessToken } from "@/lib/oauth/
  *   expires_in / expiresIn / expires_at / expiresAt
  */
 export async function POST(request) {
+  // SECURITY (#254): route-level requireAuth. Bulk-import writes many
+  // user-supplied Grok CLI tokens into the connection pool in one call.
+  if (!(await requireAuth(request))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   let body;
   try {
     body = await request.json();

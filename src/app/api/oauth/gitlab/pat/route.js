@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createProviderConnection } from "@/models";
 import { assertHostNotLinkLocalResolved } from "@/shared/utils/ssrfGuard.js";
+import { requireAuth } from "@/lib/auth/requireAuth";
 
 const GITLAB_DEFAULT_BASE = "https://gitlab.com";
 
@@ -9,6 +10,14 @@ const GITLAB_DEFAULT_BASE = "https://gitlab.com";
  * Authenticate GitLab Duo with a Personal Access Token (PAT)
  */
 export async function POST(request) {
+  // SECURITY (#254): route-level requireAuth. This endpoint both fetches
+  // a user-supplied baseUrl (SSRF guard below, #253) AND writes a PAT
+  // into the providerConnections pool. Without auth, a LAN peer on a
+  // requireLogin=false deployment could probe cloud metadata endpoints
+  // (blocked by the guard) and inject attacker-controlled GitLab accounts.
+  if (!(await requireAuth(request))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   try {
     let body;
     try {
