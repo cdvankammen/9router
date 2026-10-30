@@ -16,6 +16,12 @@ vi.mock("@/models", () => ({
   createProviderConnection: vi.fn(async (opts) => ({ id: "mock-conn", ...opts })),
 }));
 
+// Mock requireAuth to always pass — these tests validate the route logic,
+// not the auth gate (which has its own test suite).
+vi.mock("@/lib/auth/requireAuth", () => ({
+  requireAuth: vi.fn(() => Promise.resolve(true)),
+}));
+
 /* Mock NextResponse to return a plain object so we can assert on it. */
 vi.mock("next/server", () => {
   class MockNextResponse {
