@@ -423,6 +423,7 @@ export async function handleComboChat({
   sessionSticky = true,
   confidenceThreshold = 0.8,
   resolveSmartChoice = null,
+  contextAwareRouting = null,
 }) {
   let rotatedModels = models;
   let activeStickyModel = null;
@@ -520,7 +521,27 @@ export async function handleComboChat({
       rotatedModels = reordered;
     }
   }
-  
+
+  // Context-aware routing ("overflowTarget"): reroute huge prompts to a large-context
+  // model before attempting the normal rotation order.
+  // Restored 2026-10-30: this invocation block was lost during the origin/master
+  // merge while its two consumption sites (x-9r-context-reroute header appends)
+  // survived, leaving contextRerouted undeclared and throwing on every
+  // successful combo attempt.
+  let contextRerouted = false;
+  if (contextAwareRouting) {
+    const routed = applyContextAwareRouting({ body, models: rotatedModels, config: contextAwareRouting, log });
+    if (routed.rerouted) {
+      contextRerouted = true;
+      const target = contextAwareRouting.overflowTarget;
+      log.warn(
+        "COMBO",
+        `context-overflow reroute: est ${routed.promptTokens} tokens >= ${contextAwareRouting.thresholdTokens} -> ${target} (was ${rotatedModels[0]})`
+      );
+    }
+    rotatedModels = routed.models;
+  }
+
   let lastError = null;
   let earliestRetryAfter = null;
   let lastStatus = null;
@@ -578,11 +599,17 @@ export async function handleComboChat({
           }
 
           log.info("COMBO", `Model ${modelStr} succeeded`);
+          if (contextRerouted && result.headers && typeof result.headers.append === "function") {
+            try { result.headers.append("x-9r-context-reroute", String(contextAwareRouting.overflowTarget)); } catch { /* ignore */ }
+          }
           return result;
         }
 
         if (peeked.outcome === "content") {
           log.info("COMBO", `Model ${modelStr} succeeded${peeked.timedOut ? " (peek deadline; committed)" : ""}`);
+          if (contextRerouted && peeked.response.headers && typeof peeked.response.headers.append === "function") {
+            try { peeked.response.headers.append("x-9r-context-reroute", String(contextAwareRouting.overflowTarget)); } catch { /* ignore */ }
+          }
           return peeked.response;
         }
 
