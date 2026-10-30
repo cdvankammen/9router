@@ -83,18 +83,48 @@ try {
 
 // ── Helpers ───────────────────────────────────────────────────
 
-const cachedTargetIPs = {};
+// SECURITY (audit finding: cachedTargetIPs unbounded): cap the DNS cache
+// and evict stale entries. Without a bound, an attacker that triggers DNS
+// resolutions for N distinct hostnames grows this structure without limit
+// (memory DoS). TTL was already present (5 min) but expired entries were
+// never removed — only overwritten if the same hostname recurred.
+// 256 entries is generous for the 7 TARGET_HOSTS plus any CDN aliases
+// while capping abuse at a predictable memory footprint.
+const MITM_DNS_CACHE_MAX = 256;
+const cachedTargetIPs = new Map();
 const CACHE_TTL_MS = 5 * 60 * 1000;
 
+function evictStaleDnsEntries(now = Date.now()) {
+  for (const [host, entry] of cachedTargetIPs) {
+    if (now - entry.ts >= CACHE_TTL_MS) cachedTargetIPs.delete(host);
+  }
+}
+
 async function resolveTargetIP(hostname) {
-  const cached = cachedTargetIPs[hostname];
-  if (cached && Date.now() - cached.ts < CACHE_TTL_MS) return cached.ip;
+  const now = Date.now();
+  const cached = cachedTargetIPs.get(hostname);
+  if (cached && now - cached.ts < CACHE_TTL_MS) {
+    // Touch on hit: delete + re-insert so Map iteration order reflects
+    // LRU (oldest-first) for the size-cap eviction below.
+    cachedTargetIPs.delete(hostname);
+    cachedTargetIPs.set(hostname, cached);
+    return cached.ip;
+  }
   const resolver = new dns.Resolver();
   resolver.setServers(["8.8.8.8"]);
   const resolve4 = promisify(resolver.resolve4.bind(resolver));
   const addresses = await resolve4(hostname);
-  cachedTargetIPs[hostname] = { ip: addresses[0], ts: Date.now() };
-  return cachedTargetIPs[hostname].ip;
+  const entry = { ip: addresses[0], ts: now };
+  // Purge expired entries when at capacity (cheap — O(n) but n ≤ 256).
+  if (cachedTargetIPs.size >= MITM_DNS_CACHE_MAX) evictStaleDnsEntries(now);
+  // If still at capacity after stale eviction, drop the oldest entry
+  // (Map iteration order = insertion order = LRU when we touch on hit).
+  if (cachedTargetIPs.size >= MITM_DNS_CACHE_MAX) {
+    const oldest = cachedTargetIPs.keys().next().value;
+    cachedTargetIPs.delete(oldest);
+  }
+  cachedTargetIPs.set(hostname, entry);
+  return entry.ip;
 }
 
 // SECURITY (Finding #309): bound inbound body size to prevent memory-exhaustion
@@ -178,9 +208,22 @@ async function passthrough(req, res, bodyBuffer, onResponse) {
 }
 
 // ── ALPN negotiation cache ────────────────────────────────────
+// SECURITY (audit finding: alpnCache unbounded): cap the ALPN cache using
+// the same LRU pattern as certCache. TARGET_HOSTS is small (7 domains) so
+// 64 entries gives headroom for CDN aliases while capping abuse. Without
+// a bound, an attacker probing distinct SNI hostnames grows this Map
+// without limit (memory DoS on the MITM process).
+const MITM_ALPN_CACHE_MAX = 64;
 const alpnCache = new Map(); // host → "h2" | "http/1.1"
 async function negotiateAlpn(host) {
-  if (alpnCache.has(host)) return alpnCache.get(host);
+  if (alpnCache.has(host)) {
+    // Touch on hit: delete + re-insert so Map iteration order reflects
+    // LRU (oldest-first) for the size-cap eviction below.
+    const v = alpnCache.get(host);
+    alpnCache.delete(host);
+    alpnCache.set(host, v);
+    return v;
+  }
   const ip = await resolveTargetIP(host);
   return new Promise((resolve, reject) => {
     const socket = tls.connect({
@@ -188,6 +231,10 @@ async function negotiateAlpn(host) {
       ALPNProtocols: ["h2", "http/1.1"], rejectUnauthorized: false,
     }, () => {
       const proto = socket.alpnProtocol || "http/1.1";
+      if (alpnCache.size >= MITM_ALPN_CACHE_MAX) {
+        const oldest = alpnCache.keys().next().value;
+        alpnCache.delete(oldest);
+      }
       alpnCache.set(host, proto);
       log(`🔗 [mitm] ALPN ${host} → ${proto}`);
       socket.end();
