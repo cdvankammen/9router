@@ -1,4 +1,5 @@
 import { execFileSync, execSync } from "child_process";
+import fs from "fs";
 import path from "path";
 
 // Extras that improve headroom compression quality. `proxy` is the base;
@@ -48,19 +49,26 @@ const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "::1", "[::1]", "0.0.0
 
 export const DEFAULT_HEADROOM_URL = process.env.HEADROOM_URL || "http://localhost:8787";
 
+// Binary names per platform (Windows uses .exe, Unix is bare).
+const HEADROOM_BIN = IS_WIN ? "headroom.exe" : "headroom";
+
 // Detect whether the headroom CLI is installed and where its binary lives.
+// SECURITY (GAP-P2-19): filesystem-only probing. The previous `which headroom`
+// resolved via process.env.PATH spread into the child env — a crafted `.env`
+// with `PATH=/tmp/evil:$PATH` would return /tmp/evil/headroom, which is then
+// used as argv[0] in execFileSync calls (process.js, detect.js) → arbitrary
+// command execution under the server user. Now probes the static EXTRA_BINS
+// list (which already covers every location headroom installs to) with
+// fs.existsSync. No PATH lookup, no shell, no injection surface.
 export function findHeadroomBinary() {
-  try {
-    const out = execSync(`${WHICH_CMD} headroom`, {
-      stdio: ["ignore", "pipe", "ignore"],
-      windowsHide: true,
-      env: { ...process.env, PATH: EXTENDED_PATH },
-    }).toString().trim();
-    // Windows `where` may return multiple lines — take the first.
-    return out ? out.split(/\r?\n/)[0].trim() : null;
-  } catch {
-    return null;
+  for (const dir of EXTRA_BINS) {
+    if (!dir) continue;
+    const candidate = path.join(dir, HEADROOM_BIN);
+    try {
+      if (fs.existsSync(candidate)) return candidate;
+    } catch { /* keep probing */ }
   }
+  return null;
 }
 
 // Find a Python interpreter >= 3.10 (headroom-ai requires it). Returns null if none.
@@ -88,14 +96,27 @@ function pythonCandidates() {
   return list;
 }
 
+// SECURITY (GAP-P2-19): absolute-path-only probing. The previous
+// `execSync(\`${candidate} --version\`, ...)` pattern shell-interpreted the
+// candidate string, which resolved bare names (e.g. `python3.13`) via
+// env.PATH — a crafted `.env` could poison the lookup and execute an
+// arbitrary binary. Now only probes candidates that are absolute paths
+// (EXTRA_BINS + headroom binary directory) and uses execFileSync so the
+// kernel, not the shell, resolves argv[0]. Bare names from PYTHON_CANDIDATES
+// are no longer probed.
 export function findPython310() {
   let fallback = null;
   for (const candidate of pythonCandidates()) {
+    // Reject bare names — only absolute paths are safe.
+    if (!path.isAbsolute(candidate)) continue;
     try {
-      const ver = execSync(`${candidate} --version`, {
+      if (!fs.existsSync(candidate)) continue;
+    } catch { continue; }
+    try {
+      const ver = execFileSync(candidate, ["--version"], {
         stdio: ["ignore", "pipe", "ignore"],
         windowsHide: true,
-        env: { ...process.env, PATH: EXTENDED_PATH },
+        timeout: HEADROOM_PIP_TIMEOUT_MS,
       }).toString().trim();
       const match = ver.match(/(\d+)\.(\d+)/);
       if (!match) continue;
@@ -107,7 +128,6 @@ export function findPython310() {
           stdio: ["ignore", "pipe", "ignore"],
           windowsHide: true,
           timeout: HEADROOM_PIP_TIMEOUT_MS,
-          env: { ...process.env, PATH: EXTENDED_PATH },
         });
         return candidate;
       } catch {

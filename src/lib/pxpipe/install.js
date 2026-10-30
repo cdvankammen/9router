@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import { spawn, execSync } from "child_process";
+import { spawn } from "child_process";
 import { DATA_DIR } from "@/lib/dataDir.js";
 
 export const PXPIPE_DIR = path.join(DATA_DIR, "pxpipe");
@@ -11,12 +11,12 @@ const INSTALL_TIMEOUT_MS = 5 * 60 * 1000;
 const IS_WIN = process.platform === "win32";
 const NPM_CMD = IS_WIN ? "npm.cmd" : "npm";
 
-// Same PATH extension trick as headroom/detect.js: packaged/launchd environments
-// often miss the Node bin dirs.
+// Static Node/npm bin dirs (packaged/launchd environments often miss these).
+// SECURITY (GAP-P2-19): process.env.PATH is NOT spread here — findNpm() probes
+// only this list, so a crafted `.env` cannot poison npm resolution.
 const EXTRA_BINS = IS_WIN
   ? [`${process.env.ProgramFiles || ""}\\nodejs`, `${process.env.APPDATA || ""}\\npm`]
   : ["/usr/local/bin", "/opt/homebrew/bin", `${process.env.HOME || ""}/.local/bin`, "/usr/bin", "/bin"];
-const EXTENDED_PATH = [...EXTRA_BINS, process.env.PATH || ""].filter(Boolean).join(path.delimiter);
 
 let installInFlight = null;
 
@@ -32,17 +32,21 @@ export function libraryEntry() {
   return path.join(packageRoot(), "dist", "core", "library.js");
 }
 
+// SECURITY (GAP-P2-19): filesystem-only npm detection. The previous
+// `which npm` resolved via process.env.PATH — a crafted `.env` could
+// return /tmp/evil/npm which is then spawned via child_process.spawn.
+// Now probes the static EXTRA_BINS list (which already covers Node.js
+// install paths: /usr/local/bin, /opt/homebrew/bin, $LOCALAPPDATA\Programs\nodejs,
+// $APPDATA\npm, etc.) with fs.existsSync. No PATH lookup, no shell.
 export function findNpm() {
-  try {
-    const out = execSync(`${IS_WIN ? "where" : "which"} npm`, {
-      stdio: ["ignore", "pipe", "ignore"],
-      windowsHide: true,
-      env: { ...process.env, PATH: EXTENDED_PATH },
-    }).toString().trim();
-    return out ? out.split(/\r?\n/)[0].trim() : null;
-  } catch {
-    return null;
+  for (const dir of EXTRA_BINS) {
+    if (!dir) continue;
+    const candidate = path.join(dir, NPM_COMMAND);
+    try {
+      if (fs.existsSync(candidate)) return candidate;
+    } catch { /* keep probing */ }
   }
+  return null;
 }
 
 // { installed, version, path } — installed means the library entry exists on disk.
@@ -89,11 +93,15 @@ async function runInstall() {
   fs.writeSync(outFd, `\n[${new Date().toISOString()}] npm install ${PXPIPE_PACKAGE}@latest\n`);
 
   await new Promise((resolve, reject) => {
+    // findNpm() returns an absolute path; spawn uses it as argv[0] directly.
+    // No PATH lookup happens at spawn time either — the child inherits
+    // process.env.PATH as-is (which is fine for npm's own sub-spawns;
+    // the security property is that npm itself is resolved from a known
+    // filesystem location, not from attacker-controlled PATH).
     const child = spawn(npm, ["install", `${PXPIPE_PACKAGE}@latest`, "--no-audit", "--no-fund", "--omit=dev"], {
       cwd: PXPIPE_DIR,
       stdio: ["ignore", outFd, outFd],
       windowsHide: true,
-      env: { ...process.env, PATH: EXTENDED_PATH },
     });
     const timer = setTimeout(() => {
       child.kill("SIGKILL");

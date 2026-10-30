@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
+import fs from "fs";
 
 const mocks = vi.hoisted(() => ({
   execSync: vi.fn(() => { throw new Error("not found"); }),
@@ -17,8 +18,13 @@ vi.mock("child_process", () => ({
 
 import { findPython310, getHeadroomStatus, getInstalledHeadroomExtras, isLoopbackHeadroomUrl } from "../../src/lib/headroom/detect.js";
 
+// GAP-P2-19: headroom/python/npm detection is now filesystem-only (no `which`).
+// Spy on fs.existsSync so tests can simulate binaries present at specific paths.
+const fsExistsSyncSpy = vi.spyOn(fs, "existsSync");
+
 afterEach(() => {
   vi.clearAllMocks();
+  fsExistsSyncSpy.mockReset();
 });
 
 describe("headroom detect", () => {
@@ -38,18 +44,21 @@ describe("headroom detect", () => {
   });
 
   it("prefers the interpreter that actually has headroom-ai installed", () => {
-    // headroom binary lives in a bin dir; the python next to it has headroom-ai.
-    const binPython = "/opt/hr/bin/python3";
-    mocks.execSync.mockImplementation((cmd) => {
-      if (String(cmd).includes("where") || String(cmd).includes("which")) return Buffer.from("/opt/hr/bin/headroom\n");
-      if (String(cmd).includes("--version")) return Buffer.from("Python 3.13.0\n");
-      throw new Error("unexpected execSync");
-    });
+    // GAP-P2-19: headroom must be in EXTRA_BINS (filesystem-only probing).
+    // Place it in /opt/homebrew/bin (part of EXTRA_BINS on macOS) and put
+    // the python next to it. The python is the only one that has headroom-ai.
+    const headroomPath = "/opt/homebrew/bin/headroom";
+    const binPython = "/opt/homebrew/bin/python3";
+    fsExistsSyncSpy.mockImplementation((p) =>
+      p === headroomPath || p === binPython
+    );
     mocks.execFileSync.mockImplementation((py, args) => {
+      if (args[0] === "--version") return Buffer.from("Python 3.13.0\n");
       if (args.join(" ") === "-m pip show headroom-ai") {
         if (py === binPython) return Buffer.from("Name: headroom-ai\nVersion: 0.26.0\n");
         throw new Error(`not installed in ${py}`);
       }
+      if (args.join(" ").startsWith("-m pip list ")) return Buffer.from(JSON.stringify([]));
       throw new Error(`unexpected execFileSync: ${py} ${args.join(" ")}`);
     });
 
@@ -58,16 +67,16 @@ describe("headroom detect", () => {
 
   it("keeps top-level installed flag true when extras are readable", async () => {
     global.fetch = vi.fn(async () => new Response("ok", { status: 200 }));
-    mocks.execSync.mockImplementation((cmd) => {
-      if (String(cmd).includes("where") || String(cmd).includes("which")) return Buffer.from("C:/Python/Scripts/headroom.exe\n");
-      if (String(cmd).includes("python3 --version")) return Buffer.from("Python 3.13.0\n");
-      if (String(cmd).includes("python --version")) return Buffer.from("Python 3.13.0\n");
-      throw new Error("unexpected execSync");
-    });
+    // GAP-P2-19: headroom + python must be in EXTRA_BINS (filesystem-only probing).
+    const headroomPath = "/usr/local/bin/headroom";
+    const pythonPath = "/usr/local/bin/python";
+    fsExistsSyncSpy.mockImplementation((p) =>
+      p === headroomPath || p === pythonPath
+    );
     mocks.execFileSync.mockImplementation((py, args) => {
-      if (py === "python3" && args.join(" ") === "-m pip show headroom-ai") throw new Error("not installed in python3");
-      if (py === "python" && args.join(" ") === "-m pip show headroom-ai") return Buffer.from("Name: headroom-ai\nVersion: 0.26.0\n");
-      if (py === "python" && args.join(" ").startsWith("-m pip list ")) return Buffer.from(JSON.stringify([
+      if (args[0] === "--version") return Buffer.from("Python 3.13.0\n");
+      if (py === pythonPath && args.join(" ") === "-m pip show headroom-ai") return Buffer.from("Name: headroom-ai\nVersion: 0.26.0\n");
+      if (py === pythonPath && args.join(" ").startsWith("-m pip list ")) return Buffer.from(JSON.stringify([
         { name: "headroom-ai", version: "0.26.0" },
         { name: "tree-sitter", version: "0.25.0" },
       ]));
