@@ -3,7 +3,7 @@
 // pre-change safety backup in migrate.js: when the stored version is lower,
 // one lightweight DB backup is taken before applying schema changes. Forgetting
 // to bump only skips that backup — it does NOT break the additive auto-sync.
-export const SCHEMA_VERSION = 7;
+export const SCHEMA_VERSION = 8;
 
 export const PRAGMA_SQL = `
 PRAGMA journal_mode = WAL;
@@ -124,6 +124,10 @@ export const TABLES = {
       model: "TEXT",
       connectionId: "TEXT",
       apiKey: "TEXT",
+      // SECURITY (Finding #295): SHA-256(salt + plaintext apiKey) for dedup
+      // equality lookups. The apiKey column holds AES-256-GCM ciphertext
+      // (random IV → non-deterministic), so WHERE apiKey=? can't work on it.
+      apiKeyHash: "TEXT",
       endpoint: "TEXT",
       promptTokens: "INTEGER DEFAULT 0",
       completionTokens: "INTEGER DEFAULT 0",
@@ -138,6 +142,7 @@ export const TABLES = {
       "CREATE INDEX IF NOT EXISTS idx_uh_provider ON usageHistory(provider)",
       "CREATE INDEX IF NOT EXISTS idx_uh_model ON usageHistory(model)",
       "CREATE INDEX IF NOT EXISTS idx_uh_conn ON usageHistory(connectionId)",
+      "CREATE INDEX IF NOT EXISTS idx_uh_apikeyhash ON usageHistory(apiKeyHash)",
       "CREATE INDEX IF NOT EXISTS idx_uh_conversation ON usageHistory(conversationId)",
     ],
   },

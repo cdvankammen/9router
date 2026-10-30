@@ -2,6 +2,10 @@ import { EventEmitter } from "events";
 import { getAdapter } from "../driver.js";
 import { parseJson, stringifyJson } from "../helpers/jsonCol.js";
 import { getMeta, setMeta } from "../helpers/metaStore.js";
+// SECURITY (Finding #295 phase 2): usageHistory.apiKey is encrypted at rest.
+// Static import (no dynamic import()) so the functions are available inside
+// the better-sqlite3 sync transaction callback in saveRequestUsage.
+import { encryptToken, decryptToken, hashApiKey } from "../tokenEncryption.js";
 
 function maskApiKey(key) {
   if (!key || typeof key !== "string") return null;
@@ -132,7 +136,13 @@ async function ensureRingInitialized() {
     const rows = db.all(`SELECT timestamp, provider, model, connectionId, apiKey, endpoint, cost, status, tokens FROM usageHistory ORDER BY id DESC LIMIT ?`, [RING_CAP]);
     recentRing.items = rows.reverse().map((r) => ({
       timestamp: r.timestamp, provider: r.provider, model: r.model, connectionId: r.connectionId,
-      apiKey: r.apiKey, endpoint: r.endpoint, cost: r.cost, status: r.status,
+      // SECURITY (Finding #295 phase 2): decrypt on read. Pass-through for
+      // pre-migration plaintext rows. Ring items never surface apiKey to the
+      // client (only model/provider/tokens/status are sent), but downstream
+      // aggregation paths (getUsageHistory, getUsageStats) call maskApiKey()
+      // which needs plaintext input.
+      apiKey: decryptToken(r.apiKey) || r.apiKey,
+      endpoint: r.endpoint, cost: r.cost, status: r.status,
       tokens: parseJson(r.tokens, {}),
     }));
   } catch {}
@@ -259,6 +269,13 @@ export async function saveRequestUsage(entry) {
     let inserted = false;
 
     // All 3 writes (history insert, daily upsert, lifetime counter) in ONE transaction.
+    // SECURITY (Finding #295 phase 2): encrypt apiKey before write; compute
+    // hash for dedup equality lookup. Random-IV encryption is non-deterministic,
+    // so `WHERE apiKey=?` can't work on ciphertext — use apiKeyHash instead.
+    const plainApiKey = entry.apiKey && typeof entry.apiKey === "string" ? entry.apiKey : null;
+    const encryptedApiKey = plainApiKey ? (encryptToken(plainApiKey) || plainApiKey) : null;
+    const apiKeyHash = plainApiKey ? hashApiKey(plainApiKey) : null;
+
     // better-sqlite3 is sync → no JS yield mid-transaction → no race in same process.
     db.transaction(() => {
       const existing = db.get(
@@ -267,13 +284,13 @@ export async function saveRequestUsage(entry) {
            AND COALESCE(provider, '') = COALESCE(?, '')
            AND COALESCE(model, '') = COALESCE(?, '')
            AND COALESCE(connectionId, '') = COALESCE(?, '')
-           AND COALESCE(apiKey, '') = COALESCE(?, '')
+           AND COALESCE(apiKeyHash, '') = COALESCE(?, '')
            AND promptTokens = ?
            AND completionTokens = ?
          ORDER BY id DESC LIMIT 1`,
         [
           entry.timestamp, entry.provider || null, entry.model || null,
-          entry.connectionId || null, entry.apiKey || null,
+          entry.connectionId || null, apiKeyHash || null,
           promptTokens, completionTokens,
         ]
       );
@@ -286,10 +303,10 @@ export async function saveRequestUsage(entry) {
       }
 
       db.run(
-        `INSERT INTO usageHistory(timestamp, provider, model, connectionId, apiKey, endpoint, promptTokens, completionTokens, cost, status, tokens, meta, conversationId) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO usageHistory(timestamp, provider, model, connectionId, apiKey, apiKeyHash, endpoint, promptTokens, completionTokens, cost, status, tokens, meta, conversationId) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           entry.timestamp, entry.provider || null, entry.model || null,
-          entry.connectionId || null, entry.apiKey || null, entry.endpoint || null,
+          entry.connectionId || null, encryptedApiKey, apiKeyHash, entry.endpoint || null,
           promptTokens, completionTokens, entry.cost || 0, entry.status || "ok",
           stringifyJson(tokens), stringifyJson(entry.meta || {}),
           entry.conversationId || null,
@@ -334,11 +351,16 @@ export async function getUsageHistory(filter = {}) {
   const where = conds.length ? `WHERE ${conds.join(" AND ")}` : "";
   const rows = db.all(`SELECT timestamp, provider, model, connectionId, apiKey, endpoint, cost, status, tokens FROM usageHistory ${where} ORDER BY id ASC`, params);
 
-  return rows.map((r) => ({
-    timestamp: r.timestamp, provider: r.provider, model: r.model,
-    connectionId: r.connectionId, apiKeyMasked: maskApiKey(r.apiKey), endpoint: r.endpoint,
-    cost: r.cost, status: r.status, tokens: parseJson(r.tokens, {}),
-  }));
+  return rows.map((r) => {
+    // SECURITY (Finding #295 phase 2): decrypt before masking. maskApiKey()
+    // needs plaintext; pre-migration rows pass through unchanged.
+    const plainKey = decryptToken(r.apiKey) || r.apiKey;
+    return {
+      timestamp: r.timestamp, provider: r.provider, model: r.model,
+      connectionId: r.connectionId, apiKeyMasked: maskApiKey(plainKey), endpoint: r.endpoint,
+      cost: r.cost, status: r.status, tokens: parseJson(r.tokens, {}),
+    };
+  });
 }
 
 function loadDaysInRange(adapter, maxDays) {
@@ -571,11 +593,16 @@ export async function getUsageStats(period = "all") {
         if (stats.byAccount[accountKey] && new Date(ts) > new Date(stats.byAccount[accountKey].lastUsed)) stats.byAccount[accountKey].lastUsed = ts;
       }
 
+      // SECURITY (Finding #295 phase 2): decrypt before maskApiKey. Pre-migration
+      // plaintext rows pass through decryptToken unchanged.
+      const plainApiKey = e.apiKey && typeof e.apiKey === "string"
+        ? (decryptToken(e.apiKey) || e.apiKey)
+        : null;
       // AUDIT-002: overlay key must match the masked bucket key used by the
       // daily rollup and 24h live paths, or lastUsed timestamps silently
       // fail to attach to the right entry.
-      const apiKeyKey = (e.apiKey && typeof e.apiKey === "string")
-        ? `${maskApiKey(e.apiKey) || "unknown-key"}|${e.model}|${e.provider || "unknown"}`
+      const apiKeyKey = plainApiKey
+        ? `${maskApiKey(plainApiKey) || "unknown-key"}|${e.model}|${e.provider || "unknown"}`
         : "local-no-key";
       if (stats.byApiKey[apiKeyKey] && new Date(ts) > new Date(stats.byApiKey[apiKeyKey].lastUsed)) stats.byApiKey[apiKeyKey].lastUsed = ts;
 
@@ -643,11 +670,15 @@ export async function getUsageStats(period = "all") {
         if (new Date(r.timestamp) > new Date(stats.byAccount[accountKey].lastUsed)) stats.byAccount[accountKey].lastUsed = r.timestamp;
       }
 
+      // SECURITY (Finding #295 phase 2): decrypt before maskApiKey + apiKeyMap
+      // lookup. apiKeyMap is keyed by PLAINTEXT (getApiKeys() returns decrypted
+      // keys post-migration-007), so we must compare plaintext.
       if (r.apiKey && typeof r.apiKey === "string") {
-        const apiKeyVal = r.apiKey.trim();
+        const decrypted = decryptToken(r.apiKey) || r.apiKey;
+        const apiKeyVal = decrypted.trim();
         const keyInfo = apiKeyMap[apiKeyVal];
         const apiKeyMasked = maskApiKey(apiKeyVal);
-        const keyName = keyInfo?.name || apiKeyMasked || r.apiKey.slice(0, 8) + "...";
+        const keyName = keyInfo?.name || apiKeyMasked || apiKeyVal.slice(0, 8) + "...";
         // AUDIT-002 (GHSA-vjc7): bucket by masked key, not raw. Raw keys as
         // object property names leak via JSON.stringify(stats) to dashboard
         // responses. maskApiKey collisions require matching first 8 AND last 4
