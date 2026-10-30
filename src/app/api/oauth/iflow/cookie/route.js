@@ -32,7 +32,7 @@ export async function POST(request) {
     }
 
     // Step 1: GET API key info to get the name
-    // GAP-P2-21: AbortSignal.timeout(15000) — bound the upstream call so a
+    // GAP-P2-21: bound the upstream call with a 15-second timeout so a
     // slow/hanging iflow endpoint can't pin the handler indefinitely.
     const getResponse = await fetch("https://platform.iflow.cn/api/openapi/apikey", {
       method: "GET",
@@ -142,6 +142,12 @@ export async function POST(request) {
     });
   } catch (error) {
     console.error("iFlow cookie auth error:", error);
+    if (error?.name === "TimeoutError" || error?.name === "AbortError") {
+      return NextResponse.json(
+        { error: "iFlow API request timed out after 15s — the service may be unreachable from your network" },
+        { status: 504 }
+      );
+    }
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

@@ -104,9 +104,27 @@ export class DefaultExecutor extends BaseExecutor {
         delete transformed.client_metadata;
       }
       stripUnsupportedParams(this.provider, model, transformed);
+      // Inject stream_options.include_usage for streaming chat-completions so the
+      // gateway records REAL token counts instead of a chars/4 estimate (which
+      // silently drops usage entirely for tool-only/empty-text responses). Chat-completions
+      // only — claude/openai-responses/gemini/ollama don't accept stream_options. Never
+      // clobber a caller-supplied value; opt out per provider via quirks.noIncludeUsage.
+      if (transformed.stream && transformed.messages && !transformed.stream_options && this.supportsIncludeUsage()) {
+        transformed.stream_options = { include_usage: true };
+      }
     }
 
     return injectReasoningContent({ provider: this.provider, model, body: transformed });
+  }
+
+  // Whether this provider accepts OpenAI's stream_options.include_usage (chat-completions only).
+  supportsIncludeUsage() {
+    if (this.config.quirks?.noIncludeUsage) return false;
+    if (this.config.format !== "openai") return false;
+    if (this.provider?.startsWith?.("openai-compatible-")) {
+      return resolveOpenAICompatibleApiType(this.provider) === "chat";
+    }
+    return true;
   }
 
   applyNousAttribution(model, body, stream, credentials) {
