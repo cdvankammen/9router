@@ -99,6 +99,20 @@ const ALWAYS_PROTECTED = [
   // use stored credentials and must be JWT-gated regardless of requireLogin.
   "/api/oauth/minimax-code/lease",
   "/api/oauth/minimax-code-global/lease",
+  // GAP-P1-18 (2026-10-30): admin mutation routes discovered during session-26
+  // audit that had no route-level requireAuth and were missing from this list.
+  // When requireLogin=false, any LAN peer could:
+  //   - POST /api/pxpipe/install → spawns `npm install` under the server user
+  //   - POST /api/pxpipe/start|stop|restart → loads/unloads in-process module
+  //   - PUT/DELETE/POST /api/model-context → overwrites contextWindowOverrides
+  //     (Finding #257 ceiling still caps values, but the override map itself is
+  //     attacker-controlled; propagates to /v1/models output for every client)
+  //   - POST/DELETE /api/saved-views → mutates stored filter presets
+  // Promoting all four prefixes to ALWAYS_PROTECTED closes the LAN-peer
+  // mutation surface on open deployments.
+  "/api/pxpipe",
+  "/api/model-context",
+  "/api/saved-views",
 ];
 
 // Require auth, but allow through if requireLogin is disabled
