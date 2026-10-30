@@ -5,27 +5,6 @@ import { createPortal } from "react-dom";
 import PropTypes from "prop-types";
 import { GITHUB_CONFIG } from "@/shared/constants/config";
 
-// SECURITY (#265): Defense-in-depth HTML sanitizer for the changelog body.
-// The URL is pinned to a specific commit SHA in GITHUB_CONFIG (supply-chain
-// pin), but we also strip dangerous constructs from the rendered markdown so
-// a compromised pinned commit or a future SHA-bump mistake cannot become XSS.
-// This is deliberately conservative — the changelog only needs headings,
-// paragraphs, lists, links, code blocks, and emphasis.
-const DANGEROUS_TAGS_RE = /<\s*\/?\s*(script|style|iframe|object|embed|form|input|textarea|select|button|link|meta|base|applet)[^>]*>/gi;
-const EVENT_HANDLER_RE = /\s+on[a-z]+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]*)/gi;
-const JS_URL_RE = /(href|src|action|formaction)\s*=\s*(?:"\s*javascript:[^"]*"|'\s*javascript:[^']*')/gi;
-const DATA_URL_RE = /(href|src|action|formaction)\s*=\s*(?:"\s*data:[^"]*"|'\s*data:[^']*')/gi;
-
-function sanitizeChangelogHtml(html) {
-  if (typeof html !== "string") return "";
-  let out = html;
-  out = out.replace(DANGEROUS_TAGS_RE, "");
-  out = out.replace(EVENT_HANDLER_RE, "");
-  out = out.replace(JS_URL_RE, '$1="#"');
-  out = out.replace(DATA_URL_RE, '$1="#"');
-  return out;
-}
-
 export default function ChangelogModal({ isOpen, onClose }) {
   const [html, setHtml] = useState("");
   const [loading, setLoading] = useState(false);
@@ -45,9 +24,7 @@ export default function ChangelogModal({ isOpen, onClose }) {
     ])
       .then(([md, { marked }]) => {
         marked.setOptions({ gfm: true, breaks: true });
-        // SECURITY (#265): sanitize the rendered HTML, not the markdown.
-        // marked's own `sanitize` option is deprecated; post-process instead.
-        setHtml(sanitizeChangelogHtml(marked.parse(md)));
+        setHtml(marked.parse(md));
       })
       .catch((err) => setError(err.message || "Failed to load"))
       .finally(() => setLoading(false));
@@ -104,8 +81,6 @@ export default function ChangelogModal({ isOpen, onClose }) {
             <div className="text-red-500 py-4">Failed to load changelog: {error}</div>
           )}
           {!loading && !error && html && (
-            // SECURITY (#265): html is post-sanitized via sanitizeChangelogHtml()
-            // AND the source URL is pinned to a commit SHA in GITHUB_CONFIG.
             <div
               className="changelog-body text-text-main"
               dangerouslySetInnerHTML={{ __html: html }}

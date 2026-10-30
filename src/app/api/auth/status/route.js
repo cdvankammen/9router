@@ -36,12 +36,6 @@ export async function GET() {
       samlConfigured: isSamlConfigured(settings),
       samlLoginLabel: (settings.samlLoginLabel || "Sign in with SAML SSO").trim() || "Sign in with SAML SSO",
       hasPassword: !!settings.password,
-      // SECURITY (Finding #293): let the login page know whether the operator
-      // pinned the initial password via INITIAL_PASSWORD env. When set, the
-      // login page must NOT advertise "123456" as the default — that would be
-      // both wrong and a hint to attackers. When unset AND hasPassword is false,
-      // the stock default is in play and the hint is useful.
-      initialPasswordSet: !!process.env.INITIAL_PASSWORD,
       displayName,
       loginMethod,
       authenticated: !!session,
@@ -62,10 +56,6 @@ export async function GET() {
       samlConfigured: false,
       samlLoginLabel: "Sign in with SAML SSO",
       hasPassword: false,
-      // SECURITY (Finding #293): mirror the success-path field so the login
-      // page can suppress the stock-default hint when the operator pinned
-      // INITIAL_PASSWORD, even in the degraded (DB-down) response.
-      initialPasswordSet: !!process.env.INITIAL_PASSWORD,
       displayName: "Password user",
       loginMethod: "Password",
       authenticated: false,

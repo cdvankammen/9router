@@ -81,13 +81,9 @@ function configure(options = {}) {
  * @param {string} method - HTTP method
  * @param {string} path - API path
  * @param {Object} body - Request body (optional)
- * @param {Object} extraHeaders - Additional headers to merge (optional).
- *   Used by endpoints that require confirmation tokens, e.g.
- *   `DELETE /api/provider-nodes/[id]` requires `X-Confirm-Cascade: true`
- *   to acknowledge the cascading delete of bound connections.
  * @returns {Promise<Object>} Response with { success, data/error }
  */
-function makeRequest(method, path, body = null, extraHeaders = null) {
+function makeRequest(method, path, body = null) {
   return new Promise((resolve) => {
     const httpModule = config.protocol === "https:" ? https : http;
     
@@ -99,7 +95,6 @@ function makeRequest(method, path, body = null, extraHeaders = null) {
       headers: {
         "Content-Type": "application/json",
         [CLI_TOKEN_HEADER]: getCliToken(),
-        ...(extraHeaders || {}),
       },
     };
 
@@ -472,11 +467,7 @@ async function updateProviderNode(id, data) {
 }
 
 async function deleteProviderNode(id) {
-  // Cascading delete: also removes every connection bound to this node.
-  // The server requires X-Confirm-Cascade: true to acknowledge the scope.
-  return makeRequest("DELETE", `/api/provider-nodes/${id}`, null, {
-    "X-Confirm-Cascade": "true",
-  });
+  return makeRequest("DELETE", `/api/provider-nodes/${id}`);
 }
 
 async function validateProviderNode(data) {

@@ -8,15 +8,6 @@ vi.mock("../../open-sse/utils/proxyFetch.js", () => ({
   proxyAwareFetch: vi.fn(async () => ({ ok: true, status: 200, headers: { get: () => "" } })),
 }));
 
-// Master added applyFingerprintTools (appends bash/glob/grep/read quartet to
-// every Responses request for the upstream free-tier gate). This test predates
-// that change and verifies only the tool_choice demote quirk — stub fingerprint
-// out so tools/tool_choice stay as the caller passed them.
-vi.mock("../../open-sse/utils/opencodeFingerprint.js", () => ({
-  applyFingerprintTools: vi.fn(() => new Map()),
-  OPENCODE_FINGERPRINT_TOOLS: ["bash", "glob", "grep", "read"],
-}));
-
 // Break caught: opencode/muse-spark-1.3-contributor-free 400 vì upstream
 // chỉ nhận tool_choice "auto"; named/required/none phải demote sang "auto".
 const FREE_13 = "muse-spark-1.3-contributor-free";

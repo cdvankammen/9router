@@ -1,11 +1,16 @@
 import { handleTts } from "@/sse/handlers/tts.js";
-import { corsOptionsResponse, withCorsHeaders } from "@/shared/utils/corsOptions.js";
 
-export async function OPTIONS(request) {
-  return corsOptionsResponse(request, "POST, OPTIONS");
+export async function OPTIONS() {
+  return new Response(null, {
+    headers: {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "POST, OPTIONS",
+      "Access-Control-Allow-Headers": "*",
+    },
+  });
 }
 
 /** POST /v1/audio/speech - OpenAI-compatible TTS endpoint */
 export async function POST(request) {
-  return withCorsHeaders(request, await handleTts(request));
+  return await handleTts(request);
 }

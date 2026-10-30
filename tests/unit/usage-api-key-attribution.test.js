@@ -9,18 +9,12 @@ let db;
 beforeEach(async () => {
   tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "9router-api-key-"));
   process.env.DATA_DIR = tempDir;
-  // Clear the driver's global adapter singleton so this per-test db never
-  // reuses an adapter bound to a previous run's DATA_DIR (see db-driver-chain).
-  delete global._dbAdapter;
   vi.resetModules();
   db = await import("@/lib/db/index.js");
   await db.initDb();
 });
 
 afterEach(() => {
-  try { global._dbAdapter?.instance?.close?.(); } catch {}
-  delete global._dbAdapter;
-  if (tempDir) fs.rmSync(tempDir, { recursive: true, force: true });
   delete process.env.DATA_DIR;
 });
 

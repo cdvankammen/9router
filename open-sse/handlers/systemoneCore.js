@@ -124,6 +124,7 @@ export async function handleSystemoneCore({
     response: new Response(JSON.stringify(responseBody), {
       headers: {
         "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
       },
     }),
   };

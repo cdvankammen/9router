@@ -37,7 +37,7 @@ function recordImageRequestUsage({ provider, model, connectionId, apiKey, endpoi
     endpoint: endpoint || null,
     tokens: usage,
     status: "success",
-  }).catch((e) => log.warn("IMG", `usage persistence failed: ${e.message}`));
+  }).catch(() => {});
 }
 
 /**

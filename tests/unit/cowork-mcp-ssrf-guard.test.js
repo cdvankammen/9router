@@ -16,14 +16,6 @@ vi.mock("next/server", () => ({
   },
 }));
 
-// Bypass the route-level requireAuth gate (added in the OpenClaw audit
-// 2026-10-29) so this test exercises the SSRF guard specifically.
-// Without this mock, the auth gate fires first and returns 401 before
-// the SSRF check runs.
-vi.mock("@/lib/auth/requireAuth", () => ({
-  requireAuth: async () => true,
-}));
-
 const { POST } = await import(
   "../../src/app/api/cli-tools/cowork-mcp-tools/route.js"
 );

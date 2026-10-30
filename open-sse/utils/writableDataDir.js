@@ -17,9 +17,7 @@ export function getWritableDataDir() {
   ].filter(Boolean);
   for (const base of candidates) {
     try {
-      // 0o700: this directory tree holds captured browser cookies and
-      // runtime downloads — restrict to the owning user.
-      fs.mkdirSync(base, { recursive: true, mode: 0o700 });
+      fs.mkdirSync(base, { recursive: true });
       fs.accessSync(base, fs.constants.W_OK);
       cached = base;
       return base;

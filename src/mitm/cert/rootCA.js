@@ -1,16 +1,7 @@
 const path = require("path");
 const fs = require("fs");
-const crypto = require("crypto");
 const forge = require("node-forge");
 const { MITM_DIR } = require("../paths");
-
-// SECURITY (Finding #344): X.509 serial numbers MUST use a CSPRNG. Per
-// CA/Browser Forum BR §7.1, serials must contain at least 64 bits of
-// output from a cryptographic RNG. 20 bytes (160 bits) is conventional.
-// forge accepts serials as hex strings.
-function generateSerialHex() {
-  return crypto.randomBytes(20).toString("hex");
-}
 
 const ROOT_CA_KEY_PATH = path.join(MITM_DIR, "rootCA.key");
 const ROOT_CA_CERT_PATH = path.join(MITM_DIR, "rootCA.crt");
@@ -56,8 +47,7 @@ function generateRootCA() {
   // Create Root CA certificate
   const cert = forge.pki.createCertificate();
   cert.publicKey = keys.publicKey;
-  // SECURITY (Finding #344): was hardcoded "01" — now CSPRNG.
-  cert.serialNumber = generateSerialHex();
+  cert.serialNumber = "01";
   cert.validity.notBefore = new Date();
   cert.validity.notAfter = new Date();
   cert.validity.notAfter.setFullYear(cert.validity.notBefore.getFullYear() + 10);
@@ -91,15 +81,12 @@ function generateRootCA() {
   // Self-sign the certificate
   cert.sign(keys.privateKey, forge.md.sha256.create());
 
-  // Save to disk — private key at 0600 (owner-only), cert at 0644 (readable)
+  // Save to disk
   const privateKeyPem = forge.pki.privateKeyToPem(keys.privateKey);
   const certPem = forge.pki.certificateToPem(cert);
 
-  // SECURITY (Finding #312): root CA private key MUST be owner-only readable.
-  // Default umask 022 would produce 0644 (world-readable), allowing any local
-  // user to sign arbitrary leaf certs and impersonate any TARGET_HOSTS domain.
-  fs.writeFileSync(ROOT_CA_KEY_PATH, privateKeyPem, { mode: 0o600 });
-  fs.writeFileSync(ROOT_CA_CERT_PATH, certPem, { mode: 0o644 });
+  fs.writeFileSync(ROOT_CA_KEY_PATH, privateKeyPem);
+  fs.writeFileSync(ROOT_CA_CERT_PATH, certPem);
 
   console.log("✅ Root CA generated successfully");
   return { key: ROOT_CA_KEY_PATH, cert: ROOT_CA_CERT_PATH };
@@ -132,9 +119,7 @@ function generateLeafCert(domain, rootCA) {
   // Create leaf certificate
   const cert = forge.pki.createCertificate();
   cert.publicKey = keys.publicKey;
-  // SECURITY (Finding #344): was the weak V8 xorshift128+ PRNG (predictable
-  // after ~2 observations) — now CSPRNG (crypto.randomBytes).
-  cert.serialNumber = generateSerialHex();
+  cert.serialNumber = Math.floor(Math.random() * 1000000).toString();
   cert.validity.notBefore = new Date();
   cert.validity.notAfter = new Date();
   cert.validity.notAfter.setFullYear(cert.validity.notBefore.getFullYear() + 1);

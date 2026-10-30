@@ -52,9 +52,6 @@ describe("Bedrock connection API secrets", () => {
         },
       },
     }));
-    // Finding #7 follow-up: providers/[id] PUT now calls requireAuth. This
-    // test exercises secret-masking, not auth — mock the helper to pass.
-    vi.doMock("@/lib/auth/requireAuth", () => ({ requireAuth: async () => true }));
 
     ({ GET: listConnections, POST: createConnection } = await import("@/app/api/providers/route.js"));
     ({ GET: getConnection, PUT: updateConnection } = await import("@/app/api/providers/[id]/route.js"));

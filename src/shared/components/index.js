@@ -35,7 +35,6 @@ export { default as EditConnectionModal } from "./EditConnectionModal";
 export { default as AddCustomEmbeddingModal } from "./AddCustomEmbeddingModal";
 export { default as NoAuthProxyCard } from "./NoAuthProxyCard";
 export { default as SegmentedControl } from "./SegmentedControl";
-export { default as MultiSelect } from "./MultiSelect";
 export { default as Tooltip } from "./Tooltip";
 export { default as ProviderInfoCard } from "./ProviderInfoCard";
 export { default as CapacityBadges } from "./CapacityBadges";

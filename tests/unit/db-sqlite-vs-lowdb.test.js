@@ -12,23 +12,12 @@ let sqliteDb;
 beforeAll(async () => {
   tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "9router-db-compare-"));
   process.env.DATA_DIR = tempDir;
-  // driver.js stashes the live adapter on `global` to survive Next.js dev
-  // hot-reload. When another db suite ran first in this vitest worker and
-  // left it set, `if (!global._dbAdapter)` keeps the stale object and
-  // getAdapter() returns an adapter bound to that suite's (already
-  // deleted) DATA_DIR file — this suite would then CRUD foreign rows.
-  // Same cleanup pattern as db-driver-chain/db-migration-* tests.
-  delete global._dbAdapter;
   vi.resetModules();
   sqliteDb = await import("@/lib/db/index.js");
   await sqliteDb.initDb();
 });
 
 afterAll(() => {
-  // Close + drop the singleton BEFORE removing the temp dir so the next
-  // suite in this worker starts from a clean adapter.
-  try { global._dbAdapter?.instance?.close?.(); } catch {}
-  delete global._dbAdapter;
   if (tempDir) fs.rmSync(tempDir, { recursive: true, force: true });
   if (originalDataDir === undefined) delete process.env.DATA_DIR;
   else process.env.DATA_DIR = originalDataDir;

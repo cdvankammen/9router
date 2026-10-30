@@ -30,9 +30,6 @@ let generateAuthData, exchangeTokens;
 // hook timeout under full-suite load (it passes in isolation), so allow 30s.
 beforeAll(async () => {
   process.env.DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), "9router-zed-auth-"));
-  // Clear the driver's global adapter singleton so this suite never reuses
-  // an adapter bound to a previous suite's DATA_DIR (see db-driver-chain).
-  delete global._dbAdapter;
   vi.resetModules();
   ({ startZedProxy, stopZedProxy, registerZedSession, getZedSessionStatus, clearZedSession } =
     await import("@/lib/oauth/utils/server.js"));
@@ -40,8 +37,6 @@ beforeAll(async () => {
 }, 30_000);
 
 afterAll(() => {
-  try { global._dbAdapter?.instance?.close?.(); } catch {}
-  delete global._dbAdapter;
   fs.rmSync(process.env.DATA_DIR, { recursive: true, force: true });
   if (originalDataDir === undefined) delete process.env.DATA_DIR;
   else process.env.DATA_DIR = originalDataDir;

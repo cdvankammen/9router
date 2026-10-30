@@ -123,32 +123,8 @@ function getProcessUsingPort443() {
 let serverProcess = null;
 let serverPid = null;
 
-// --- MITM sudo password cache (Finding #299 hardening) ---
-// Module-private state (was globalThis.__mitmSudoPassword — leaked across the realm).
-// TTL bounds the window an attacker with process-memory read access can extract the
-// credential. Aligned with typical sudo timestamp_timeout (default 5 min, we use 10).
-const CACHED_PASSWORD_TTL_MS = Number(process.env.MITM_PASSWORD_CACHE_TTL_MS) || 10 * 60 * 1000;
-let _cachedPassword = null;
-let _cachedPasswordAt = 0;
-
-function getCachedPassword() {
-  if (!_cachedPassword) return null;
-  if (Date.now() - _cachedPasswordAt > CACHED_PASSWORD_TTL_MS) {
-    _cachedPassword = null;
-    _cachedPasswordAt = 0;
-    return null;
-  }
-  return _cachedPassword;
-}
-function setCachedPassword(pwd) {
-  if (!pwd) {
-    _cachedPassword = null;
-    _cachedPasswordAt = 0;
-    return;
-  }
-  _cachedPassword = String(pwd);
-  _cachedPasswordAt = Date.now();
-}
+function getCachedPassword() { return globalThis.__mitmSudoPassword || null; }
+function setCachedPassword(pwd) { globalThis.__mitmSudoPassword = pwd; }
 
 function isProcessAlive(pid) {
   try {

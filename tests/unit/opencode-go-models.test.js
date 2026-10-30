@@ -85,9 +85,9 @@ describe("OpenCode Go per-model supportedFormats", () => {
     }
   });
 
-  it("declares [openai, openai-responses] for DeepSeek models (zen-go /v1/messages rejects tool declarations)", () => {
+  it("declares [openai, claude, openai-responses] for DeepSeek models", () => {
     for (const m of RESPONSES_CAPABLE) {
-      expect(getModelSupportedFormats("opencode-go", m)).toEqual(["openai", "openai-responses"]);
+      expect(getModelSupportedFormats("opencode-go", m)).toEqual(["openai", "claude", "openai-responses"]);
     }
   });
 
@@ -121,28 +121,6 @@ describe("OpenCode Go multi-endpoint transports", () => {
     const t = resolveTransport("opencode-go", "claude");
     expect(t.auth.header).toBe("x-api-key");
     expect(t.auth.anthropicVersion).toBe(true);
-  });
-});
-
-describe("Custom multi-protocol transports", () => {
-  const credentials = {
-    providerSpecificData: {
-      transports: [
-        { format: "openai", baseUrl: "https://multi.test/v1/chat/completions" },
-        { format: "claude", baseUrl: "https://multi.test/v1/messages" },
-      ],
-    },
-  };
-
-  it("resolves a custom transport matching the incoming format", () => {
-    expect(resolveTransport("openai-compatible-multi-test", "claude", credentials)).toEqual({
-      format: "claude",
-      baseUrl: "https://multi.test/v1/messages",
-    });
-  });
-
-  it("returns null when the custom provider has no matching endpoint", () => {
-    expect(resolveTransport("openai-compatible-multi-test", "openai-responses", credentials)).toBeNull();
   });
 });
 

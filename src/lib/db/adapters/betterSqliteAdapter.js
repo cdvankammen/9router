@@ -20,18 +20,14 @@ export function createBetterSqliteAdapter(filePath) {
     return stmt;
   }
 
-  // Checkpoint WAL periodically so file stays small for backup/copy.
-  // SECURITY (sec-3673): PASSIVE not TRUNCATE — TRUNCATE acquires exclusive
-  // lock that blocks concurrent readers for the duration of the checkpoint,
-  // causing visible event-loop stalls every 60s under load. PASSIVE only
-  // checkpoints frames that no reader is using, so it never blocks.
+  // Truncate WAL periodically so file stays small for backup/copy
   const checkpointTimer = setInterval(() => {
-    try { db.pragma("wal_checkpoint(PASSIVE)"); } catch {}
+    try { db.pragma("wal_checkpoint(TRUNCATE)"); } catch {}
   }, CHECKPOINT_INTERVAL_MS);
   if (typeof checkpointTimer.unref === "function") checkpointTimer.unref();
 
   function gracefulClose() {
-    try { db.pragma("wal_checkpoint(PASSIVE)"); } catch {}
+    try { db.pragma("wal_checkpoint(TRUNCATE)"); } catch {}
     try { stmtCache.clear(); } catch {}
     try { db.close(); } catch {}
   }
@@ -49,7 +45,7 @@ export function createBetterSqliteAdapter(filePath) {
     all(sql, params = []) { return prepare(sql).all(...params); },
     exec(sql) { return db.exec(sql); },
     transaction(fn) { return db.transaction(fn)(); },
-    checkpoint() { try { db.pragma("wal_checkpoint(PASSIVE)"); } catch {} },
+    checkpoint() { try { db.pragma("wal_checkpoint(TRUNCATE)"); } catch {} },
     close() {
       clearInterval(checkpointTimer);
       gracefulClose();

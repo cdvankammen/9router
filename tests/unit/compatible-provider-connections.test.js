@@ -8,9 +8,6 @@ const originalDataDir = process.env.DATA_DIR;
 async function setupTestContext(nodeData) {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "9router-compatible-provider-"));
   process.env.DATA_DIR = tempDir;
-  // Clear the driver's global adapter singleton so this per-test context never
-  // reuses an adapter bound to a previous run's DATA_DIR (see db-driver-chain).
-  delete global._dbAdapter;
   vi.resetModules();
   vi.doMock("next/server", () => ({
     NextResponse: {
@@ -36,8 +33,6 @@ async function setupTestContext(nodeData) {
     POST,
     getProviderConnections,
     cleanup() {
-      try { global._dbAdapter?.instance?.close?.(); } catch {}
-      delete global._dbAdapter;
       fs.rmSync(tempDir, { recursive: true, force: true });
     },
   };
@@ -118,39 +113,6 @@ describe("compatible provider connections API", () => {
         nodeName: ctx.node.name,
       },
     });
-  });
-
-  it("copies multi-protocol transports into the connection", async () => {
-    const transports = [
-      {
-        format: "openai",
-        baseUrl: "https://multi.test/v1/chat/completions",
-        auth: { combined: true, header: "Authorization", scheme: "bearer" },
-      },
-      {
-        format: "claude",
-        baseUrl: "https://multi.test/v1/messages",
-        auth: { combined: true, header: "x-api-key", scheme: "raw", anthropicVersion: true },
-      },
-    ];
-    const ctx = await setupTestContext({
-      id: "openai-compatible-multi-test",
-      type: "multi-compatible",
-      name: "Multi-protocol Test Node",
-      prefix: "multi",
-      apiType: "chat",
-      baseUrl: "https://multi.test/v1",
-      transports,
-    });
-    cleanup = ctx.cleanup;
-
-    const response = await ctx.POST(makeRequest(ctx.node.id));
-    const body = await response.json();
-    const storedConnections = await ctx.getProviderConnections({ provider: ctx.node.id });
-
-    expect(response.status).toBe(201);
-    expect(body.connection.providerSpecificData.transports).toEqual(transports);
-    expect(storedConnections[0].providerSpecificData.transports).toEqual(transports);
   });
 
   it("creates one API-key connection for an Anthropic-compatible node", async () => {

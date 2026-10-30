@@ -57,33 +57,3 @@ describe("Driver fallback chain", () => {
     expect(db.driver).toBe("sql.js");
   });
 });
-
-// Every adapter must hand back plain objects (Object.prototype) from get/all.
-// node:sqlite returns null-prototype rows natively, which Next.js RSC
-// serialization rejects ("Only plain objects ... can be passed to Client
-// Components") and JSON.stringify silently empties — the Statistics page 500s
-// once real data exists. Guards the adapter contract across all drivers.
-describe("Adapter row shape", () => {
-  it("get/all return plain objects with enumerable keys", async () => {
-    // Clear any vi.doMock leakage from the fallback-chain tests above —
-    // otherwise this test silently runs against sql.js and never exercises
-    // the node:sqlite null-prototype path.
-    vi.doUnmock("@/lib/db/adapters/betterSqliteAdapter.js");
-    vi.doUnmock("@/lib/db/adapters/nodeSqliteAdapter.js");
-    const { getAdapter } = await import("@/lib/db/driver.js");
-    const db = await getAdapter();
-
-    db.exec("CREATE TABLE IF NOT EXISTS proto_probe (a TEXT, b INTEGER)");
-    db.run("DELETE FROM proto_probe");
-    db.run("INSERT INTO proto_probe (a, b) VALUES (?, ?)", ["x", 1]);
-
-    const row = db.get("SELECT * FROM proto_probe");
-    const rows = db.all("SELECT * FROM proto_probe");
-
-    expect(row).not.toBeUndefined();
-    expect(Object.getPrototypeOf(row)).toBe(Object.prototype);
-    expect(Object.getPrototypeOf(rows[0])).toBe(Object.prototype);
-    expect(Object.keys(row).sort()).toEqual(["a", "b"]);
-    expect(JSON.parse(JSON.stringify(row))).toEqual({ a: "x", b: 1 });
-  });
-});

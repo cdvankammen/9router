@@ -116,7 +116,7 @@ export async function POST(request) {
       await fetch(`${DENO_V2_API}/apps/${app.id}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${denoToken}` },
-      }).catch((e) => console.error("Deno Deploy cleanup DELETE failed (deploy error):", e.message));
+      }).catch(() => {});
       return NextResponse.json(
         { error: `Deploy failed (${deployRes.status}): ${text}` },
         { status: deployRes.status }
@@ -147,7 +147,7 @@ export async function POST(request) {
       await fetch(`${DENO_V2_API}/apps/${app.id}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${denoToken}` },
-      }).catch((e) => console.error("Deno Deploy cleanup DELETE failed (status check):", e.message));
+      }).catch(() => {});
       return NextResponse.json(
         { error: `Deploy failed with status: ${status}` },
         { status: 500 }

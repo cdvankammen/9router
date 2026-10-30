@@ -1,8 +1,6 @@
 import { saveRequestUsage, appendRequestLog, saveRequestDetail } from "@/lib/usageDb.js";
 import { COLORS } from "../../utils/stream.js";
 import { canonicalizeUsage } from "../../utils/usageTracking.js";
-import { getPricingForModel, calculateCostFromTokens, MODEL_PRICING, PROVIDER_PRICING, PATTERN_PRICING } from "../../providers/pricing.js";
-import { detectClientTool, detectIDE } from "../../utils/clientDetector.js";
 
 const OPTIONAL_PARAMS = [
   "temperature", "top_p", "top_k",
@@ -81,64 +79,8 @@ export function extractUsageFromResponse(responseBody) {
   return null;
 }
 
-/**
- * Compute per-request cost (USD) with provenance labels. FAIL-OPEN: never
- * throws — any error (or missing pricing entry) degrades to cost 0 with
- * provenance "unavailable", so request capture can never be broken by cost.
- *
- * provenance values:
- *   "exact"       — matched a concrete PROVIDER_PRICING / MODEL_PRICING entry
- *   "estimated"   — matched a PATTERN_PRICING glob fallback (rates are an
- *                   approximation for this model)
- *   "unavailable" — no pricing entry matched, or computation threw
- *
- * @param {string} provider provider alias/id (e.g. "gh", "tokenrouter")
- * @param {string} model model id (e.g. "gpt-4o-mini", "anthropic/claude-opus-4.6")
- * @param {object} tokens usage counters (OpenAI or Claude field names; cached
- *   tokens are included at the discounted rate — see calculateCostFromTokens)
- * @returns {{ cost: number, provenance: "exact"|"estimated"|"unavailable", pricingModel: string|undefined }}
- *   cost in USD; pricingModel = the pricing key/pattern that was used.
- */
-export function computeCost(provider, model, tokens) {
-  try {
-    if (!model || !tokens || typeof tokens !== "object") {
-      return { cost: 0, provenance: "unavailable", pricingModel: undefined };
-    }
-    const pricing = getPricingForModel(provider, model);
-    if (!pricing) {
-      return { cost: 0, provenance: "unavailable", pricingModel: undefined };
-    }
-    const cost = calculateCostFromTokens(tokens, pricing) || 0;
-
-    // Provenance: getPricingForModel returns PATTERN_PRICING entries only when
-    // no concrete entry matched, and always by reference — so reference
-    // equality distinguishes "exact" (PROVIDER/MODEL tables) from "estimated".
-    let provenance = "estimated";
-    let pricingModel = model;
-    if (provider && PROVIDER_PRICING[provider]?.[model]) {
-      provenance = "exact";
-      pricingModel = `${provider}:${model}`;
-    } else {
-      const baseModel = model.includes("/") ? model.split("/").pop() : model;
-      if (MODEL_PRICING[baseModel] === pricing) {
-        provenance = "exact";
-        pricingModel = baseModel;
-      } else if (MODEL_PRICING[model] === pricing) {
-        provenance = "exact";
-        pricingModel = model;
-      } else {
-        const hit = PATTERN_PRICING.find(({ pricing: p }) => p === pricing);
-        if (hit) pricingModel = hit.pattern;
-      }
-    }
-    return { cost, provenance, pricingModel };
-  } catch {
-    return { cost: 0, provenance: "unavailable", pricingModel: undefined };
-  }
-}
-
 export function buildRequestDetail(base, overrides = {}) {
-  const detail = {
+  return {
     provider: base.provider || "unknown",
     model: base.model || "unknown",
     connectionId: base.connectionId || undefined,
@@ -151,32 +93,8 @@ export function buildRequestDetail(base, overrides = {}) {
     response: base.response || {},
     pxpipe: base.pxpipe || undefined,
     status: base.status || "success",
-    conversationId: base.conversationId || undefined,
-    errorCategory: base.errorCategory || undefined,
-    sourceApp: base.sourceApp || undefined,
-    userAgent: base.userAgent || undefined,
-    clientTool: base.clientTool || undefined,
-    ide: base.ide || undefined,
-    url: base.url || undefined,
     ...overrides
   };
-
-  // Per-request cost capture, computed from the FINAL merged tokens (so
-  // overrides are respected). Fail-open: cost computation can never break
-  // capture. An explicit overrides.cost is honored as-is (computed costs
-  // cannot be pre-empted by base).
-  if (overrides.cost === undefined) {
-    const { cost, provenance, pricingModel } = computeCost(detail.provider, detail.model, detail.tokens);
-    detail.cost = cost;
-    detail.costProvenance = provenance;
-    detail.pricingModel = pricingModel;
-  } else {
-    detail.cost = overrides.cost;
-    if (overrides.costProvenance !== undefined) detail.costProvenance = overrides.costProvenance;
-    if (overrides.pricingModel !== undefined) detail.pricingModel = overrides.pricingModel;
-  }
-
-  return detail;
 }
 
 // Build the "done" summary: duration, ttft, in/out tokens with cache breakdown
@@ -197,7 +115,7 @@ export function formatDoneLine({ usage, latency }) {
   return `DONE ${latency?.total ?? 0}ms${ttftStr} · ${inStr} · OUT ${outTok}`;
 }
 
-export function saveUsageStats({ provider, model, tokens, connectionId, apiKey, endpoint, label = "USAGE", silent = false, conversationId, taskType, smartRouterMeta }) {
+export function saveUsageStats({ provider, model, tokens, connectionId, apiKey, endpoint, label = "USAGE", silent = false }) {
   if (!tokens || typeof tokens !== "object") return;
 
   const inTokens = tokens.input_tokens ?? tokens.prompt_tokens ?? 0;
@@ -225,11 +143,6 @@ export function saveUsageStats({ provider, model, tokens, connectionId, apiKey, 
     timestamp: new Date().toISOString(),
     connectionId: connectionId || undefined,
     apiKey: apiKey || undefined,
-    endpoint: endpoint || null,
-    conversationId: conversationId || undefined,
-    meta: {
-      ...(taskType ? { taskType } : {}),
-      ...(smartRouterMeta || {}),
-    },
+    endpoint: endpoint || null
   }).catch(() => {});
 }

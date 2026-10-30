@@ -77,21 +77,9 @@ export function selectAnthropicBeta(model = "", body = null) {
   return flags.join(",");
 }
 
-// SECURITY (Finding #306): Whitelist of known Anthropic beta flags. Client-supplied
-// anthropic-beta headers are intersected with this set before merging into upstream
-// requests. Without a whitelist, an attacker can inject arbitrary beta flags —
-// including future/unknown flags that unlock gated features or change billing.
-const ANTHROPIC_BETA_WHITELIST = new Set([
-  ...ANTHROPIC_BETA_BASE,
-  ...ANTHROPIC_BETA_HEAVY_AGENT,
-  ANTHROPIC_BETA_REDACT_THINKING,
-]);
-
 export function mergeAnthropicBeta(...values) {
   const flags = values.flatMap((v) => (typeof v === "string" ? v.split(",") : [])).map((f) => f.trim()).filter(Boolean);
-  // Intersect with whitelist — unknown flags are silently dropped.
-  const allowed = flags.filter((f) => ANTHROPIC_BETA_WHITELIST.has(f));
-  return [...new Set(allowed)].join(",");
+  return [...new Set(flags)].join(",");
 }
 
 // Shared baseUrls
@@ -108,28 +96,14 @@ export const ANTIGRAVITY_IDE_VERSION = "2.24.0";
 export const ANTIGRAVITY_IDE_BASE_URL = "https://daily-cloudcode-pa.googleapis.com";
 export const ANTIGRAVITY_IDE_USER_AGENT = `antigravity/hub/${ANTIGRAVITY_IDE_VERSION} darwin/arm64`;
 
-// SECURITY (Finding #326): OAuth client credentials moved to environment variables
-// with the originally-shipped public CLI client IDs/secrets as fallback. Operators
-// should rotate these via ANTIGRAVITY_OAUTH_CLIENT_SECRET / GOOGLE_OAUTH_CLIENT_SECRET
-// — Google revokes GOCSPX-* secrets that appear in public repos, which would break
-// all users' OAuth flows simultaneously if the hardcoded fallback is revoked.
-// Single source of truth: registry files spread from these constants (no duplicate literals).
+// Antigravity OAuth client credentials (public CLI client — duplicated in usage.js + src/lib/oauth)
 export const ANTIGRAVITY_OAUTH_CLIENT = {
-  clientId:
-    process.env.ANTIGRAVITY_OAUTH_CLIENT_ID ||
-    "1071006060591-tmhssin2h21lcre235vtolojh4g403ep.apps.googleusercontent.com",
-  clientSecret:
-    process.env.ANTIGRAVITY_OAUTH_CLIENT_SECRET ||
-    "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",
+  clientId: "1071006060591-tmhssin2h21lcre235vtolojh4g403ep.apps.googleusercontent.com",
+  clientSecret: "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"
 };
 
-// Gemini (Google) OAuth client credentials — same env-override pattern.
-// Shared by gemini, gemini-cli, and src/lib/oauth via PROVIDER_OAUTH spread.
+// Gemini (Google) OAuth client credentials (public CLI client — shared by gemini, gemini-cli, src/lib/oauth)
 export const GOOGLE_OAUTH_CLIENT = {
-  clientId:
-    process.env.GOOGLE_OAUTH_CLIENT_ID ||
-    "681255809395-oo8ft2oprdrnp9e3aqf6av3hmdib135j.apps.googleusercontent.com",
-  clientSecret:
-    process.env.GOOGLE_OAUTH_CLIENT_SECRET ||
-    "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",
+  clientId: "681255809395-oo8ft2oprdrnp9e3aqf6av3hmdib135j.apps.googleusercontent.com",
+  clientSecret: "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"
 };

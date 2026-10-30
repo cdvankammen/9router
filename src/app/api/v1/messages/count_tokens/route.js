@@ -1,11 +1,14 @@
-import { corsOptionsResponse, withCorsHeaders } from "@/shared/utils/corsOptions.js";
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "*"
+};
 
 /**
- * Handle CORS preflight — delegates to shared helper which honors
- * settings.corsAllowedOrigins (CORS rollout 2026-10-29).
+ * Handle CORS preflight
  */
-export async function OPTIONS(request) {
-  return corsOptionsResponse(request, "POST, OPTIONS");
+export async function OPTIONS() {
+  return new Response(null, { headers: CORS_HEADERS });
 }
 
 function countValueChars(value) {
@@ -74,18 +77,18 @@ export async function POST(request) {
   try {
     body = await request.json();
   } catch {
-    return withCorsHeaders(request, new Response(JSON.stringify({ error: "Invalid JSON body" }), {
+    return new Response(JSON.stringify({ error: "Invalid JSON body" }), {
       status: 400,
-      headers: { "Content-Type": "application/json" }
-    }));
+      headers: { "Content-Type": "application/json", ...CORS_HEADERS }
+    });
   }
 
   const inputTokens = estimateAnthropicInputTokens(body);
 
-  return withCorsHeaders(request, new Response(JSON.stringify({
+  return new Response(JSON.stringify({
     input_tokens: inputTokens
   }), {
-    headers: { "Content-Type": "application/json" }
-  }));
+    headers: { "Content-Type": "application/json", ...CORS_HEADERS }
+  });
 }
 

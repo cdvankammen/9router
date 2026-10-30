@@ -46,8 +46,7 @@ describe("Codex GPT-6 image models", () => {
     const onRequestSuccess = vi.fn();
     const onUsage = vi.fn();
     const modelInfo = await getModelInfoCore(`cx/${model}-image`);
-    // toMatchObject: getModelInfoCore may include extra fields (e.g. betaMarker) beyond {provider, model}
-    expect(modelInfo).toMatchObject({ provider: "codex", model: `${model}-image` });
+    expect(modelInfo).toEqual({ provider: "codex", model: `${model}-image` });
     expect(await getModelInfoCore(`codex/${model}-image`)).toEqual(modelInfo);
 
     const result = await handleImageGenerationCore({

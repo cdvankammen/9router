@@ -203,7 +203,6 @@ export const MODEL_CAPABILITIES = {
   "muse-spark-1.3-contributor-free": { vision: true, reasoning: true, thinkingFormat: "openai", contextWindow: 1048576, maxOutput: 131072 },
   // OpenCode Free Union Alpha — multimodal (text+vision), 262K context, 131K max output
   "union-alpha": { vision: true, contextWindow: 262144, maxOutput: 131072 },
-
   // ── OpenCode Free (reasoning: true in models.dev, ids newer than the tables above) ──
   // Without these entries getCapabilitiesForModel() falls through to
   // DEFAULT_CAPABILITIES (reasoning: false) and applyThinking() strips the client's
@@ -220,15 +219,6 @@ export const MODEL_CAPABILITIES = {
   "north-mini-code-free":    { reasoning: true, thinkingFormat: "openai", contextWindow: 256000, maxOutput: 64000 },
   "ring-2.6-1t-free":        { reasoning: true, thinkingFormat: "openai", contextWindow: 262000, maxOutput: 66000 },
   "x-preview-f-free":        { vision: true, videoInput: true, reasoning: true, thinkingFormat: "openai", contextWindow: 1000000, maxOutput: 131072 },
-
-  // 9Router virtual smart router models — capabilities reflect the union of
-  // all real providers they may dispatch to. Marked broadly capable so
-  // capability-gating never blocks a 9router request before selection.
-  "auto":           { vision: true, reasoning: true, search: true, tools: true, contextWindow: 1000000, maxOutput: 128000 },
-  "best-code":      { vision: true, reasoning: true, tools: true, contextWindow: 1000000, maxOutput: 128000 },
-  "best-chat":      { vision: true, tools: true, contextWindow: 1000000, maxOutput: 128000 },
-  "best-reasoning": { vision: true, reasoning: true, search: true, tools: true, contextWindow: 1000000, maxOutput: 128000 },
-  "best-cheap":     { vision: true, tools: true, contextWindow: 200000, maxOutput: 64000 },
 };
 
 const KIRO_GPT_5_6_CAPABILITIES = { vision: true, reasoning: true, search: true, thinkingFormat: "openai", contextWindow: 272000, maxOutput: 128000 };
@@ -309,7 +299,6 @@ export const PROVIDER_CAPABILITIES = {
     "claude-haiku-5-5": { vision: true, reasoning: true, search: true, thinkingFormat: "commandcode", thinkingEffortSupported: true, contextWindow: 1000000, maxOutput: 128000 },
   },
   "codex": {
-    "gpt-6.1-sol":               { vision: true, reasoning: true, search: true, thinkingFormat: "openai", contextWindow: 272000, maxOutput: 128000 },
     "gpt-6-astra":               { vision: true, reasoning: true, search: true, thinkingFormat: "openai", contextWindow: 272000, maxOutput: 128000 },
     "gpt-6-sol":                 { vision: true, reasoning: true, search: true, thinkingFormat: "openai", contextWindow: 272000, maxOutput: 128000 },
     // Without its own entry gpt-6.1-sol fell through to *gpt-6* (1.05M), overstating

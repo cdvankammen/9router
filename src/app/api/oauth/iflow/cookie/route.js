@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { createProviderConnection } from "@/models";
-import { requireAuth } from "@/lib/auth/requireAuth";
 
 /**
  * iFlow Cookie-Based Authentication
@@ -8,11 +7,6 @@ import { requireAuth } from "@/lib/auth/requireAuth";
  * Body: { cookie: "BXAuth=xxx; ..." }
  */
 export async function POST(request) {
-  // SECURITY (#254): route-level requireAuth. This endpoint writes a
-  // user-supplied iFlow cookie into the providerConnections pool.
-  if (!(await requireAuth(request))) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
   try {
     const { cookie } = await request.json();
 
@@ -34,7 +28,6 @@ export async function POST(request) {
     // Step 1: GET API key info to get the name
     const getResponse = await fetch("https://platform.iflow.cn/api/openapi/apikey", {
       method: "GET",
-      signal: AbortSignal.timeout(15000),
       headers: {
         "Cookie": normalizedCookie,
         "Accept": "application/json, text/plain, */*",
@@ -72,7 +65,6 @@ export async function POST(request) {
     // Step 2: POST to refresh API key
     const postResponse = await fetch("https://platform.iflow.cn/api/openapi/apikey", {
       method: "POST",
-      signal: AbortSignal.timeout(15000),
       headers: {
         "Cookie": normalizedCookie,
         "Content-Type": "application/json",
@@ -140,12 +132,6 @@ export async function POST(request) {
     });
   } catch (error) {
     console.error("iFlow cookie auth error:", error);
-    if (error?.name === "TimeoutError" || error?.name === "AbortError") {
-      return NextResponse.json(
-        { error: "iFlow API request timed out after 15s — the service may be unreachable from your network" },
-        { status: 504 }
-      );
-    }
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

@@ -263,7 +263,7 @@ export function extractKiroEffortLevel(body, model) {
   const normalized = effort.toLowerCase();
   if (normalized === "none" || normalized === "off" || normalized === "disabled") return null;
   if (normalized === "xhigh") return kiroModelLacksXhigh(model) ? "high" : "xhigh";
-  if (normalized === "max") return kiroModelLacksXhigh(model) ? "high" : "max";
+  if (normalized === "max") return "max";
   if (["low", "medium", "high"].includes(normalized)) return normalized;
   return null;
 }
@@ -477,12 +477,3 @@ function containsTagInText(text) {
   return text.includes("<thinking_mode>enabled</thinking_mode>")
     || text.includes("<thinking_mode>interleaved</thinking_mode>");
 }
-
-// Upstream payload budget (ported from cpa-kiro-provider maxKiroPayloadBytes).
-// Kiro rejects requests above ~900 KiB, so oversized payloads are degraded
-// before sending instead of failing the whole turn.
-export const KIRO_MAX_PAYLOAD_BYTES = 900 * 1024;
-export const KIRO_TRUNCATION_NOTICE =
-  "\n\n[truncated: content exceeded the upstream request size limit]";
-export const KIRO_IMAGE_DROP_NOTICE =
-  "\n\n[an attached image was dropped: the request exceeded the upstream size limit]";

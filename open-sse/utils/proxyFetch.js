@@ -259,24 +259,13 @@ async function fetchWithTlsFallback(url, options, proxyUrl) {
     const dispatcher = proxyUrl ? await getDispatcher(proxyUrl) : undefined;
     return await originalFetch(url, dispatcher ? { ...options, dispatcher } : options);
   } catch (err) {
-    // Row 42 (2026-10-27): Default-deny insecure TLS fallback.
-    // Previously the auto-fallback to rejectUnauthorized:false was the default
-    // unless STRICT_SSL was explicitly set, silently downgrading certificate
-    // verification for ALL upstream provider calls. Now the fallback requires
-    // explicit opt-in via options.allowInsecureTls or the ALLOW_INSECURE_TLS
-    // env var. STRICT_SSL=true is still honored as a belt-and-suspenders
-    // override that blocks fallback regardless of other flags.
     const isStrictSsl = options.strictTls === true || process.env.STRICT_SSL === "true" || process.env.STRICT_SSL === "1";
-    const allowInsecureFallback =
-      options.allowInsecureTls === true ||
-      process.env.ALLOW_INSECURE_TLS === "true" ||
-      process.env.ALLOW_INSECURE_TLS === "1";
-    if (!isStrictSsl && allowInsecureFallback && isTlsCertError(err)) {
+    if (!isStrictSsl && isTlsCertError(err)) {
       if (options.body && typeof options.body.getReader === "function" && options.body.locked) {
         throw err;
       }
       // ponytail: in-memory insecure agent fallback for self-signed MITM corporate/antivirus certs
-      console.warn(`[ProxyFetch] TLS cert verification failed (${err.cause?.code || err.code}), retrying with insecure TLS (allowInsecureTls): ${url}`);
+      console.warn(`[ProxyFetch] TLS cert verification failed (${err.cause?.code || err.code}), retrying with insecure TLS: ${url}`);
       const insecureDispatcher = await getDispatcher(proxyUrl, true);
       return await originalFetch(url, { ...options, dispatcher: insecureDispatcher });
     }

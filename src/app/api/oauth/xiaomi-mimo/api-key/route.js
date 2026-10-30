@@ -1,7 +1,5 @@
 import { NextResponse } from "next/server";
-import crypto from "node:crypto";
 import { createProviderConnection } from "@/models";
-import { requireAuth } from "@/lib/auth/requireAuth";
 
 /**
  * POST /api/oauth/xiaomi-mimo/api-key
@@ -11,14 +9,6 @@ import { requireAuth } from "@/lib/auth/requireAuth";
  * Body: { apiKey, uid?, baseUrl? }
  */
 export async function POST(request) {
-  // SECURITY (#254): route-level requireAuth. This endpoint writes a
-  // user-supplied MiMo API key into the providerConnections pool AND
-  // makes an outbound fetch to validate it (SSRF surface already guarded
-  // by assertLoopbackProxyUrl in mimoLoginSession.js, but auth is the
-  // defense-in-depth layer). Also creates a MiMo login session.
-  if (!(await requireAuth(request))) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
   try {
     const { apiKey, uid, baseUrl, mimoPassToken, mimoUserId, mimoCUserId, region } = await request.json();
 
@@ -72,19 +62,10 @@ export async function POST(request) {
     // Dedup: same uid, same key, or same session identity+region
     const { getProviderConnections, updateProviderConnection } = await import("@/models");
     const normRegion = (typeof region === "string" && region) || undefined;
-    // SECURITY (Finding #323): timing-safe comparison for stored API key.
-    // Plain === on secrets leaks match length via timing side-channel.
-    const safeKeyMatch = (stored, candidate) => {
-      if (!stored || !candidate) return false;
-      const a = Buffer.from(String(stored), "utf8");
-      const b = Buffer.from(String(candidate), "utf8");
-      if (a.length !== b.length) return false;
-      return crypto.timingSafeEqual(a, b);
-    };
     const existing = (await getProviderConnections()).find(
       (c) => c.provider === "xiaomi-mimo" && (
         (uid && c.email === `${uid}@xiaomi`) ||
-        (key && safeKeyMatch(c.accessToken, key)) ||
+        (key && c.accessToken === key) ||
         (sessionOnly && mimoUserId &&
           c.providerSpecificData?.mimoUserId === mimoUserId &&
           (normRegion ? (c.providerSpecificData?.region || "cn") === normRegion : true))

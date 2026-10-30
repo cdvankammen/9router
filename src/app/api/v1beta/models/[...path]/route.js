@@ -1,5 +1,4 @@
 import { handleChat } from "@/sse/handlers/chat.js";
-import { corsOptionsResponse, withCorsHeaders } from "@/shared/utils/corsOptions.js";
 import {
   clearAccountError,
   getProviderCredentials,
@@ -30,8 +29,14 @@ async function ensureInitialized() {
 /**
  * Handle CORS preflight
  */
-export async function OPTIONS(request) {
-  return corsOptionsResponse(request, "GET, POST, OPTIONS");
+export async function OPTIONS() {
+  return new Response(null, {
+    headers: {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+      "Access-Control-Allow-Headers": "*"
+    }
+  });
 }
 
 /**
@@ -81,9 +86,7 @@ export async function POST(request, { params }) {
     const body = await request.json();
 
     if (isGeminiNativeTtsRequest(model, body)) {
-      // forwardGeminiNativeRequest returns bare Response.json on auth/credential/
-      // fetch error paths — wrap here so withCorsHeaders is the single authority.
-      return withCorsHeaders(request, await forwardGeminiNativeRequest(request, body, model, action));
+      return await forwardGeminiNativeRequest(request, body, model, action);
     }
 
     // Streaming is determined by URL action suffix:
@@ -107,17 +110,17 @@ export async function POST(request, { params }) {
       // Transform OpenAI SSE => Gemini SSE on the fly.
       // The @google/genai SDK always uses :streamGenerateContent?alt=sse and
       // expects Gemini SSE chunks (no [DONE] sentinel — stream just closes).
-      return withCorsHeaders(request, transformOpenAISSEToGeminiSSE(response, model));
+      return transformOpenAISSEToGeminiSSE(response, model);
     } else {
       // Convert OpenAI JSON response => Gemini GenerateContentResponse
-      return await convertOpenAIResponseToGemini(request, response, model);
+      return await convertOpenAIResponseToGemini(response, model);
     }
   } catch (error) {
     console.log("Error handling Gemini request:", error);
-    return withCorsHeaders(request, Response.json(
+    return Response.json(
       { error: { message: error.message, code: 500 } },
       { status: 500 }
-    ));
+    );
   }
 }
 
@@ -205,8 +208,7 @@ function corsHeadersFrom(response) {
   headers.delete("content-encoding");
   headers.delete("content-length");
   headers.delete("transfer-encoding");
-  // CORS headers are applied at the call site via withCorsHeaders(request, response)
-  // so they honor settings.corsAllowedOrigins.
+  headers.set("Access-Control-Allow-Origin", "*");
   return headers;
 }
 
@@ -337,11 +339,11 @@ async function forwardGeminiNativeRequest(request, body, model, action) {
 
     if (upstreamResponse.ok) {
       await clearAccountError(credentials.connectionId, credentials, modelId);
-      return withCorsHeaders(request, new Response(upstreamResponse.body, {
+      return new Response(upstreamResponse.body, {
         status: upstreamResponse.status,
         statusText: upstreamResponse.statusText,
         headers: corsHeadersFrom(upstreamResponse),
-      }));
+      });
     }
 
     const errorText = await upstreamResponse.text();
@@ -360,11 +362,11 @@ async function forwardGeminiNativeRequest(request, body, model, action) {
       continue;
     }
 
-    return withCorsHeaders(request, new Response(errorText, {
+    return new Response(errorText, {
       status: upstreamResponse.status,
       statusText: upstreamResponse.statusText,
       headers: corsHeadersFrom(upstreamResponse),
-    }));
+    });
   }
 }
 
@@ -515,6 +517,7 @@ function transformOpenAISSEToGeminiSSE(upstreamResponse, model) {
     headers: {
       "Content-Type": "text/event-stream",
       "Cache-Control": "no-cache",
+      "Access-Control-Allow-Origin": "*",
     },
   });
 }
@@ -523,30 +526,30 @@ function transformOpenAISSEToGeminiSSE(upstreamResponse, model) {
  * Convert an OpenAI chat.completion JSON response into a Gemini
  * GenerateContentResponse so that Gemini CLI can parse it.
  */
-async function convertOpenAIResponseToGemini(request, response, model) {
-  if (!response.ok) return withCorsHeaders(request, response);
+async function convertOpenAIResponseToGemini(response, model) {
+  if (!response.ok) return response;
 
   let body;
   try {
     body = await response.json();
   } catch {
-    return withCorsHeaders(request, response);
+    return response;
   }
 
-  if (body.candidates) return withCorsHeaders(request, Response.json(body, {
-    headers: { "Content-Type": "application/json" }
-  }));
+  if (body.candidates) return Response.json(body, {
+    headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
+  });
 
-  if (body.error) return withCorsHeaders(request, Response.json(body, {
+  if (body.error) return Response.json(body, {
     status: response.status,
-    headers: { "Content-Type": "application/json" }
-  }));
+    headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
+  });
 
   const choice = body.choices?.[0];
   if (!choice) {
-    return withCorsHeaders(request, Response.json(body, {
-      headers: { "Content-Type": "application/json" }
-    }));
+    return Response.json(body, {
+      headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
+    });
   }
 
   const { message, finish_reason } = choice;
@@ -582,7 +585,7 @@ async function convertOpenAIResponseToGemini(request, response, model) {
     }
   }
 
-  return withCorsHeaders(request, Response.json(geminiResponse, {
-    headers: { "Content-Type": "application/json" }
-  }));
+  return Response.json(geminiResponse, {
+    headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
+  });
 }

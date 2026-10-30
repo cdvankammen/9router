@@ -40,15 +40,6 @@ const getPageInfo = (pathname) => {
   const mediaKindMatch = pathname.match(/\/media-providers\/([^/]+)$/);
   if (mediaKindMatch) {
     const kindId = mediaKindMatch[1];
-    // Special case: /media-providers/web is a combined page for webSearch + webFetch
-    if (kindId === "web") {
-      return {
-        title: "Web",
-        description: "Manage your Web Search and Web Fetch providers",
-        icon: "travel_explore",
-        breadcrumbs: [],
-      };
-    }
     const kindConfig = MEDIA_PROVIDER_KINDS.find((k) => k.id === kindId);
     return {
       title: kindConfig?.label || kindId,
@@ -242,10 +233,9 @@ export default function Header({ onMenuClick, showMenuButton = true }) {
         {showMenuButton && (
           <button
             onClick={onMenuClick}
-            aria-label="Toggle navigation menu"
             className="text-text-main hover:text-primary transition-colors"
           >
-            <span className="material-symbols-outlined" aria-hidden="true">menu</span>
+            <span className="material-symbols-outlined">menu</span>
           </button>
         )}
       </div>
@@ -262,7 +252,7 @@ export default function Header({ onMenuClick, showMenuButton = true }) {
                 }`}
               >
                 {index > 0 && (
-                  <span className="material-symbols-outlined text-text-muted text-base hidden sm:inline" aria-hidden="true">
+                  <span className="material-symbols-outlined text-text-muted text-base hidden sm:inline">
                     chevron_right
                   </span>
                 )}

@@ -4,85 +4,28 @@
 # Catalogued before the June translator refactor (9532ec80); expected behavior not
 # re-established from current code, needs the maintainer.
 tests/unit/claude-header-forwarding.test.js :: proxyAwareFetch — api.anthropic.com routing routes api.anthropic.com to gotScraping (non-streaming) and returns ok response
-# GAP-P1-12 cherry-pick (9ed94dd3) fixed 5 of 8 cursor auto-import tests.
-# 3 remaining failures are test-mock gaps (realpath mock doesn't fully satisfy
-# validateCursorDbPath happy-path for token extraction tests).
-# (Removed 2026-10-30 session 26): all 10 oauth-cursor-auto-import tests now pass.
-# CLI fallback strategy is mocked via child_process.execFile with util.promisify.custom;
-# better-sqlite3 native binding is unavailable in the test env, so the CLI path is the
-# one exercised. GAP-P1-12 (validateCursorDbPath) provides the symlink/traversal guard.
+tests/unit/oauth-cursor-auto-import.test.js :: GET /api/oauth/cursor/auto-import extracts tokens using exact keys
+tests/unit/oauth-cursor-auto-import.test.js :: GET /api/oauth/cursor/auto-import falls back to fuzzy key matching on macOS when exact keys are missing
+tests/unit/oauth-cursor-auto-import.test.js :: GET /api/oauth/cursor/auto-import linux uses single hardcoded path and original error message
+tests/unit/oauth-cursor-auto-import.test.js :: GET /api/oauth/cursor/auto-import returns descriptive error if macOS db file exists but cannot be opened
+tests/unit/oauth-cursor-auto-import.test.js :: GET /api/oauth/cursor/auto-import returns login-prompt error when tokens are missing even after fallback
+tests/unit/oauth-cursor-auto-import.test.js :: GET /api/oauth/cursor/auto-import returns not-found when no macOS cursor db paths are accessible
+tests/unit/oauth-cursor-auto-import.test.js :: GET /api/oauth/cursor/auto-import unsupported platform returns 400
+tests/unit/oauth-cursor-auto-import.test.js :: GET /api/oauth/cursor/auto-import unwraps JSON-encoded string values
 tests/unit/openai-to-claude.test.js :: openaiToClaudeResponse omits empty Read pages tool argument before emitting Claude input deltas
 tests/unit/translator-request-normalization.test.js :: request normalization claudeToOpenAIRequest flattens text-only content arrays into string
 tests/unit/translator-request-normalization.test.js :: request normalization filterToOpenAIFormat flattens text-only arrays to string
 tests/unit/translator-request-normalization.test.js :: request normalization parseSSELine supports provider raw NDJSON stream lines
 tests/unit/translator-request-normalization.test.js :: request normalization translateRequest keeps /v1/messages Claude->OpenAI text payloads string-safe
 
+# Real bug: /api/usage/stats serializes raw API keys as byApiKey property names (GHSA-vjc7).
+# Fixed by decolua/9router#4286.
+tests/unit/security-audit.test.js :: AUDIT-002: API key masking byApiKey object keys should use masked key, not raw key
+
 # Stale expectations fixed by decolua/9router#3665 (search auto-switch disabled on purpose;
 # reorder returns a copy).
 tests/unit/combo-autoswitch.test.js :: detectRequiredCapabilities web_search tool -> search
 tests/unit/combo-autoswitch.test.js :: reorderByCapabilities keeps order when no model matches
-
-# Stale expectation: upstream combo.js now classifies generic 400 "Bad request" as
-# request-scoped (advance to next member) rather than account-scoped (return immediately).
-# The request-scoped-fallback tests validate the new semantics; this test predates that distinction.
-tests/unit/combo-credit-fallback.test.js :: combo credit fallback routes a 400 response correctly: Bad request
-
-# Test drift: hardcoded schema version number (schema-1-to-2) doesn't match our
-# branch's SCHEMA_VERSION=6 (which produces schema-1-to-6 backup dir).
-tests/unit/key-access-migration.test.js :: apiKeys access columns: upgrade from the previous schema adds the columns, keeps every row, and reads every existing key as unrestricted
-
-# I18N drift: zh-CN retains old guidance key that upstream removed during merge.
-tests/unit/api-key-visibility-guidance.test.js :: API key visibility guidance source verification updates the existing zh-CN translation without retaining the one-time claim
-
-# Upstream accountFallback.checkFallbackError now returns requestScoped:true in
-# the response shape; these tests predate that field.
-tests/unit/codebuddy-block-backoff.test.js :: CodeBuddy Intl block backoff (#5024) keeps the same text request-scoped for provider openai
-tests/unit/codebuddy-block-backoff.test.js :: CodeBuddy Intl block backoff (#5024) keeps the same text request-scoped for provider codebuddy-cn
-tests/unit/codebuddy-block-backoff.test.js :: CodeBuddy Intl block backoff (#5024) keeps the same text request-scoped for provider null
-tests/unit/codebuddy-block-backoff.test.js :: CodeBuddy Intl block backoff (#5024) does not classify every 11128 code as a block
-tests/unit/codebuddy-block-backoff.test.js :: CodeBuddy Intl block backoff (#5024) still stops a combo on a malformed CodeBuddy request
-
-# Upstream opencode-free tool_choice: tools array shrunk (bash/glob/grep/read removed).
-tests/unit/opencode-free-tool-choice.test.js :: opencode Free 1.3 tool_choice auto-only demote Responses named sang auto (plain và max)
-tests/unit/opencode-free-tool-choice.test.js :: opencode Free 1.3 tool_choice auto-only demote Chat function named sang auto (plain và max)
-tests/unit/opencode-free-tool-choice.test.js :: opencode Free 1.3 tool_choice auto-only demote Claude tool named sang auto (plain và max)
-tests/unit/opencode-free-tool-choice.test.js :: opencode Free 1.3 tool_choice auto-only demote required sang auto (plain và max)
-tests/unit/opencode-free-tool-choice.test.js :: opencode Free 1.3 tool_choice auto-only demote none sang auto (plain và max)
-tests/unit/opencode-free-tool-choice.test.js :: opencode Free 1.3 tool_choice auto-only giữ auto và absent; tools/input nguyên vẹn
-tests/unit/opencode-free-tool-choice.test.js :: opencode Free 1.3 tool_choice auto-only wire: execute gửi choice auto tới /inference/v1/responses
-
-# Upstream opencode-go: added 'claude' to supportedFormats for DeepSeek models.
-tests/unit/opencode-go-models.test.js :: OpenCode Go per-model supportedFormats declares [openai, openai-responses] for DeepSeek models (zen-go /v1/messages rejects tool declarations)
-
-# Upstream kiro thinking-levels: 'max' cap changed to 'high' for 4.6.
-tests/unit/thinking-levels-kiro.test.js :: getThinkingLevels for Kiro passes xhigh/max through on the wire for 4.7+, clamps xhigh on 4.6
-
-# Environment artifact: X-Mavis-Timezone-Offset varies by test runner timezone.
-tests/translator/golden-url-header.test.js :: GOLDEN buildHeaders (default executor providers) cline → headers (apiKey / oauth)
-tests/translator/golden-url-header.test.js :: GOLDEN buildHeaders (default executor providers) clinepass → headers (apiKey / oauth)
-tests/translator/golden-url-header.test.js :: GOLDEN buildHeaders (default executor providers) kimi → headers (apiKey / oauth)
-tests/translator/golden-url-header.test.js :: GOLDEN buildHeaders (default executor providers) minimax-code → headers (apiKey / oauth)
-tests/translator/golden-url-header.test.js :: GOLDEN buildHeaders (default executor providers) minimax-code-global → headers (apiKey / oauth)
-
-# Translator behavior drift from upstream merge.
-tests/translator/bugs-toClaude-context.test.js :: OpenAI → Claude context mapping assistant reasoning_content becomes a thinking block
-tests/translator/claude-kiro-direct.test.js :: Claude → Kiro (direct route) sends Claude system in the first user turn, never as a top-level systemPrompt
-
-# Upstream windsurf endpoint URL changed from server.codeium.com to server.self-serve.windsurf.com.
-tests/unit/windsurf-executor.test.js :: WindsurfExecutor class constructor falls back to the built-in chat endpoint while windsurf is hidden
-tests/unit/windsurf-executor.test.js :: WindsurfExecutor class buildUrl returns the GetChatMessage endpoint
-tests/unit/windsurf-executor.test.js :: WindsurfExecutor class registry entry and executor fallback use the same chat endpoint (registry in sync)
-
-# Provider/registry drift from upstream merge.
-tests/unit/bedrock-provider.test.js :: Bedrock provider registration routes a prefixed model to the bedrock provider
-tests/unit/bedrock-provider.test.js :: Bedrock xAI entry (OpenAI wire) routes both the id and the brx alias
-tests/unit/cline-free-tier-models.test.js :: cline-free namespace pricing still bills the paid twin at its published rate
-tests/unit/executor-const-guard.test.js :: antigravity retry (429=3, 503=3) 429 attempts = 3
-tests/unit/codex-refresh-token.test.js :: Codex Refresh Token getRefreshLeadMs (early refresh config) should return provider-specific lead time for OAuth providers
-tests/unit/commandcode-to-openai.test.js :: commandcode-to-openai — error event stringifies object errors so client sees readable message
-tests/unit/headroom-responses-format.test.js :: compressWithHeadroom openai-responses format (#1998) skips Responses tool/reasoning history instead of collapsing it into a message (#2132)
-tests/unit/openai-to-kiro.test.js :: openaiToKiroRequest thinking budget clamps reasoning_effort max to Kiro max_thinking_length 32000
-tests/unit/openai-to-kiro.test.js :: openaiToKiroRequest thinking budget keeps the prompt stable across turns and never sends a top-level systemPrompt
 
 # Live call: the upstream now answers "Unsupported model mimo-auto", the only model the
 # (hidden since 6d96e24b) mimo-free / mmf providers list.
@@ -92,30 +35,3 @@ tests/unit/mimo-free.live.test.js :: MiMo Free anti-abuse gate (live) chat WITH 
 # which is not part of this repository.
 tests/unit/db-benchmark.test.js :: <suite failed to load>
 tests/unit/embeddings.cloud.test.js :: <suite failed to load>
-
-# Pre-existing but uncatalogued until 2026-10-30 (session 24). Not caused by
-# security hardening — present at commit 2429f872 (prior to sessions 23+24).
-# Root causes not yet investigated; grouped by test file.
-tests/translator/golden-url-header.test.js :: GOLDEN buildHeaders (default executor providers) cline → headers (apiKey / oauth)
-tests/translator/golden-url-header.test.js :: GOLDEN buildHeaders (default executor providers) clinepass → headers (apiKey / oauth)
-tests/translator/golden-url-header.test.js :: GOLDEN buildHeaders (default executor providers) codebuddy-cn → headers (apiKey / oauth)
-tests/translator/golden-url-header.test.js :: GOLDEN buildHeaders (default executor providers) codebuddy-intl → headers (apiKey / oauth)
-tests/translator/golden-url-header.test.js :: GOLDEN buildHeaders (default executor providers) kimi → headers (apiKey / oauth)
-tests/translator/golden-url-header.test.js :: GOLDEN buildHeaders (default executor providers) minimax-code → headers (apiKey / oauth)
-tests/translator/golden-url-header.test.js :: GOLDEN buildHeaders (default executor providers) minimax-code-global → headers (apiKey / oauth)
-tests/unit/anthropic-gateway-passthrough.test.js :: DefaultExecutor.buildHeaders() forwards client anthropic-beta forwards client flags on anthropic-compatible Claude models
-tests/unit/anthropic-gateway-passthrough.test.js :: DefaultExecutor.buildHeaders() forwards client anthropic-beta forwards client flags on the anthropic provider
-tests/unit/anthropic-gateway-passthrough.test.js :: DefaultExecutor.buildHeaders() forwards client anthropic-beta keeps unknown client flags alongside the pinned set on claude
-tests/unit/anthropic-gateway-passthrough.test.js :: mergeAnthropicBeta unions and dedupes comma lists, ignoring blanks
-# Uses node:test runner (not vitest) — vitest cannot discover test() calls.
-# Conversion to vitest is non-trivial (715 lines, 32 tests). Baseline until converted.
-tests/unit/memory-enhancements.test.js :: <suite uses node:test runner, not vitest>
-
-# (Removed 2026-10-30 session 26): iflow-cookie-timeout.test.js now passes 7/7
-# after the requireAuth mock was added to the test. Source timeout fix
-# (AbortSignal.timeout(15000) on both fetch calls) was already present in the
-# route (commit c542b067 on gap-p2-rel branch, cherry-pick not needed since
-# it was already merged upstream).
-tests/unit/image-generation.test.js :: handleImageGenerationCore resolves Cloudflare img2img and inpainting URL inputs before sending
-tests/unit/kiro-external-idp.test.js :: Kiro external_idp (CLIProxyAPI) import and refresh imports CLIProxyAPI external_idp JSON as a Kiro OAuth connection
-tests/unit/nonstream-sse-error.test.js :: non-streaming SSE errors retains the existing error for an unparseable SSE body

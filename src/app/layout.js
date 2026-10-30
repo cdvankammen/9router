@@ -52,14 +52,8 @@ export default function RootLayout({ children }) {
             {children}
           </RuntimeI18nProvider>
         </ThemeProvider>
-        {process.env.NEXT_PUBLIC_ENABLE_GA === "true" && (
-          <GoogleAnalytics gaId={"G-LC959F603F"} />
-        )}
+        <GoogleAnalytics gaId={"G-LC959F603F"} />
       </body>
     </html>
   );
 }
-// GA4 telemetry is opt-in via NEXT_PUBLIC_ENABLE_GA=true. Self-hosted deployments
-// (the default) never fire analytics — routing users' API keys through a proxy
-// that phones home without consent is a trust violation. See 51-mini2-dashboard-
-// dom-error-audit.md Finding #5 for the original report.

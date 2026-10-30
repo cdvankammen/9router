@@ -118,17 +118,8 @@ export function openaiToClaudeResponse(chunk, state) {
         chunk.extend_fields?.traceId ||
         `msg_${Date.now()}`;
     }
-    // Preserve client-requested model (set in createSSEStream from chatCore);
-    // only fall back to upstream model if the client didn't specify one.
-    // BUG-3692: combos that fall back to non-Anthropic upstreams must echo the
-    // requested model name, not the upstream's, so Claude Code session restore
-    // doesn't break on model-name mismatch.
-    if (!state.model) // Preserve the client-requested model name (set via state.model from the
- // streaming context) so combo fallbacks echo the original model — not the
- // upstream provider's model.  Only fall back to chunk.model when no
- // requestedModel was threaded through (legacy callers).
- state.model = state.model || chunk.model || MODEL_FALLBACK;
- state.nextBlockIndex = 0;
+    state.model = chunk.model || MODEL_FALLBACK;
+    state.nextBlockIndex = 0;
     results.push({
       type: "message_start",
       message: {

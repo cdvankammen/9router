@@ -26,10 +26,7 @@ export default {
     },
     retry: {
       "429": {
-        // Intentional increase: 429 (rate-limit) retries raised to 6 to absorb
-        // bursty quota exhaustion on the Antigravity IDE endpoint (test contract
-        // in tests/unit/executor-const-guard.test.js).
-        attempts: 6,
+        attempts: 3,
       },
       "500": {
         attempts: 3,
@@ -44,8 +41,8 @@ export default {
       loadProjectApiUrl: "https://cloudcode-pa.googleapis.com/v1internal:loadCodeAssist",
       tokenUrl: "https://oauth2.googleapis.com/token",
     },
-    // SECURITY (Finding #326): spread from shared constant — no duplicate literal.
-    ...ANTIGRAVITY_OAUTH_CLIENT,
+    clientId: "1071006060591-tmhssin2h21lcre235vtolojh4g403ep.apps.googleusercontent.com",
+    clientSecret: "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",
   },
   models: [
     { id: "gemini-4-argon-high", name: "Gemini 4 Argon (High)", upstreamModelId: "gemini-4-argon-high(high)" },

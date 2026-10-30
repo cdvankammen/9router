@@ -106,17 +106,13 @@ export async function generateAuthData(providerName, redirectUri, meta) {
   const codeVerifier = config.privateKeyVerifier || pkceVerifier;
 
   let authUrl;
-  // SECURITY (2026-10-29): await buildAuthUrl — some providers (GitLab) now
-  // perform async SSRF validation (DNS resolution) inside buildAuthUrl and
-  // return a Promise. Awaiting is safe for sync providers too (their
-  // buildAuthUrl returns a plain string, which `await` passes through).
   if (provider.flowType === "device_code") {
     // Device code flow doesn't have auth URL upfront
     authUrl = null;
   } else if (provider.flowType === "authorization_code_pkce") {
-    authUrl = await provider.buildAuthUrl(config, redirectUri, state, codeChallenge, meta || {});
+    authUrl = provider.buildAuthUrl(config, redirectUri, state, codeChallenge, meta || {});
   } else {
-    authUrl = await provider.buildAuthUrl(config, redirectUri, state, undefined, meta || {});
+    authUrl = provider.buildAuthUrl(config, redirectUri, state, undefined, meta || {});
   }
 
   return {

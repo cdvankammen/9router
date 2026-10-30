@@ -13,9 +13,7 @@ import { getModelInfoCore } from "../../open-sse/services/model.js";
 // "No active credentials for provider: openai".
 describe("codex auto-review routing (#1398)", () => {
   it("routes the bare Codex auto-review model to the OAuth Codex provider", async () => {
-    // Master added betaMarker to the return shape; use toMatchObject so the
-    // routing assertion stays focused on provider+model.
-    await expect(getModelInfoCore("codex-auto-review", {})).resolves.toMatchObject({
+    await expect(getModelInfoCore("codex-auto-review", {})).resolves.toEqual({
       provider: "codex",
       model: "codex-auto-review",
     });

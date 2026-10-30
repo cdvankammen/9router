@@ -1,5 +1,4 @@
 import { PROVIDER_MODELS } from "open-sse/config/providerModels.js";
-import { corsOptionsResponse, withCorsHeaders } from "@/shared/utils/corsOptions.js";
 import { AI_PROVIDERS, ALIAS_TO_ID } from "@/shared/constants/providers";
 import { getModelKind } from "@/shared/constants/models";
 
@@ -77,8 +76,10 @@ function lookup(fullId, requestedKind) {
   return null;
 }
 
-export async function OPTIONS(request) {
-  return corsOptionsResponse(request, "GET, OPTIONS");
+export async function OPTIONS() {
+  return new Response(null, {
+    headers: { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "GET, OPTIONS" },
+  });
 }
 
 // GET /v1/models/info?id={alias}/{modelId} — metadata for a single model
@@ -87,17 +88,17 @@ export async function GET(request) {
   const id = searchParams.get("id");
   const kind = searchParams.get("kind");
   if (!id) {
-    return withCorsHeaders(request, Response.json(
+    return Response.json(
       { error: { message: "Missing required query param: id (e.g. ?id=openai/dall-e-3)", type: "invalid_request_error" } },
-      { status: 400 },
-    ));
+      { status: 400, headers: { "Access-Control-Allow-Origin": "*" } },
+    );
   }
   const info = lookup(id, kind);
   if (!info) {
-    return withCorsHeaders(request, Response.json(
+    return Response.json(
       { error: { message: `Model not found: ${id}`, type: "not_found" } },
-      { status: 404 },
-    ));
+      { status: 404, headers: { "Access-Control-Allow-Origin": "*" } },
+    );
   }
-  return withCorsHeaders(request, Response.json(info));
+  return Response.json(info, { headers: { "Access-Control-Allow-Origin": "*" } });
 }

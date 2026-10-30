@@ -1,17 +1,21 @@
 import { handleSystemone } from "@/sse/handlers/systemone.js";
-import { corsOptionsResponse, withCorsHeaders } from "@/shared/utils/corsOptions.js";
 
 /**
- * Handle CORS preflight — honors settings.corsAllowedOrigins.
+ * Handle CORS preflight
  */
-export async function OPTIONS(request) {
-  return corsOptionsResponse(request, "POST, OPTIONS");
+export async function OPTIONS() {
+  return new Response(null, {
+    headers: {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "POST, OPTIONS",
+      "Access-Control-Allow-Headers": "*"
+    }
+  });
 }
 
 /**
  * POST /v1/systemone - System One (Jev) decision endpoint
  */
 export async function POST(request) {
-  const response = await handleSystemone(request);
-  return withCorsHeaders(request, response);
+  return await handleSystemone(request);
 }

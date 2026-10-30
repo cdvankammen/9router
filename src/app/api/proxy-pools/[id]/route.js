@@ -5,7 +5,6 @@ import {
   getProxyPoolById,
   updateProxyPool,
 } from "@/models";
-import { requireAuth } from "@/lib/auth/requireAuth";
 
 function normalizeProxyPoolUpdate(body = {}) {
   const updates = {};
@@ -53,12 +52,6 @@ function countBoundConnections(connections = [], proxyPoolId) {
 // GET /api/proxy-pools/[id] - Get proxy pool
 export async function GET(request, { params }) {
   try {
-    // IDOR sweep (2026-10-29): route-level requireAuth as defence-in-depth.
-    // Proxy pool records expose upstream proxy hostnames, credentials
-    // references, and routing targets — SSRF-via-stored-config surface.
-    if (!(await requireAuth(request))) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
     const { id } = await params;
     const proxyPool = await getProxyPoolById(id);
 
@@ -74,14 +67,8 @@ export async function GET(request, { params }) {
 }
 
 // PUT /api/proxy-pools/[id] - Update proxy pool
-// Finding #7 follow-up (2026-10-26): route-level requireAuth. Proxy pools
-// define the egress hop for bound connections — rewriting a pool redirects
-// stored-credential traffic through an attacker-controlled proxy.
 export async function PUT(request, { params }) {
   try {
-    if (!(await requireAuth(request))) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
     const { id } = await params;
     const existing = await getProxyPoolById(id);
 
@@ -105,12 +92,8 @@ export async function PUT(request, { params }) {
 }
 
 // DELETE /api/proxy-pools/[id] - Delete proxy pool
-// Finding #7 follow-up (2026-10-26): route-level requireAuth.
 export async function DELETE(request, { params }) {
   try {
-    if (!(await requireAuth(request))) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
     const { id } = await params;
     const existing = await getProxyPoolById(id);
 

@@ -88,7 +88,7 @@ export async function handleChatCore({ body, modelInfo, credentials, log, onCred
   // /chat/completions), so without this guard a claude-format request would wrongly
   // route kimi to /messages.
   const modelSupportedFormats = getModelSupportedFormats(alias, model);
-  const runtimeTransport = resolveTransport(provider, sourceFormat, credentials);
+  const runtimeTransport = resolveTransport(provider, sourceFormat);
   // Per-model guard: when a model declares supportedFormats, only use the
   // sourceFormat-matched transport if that format is declared (opencode-go models
   // differ — kimi/glm only do /chat/completions). Undeclared models keep the
@@ -177,47 +177,21 @@ export async function handleChatCore({ body, modelInfo, credentials, log, onCred
   const clientTool = detectClientTool(clientRawRequest?.headers || {}, body);
   const passthrough = isNativePassthrough(clientTool, provider);
 
-  // SECURITY (Finding #305): Expose a sanitized allowlist of client headers to
-  // translators/executors — NOT the full request header bag. Forwarding raw
-  // headers enabled header injection into upstream provider calls: session-fixation
-  // via x-session-id, project targeting via x-opencode-project, and arbitrary
-  // header injection. The allowlist covers exactly what consumers actually read:
-  // session-id resolution (5 keys), anthropic-beta merge, user-agent for client
-  // detection, x-opencode-* for fingerprinting, and auth headers for identity
-  // keying. Everything else (cookie, host, referer, origin, x-forwarded-*, custom
-  // x-9r-* headers, etc.) is stripped at this chokepoint.
-  if (credentials) {
-    const ALLOWED_HEADER_KEYS = new Set([
-      "user-agent",
-      "anthropic-beta",
-      "x-session-id", "session-id", "session_id", "x-amp-thread-id",
-      "x-claude-code-session-id",
-      "x-opencode-client", "x-opencode-project",
-      "authorization", "x-api-key",
-    ]);
-    const raw = clientRawRequest?.headers || {};
-    const sanitized = {};
-    for (const [k, v] of Object.entries(raw)) {
-      if (ALLOWED_HEADER_KEYS.has(k.toLowerCase())) sanitized[k] = v;
-    }
-    credentials.rawHeaders = sanitized;
-  }
+  // Expose raw client headers to translators/executors for session-id resolution
+  if (credentials) credentials.rawHeaders = clientRawRequest?.headers || {};
 
-  // SECURITY (Finding #304): Apply modality/prefetch sanitization on ALL paths
-  // including native passthrough. Without this, an attacker spoofing a native
-  // client tool (e.g. x-9r-app: claude) can bypass:
-  // - stripUnsupportedModalities: vision/audio/pdf blocks reach models that reject them
-  // - prefetchRemoteImages: remote image URLs cause SSRF on hosts that can't fetch
-  // The passthrough path is "less normalization" not "no sanitization".
-  const caps = getCapabilitiesForModel(provider, model);
-  if (stripUnsupportedModalities(body, sourceFormat, caps)) {
-    log?.debug?.("MODALITY", `stripped unsupported media for ${provider}/${model}`);
+  // Auto-strip media blocks the model can't read (vision/audio/pdf) before translation.
+  if (!passthrough) {
+    const caps = getCapabilitiesForModel(provider, model);
+    if (stripUnsupportedModalities(body, sourceFormat, caps)) {
+      log?.debug?.("MODALITY", `stripped unsupported media for ${provider}/${model}`);
+    }
+    // Convert remote image URLs to base64 for targets that can't fetch URLs.
+    try {
+      const n = await prefetchRemoteImages(body, sourceFormat, targetFormat, { signal: undefined });
+      if (n > 0) log?.debug?.("MODALITY", `prefetched ${n} remote image(s) for ${targetFormat}`);
+    } catch (e) { log?.warn?.("MODALITY", `image prefetch failed: ${e.message}`); }
   }
-  // Convert remote image URLs to base64 for targets that can't fetch URLs.
-  try {
-    const n = await prefetchRemoteImages(body, sourceFormat, targetFormat, { signal: undefined });
-    if (n > 0) log?.debug?.("MODALITY", `prefetched ${n} remote image(s) for ${targetFormat}`);
-  } catch (e) { log?.warn?.("MODALITY", `image prefetch failed: ${e.message}`); }
 
   let translatedBody;
   let toolNameMap;
@@ -252,11 +226,6 @@ export async function handleChatCore({ body, modelInfo, credentials, log, onCred
     translatedBody.model = stripThinkingSuffix(upstreamModel);
     stripContinuityFields(translatedBody);
   }
-  // SECURITY (Finding #304): stripContinuityFields must run on passthrough too.
-  // The Responses→Chat translator stashes encrypted_content on assistant messages;
-  // if a native passthrough client forwards these, upstream rejects with 400.
-  // This is idempotent — safe to call on already-clean bodies.
-  if (passthrough) stripContinuityFields(translatedBody);
 
   // Tool normalization: MCP-equivalent built-in dedup (Claude clients) + same-name
   // dedup for DeepSeek models (upstream rejects duplicate tool names on all endpoints).

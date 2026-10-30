@@ -15,7 +15,6 @@ import { updateProviderCredentials, checkAndRefreshToken } from "../services/tok
 import { handleComboChat, getComboModelsFromData } from "open-sse/services/combo.js";
 import { getKeyAccessContext, enforceKeyAccessProvider } from "../services/keyAccess.js";
 import { assertPublicUrlResolved } from "@/shared/utils/ssrfGuard.js";
-import { withCorsHeaders } from "@/shared/utils/corsOptions.js";
 
 /**
  * Handle web fetch (URL extraction) request for the SSE/Next.js server.
@@ -154,9 +153,9 @@ async function handleSingleProviderFetch(body, providerInput, request, apiKey, s
       log
     });
     if (result.success) {
-      return withCorsHeaders(request, new Response(JSON.stringify(result.data), {
-        headers: { "Content-Type": "application/json" }
-      }));
+      return new Response(JSON.stringify(result.data), {
+        headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
+      });
     }
     return errorResponse(result.status || HTTP_STATUS.BAD_GATEWAY, result.error || "Fetch failed");
   }
@@ -213,9 +212,9 @@ async function handleSingleProviderFetch(body, providerInput, request, apiKey, s
 
     if (result.success) {
       await clearAccountError(credentials.connectionId, credentials, fetchLockKey);
-      return withCorsHeaders(request, new Response(JSON.stringify(result.data), {
-        headers: { "Content-Type": "application/json" }
-      }));
+      return new Response(JSON.stringify(result.data), {
+        headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
+      });
     }
 
     const { shouldFallback } = await markAccountUnavailable(

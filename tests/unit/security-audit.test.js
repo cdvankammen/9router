@@ -23,12 +23,11 @@ describe("AUDIT-002: API key masking", () => {
       path.resolve(REPO_ROOT, "src/lib/db/repos/usageRepo.js"),
       "utf-8"
     );
-    // The REST response should use apiKeyMasked (decryptToken before mask
-    // is the Finding #295 phase 2 pattern — r.apiKey is ciphertext at rest).
-    expect(source).toMatch(/apiKeyMasked:\s*maskApiKey\(plainKey\)/);
-    // The return mapping in getUsageHistory should not have raw apiKey in output
-    // (The internal ring buffer still uses apiKey: ... for internal state — that's fine)
-    const historyReturn = source.match(/return rows\.map\(\(r\)\s*=>\s*\{[\s\S]*?apiKeyMasked[\s\S]*?\}\);/);
+    // The REST response should use apiKeyMasked
+    expect(source).toContain("apiKeyMasked: maskApiKey(r.apiKey)");
+    // The return mapping in getUsageHistory should not have raw apiKey
+    // (The internal ring buffer still uses apiKey: r.apiKey for internal state - that's fine)
+    const historyReturn = source.match(/return rows\.map\(\(r\)\s*=>\s*\(\{[\s\S]*?\}\)\);/);
     expect(historyReturn).not.toBeNull();
     expect(historyReturn[0]).toContain("apiKeyMasked");
     expect(historyReturn[0]).not.toContain("apiKey: r.apiKey");

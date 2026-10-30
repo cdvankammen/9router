@@ -111,18 +111,10 @@ async function transcribeGemini(cfg, file, model, token, formData) {
     : "Generate a transcript of the speech. Return only the transcribed text, no commentary.";
   if (typeof lang === "string" && lang.trim()) promptText += ` Language: ${lang.trim()}.`;
 
-  // SECURITY (#291): pass the Gemini API key via header, not URL query string.
-  // URL query strings are logged by proxies, CDNs, server access logs, and
-  // browser history (CWE-598). Gemini accepts x-goog-api-key as an alternative
-  // to ?key= for REST calls. WebSocket transports (geminiLiveStt.js) still
-  // require ?key= because the WS upgrade handshake has no header channel.
-  const url = `${cfg.baseUrl}/${model}:generateContent`;
+  const url = `${cfg.baseUrl}/${model}:generateContent?key=${token}`;
   const res = await fetch(url, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-goog-api-key": token,
-    },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       contents: [{ parts: [{ text: promptText }, { inline_data: { mime_type: mime, data: b64 } }] }],
     }),
@@ -214,7 +206,7 @@ function textResponse(body) {
     success: true,
     response: new Response(body, {
       status: 200,
-      headers: { "Content-Type": "text/plain; charset=utf-8" },
+      headers: { "Content-Type": "text/plain; charset=utf-8", "Access-Control-Allow-Origin": "*" },
     }),
   };
 }
@@ -247,7 +239,7 @@ async function transcribeOpenAICompatible(cfg, file, model, token, formData) {
   if (!res.ok) return upstreamError(res);
   const ct = res.headers.get("content-type") || "application/json";
   const txt = await res.text();
-  return { success: true, response: new Response(txt, { status: 200, headers: { "Content-Type": ct } }) };
+  return { success: true, response: new Response(txt, { status: 200, headers: { "Content-Type": ct, "Access-Control-Allow-Origin": "*" } }) };
 }
 
 function jsonResponse(obj) {
@@ -255,7 +247,7 @@ function jsonResponse(obj) {
     success: true,
     response: new Response(JSON.stringify(obj), {
       status: 200,
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
     }),
   };
 }
@@ -279,32 +271,9 @@ function resolveModelTransport(provider, model) {
  * it in the app layer; built-ins fall back to the registry entry marker).
  * @returns {Promise<{success, response, status?, error?}>}
  */
-// Max bytes accepted for non-Codex STT uploads. Codex has its own tighter
-// limit (MAX_AUDIO_BYTES in codexSttAudio.js, 25MB) enforced after ffmpeg
-// conversion. This guard stops memory-exhaustion DoS at the entry point:
-// without it, every non-Codex provider calls file.arrayBuffer() and buffers
-// the full upload into server RAM — a 128MB multipart body (the Next.js
-// proxyClientMaxBodySize default) × concurrent requests is trivially lethal.
-// 25MB matches OpenAI Whisper's public limit and covers normal long-form
-// audio (≈25min at 128kbps MP3). Operators needing larger files should use
-// the Codex transport, which streams through ffmpeg with bounded output.
-const MAX_STT_UPLOAD_BYTES = 25 * 1024 * 1024;
-
 export async function handleSttCore({ provider, model, formData, credentials, sttConfig, transport, signal, proxyOptions }) {
   const file = formData.get("file");
   if (!file) return createErrorResult(HTTP_STATUS.BAD_REQUEST, "Missing required field: file");
-
-  // Size guard: reject oversized uploads before any arrayBuffer() call
-  // buffers them into RAM. file.size is the Content-Length the client
-  // declared in the multipart part header — trustworthy enough to stop
-  // naive DoS (an attacker who lies about size still hits the Next.js
-  // 128MB body cap and the per-call maxDuration=300s timeout).
-  if (typeof file.size === "number" && file.size > MAX_STT_UPLOAD_BYTES) {
-    return createErrorResult(
-      413,
-      `Audio file too large (${Math.round(file.size / 1024 / 1024)}MB). Maximum is ${Math.round(MAX_STT_UPLOAD_BYTES / 1024 / 1024)}MB.`
-    );
-  }
 
   let cfg = sttConfig;
   if (!cfg) return createErrorResult(HTTP_STATUS.BAD_REQUEST, `Provider '${provider}' does not support STT`);

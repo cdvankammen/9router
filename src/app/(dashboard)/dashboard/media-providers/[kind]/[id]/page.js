@@ -23,16 +23,9 @@ export default function MediaProviderDetailPage() {
   const isCustom = isCustomEmbeddingProvider(id) && kind === "embedding";
 
   const handleDeleteCustom = async () => {
-    if (!confirm("Delete this Custom Embedding node? This also deletes every connection bound to it.")) return;
+    if (!confirm("Delete this Custom Embedding node?")) return;
     try {
-      // X-Confirm-Cascade: server-side echo of the confirm() above. The
-      // DELETE cascades to every providerConnection bound to this node via
-      // deleteProviderConnectionsByProvider(id); without the header the
-      // server returns 412 Precondition Failed.
-      const res = await fetch(`/api/provider-nodes/${id}`, {
-        method: "DELETE",
-        headers: { "X-Confirm-Cascade": "true" },
-      });
+      const res = await fetch(`/api/provider-nodes/${id}`, { method: "DELETE" });
       if (res.ok) router.push(`/dashboard/media-providers/${kind}`);
     } catch (error) {
       console.log("Error deleting custom embedding node:", error);

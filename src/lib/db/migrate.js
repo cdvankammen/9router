@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { LEGACY_FILES, DB_DIR } from "./paths.js";
 import { TABLES, buildCreateTableSql, SCHEMA_VERSION } from "./schema.js";
-import { MIGRATIONS, latestVersion, registryFingerprint, validateMigrationRegistry } from "./migrations/index.js";
+import { MIGRATIONS, latestVersion } from "./migrations/index.js";
 import { getMetaSync, setMetaSync } from "./helpers/metaStore.js";
 import { makeBackupDir, backupFile, backupDbLite, pruneOldBackups } from "./backup.js";
 import { getAppVersion } from "./version.js";
@@ -212,49 +212,6 @@ function importLegacyDetails(adapter, data) {
   }
 }
 
-// ─── Migration refusal bookkeeping + dry-run (backlog #2) ────────────────
-function persistMigrationWarnings(adapter, reasons) {
-  try {
-    setMetaSync(adapter, "migrationWarnings", stringifyJson({ reasons, detectedAt: new Date().toISOString() }));
-  } catch (e) {
-    console.warn(`[DB][migrate] failed to persist migration warnings: ${e.message}`);
-  }
-}
-
-/**
- * Read-only dry-run of the migration runner (backlog #2). Reports what the
- * next boot WOULD do — pending migrations, registry health, fingerprint
- * divergence, downgrade detection — without applying anything. Backs
- * GET /api/settings/database/migrations.
- */
-export function previewMigrations(adapter) {
-  adapter.exec(buildCreateTableSql("_meta", TABLES._meta));
-  const registryCheck = validateMigrationRegistry();
-  const expectedFingerprint = registryFingerprint();
-  const storedFingerprint = getMetaSync(adapter, "migrationRegistryFingerprint", null);
-  const currentSchemaVer = parseInt(getMetaSync(adapter, "schemaVersion", "0"), 10) || 0;
-  const targetVer = latestVersion();
-  const warningsRaw = getMetaSync(adapter, "migrationWarnings", null);
-  let warnings = null;
-  if (warningsRaw) {
-    try { warnings = JSON.parse(warningsRaw); } catch { warnings = { reasons: [String(warningsRaw)] }; }
-  }
-  const diverged = !!storedFingerprint && storedFingerprint !== expectedFingerprint;
-  const downgrade = currentSchemaVer > targetVer;
-  return {
-    registry: registryCheck,
-    currentVersion: currentSchemaVer,
-    latestVersion: targetVer,
-    pending: MIGRATIONS.filter((m) => m.version > currentSchemaVer).map((m) => ({ version: m.version, name: m.name })),
-    fingerprint: expectedFingerprint,
-    storedFingerprint,
-    diverged,
-    downgrade,
-    wouldApply: registryCheck.ok && !diverged && !downgrade && currentSchemaVer < targetVer,
-    warnings,
-  };
-}
-
 // ─── Main entry ──────────────────────────────────────────────────────────
 export async function runMigrationOnce(adapter) {
   if (_migratedAdapters.has(adapter)) return;
@@ -286,44 +243,6 @@ export async function runMigrationOnce(adapter) {
     }
   }
 
-  // ─── Registry integrity gate (backlog #2 hardening) ────────────────────
-  // Refuse to apply migrations when the installed registry does not match
-  // expectations: invalid shape, divergence from the fingerprint stamped by
-  // the build that last migrated this DB, or a downgrade (DB already newer
-  // than this build). Applying anyway risks silent corruption — instead warn
-  // loudly, persist the reason to _meta.migrationWarnings for the dashboard
-  // (GET /api/settings/database/migrations), and keep the DB read-usable.
-  const registryCheck = validateMigrationRegistry();
-  const expectedFingerprint = registryFingerprint();
-  const storedFingerprint = getMetaSync(adapter, "migrationRegistryFingerprint", null);
-  const currentSchemaVer = parseInt(getMetaSync(adapter, "schemaVersion", "0"), 10) || 0;
-  const targetVer = latestVersion();
-
-  const refusalReasons = [];
-  if (!registryCheck.ok) {
-    refusalReasons.push(`invalid migration registry: ${registryCheck.problems.join("; ")}`);
-  }
-  if (!fresh && storedFingerprint && storedFingerprint !== expectedFingerprint) {
-    refusalReasons.push(
-      `migration registry diverged from this database (stored: "${storedFingerprint}", expected: "${expectedFingerprint}") — a migration was added, removed, reordered, or renamed since this DB was migrated`
-    );
-  }
-  if (!fresh && currentSchemaVer > targetVer) {
-    refusalReasons.push(
-      `database schema version ${currentSchemaVer} is newer than this build's latest migration ${targetVer} — refusing to apply older migrations over a newer schema`
-    );
-  }
-
-  if (refusalReasons.length > 0) {
-    persistMigrationWarnings(adapter, refusalReasons);
-    for (const r of refusalReasons) console.error(`[DB][migrate] REFUSING to apply migrations: ${r}`);
-    console.error("[DB][migrate] database stays at its current schema; fix the registry/build mismatch and restart. Warnings are stored in _meta.migrationWarnings.");
-    // Additive sync is declarative (TABLES-driven), idempotent and independent
-    // of the migration registry — still safe to run so the DB stays usable.
-    syncSchemaFromTables(adapter);
-    return;
-  }
-
   // 1. Always run versioned migrations chain (skip-version safe)
   const migInfo = runVersionedMigrations(adapter);
 
@@ -332,11 +251,6 @@ export async function runMigrationOnce(adapter) {
 
   // Stamp the schema version we just reached so future boots skip re-backup.
   setMetaSync(adapter, "backupSchemaVersion", SCHEMA_VERSION);
-
-  // Registry matched and migrations applied — stamp the fingerprint so future
-  // builds can detect divergence, and clear any stale refusal warnings.
-  setMetaSync(adapter, "migrationRegistryFingerprint", expectedFingerprint);
-  adapter.run(`DELETE FROM _meta WHERE key = 'migrationWarnings'`);
 
   // 3. One-time legacy JSON import (only if DB was fresh on entry)
   const alreadyImported = fs.existsSync(MIGRATED_MARKER);

@@ -2,23 +2,28 @@ import { NextResponse } from "next/server";
 import { getSettings, updateSettings } from "@/lib/localDb";
 import { PROVIDERS } from "open-sse/config/providers.js";
 import { resolveProviderAlias } from "open-sse/services/model.js";
-import { requireAuth } from "@/lib/auth/requireAuth";
-import {
-  MAX_HEADERS,
-  MAX_HEADER_VALUE_LENGTH,
-  HEADER_NAME_RE,
-  BLOCKED_HEADERS,
-} from "@/lib/auth/providerOverridesValidator";
 
 export const dynamic = "force-dynamic";
+
+// Validation at the trust boundary — the UI also validates, but this is the gate.
+const MAX_HEADERS = 20;
+const MAX_HEADER_VALUE_LENGTH = 8192;
+// RFC 7230 token subset: letters, digits, hyphen (no spaces, no unicode)
+const HEADER_NAME_RE = /^[A-Za-z0-9-]+$/;
+// Request-structure / auth headers a user override must never touch
+const BLOCKED_HEADERS = new Set([
+  "host",
+  "content-length",
+  "content-type",
+  "connection",
+  "transfer-encoding",
+  "authorization",
+  "cookie",
+]);
 
 /**
  * Validate + normalize an override payload. Returns { override } or { error }.
  * An override with no headers is normalized to null (= delete).
- *
- * Validation constants (BLOCKED_HEADERS, HEADER_NAME_RE, limits) are shared
- * with PATCH /api/settings via src/lib/auth/providerOverridesValidator.js so
- * the two write paths can never drift apart (Row 19 remediation).
  */
 function normalizeOverride({ headers }) {
   const out = {};
@@ -63,12 +68,6 @@ async function readOverrides() {
  */
 export async function GET(request, { params }) {
   try {
-    // IDOR sweep (2026-10-29): route-level requireAuth as defence-in-depth.
-    // Provider overrides contain model-cap overrides, context-window limits,
-    // and per-provider tuning that should not be enumerable by unauthed peers.
-    if (!(await requireAuth(request))) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
     const { id } = await params;
     // URL may use an alias (gcli, cc…) — key everything by canonical registry id
     const canonical = resolveProviderAlias(id);
@@ -88,17 +87,9 @@ export async function GET(request, { params }) {
 /**
  * PUT /api/providers/[id]/overrides — body: { headers: {name: value} }
  * Empty payload clears the override.
- *
- * Finding #7 (2026-10-26): route-level requireAuth — this writes to GLOBAL
- * settings.providerOverrides via updateSettings. An unauthenticated peer
- * could inject headers (incl. x-* tracking headers) that would be sent on
- * every user's upstream requests for that provider system-wide.
  */
 export async function PUT(request, { params }) {
   try {
-    if (!(await requireAuth(request))) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
     const { id } = await params;
     const canonical = resolveProviderAlias(id);
     const body = await request.json().catch(() => ({}));

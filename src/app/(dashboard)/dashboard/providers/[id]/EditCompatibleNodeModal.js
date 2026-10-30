@@ -1,32 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import PropTypes from "prop-types";
-import { Badge, Button, Input, Modal, Select } from "@/shared/components";
+import { Button, Badge, Input, Modal, Select } from "@/shared/components";
 
-const API_TYPE_OPTIONS = [
-  { value: "chat", label: "Chat Completions" },
-  { value: "responses", label: "Responses API" },
-];
-
-export default function EditCompatibleNodeModal({
-  isOpen,
-  node,
-  onSave,
-  onClose,
-  isAnthropic,
-}) {
-  const isMulti = node?.type === "multi-compatible";
+export default function EditCompatibleNodeModal({ isOpen, node, onSave, onClose, isAnthropic }) {
   const [formData, setFormData] = useState({
     name: "",
     prefix: "",
     apiType: "chat",
     baseUrl: "https://api.openai.com/v1",
-    openaiUrl: "",
-    anthropicUrl: "",
-    supportsResponses: false,
-    usageUrl: "",
-    usageAuthMode: "bearer",
   });
   const [saving, setSaving] = useState(false);
   const [checkKey, setCheckKey] = useState("");
@@ -35,50 +18,33 @@ export default function EditCompatibleNodeModal({
   const [validationResult, setValidationResult] = useState(null);
 
   useEffect(() => {
-    if (!node) return;
-
-    const transportUrl = (format) =>
-      node.transports?.find((transport) => transport.format === format)?.baseUrl || "";
-    setFormData({
-      name: node.name || "",
-      prefix: node.prefix || "",
-      apiType: node.apiType || "chat",
-      baseUrl:
-        node.baseUrl ||
-        (isAnthropic
-          ? "https://api.anthropic.com/v1"
-          : "https://api.openai.com/v1"),
-      openaiUrl: node.baseUrl || transportUrl("openai"),
-      anthropicUrl: transportUrl("claude"),
-      supportsResponses: Boolean(transportUrl("openai-responses")),
-      usageUrl: node.usageUrl || "",
-      usageAuthMode: node.usageAuthMode || "bearer",
-    });
-    setValidationResult(null);
+    if (node) {
+      setFormData({
+        name: node.name || "",
+        prefix: node.prefix || "",
+        apiType: node.apiType || "chat",
+        baseUrl: node.baseUrl || (isAnthropic ? "https://api.anthropic.com/v1" : "https://api.openai.com/v1"),
+      });
+    }
   }, [node, isAnthropic]);
 
-  const hasRequiredEndpoints = isMulti
-    ? formData.openaiUrl.trim() && formData.anthropicUrl.trim()
-    : formData.baseUrl.trim();
+  const apiTypeOptions = [
+    { value: "chat", label: "Chat Completions" },
+    { value: "responses", label: "Responses API" },
+  ];
 
   const handleSubmit = async () => {
-    if (!formData.name.trim() || !formData.prefix.trim() || !hasRequiredEndpoints) return;
+    if (!formData.name.trim() || !formData.prefix.trim() || !formData.baseUrl.trim()) return;
     setSaving(true);
     try {
       const payload = {
         name: formData.name,
         prefix: formData.prefix,
-        ...(isMulti
-          ? {
-              openaiUrl: formData.openaiUrl,
-              anthropicUrl: formData.anthropicUrl,
-              supportsResponses: formData.supportsResponses,
-            }
-          : { baseUrl: formData.baseUrl }),
-        usageUrl: formData.usageUrl?.trim() || undefined,
-        usageAuthMode: formData.usageAuthMode,
+        baseUrl: formData.baseUrl,
       };
-      if (!isAnthropic && !isMulti) payload.apiType = formData.apiType;
+      if (!isAnthropic) {
+        payload.apiType = formData.apiType;
+      }
       await onSave(payload);
     } finally {
       setSaving(false);
@@ -92,30 +58,14 @@ export default function EditCompatibleNodeModal({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          ...(isMulti
-            ? {
-                openaiUrl: formData.openaiUrl,
-                anthropicUrl: formData.anthropicUrl,
-                responsesUrl: formData.responsesUrl,
-              }
-            : { baseUrl: formData.baseUrl }),
+          baseUrl: formData.baseUrl,
           apiKey: checkKey,
-          type: isMulti
-            ? "multi-compatible"
-            : isAnthropic
-              ? "anthropic-compatible"
-              : "openai-compatible",
-          modelId: checkModelId.trim() || undefined,
+          type: isAnthropic ? "anthropic-compatible" : "openai-compatible",
+          modelId: checkModelId.trim() || undefined
         }),
       });
       const data = await res.json();
-      setValidationResult(data.valid ? data : "failed");
-      if (isMulti && data.valid) {
-        setFormData((prev) => ({
-          ...prev,
-          supportsResponses: Boolean(data.supportsResponses),
-        }));
-      }
+      setValidationResult(data.valid ? "success" : "failed");
     } catch {
       setValidationResult("failed");
     } finally {
@@ -125,149 +75,66 @@ export default function EditCompatibleNodeModal({
 
   if (!node) return null;
 
-  const providerLabel = isMulti
-    ? "Multi-protocol"
-    : isAnthropic
-      ? "Anthropic"
-      : "OpenAI";
-
   return (
-    <Modal isOpen={isOpen} title={`Edit ${providerLabel} Compatible`} onClose={onClose}>
+    <Modal isOpen={isOpen} title={`Edit ${isAnthropic ? "Anthropic" : "OpenAI"} Compatible`} onClose={onClose}>
       <div className="flex flex-col gap-4">
         <Input
           label="Name"
           value={formData.name}
           onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-          placeholder={`${providerLabel} Compatible (Prod)`}
+          placeholder={`${isAnthropic ? "Anthropic" : "OpenAI"} Compatible (Prod)`}
           hint="Required. A friendly label for this node."
         />
         <Input
           label="Prefix"
           value={formData.prefix}
           onChange={(e) => setFormData({ ...formData, prefix: e.target.value })}
-          placeholder={isMulti ? "multi-prod" : isAnthropic ? "ac-prod" : "oc-prod"}
+          placeholder={isAnthropic ? "ac-prod" : "oc-prod"}
           hint="Required. Used as the provider prefix for model IDs."
         />
-        {!isAnthropic && !isMulti && (
+        {!isAnthropic && (
           <Select
             label="API Type"
-            options={API_TYPE_OPTIONS}
+            options={apiTypeOptions}
             value={formData.apiType}
             onChange={(e) => setFormData({ ...formData, apiType: e.target.value })}
           />
         )}
-        {isMulti ? (
-          <>
-            <Input
-              label="OpenAI URL"
-              value={formData.openaiUrl}
-              onChange={(e) => setFormData({
-                ...formData,
-                openaiUrl: e.target.value,
-                supportsResponses: false,
-              })}
-              placeholder="https://provider.example/v1"
-              hint="Required. Base URL, Chat Completions URL, or Responses URL. Check detects Responses support."
-            />
-            <Input
-              label="Anthropic Messages URL"
-              value={formData.anthropicUrl}
-              onChange={(e) => setFormData({ ...formData, anthropicUrl: e.target.value })}
-              placeholder="https://provider.example/v1/messages"
-              hint="Required. Base URL or full Anthropic Messages endpoint URL."
-            />
-          </>
-        ) : (
-          <Input
-            label="Base URL"
-            value={formData.baseUrl}
-            onChange={(e) => setFormData({ ...formData, baseUrl: e.target.value })}
-            placeholder={
-              isAnthropic
-                ? "https://api.anthropic.com/v1"
-                : "https://api.openai.com/v1"
-            }
-            hint={`Use the base URL ending in /v1 for your ${providerLabel}-compatible API.`}
-          />
-        )}
         <Input
-          label="API Key (for Check)"
-          type="password"
-          value={checkKey}
-          onChange={(e) => setCheckKey(e.target.value)}
+          label="Base URL"
+          value={formData.baseUrl}
+          onChange={(e) => setFormData({ ...formData, baseUrl: e.target.value })}
+          placeholder={isAnthropic ? "https://api.anthropic.com/v1" : "https://api.openai.com/v1"}
+          hint={`Use the base URL (ending in /v1) for your ${isAnthropic ? "Anthropic" : "OpenAI"}-compatible API.`}
         />
-        {!isMulti && (
-          <>
-            <Input
-              label="Usage API URL (optional)"
-              value={formData.usageUrl}
-              onChange={(e) => setFormData({ ...formData, usageUrl: e.target.value })}
-              placeholder="https://provider.example/v1/usage"
-              hint="Optional. GET endpoint returning quota JSON ({used, limit}). Enables the quota page for this node."
-            />
-            <Select
-              label="Usage Auth Mode"
-              value={formData.usageAuthMode}
-              onChange={(e) => setFormData({ ...formData, usageAuthMode: e.target.value })}
-              options={[
-                { value: "bearer", label: "Bearer token (Authorization header)" },
-                { value: "header", label: "x-api-key header" },
-                { value: "none", label: "No auth header" },
-              ]}
-            />
-          </>
-        )}
+        <div className="flex gap-2">
+          <Input
+            label="API Key (for Check)"
+            type="password"
+            value={checkKey}
+            onChange={(e) => setCheckKey(e.target.value)}
+            className="flex-1"
+          />
+          <div className="pt-6">
+            <Button onClick={handleValidate} disabled={!checkKey || validating || !formData.baseUrl.trim()} variant="secondary">
+              {validating ? "Checking..." : "Check"}
+            </Button>
+          </div>
+        </div>
         <Input
-          label={isMulti ? "Model ID" : "Model ID (optional)"}
+          label="Model ID (optional)"
           value={checkModelId}
           onChange={(e) => setCheckModelId(e.target.value)}
           placeholder="e.g. my-model-id"
-          hint={
-            isMulti
-              ? "Required to check each protocol endpoint."
-              : "If the provider lacks /models, enter a model ID to validate with inference."
-          }
+          hint="If provider lacks /models endpoint, enter a model ID to validate via chat/completions instead."
         />
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <Button
-            onClick={handleValidate}
-            disabled={
-              !checkKey ||
-              validating ||
-              !hasRequiredEndpoints ||
-              (isMulti && !checkModelId.trim())
-            }
-            variant="secondary"
-            className="w-full sm:w-auto"
-          >
-            {validating ? "Checking..." : "Check"}
-          </Button>
-          {validationResult && (
-            <>
-              <Badge variant={validationResult === "failed" ? "error" : "success"}>
-                {validationResult === "failed" ? "Invalid" : "Valid"}
-              </Badge>
-              {isMulti && validationResult !== "failed" && (
-                <span className="text-sm text-text-muted">
-                  {validationResult.supportsResponses
-                    ? "Responses supported"
-                    : "Responses will use Chat fallback"}
-                </span>
-              )}
-            </>
-          )}
-        </div>
-        <div className="flex flex-col gap-2 sm:flex-row">
-          <Button
-            onClick={handleSubmit}
-            fullWidth
-            disabled={
-              !formData.name.trim() ||
-              !formData.prefix.trim() ||
-              !hasRequiredEndpoints ||
-              saving
-            }
-          >
+        {validationResult && (
+          <Badge variant={validationResult === "success" ? "success" : "error"}>
+            {validationResult === "success" ? "Valid" : "Invalid"}
+          </Badge>
+        )}
+        <div className="flex gap-2">
+          <Button onClick={handleSubmit} fullWidth disabled={!formData.name.trim() || !formData.prefix.trim() || !formData.baseUrl.trim() || saving}>
             {saving ? "Saving..." : "Save"}
           </Button>
           <Button onClick={onClose} variant="ghost" fullWidth>
@@ -287,13 +154,6 @@ EditCompatibleNodeModal.propTypes = {
     prefix: PropTypes.string,
     apiType: PropTypes.string,
     baseUrl: PropTypes.string,
-    type: PropTypes.string,
-    transports: PropTypes.arrayOf(
-      PropTypes.shape({
-        format: PropTypes.string,
-        baseUrl: PropTypes.string,
-      }),
-    ),
   }),
   onSave: PropTypes.func.isRequired,
   onClose: PropTypes.func.isRequired,

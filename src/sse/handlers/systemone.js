@@ -137,7 +137,7 @@ export async function handleSystemone(request) {
             total_tokens: result.usage.prompt_tokens + result.usage.completion_tokens,
           },
           status: "success",
-        }).catch((e) => log.warn("SYS1", `usage persistence failed: ${e.message}`));
+        }).catch(() => {});
       }
       return result.response;
     }

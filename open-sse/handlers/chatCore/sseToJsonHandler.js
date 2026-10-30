@@ -115,12 +115,10 @@ function chatCompletionToResponses(responseBody, customToolNames = null) {
 export function parseSSEToOpenAIResponse(rawSSE, fallbackModel) {
   const chunks = [];
   let streamError = null;
-  let sawDataLine = false;
 
   for (const line of String(rawSSE || "").split("\n")) {
     const trimmed = line.trim();
     if (!trimmed.startsWith("data:")) continue;
-    sawDataLine = true;
     const payload = trimmed.slice(5).trim();
     if (!payload || payload === "[DONE]") continue;
     try {
@@ -131,21 +129,7 @@ export function parseSSEToOpenAIResponse(rawSSE, fallbackModel) {
   }
 
   if (streamError) return { error: streamError };
-  if (chunks.length === 0) {
-    // No data lines at all → truly empty input, return null.
-    if (!sawDataLine) return null;
-    // [DONE]-only stream (data lines present but no parseable chunks) —
-    // return a valid empty completion so downstream handlers see a
-    // well-formed response with empty choices.
-    return {
-      id: `chatcmpl-${Date.now()}`,
-      object: "chat.completion",
-      created: Math.floor(Date.now() / 1000),
-      model: fallbackModel || "unknown",
-      choices: [],
-      usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 },
-    };
-  }
+  if (chunks.length === 0) return null;
 
   const first = chunks[0];
   const contentParts = [];
@@ -248,7 +232,7 @@ export async function handleForcedSSEToJson({ providerResponse, sourceFormat, ta
 
       // Client is Responses API → return as-is
       if (sourceFormat === FORMATS.OPENAI_RESPONSES) {
-        return { success: true, response: new Response(JSON.stringify(restoreToolNames(jsonResponse, toolNameMap)), { headers: { "Content-Type": "application/json" } }) };
+        return { success: true, response: new Response(JSON.stringify(restoreToolNames(jsonResponse, toolNameMap)), { headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } }) };
       }
 
       // Build client-format response.
@@ -308,7 +292,7 @@ export async function handleForcedSSEToJson({ providerResponse, sourceFormat, ta
         finalResp = openAICompletionToClaudeMessage(finalResp);
       }
 
-      return { success: true, response: new Response(JSON.stringify(restoreToolNames(finalResp, toolNameMap)), { headers: { "Content-Type": "application/json" } }) };
+      return { success: true, response: new Response(JSON.stringify(restoreToolNames(finalResp, toolNameMap)), { headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } }) };
     } catch (err) {
       console.error("[ChatCore] Responses API SSE→JSON failed:", err);
       return createErrorResult(HTTP_STATUS.BAD_GATEWAY, "Failed to convert streaming response to JSON");
@@ -388,7 +372,7 @@ export async function handleForcedSSEToJson({ providerResponse, sourceFormat, ta
         ? openAICompletionToClaudeMessage(parsed)
         : parsed;
 
-    return { success: true, response: new Response(JSON.stringify(restoreToolNames(finalBody, toolNameMap)), { headers: { "Content-Type": "application/json" } }) };
+    return { success: true, response: new Response(JSON.stringify(restoreToolNames(finalBody, toolNameMap)), { headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } }) };
   } catch (err) {
     console.error("[ChatCore] Chat Completions SSE→JSON failed:", err);
     return createErrorResult(HTTP_STATUS.BAD_GATEWAY, "Failed to convert streaming response to JSON");

@@ -131,20 +131,6 @@ export function cancelWebLogin(providerId) {
   return true;
 }
 
-/**
- * Remove a browser profile directory (captured cookies, cache, etc.).
- * Called when the last web-login connection using a profile is deleted.
- * Best-effort: returns false if the directory doesn't exist or can't be removed.
- */
-export function removeWebLoginProfile(profileName) {
-  try {
-    rmSync(profileDir(profileName), { recursive: true, force: true });
-    return true;
-  } catch {
-    return false;
-  }
-}
-
 /** "default" unless the user picked/created a named profile. */
 function sanitizeProfileName(name) {
   const cleaned = String(name || "").trim().replace(/[^a-zA-Z0-9_-]/g, "-").slice(0, 40);
@@ -209,8 +195,7 @@ async function runLogin(session, config) {
     throw new Error("No Chrome/Chromium executable found — set CHROME_PATH or install Google Chrome");
   }
   const dir = profileDir(session.profile);
-  // 0o700: profile dirs contain captured session cookies — restrict to owner.
-  mkdirSync(dir, { recursive: true, mode: 0o700 });
+  mkdirSync(dir, { recursive: true });
 
   const context = await launchLoginBrowser(chromium, dir, executablePath);
 

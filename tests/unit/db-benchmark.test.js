@@ -28,9 +28,6 @@ beforeAll(async () => {
   // SQLite setup
   tempSqlite = fs.mkdtempSync(path.join(os.tmpdir(), "9router-bench-sqlite-"));
   process.env.DATA_DIR = tempSqlite;
-  // Clear the driver's global adapter singleton so this suite never reuses
-  // an adapter bound to a previous suite's DATA_DIR (see db-driver-chain).
-  delete global._dbAdapter;
   vi.resetModules();
   sqliteDb = await import("@/lib/db/index.js");
   await sqliteDb.initDb();
@@ -46,8 +43,6 @@ beforeAll(async () => {
 });
 
 afterAll(() => {
-  try { global._dbAdapter?.instance?.close?.(); } catch {}
-  delete global._dbAdapter;
   if (tempSqlite) fs.rmSync(tempSqlite, { recursive: true, force: true });
   if (tempLowdb) fs.rmSync(tempLowdb, { recursive: true, force: true });
   if (originalDataDir === undefined) delete process.env.DATA_DIR;

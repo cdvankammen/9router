@@ -182,6 +182,54 @@ export async function POST(request) {
       mergedProviderSpecificData.proxyPoolId = proxyPoolId;
     }
 
+    let providerSpecificData = normalizeProviderSpecificData(provider, body, body.providerSpecificData);
+
+    // Compatible LLM nodes support multiple API-key connections (key pool); runtime
+    // rotates/fails over via getProviderCredentials. Embedding nodes stay single-connection.
+    if (isOpenAICompatibleProvider(provider)) {
+      const node = await getProviderNodeById(provider);
+      if (!node) {
+        return NextResponse.json({ error: "OpenAI Compatible node not found" }, { status: 404 });
+      }
+      providerSpecificData = {
+        prefix: node.prefix,
+        apiType: node.apiType,
+        baseUrl: node.baseUrl,
+        nodeName: node.name,
+      };
+    } else if (isAnthropicCompatibleProvider(provider)) {
+      const node = await getProviderNodeById(provider);
+      if (!node) {
+        return NextResponse.json({ error: "Anthropic Compatible node not found" }, { status: 404 });
+      }
+      providerSpecificData = {
+        prefix: node.prefix,
+        baseUrl: node.baseUrl,
+        nodeName: node.name,
+      };
+    } else if (isCustomEmbeddingProvider(provider)) {
+      const node = await getProviderNodeById(provider);
+      if (!node) {
+        return NextResponse.json({ error: "Custom Embedding node not found" }, { status: 404 });
+      }
+      providerSpecificData = {
+        prefix: node.prefix,
+        baseUrl: node.baseUrl,
+        nodeName: node.name,
+      };
+    }
+
+    const mergedProviderSpecificData = {
+      ...(providerSpecificData || {}),
+      connectionProxyEnabled: proxyConfig.connectionProxyEnabled,
+      connectionProxyUrl: proxyConfig.connectionProxyUrl,
+      connectionNoProxy: proxyConfig.connectionNoProxy,
+    };
+
+    if (proxyPoolId !== null) {
+      mergedProviderSpecificData.proxyPoolId = proxyPoolId;
+    }
+
     const newConnection = await createProviderConnection({
       provider,
       authType: isWebCookieProvider ? "cookie" : "apikey",

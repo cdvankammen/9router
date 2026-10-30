@@ -5,28 +5,16 @@ import { readFileSync } from "fs";
 
 const knownFails = new Set(
   readFileSync(new URL("./known-fails.txt", import.meta.url), "utf8")
-    .split("\n")
-    .map(s => s.trim())
-    .filter(s => s && !s.startsWith("#"))
+    .split("\n").map(s => s.trim()).filter(Boolean)
 );
 
 const resultsPath = process.argv[2];
 if (!resultsPath) { console.error("Missing results.json path"); process.exit(2); }
 
-/**
- * Normalize a test file path to the repo-relative form used in known-fails.txt.
- * Strips everything up to and including 'tests/' so it works regardless of
- * checkout location (Docker /app/, macOS /Users/..., CI runners, etc.).
- */
-function normalizeTestPath(absPath) {
-  const idx = absPath.indexOf("tests/");
-  return idx !== -1 ? absPath.slice(idx) : absPath;
-}
-
 const r = JSON.parse(readFileSync(resultsPath, "utf8"));
 const nowFails = r.testResults.flatMap(f =>
   f.assertionResults.filter(a => a.status === "failed")
-    .map(a => normalizeTestPath(f.name) + " :: " + a.fullName)
+    .map(a => f.name.split("/app/")[1] + " :: " + a.fullName)
 );
 
 // Regression = fail bây giờ NHƯNG không có trong baseline known-fails

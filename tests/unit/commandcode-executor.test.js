@@ -199,9 +199,7 @@ describe("inspectAndWrapCommandCodeResponse", () => {
 });
 
 describe("CommandCode in Combo Fallback", () => {
-  // 503 triggers the transient cooldown wait (TRANSIENT_COOLDOWN_MS = 5s) before
-  // falling back — the default 5s test timeout is too tight.
-  it("automatically falls back to next model when commandcode returns 503 error", { timeout: 15000 }, async () => {
+  it("automatically falls back to next model when commandcode returns 503 error", async () => {
     const log = {
       info: vi.fn(),
       warn: vi.fn(),

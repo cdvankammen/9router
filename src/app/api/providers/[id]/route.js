@@ -1,13 +1,11 @@
 import { NextResponse } from "next/server";
 import {
   getProviderConnectionById,
-  getProviderConnections,
   getProxyPoolById,
   updateProviderConnection,
   deleteProviderConnection,
 } from "@/models";
 import { toProviderConnectionResponse, usesAwsCredentialForm } from "@/lib/providerConnectionResponse";
-import { requireAuth } from "@/lib/auth/requireAuth";
 
 function normalizeProxyConfig(body = {}) {
   const hasAnyProxyField =
@@ -63,16 +61,8 @@ function shouldMergeProviderSpecificData(existing, incoming, hasLegacyProxy, has
 }
 
 // GET /api/providers/[id] - Get single connection
-// IDOR sweep (2026-10-29): route-level requireAuth as defence-in-depth,
-// matching the PUT/DELETE guards. The response includes masked apiKey,
-// proxyUrl, baseUrl, OAuth credential references, and providerSpecificData
-// — sensitive connection state that should not leak on a middleware
-// regression from ALWAYS_PROTECTED back to PROTECTED_API_PATHS.
 export async function GET(request, { params }) {
   try {
-    if (!(await requireAuth(request))) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
     const { id } = await params;
     const connection = await getProviderConnectionById(id);
 
@@ -88,15 +78,8 @@ export async function GET(request, { params }) {
 }
 
 // PUT /api/providers/[id] - Update connection
-// Finding #7 follow-up (2026-10-26): route-level requireAuth. PUT rewrites
-// credentials, proxy targets, and provider-specific data for the connection;
-// one unauthenticated call can redirect stored OAuth/API-key traffic to an
-// attacker-controlled proxy.
 export async function PUT(request, { params }) {
   try {
-    if (!(await requireAuth(request))) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
     const { id } = await params;
     const body = await request.json();
     const {
@@ -186,48 +169,13 @@ export async function PUT(request, { params }) {
 }
 
 // DELETE /api/providers/[id] - Delete connection
-// Finding #7 follow-up (2026-10-26): route-level requireAuth. DELETE
-// removes the stored credential entirely; an unauthenticated peer could
-// wipe connections they know/guess the UUID of.
 export async function DELETE(request, { params }) {
   try {
-    if (!(await requireAuth(request))) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
     const { id } = await params;
-
-    // Fetch before delete so we can clean up web-login browser profiles
-    const existing = await getProviderConnectionById(id);
-    if (!existing) {
-      return NextResponse.json({ error: "Connection not found" }, { status: 404 });
-    }
 
     const deleted = await deleteProviderConnection(id);
     if (!deleted) {
       return NextResponse.json({ error: "Connection not found" }, { status: 404 });
-    }
-
-    // Web-cookie follow-up (2026-10-26): remove the browser profile so
-    // captured cookies don't persist after the connection is gone.
-    // Profiles are shared across providers, so only remove when no other
-    // web-login connection references the same profile.
-    if (existing.providerSpecificData?.authMethod === "web-login") {
-      try {
-        const profileName = existing.providerSpecificData?.webLoginProfile || "default";
-        const allConnections = await getProviderConnections();
-        const stillUsed = allConnections.some(
-          (c) =>
-            c.id !== id &&
-            c.providerSpecificData?.authMethod === "web-login" &&
-            (c.providerSpecificData?.webLoginProfile || "default") === profileName
-        );
-        if (!stillUsed) {
-          const { removeWebLoginProfile } = await import("open-sse/services/webLogin.js");
-          removeWebLoginProfile(profileName);
-        }
-      } catch {
-        // Best-effort — profile cleanup must not block the delete response
-      }
     }
 
     return NextResponse.json({ message: "Connection deleted successfully" });

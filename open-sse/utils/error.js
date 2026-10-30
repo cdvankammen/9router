@@ -32,6 +32,7 @@ export function errorResponse(statusCode, message, extraHeaders = null) {
     status: statusCode,
     headers: {
       "Content-Type": "application/json",
+      "Access-Control-Allow-Origin": "*",
       ...extraHeaders
     }
   });

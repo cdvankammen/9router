@@ -5,7 +5,6 @@ import {
   fetchZedAuthenticatedUser,
   resolveZedOrganizationId,
 } from "open-sse/shared/zedAuth.js";
-import { requireAuth } from "@/lib/auth/requireAuth";
 
 /**
  * POST /api/oauth/zed/import
@@ -14,11 +13,6 @@ import { requireAuth } from "@/lib/auth/requireAuth";
  * Body: { accessToken, userId, systemId? }
  */
 export async function POST(request) {
-  // SECURITY (#254): route-level requireAuth. This endpoint writes a
-  // user-supplied Zed access token into the providerConnections pool.
-  if (!(await requireAuth(request))) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
   try {
     const body = await request.json();
     const accessToken = typeof body?.accessToken === "string" ? body.accessToken.trim() : "";

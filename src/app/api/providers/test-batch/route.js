@@ -8,7 +8,6 @@ import {
   ANTHROPIC_COMPATIBLE_PREFIX,
 } from "@/shared/constants/providers";
 import { testSingleConnection } from "../[id]/test/testUtils.js";
-import { requireAuth } from "@/lib/auth/requireAuth";
 
 function getAuthGroup(providerId, connection = null) {
   // Prioritize authType from connection if available
@@ -41,16 +40,8 @@ function isCompatibleProvider(providerId) {
 }
 
 // POST /api/providers/test-batch - Test multiple connections by group
-// Finding #7 follow-up (2026-10-26): route-level requireAuth. test-batch
-// fans out testSingleConnection across the whole fleet — same
-// SSRF-via-stored-config primitive as /api/providers/[id]/test but with
-// a broader blast radius. An unauthenticated peer could force every
-// stored credential to make outbound calls.
 export async function POST(request) {
   try {
-    if (!(await requireAuth(request))) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
     const body = await request.json();
     const { mode, providerId } = body;
 

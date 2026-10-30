@@ -13,7 +13,6 @@ import {
   isNousApiKeyAccepted,
 } from "open-sse/services/nous.js";
 import { normalizeProviderId } from "@/lib/providerNormalization";
-import { assertNotLinkLocalResolved } from "@/shared/utils/ssrfGuard.js";
 
 // Probe a webSearch/webFetch provider using its searchConfig/fetchConfig.
 // Returns true if API key is accepted (status !== 401 && !== 403).
@@ -116,17 +115,8 @@ export async function POST(request) {
           return NextResponse.json({ error: "OpenAI Compatible node not found" }, { status: 404 });
         }
         const modelsUrl = `${node.baseUrl?.replace(/\/$/, "")}/models`;
-        // SECURITY: block link-local / cloud-metadata base URLs (169.254.0.0/16,
-        // fe80::/10). RFC1918 + loopback are intentionally permitted — local model
-        // hosts (Ollama, LAN vLLM) are legitimate use cases for this code path.
-        try {
-          await assertNotLinkLocalResolved(modelsUrl);
-        } catch (guardErr) {
-          return NextResponse.json({ valid: false, error: guardErr.message }, { status: 400 });
-        }
         const res = await fetch(modelsUrl, {
           headers: { "Authorization": `Bearer ${apiKey}` },
-          signal: AbortSignal.timeout(8000),
         });
         isValid = res.ok;
         return NextResponse.json({
@@ -142,16 +132,8 @@ export async function POST(request) {
           return NextResponse.json({ error: "Custom Embedding node not found" }, { status: 404 });
         }
         const baseUrl = node.baseUrl?.replace(/\/$/, "");
-        // SECURITY: block link-local / cloud-metadata base URLs (see OpenAI-compat
-        // branch for rationale). RFC1918 + loopback permitted for local embedding servers.
-        try {
-          await assertNotLinkLocalResolved(`${baseUrl}/models`);
-        } catch (guardErr) {
-          return NextResponse.json({ valid: false, error: guardErr.message }, { status: 400 });
-        }
         const modelsRes = await fetch(`${baseUrl}/models`, {
           headers: { "Authorization": `Bearer ${apiKey}` },
-          signal: AbortSignal.timeout(8000),
         });
         if (modelsRes.ok) {
           return NextResponse.json({ valid: true });
@@ -165,7 +147,6 @@ export async function POST(request) {
           method: "POST",
           headers: { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json" },
           body: JSON.stringify({ model: "test", input: "ping" }),
-          signal: AbortSignal.timeout(8000),
         });
         // 401/403 = bad key; anything else (including 400 "model not found") means key works
         isValid = embedRes.status !== 401 && embedRes.status !== 403;
@@ -187,14 +168,6 @@ export async function POST(request) {
         }
 
         const messagesUrl = `${normalizedBase}/v1/messages`;
-        // SECURITY: block link-local / cloud-metadata base URLs (see OpenAI-compat
-        // branch for rationale). RFC1918 + loopback permitted for local
-        // Anthropic-compatible servers.
-        try {
-          await assertNotLinkLocalResolved(messagesUrl);
-        } catch (guardErr) {
-          return NextResponse.json({ valid: false, error: guardErr.message }, { status: 400 });
-        }
         const model = node.defaultModel || "claude-3-haiku-20240307";
 
         const res = await fetch(messagesUrl, {
@@ -210,7 +183,6 @@ export async function POST(request) {
             max_tokens: 1,
             messages: [{ role: "user", content: "test" }],
           }),
-          signal: AbortSignal.timeout(8000),
         });
 
         // 400/529 still confirms key accepted; only 401/403 = bad key
@@ -236,7 +208,6 @@ export async function POST(request) {
             messages: [{ role: "user", content: "test" }],
             max_tokens: 1,
           }),
-          signal: AbortSignal.timeout(8000),
         });
         isValid = cfRes.status !== 401 && cfRes.status !== 403 && cfRes.status !== 404;
         return NextResponse.json({
@@ -266,7 +237,6 @@ export async function POST(request) {
             messages: [{ role: "user", content: "test" }],
             max_tokens: 1,
           }),
-          signal: AbortSignal.timeout(8000),
         });
         isValid = azureRes.status !== 401 && azureRes.status !== 403;
         return NextResponse.json({
@@ -303,7 +273,6 @@ export async function POST(request) {
         case "openai":
           const openaiRes = await fetch("https://api.openai.com/v1/models", {
             headers: { "Authorization": `Bearer ${apiKey}` },
-            signal: AbortSignal.timeout(8000),
           });
           isValid = openaiRes.ok;
           break;
@@ -311,7 +280,6 @@ export async function POST(request) {
         case "vercel-ai-gateway":
           const vercelAiGatewayRes = await fetch("https://ai-gateway.vercel.sh/v1/models", {
             headers: { "Authorization": `Bearer ${apiKey}` },
-            signal: AbortSignal.timeout(8000),
           });
           isValid = vercelAiGatewayRes.ok;
           break;
@@ -329,20 +297,18 @@ export async function POST(request) {
               max_tokens: 1,
               messages: [{ role: "user", content: "test" }],
             }),
-            signal: AbortSignal.timeout(8000),
           });
           isValid = anthropicRes.status !== 401;
           break;
 
         case "gemini":
-          const geminiRes = await fetch(`https://generativelanguage.googleapis.com/v1/models?key=${apiKey}`, { signal: AbortSignal.timeout(8000) });
+          const geminiRes = await fetch(`https://generativelanguage.googleapis.com/v1/models?key=${apiKey}`);
           isValid = geminiRes.ok;
           break;
 
         case "openrouter":
           const openrouterRes = await fetch("https://openrouter.ai/api/v1/models", {
             headers: { "Authorization": `Bearer ${apiKey}` },
-            signal: AbortSignal.timeout(8000),
           });
           isValid = openrouterRes.ok;
           break;
@@ -379,7 +345,6 @@ export async function POST(request) {
               method: "POST",
               headers: { "Authorization": `Bearer ${apiKey}`, "content-type": "application/json" },
               body: JSON.stringify({ model: testModel, max_tokens: 1, messages: [{ role: "user", content: "test" }] }),
-              signal: AbortSignal.timeout(8000),
             });
             isValid = res.status !== 401 && res.status !== 403;
           } else {
@@ -393,7 +358,6 @@ export async function POST(request) {
                 ...(cfg.headers || {}),
               },
               body: JSON.stringify({ model: testModel, max_tokens: 1, messages: [{ role: "user", content: "test" }] }),
-              signal: AbortSignal.timeout(8000),
             });
             // 400 = model resolution error but auth passed (e.g. agentrouter "no available channel")
             isValid = res.status !== 401 && res.status !== 403;
@@ -413,7 +377,6 @@ export async function POST(request) {
               max_tokens: 1,
               messages: [{ role: "user", content: "test" }],
             }),
-            signal: AbortSignal.timeout(8000),
           });
           isValid = res.status !== 401 && res.status !== 403;
           break;
@@ -473,7 +436,6 @@ export async function POST(request) {
               max_tokens: 1,
               stream: false,
             }),
-            signal: AbortSignal.timeout(8000),
           });
           isValid = res.status !== 401 && res.status !== 403;
           break;
@@ -491,7 +453,6 @@ export async function POST(request) {
             method: "POST",
             headers: buildCommandCodeHeaders({ apiKey, sessionId: payload.threadId }),
             body: JSON.stringify(payload),
-            signal: AbortSignal.timeout(8000),
           });
           isValid = res.status !== 401 && res.status !== 403;
           break;
@@ -500,7 +461,6 @@ export async function POST(request) {
         case "deepgram": {
           const res = await fetch("https://api.deepgram.com/v1/projects", {
             headers: { "Authorization": `Token ${apiKey}` },
-            signal: AbortSignal.timeout(8000),
           });
           isValid = res.ok;
           break;
@@ -518,7 +478,6 @@ export async function POST(request) {
               messages: [{ role: "user", content: "test" }],
               max_tokens: 10,
             }),
-            signal: AbortSignal.timeout(8000),
           });
           // Returns 401 for invalid key, 200 for valid, 400 for malformed
           isValid = res.status === 200 || res.status === 400;
@@ -536,7 +495,7 @@ export async function POST(request) {
             // Raw key: probe Vertex — 404 means key is valid (model just doesn't exist), 401 means invalid key
             const probeRes = await fetch(
               `https://aiplatform.googleapis.com/v1/publishers/google/models/__probe__:generateContent?key=${apiKey}`,
-              { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}", signal: AbortSignal.timeout(8000) }
+              { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" }
             );
             isValid = probeRes.status !== 401 && probeRes.status !== 403;
           }
@@ -550,7 +509,7 @@ export async function POST(request) {
           } else {
             const probeRes = await fetch(
               `https://aiplatform.googleapis.com/v1/publishers/google/models/__probe__:generateContent?key=${apiKey}`,
-              { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}", signal: AbortSignal.timeout(8000) }
+              { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" }
             );
             isValid = probeRes.status !== 401 && probeRes.status !== 403;
           }
@@ -570,7 +529,6 @@ export async function POST(request) {
           const spanId = randomHex(8);
           const res = await fetch("https://grok.com/rest/app-chat/conversations/new", {
             method: "POST",
-            signal: AbortSignal.timeout(8000),
             headers: {
               Accept: "*/*",
               "Accept-Encoding": "gzip, deflate, br, zstd",
@@ -620,7 +578,6 @@ export async function POST(request) {
           const tz = typeof Intl !== "undefined" ? Intl.DateTimeFormat().resolvedOptions().timeZone : "UTC";
           const res = await fetch("https://www.perplexity.ai/rest/sse/perplexity_ask", {
             method: "POST",
-            signal: AbortSignal.timeout(8000),
             headers: {
               "Content-Type": "application/json",
               Accept: "text/event-stream",

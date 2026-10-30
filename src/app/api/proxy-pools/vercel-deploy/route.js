@@ -3,12 +3,6 @@ import { createProxyPool } from "@/models";
 
 const VERCEL_API = "https://api.vercel.com";
 
-// Timeout budgets (ms). Deploy operations are slow (Vercel build queue)
-// but must not hang indefinitely on a stuck upstream.
-const VERCEL_API_TIMEOUT_MS = 60_000; // deploy create / project PATCH
-const VERCEL_POLL_TIMEOUT_MS = 30_000; // single poll fetch (loop has its own wall clock)
-const RELAY_FORWARD_TIMEOUT_MS = 60_000; // edge relay forwarding user traffic
-
 // Relay function source code deployed to Vercel
 // Forwards requests to target URL specified in x-relay-target header
 const RELAY_FUNCTION_CODE = `
@@ -26,10 +20,6 @@ export default async function handler(req) {
 
   const targetUrl = target.replace(/\\/$/, "") + relayPath;
 
-  // Build forwarded headers as a plain object from req.headers.entries()
-  // rather than new Headers(req.headers). Edge-runtime Headers normalization
-  // lowercases + merges duplicate keys in ways some upstream providers reject
-  // (regression re-introduced by 2b63e0dd; original fix: 6af26a9e savioruz).
   const rawHeaders = {};
   for (const [k, v] of req.headers.entries()) rawHeaders[k] = v;
   delete rawHeaders["x-relay-target"];
@@ -41,7 +31,6 @@ export default async function handler(req) {
     headers: rawHeaders,
     body: req.method !== "GET" && req.method !== "HEAD" ? req.body : undefined,
     duplex: "half",
-    signal: AbortSignal.timeout(${RELAY_FORWARD_TIMEOUT_MS}),
   });
 
   return new Response(response.body, {
@@ -56,7 +45,6 @@ async function pollDeployment(deploymentId, token, maxMs = 120000) {
   while (Date.now() - start < maxMs) {
     const res = await fetch(`${VERCEL_API}/v13/deployments/${deploymentId}`, {
       headers: { Authorization: `Bearer ${token}` },
-      signal: AbortSignal.timeout(VERCEL_POLL_TIMEOUT_MS),
     });
     const data = await res.json();
     if (data.readyState === "READY") return data;
@@ -109,7 +97,6 @@ export async function POST(request) {
         },
         target: "production",
       }),
-      signal: AbortSignal.timeout(VERCEL_API_TIMEOUT_MS),
     });
 
     if (!deployRes.ok) {
@@ -132,7 +119,6 @@ export async function POST(request) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ ssoProtection: null }),
-      signal: AbortSignal.timeout(VERCEL_API_TIMEOUT_MS),
     });
 
     // Poll until deployment is ready

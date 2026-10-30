@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { Card, Button } from "@/shared/components";
 import { useCopyToClipboard } from "@/shared/hooks/useCopyToClipboard";
-import { useNotificationStore } from "@/store/notificationStore";
 import dynamic from "next/dynamic";
 import { MONACO_VS_PATH } from "@/shared/constants/monaco";
 
@@ -41,7 +40,6 @@ export default function TranslatorPage() {
   const [loading, setLoading] = useState({});
   // Detected from step 1: { provider, model, sourceFormat, targetFormat }
   const [meta, setMeta] = useState(null);
-  const notify = useNotificationStore();
 
   const setLoad = (key, val) => setLoading(prev => ({ ...prev, [key]: val }));
   const setContent = (id, val) => setContents(prev => ({ ...prev, [id]: val }));
@@ -65,10 +63,10 @@ export default function TranslatorPage() {
         setContent(stepId, data.content);
         if (stepId === 1) await detectMeta(data.content);
       } else {
-        notify.error(data.error || "File not found");
+        alert(data.error || "File not found");
       }
     } catch (e) {
-      notify.error(e.message);
+      alert(e.message);
     }
     setLoad(`load-${stepId}`, false);
   };
@@ -109,11 +107,11 @@ export default function TranslatorPage() {
         body: JSON.stringify({ step: 2, body })
       });
       const data = await res.json();
-      if (!data.success) { notify.error(data.error); return; }
+      if (!data.success) { alert(data.error); return; }
       const str = JSON.stringify(data.result.body, null, 2);
       setContent(3, str);
       openNext(3);
-    } catch (e) { notify.error(e.message); }
+    } catch (e) { alert(e.message); }
     setLoad("toOpenAI", false);
   };
 
@@ -132,12 +130,12 @@ export default function TranslatorPage() {
         body: JSON.stringify({ step: 3, body: { ...openaiBody, provider: meta?.provider, model: meta?.model } })
       });
       const data = await res.json();
-      if (!data.success) { notify.error(data.error); return; }
+      if (!data.success) { alert(data.error); return; }
       // Embed provider + model so Send works even without meta
       const step4Content = { ...data.result, provider: meta?.provider, model: meta?.model };
       setContent(4, JSON.stringify(step4Content, null, 2));
       openNext(4);
-    } catch (e) { notify.error(e.message); }
+    } catch (e) { alert(e.message); }
     setLoad("toTarget", false);
   };
 
@@ -155,7 +153,7 @@ export default function TranslatorPage() {
       const model = step4.model || meta?.model;
 
       if (!provider || !model) {
-        notify.warning("Missing provider or model. Please run step 1 first to detect them.");
+        alert("Missing provider or model. Please run step 1 first to detect them.");
         return;
       }
 
@@ -167,7 +165,7 @@ export default function TranslatorPage() {
 
       if (!res.ok) {
         const err = await res.json().catch(() => ({ error: res.statusText }));
-        notify.error(err.error || "Send failed");
+        alert(err.error || "Send failed");
         return;
       }
 
@@ -191,7 +189,7 @@ export default function TranslatorPage() {
         body: JSON.stringify({ file: "5_res_provider.txt", content: full })
       });
     } catch (e) {
-      notify.error(e.message);
+      alert(e.message);
     } finally {
       setLoad("send", false);
     }

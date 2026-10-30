@@ -8,9 +8,6 @@ const originalDataDir = process.env.DATA_DIR;
 async function setupDb() {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "9router-model-routing-"));
   process.env.DATA_DIR = tempDir;
-  // Clear the driver's global adapter singleton so this per-test db never
-  // reuses an adapter bound to a previous run's DATA_DIR (see db-driver-chain).
-  delete global._dbAdapter;
   vi.resetModules();
 
   const { createProviderNode } = await import("@/models/index.js");
@@ -20,8 +17,6 @@ async function setupDb() {
     createProviderNode,
     getModelInfo,
     cleanup() {
-      try { global._dbAdapter?.instance?.close?.(); } catch {}
-      delete global._dbAdapter;
       fs.rmSync(tempDir, { recursive: true, force: true });
     },
   };
@@ -60,26 +55,6 @@ describe("model routing", () => {
       .resolves.toEqual({
         provider: "cloudflare-ai",
         model: "@cf/black-forest-labs/flux-2-klein-9b",
-      });
-  });
-
-  it("routes multi-protocol node prefixes", async () => {
-    const ctx = await setupDb();
-    cleanup = ctx.cleanup;
-
-    await ctx.createProviderNode({
-      id: "openai-compatible-multi-test",
-      type: "multi-compatible",
-      name: "Multi-compatible Node",
-      prefix: "multi",
-      apiType: "chat",
-      baseUrl: "https://multi.test/v1",
-    });
-
-    await expect(ctx.getModelInfo("multi/shared-model"))
-      .resolves.toEqual({
-        provider: "openai-compatible-multi-test",
-        model: "shared-model",
       });
   });
 

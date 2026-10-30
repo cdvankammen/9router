@@ -17,17 +17,12 @@ let db;
 beforeAll(async () => {
   tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "9router-concurrent-"));
   process.env.DATA_DIR = tempDir;
-  // Clear the driver's global adapter singleton so this suite never reuses
-  // an adapter bound to a previous suite's DATA_DIR (see db-driver-chain).
-  delete global._dbAdapter;
   vi.resetModules();
   db = await import("@/lib/db/index.js");
   await db.initDb();
 });
 
 afterAll(() => {
-  try { global._dbAdapter?.instance?.close?.(); } catch {}
-  delete global._dbAdapter;
   if (tempDir) fs.rmSync(tempDir, { recursive: true, force: true });
   if (originalDataDir === undefined) delete process.env.DATA_DIR;
   else process.env.DATA_DIR = originalDataDir;
@@ -38,16 +33,11 @@ describe("DB Concurrency — atomic safety", () => {
     const N = 100;
     const promises = [];
     for (let i = 0; i < N; i++) {
-      // Unique timestamp per entry: saveRequestUsage dedupes identical
-      // (timestamp+provider+model+fields) rows — production requests never
-      // collide on the same millisecond, so the concurrency test must not
-      // either (otherwise 99 of 100 look like duplicates).
       promises.push(db.saveRequestUsage({
         timestamp: tsFor(i),
         provider: "openai", model: "gpt-4", connectionId: "c1",
         tokens: { prompt_tokens: 10, completion_tokens: 5 },
         endpoint: "/v1/chat", status: "ok",
-        timestamp: new Date(Date.now() + i).toISOString(),
       }));
     }
     await Promise.all(promises);
@@ -89,7 +79,6 @@ describe("DB Concurrency — atomic safety", () => {
         timestamp: tsFor(1000 + i),
         provider: "anthropic", model: `m-${i % 3}`, connectionId: "c2",
         tokens: { prompt_tokens: 20 }, status: "ok",
-        timestamp: new Date(Date.now() + i).toISOString(),
       }));
       ops.push(db.setModelAlias(`a-${i}`, `target-${i}`));
       ops.push(db.disableModels("openai", [`d-${i}`]));
@@ -171,16 +160,11 @@ describe("DB Concurrency — atomic safety", () => {
     const N = 50;
     const promises = [];
     for (let i = 0; i < N; i++) {
-      // Unique timestamp per entry: saveRequestUsage dedupes identical
-      // (timestamp+provider+model+fields) rows — production requests never
-      // collide on the same millisecond, so the concurrency test must not
-      // either (otherwise 49 of 50 look like duplicates).
       promises.push(db.saveRequestUsage({
         timestamp: tsFor(2000 + i),
         provider: "google", model: "gemini-pro", connectionId: "cG",
         tokens: { prompt_tokens: 100, completion_tokens: 50 },
         status: "ok",
-        timestamp: new Date(Date.now() + i).toISOString(),
       }));
     }
     await Promise.all(promises);

@@ -22,6 +22,7 @@ function createTtsResponse(base64Audio, format, responseFormat) {
       response: new Response(JSON.stringify({ audio: base64Audio, format }), {
         headers: {
           "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": "*",
         },
       }),
     };
@@ -34,6 +35,7 @@ function createTtsResponse(base64Audio, format, responseFormat) {
       headers: {
         "Content-Type": `audio/${format}`,
         "Content-Length": String(audioBuffer.length),
+        "Access-Control-Allow-Origin": "*",
       },
     }),
   };

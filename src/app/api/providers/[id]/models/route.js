@@ -15,7 +15,6 @@ import { resolveZedModels } from "open-sse/shared/zedAuth.js";
 import { resolveClineModels, resolveClinepassModels } from "open-sse/services/clinepassModels.js";
 import { NOUS_MODELS_URL, normalizeNousModels } from "open-sse/services/nous.js";
 import codexProvider from "open-sse/providers/registry/codex.js";
-import { requireAuth } from "@/lib/auth/requireAuth.js";
 
 const GEMINI_CLI_MODELS_URL = "https://cloudcode-pa.googleapis.com/v1internal:fetchAvailableModels";
 
@@ -544,21 +543,9 @@ const PROVIDER_MODELS_CONFIG = {
 
 /**
  * GET /api/providers/[id]/models - Get models list from provider
- *
- * IDOR sweep (2026-10-29): route-level requireAuth. This handler has a
- * side-effect: it calls refreshGoogleToken / refreshCodexToken on GET
- * when the connection uses Google or Codex providers. Token refresh is
- * credential-adjacent and triggers outbound network calls with stored
- * OAuth credentials — unauthenticated iteration of connection ids would
- * otherwise force refresh storms against upstream OAuth endpoints. The
- * defence-in-depth guard catches any middleware regression and ensures
- * the refresh side-effect only fires for authenticated sessions.
  */
 export async function GET(request, { params }) {
   try {
-    if (!(await requireAuth(request))) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
     const { id } = await params;
     const connection = await getProviderConnectionById(id);
 

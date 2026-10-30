@@ -17,47 +17,6 @@ const DEFAULT_SETTINGS = {
   comboStrategy: "fallback",
   comboStickyRoundRobinLimit: 1,
   comboStrategies: {},
-  // Per-combo context-aware routing: comboStrategies[comboName].contextAwareRouting
-  // = { enabled, overflowTarget, thresholdTokens }. When enabled and the estimated
-  // prompt exceeds thresholdTokens, the overflowTarget floats to the front of the
-  // attempt list instead of failing a small-context model (see
-  // open-sse/services/combo.js applyContextAwareRouting).
-  smartRouter: {
-    enabled: false,
-    names: ["modelRouter"],
-    allowedProviders: [],
-    allowedModels: [],
-    costQualityTradeoff: 5,
-    maxCandidates: 3,
-    stickyTtlMin: 5,
-  },
-  // Optional sweep of stale smart-router (sr-*) combos. OFF by default —
-  // users opt in. ttlHours = age after which an unused sr- combo is deleted;
-  // intervalHours = how often the sweeper runs.
-  srComboCleanup: {
-    enabled: false,
-    ttlHours: 24,
-    intervalHours: 12,
-  },
-  analyzeErrorModel: "oc/mimo-v2.5-free",
-  // L1 in-app peer forwarding (node failover): array of peer base URLs
-  // (e.g. ["http://mini2-9.local:20128"]). When the LOCAL node is up but
-  // degraded (health probe failing / all providers dead), /v1* requests are
-  // forwarded to the first healthy peer. Empty = feature off.
-  peerNodes: [],
-  // Error Inbox (P2) triage assignments: { [errorFingerprint]: columnKey }.
-  // Coarse fingerprint key = provider|model|errorCategory (Sentry-style) —
-  // see requestDetailsRepo.getErrorSummary. Stored with MAP_REPLACE semantics
-  // (sender owns the full map).
-  boardColumns: {},
-  markdownLogEnabled: false,
-  markdownLogFlushIntervalMin: 5,
-  modelFallbacks: {},
-  // User-set per-model capability overrides: { [fullModelId]: { vision: true, audioInput: false, ... } }.
-  // Merged over static capabilities so users can mark custom/unknown models as
-  // vision/audio-capable (or correct a wrong static flag). Only the fields the
-  // user explicitly set are stored; resolution merges over DEFAULT_CAPABILITIES.
-  modelCapOverrides: {},
   capacityAdapter: {
     vision: { enabled: true, roundRobin: false, models: [] },
     pdf: { enabled: false, roundRobin: false, models: [] },
@@ -108,150 +67,17 @@ const DEFAULT_SETTINGS = {
   pxpipeTimeoutMs: 15000,
   // Per-provider user header overrides applied at dispatch: { [providerId]: { headers: {..} } }
   providerOverrides: {},
-  // Auto-persist discovered model IDs from compatible providers to kv customModels.
-  // Default OFF — users opt in via dashboard settings toggle.
-  // First-discovery only (addCustomModel is idempotent). No auto-reap.
-  modelAutoPersist: {
-    enabled: false,
-    maxModelsPerProvider: 200,
-    markSource: true,
-  },
-  // CORS allowlist for API endpoints. Empty = wildcard (legacy behavior).
-  // When non-empty, only listed origins receive Access-Control-Allow-Origin.
-  corsAllowedOrigins: [],
-  // Claude compat layer (see src/lib/claudeCompat.js): suffixMode controls
-  // when [1m] is appended to rewritten /v1/models ids.
-  claudeCompat: {
-    enabled: true,
-    suffixMode: "auto",
-    keywords: [],
-  },
-  // Default-model mapping written to ~/.claude/settings.json env by the
-  // endpoint page's one-click button (see /api/claude-compat/write-claude-settings).
-  claudeDefaultModels: {
-    sonnet: { model: "", name: "", oneM: false },
-    opus: { model: "", name: "", oneM: false },
-    fable: { model: "", name: "", oneM: false },
-    haiku: { model: "", name: "", oneM: false },
-    subagent: { model: "", oneM: false },
-  },
-  // User contextWindow overrides, keyed by model id or glob pattern (e.g.
-  // "glm-5.3" or "glm-5*"). Consumed by open-sse/providers/capabilities.js
-  // via setContextWindowOverrides(); managed on /dashboard/model-context.
-  contextWindowOverrides: {},
-  // ── AI Memory & Context Optimization (PR #3599 additive) ──
-  memoryToolPruningEnabled: false,
-  memoryMaxToolTurnsKeepFull: 2,
-  memoryMaxHistoricalToolChars: 4000,
-  memoryMediaPruningEnabled: false,
-  memoryCompactionEnabled: false,
-  memoryCompactionThresholdTokens: 128000,
-  memoryRecentTurnsToKeep: 8,
-  memoryCacheAnchorEnabled: false,
-  
 };
 
 async function readRaw() {
   const db = await getAdapter();
   const row = db.get(`SELECT data FROM settings WHERE id = 1`);
-  if (!row) return {};
-  const parsed = parseJson(row.data, {});
-  // Guard against corrupted stored JSON: if the DB contains an array (e.g.
-  // from a bad migration or client PATCH), JSON.parse returns an array and
-  // spreading it into mergeWithDefaults produces {"0": null, "1": null, ...}
-  // numeric keys that leak into every GET /api/settings response. Strip
-  // non-string-keyed entries and any numeric-named keys to keep the response
-  // shape clean. Also reject non-object parses (strings, numbers, booleans).
-  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
-  const clean = {};
-  for (const [k, v] of Object.entries(parsed)) {
-    if (/^\d+$/.test(k)) continue; // skip numeric-indexed keys
-    clean[k] = v;
-  }
-  return clean;
+  return row ? parseJson(row.data, {}) : {};
 }
 
 // Merge raw settings with defaults; backward-compat for missing keys
-// Deep-merges nested objects so a PARTIAL update (e.g. {smartRouter:{enabled:true}})
-// never shadows the sibling defaults (names, allowedModels, ...).
-// (Key sets are defined below: CONFIG_MERGE_KEYS + MAP_REPLACE_KEYS.)
-
-// Recursive plain-object merge (arrays and scalars replace; objects merge
-// key-by-key). Used for the nested settings so partial updates at ANY depth
-// (e.g. capacityAdapter.vision.enabled) keep the sibling defaults.
-function deepMergeObject(base, override) {
-  if (
-    !override ||
-    typeof override !== "object" ||
-    Array.isArray(override) ||
-    !base ||
-    typeof base !== "object" ||
-    Array.isArray(base)
-  ) {
-    return override === undefined ? base : override;
-  }
-  const out = { ...base };
-  for (const [k, v] of Object.entries(override)) {
-    // SECURITY: defense-in-depth against prototype-pollution attempts via
-    // PATCH /api/settings. JSON.parse creates __proto__/constructor/prototype
-    // as own enumerable keys, so Object.entries would otherwise iterate them
-    // and `out[k] = ...` would mutate the local `out`'s prototype link. The
-    // stored JSON drops prototype chains on stringify (so no persistence),
-    // but skipping these keys at merge time keeps the in-memory object clean
-    // and follows the standard Node.js hardening pattern.
-    if (k === "__proto__" || k === "constructor" || k === "prototype") continue;
-    out[k] = deepMergeObject(base[k], v);
-  }
-  return out;
-}
-
-// Nested config OBJECTS: partial PATCHes accumulate against the stored value
-// (sequential PATCHes never reset each other). These are UI-owned config
-// shapes, not maps — merging with the stored value is the correct semantics.
-const CONFIG_MERGE_KEYS = new Set([
-  "smartRouter",
-  "capacityAdapter",
-  "srComboCleanup",
-  "modelAutoPersist",
-  "claudeCompat",
-]);
-
-// Nested MAP keys: the sender owns the full map (replace semantics — deleting
-// an entry = sending the map without it; merging with stored would resurrect
-// deletes). Their defaults are empty objects, so merging against defaults IS
-// a replace.
-const MAP_REPLACE_KEYS = new Set([
-  "modelFallbacks",
-  "comboStrategies",
-  "providerStrategies",
-  "quotaVisibility",
-  "dnsToolEnabled",
-  "boardColumns",
-]);
-
-const NESTED_KEYS = new Set([...CONFIG_MERGE_KEYS, ...MAP_REPLACE_KEYS]);
-
-// Read-path: fill missing nested keys from defaults (backward compat for DBs
-// written before a key existed). Map keys have empty-object defaults, so this
-// is a no-op for them unless the stored value is missing entirely.
-function deepMergeNested(merged, key) {
-  const defVal = DEFAULT_SETTINGS[key];
-  const curVal = merged[key];
-  if (
-    curVal &&
-    typeof curVal === "object" &&
-    !Array.isArray(curVal) &&
-    defVal &&
-    typeof defVal === "object" &&
-    !Array.isArray(defVal)
-  ) {
-    merged[key] = deepMergeObject(defVal, curVal);
-  }
-}
-
 export function mergeWithDefaults(raw) {
   const merged = { ...DEFAULT_SETTINGS, ...(raw || {}) };
-  for (const key of NESTED_KEYS) deepMergeNested(merged, key);
   for (const [key, defVal] of Object.entries(DEFAULT_SETTINGS)) {
     if (merged[key] === undefined) {
       if (
@@ -290,17 +116,7 @@ export async function updateSettings(updates) {
   db.transaction(function () {
     const row = db.get(`SELECT data FROM settings WHERE id = 1`);
     const current = row ? parseJson(row.data, {}) : {};
-    // CONFIG_MERGE_KEYS accumulate against the STORED value: sequential partial
-    // PATCHes (e.g. {smartRouter:{enabled:true}} then {smartRouter:{allowedModels:[...]}})
-    // never reset each other. MAP_REPLACE_KEYS keep replace semantics — the
-    // sender owns the full map, so deleting an entry (map without the key) is
-    // honored and never resurrected.
     next = { ...current, ...updates };
-    for (const key of CONFIG_MERGE_KEYS) {
-      if (updates[key] && typeof updates[key] === "object" && !Array.isArray(updates[key])) {
-        next[key] = deepMergeObject(current[key] ?? DEFAULT_SETTINGS[key] ?? {}, updates[key]);
-      }
-    }
     db.run(
       `INSERT INTO settings(id, data) VALUES(1, ?) ON CONFLICT(id) DO UPDATE SET data = excluded.data`,
       [stringifyJson(next)],

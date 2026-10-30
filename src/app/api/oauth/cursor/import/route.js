@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { CursorService } from "@/lib/oauth/services/cursor";
 import { createProviderConnection } from "@/models";
-import { requireAuth } from "@/lib/auth/requireAuth";
 
 /**
  * POST /api/oauth/cursor/import
@@ -12,13 +11,6 @@ import { requireAuth } from "@/lib/auth/requireAuth";
  * - machineId: string - Machine ID from storage.serviceMachineId
  */
 export async function POST(request) {
-  // SECURITY (#254): route-level requireAuth. This endpoint writes a
-  // user-supplied Cursor access token into the providerConnections pool.
-  // Without auth, a LAN peer on a requireLogin=false deployment could
-  // flood the pool with attacker-controlled Cursor accounts.
-  if (!(await requireAuth(request))) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
   try {
     const { accessToken, machineId } = await request.json();
 

@@ -283,10 +283,6 @@ function getContentBlocksFromMessage(msg, toolNameMap = new Map()) {
       }
     }
   } else if (msg.role === ROLE.ASSISTANT) {
-    // Preserve reasoning_content as a Claude thinking block (OpenAI → Claude history)
-    if (typeof msg.reasoning_content === "string" && msg.reasoning_content.trim()) {
-      blocks.push({ type: CLAUDE_BLOCK.THINKING, thinking: msg.reasoning_content });
-    }
     if (Array.isArray(msg.content)) {
       for (const part of msg.content) {
         if (part.type === OPENAI_BLOCK.TEXT && part.text) {

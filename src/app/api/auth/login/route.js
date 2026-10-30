@@ -6,6 +6,7 @@ import { setDashboardAuthCookie } from "@/lib/auth/dashboardSession";
 import { isOidcConfigured } from "@/lib/auth/oidc";
 import { isSamlConfigured } from "@/lib/auth/saml.js";
 import { checkLock, recordFail, recordSuccess, getClientIp } from "@/lib/auth/loginLimiter";
+import { isLocalRequest } from "@/dashboardGuard";
 
 const RESET_HINT = "Forgot password? Reset to default via 9Router CLI → Settings → Reset Password to Default.";
 const NO_STORE_HEADERS = { "Cache-Control": "no-store" };
@@ -36,6 +37,7 @@ export async function POST(request) {
       return NextResponse.json({ error: "Dashboard access via tunnel is disabled" }, { status: 403 });
     }
 
+    // Default password is '123456' if not set
     const storedHash = settings.password;
 
     if (settings.authMode === "sso" || settings.authMode === "saml" || settings.authMode === "oidc") {
@@ -48,43 +50,42 @@ export async function POST(request) {
       }
     }
 
-    // FIRST-RUN SETUP GATE — kept AFTER the SSO gate so SSO-configured
-    // installs that happen not to have a stored hash are handled above
-    // (and not spuriously told to "finish setup"). For any NON-SSO
-    // install with no stored hash AND no INITIAL_PASSWORD, the hardcoded
-    // "123456" default is NEVER accepted, from ANY origin: localhost, LAN,
-    // tunnel, or Tailscale. Tunnel/Tailscale clients terminate on loopback,
-    // so isLocalRequest() alone cannot reliably tell them from a local
-    // browser — relying on it previously let remote users authenticate with
-    // the well-known default. Anyone reaching login on such an install must
-    // first create a password via /api/auth/setup on localhost (or via
-    // INITIAL_PASSWORD / SSO). This is a state condition on the install,
-    // NOT a per-IP credential failure, so no recordFail() is applied here:
-    // multiple viewers looking at a fresh install's login page must not
-    // exhaust the brute-force budget.
-    const setupRequired = !storedHash && !process.env.INITIAL_PASSWORD;
-    if (setupRequired) {
-      return NextResponse.json(
-        {
-          success: false,
-          setupRequired: true,
-          error: "No password is configured yet. Create one to finish first-run setup.",
-        },
-        { status: 403, headers: NO_STORE_HEADERS }
-      );
-    }
-
     let isValid = false;
     if (storedHash) {
       isValid = await bcrypt.compare(password, storedHash);
     } else {
-      // No stored hash but INITIAL_PASSWORD set: operator-declared bootstrap
-      // password — honored only because it is explicit, never a hardcoded fallback.
-      isValid = password === process.env.INITIAL_PASSWORD;
+      // Use env var or default
+      const initialPassword = process.env.INITIAL_PASSWORD || "123456";
+      isValid = password === initialPassword;
     }
 
     if (isValid) {
       recordSuccess(ip);
+
+      // Default password still in use on a remote client → force a password
+      // change before the dashboard is exposed remotely (keeps local UX intact).
+      const mustChangePassword =
+        !storedHash && !process.env.INITIAL_PASSWORD && !isLocalRequest(request);
+
+      if (mustChangePassword) {
+        // Do NOT issue a session token: a fresh install's default password is
+        // public knowledge ("123456"), so handing out a valid JWT would let any
+        // remote attacker authenticate and (e.g.) PATCH /api/settings to disable
+        // authentication entirely (CVE-2026-56679 class). Require the password
+        // to be changed first.
+        //
+        // NOTE: this intentionally leaves no remote self-service password-change
+        // path — the change-password flow (PATCH /api/settings) requires a JWT,
+        // which we deliberately withhold. A remote fresh-install user must either
+        // change the password from the local machine or set INITIAL_PASSWORD
+        // before first launch. This is a deliberate security trade-off, not an
+        // oversight: issuing any credential before the default password is
+        // rotated re-opens the exact attack chain this branch closes.
+        return NextResponse.json(
+          { success: false, error: "Default password must be changed before remote access. Change it from the local machine (or set INITIAL_PASSWORD).", mustChangePassword },
+          { status: 403, headers: NO_STORE_HEADERS }
+        );
+      }
 
       const cookieStore = await cookies();
       await setDashboardAuthCookie(cookieStore, request);
@@ -105,18 +106,6 @@ export async function POST(request) {
       { status: 401 }
     );
   } catch (error) {
-    // SECURITY (Finding #324/#340): swallow the raw error.message into a
-    // uniform response. bcrypt.compare can throw on a corrupt stored hash
-    // ("Invalid salt", "Invalid salt rounds", etc.) — returning
-    // error.message leaks the password storage internals to an
-    // unauthenticated caller (an error oracle that confirms the hash
-    // format is bcrypt, that a stored hash exists, and what shape it
-    // takes). All unexpected errors collapse to the same response so
-    // the caller learns nothing beyond "something went wrong."
-    console.error("[login] unexpected error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500, headers: NO_STORE_HEADERS }
-    );
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
