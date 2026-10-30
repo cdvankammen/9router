@@ -150,7 +150,7 @@ export async function handleEmbeddings(request) {
           endpoint: url.pathname,
           tokens: usage,
           status: "success",
-        }).catch(() => {});
+        }).catch((e) => log.warn("EMBED", `usage persistence failed: ${e.message}`));
       }
       return result.response;
     }
