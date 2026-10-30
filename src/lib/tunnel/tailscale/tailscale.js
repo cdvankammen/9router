@@ -58,15 +58,20 @@ function fallbackBin() {
   return null;
 }
 
+// SECURITY (GAP-P2-15 extension): filesystem-only bin refresh. The previous
+// `which tailscale` probe resolved via process.env.PATH, so a crafted .env
+// with PATH=/tmp/evil:$PATH would execute an arbitrary binary and poison the
+// cache — every subsequent `execSync("${bin}" ...)` became command execution.
+// The sync fallbackBin() already probes all known install locations with
+// fs.existsSync, so the async refresh just re-runs those probes (non-blocking)
+// rather than consulting PATH.
 function bgRefreshBin() {
   if (binCache.refreshing) return;
   binCache.refreshing = true;
-  const cmd = IS_WINDOWS ? "where tailscale 2>nul" : "which tailscale 2>/dev/null";
-  execAsync(cmd, { windowsHide: true, timeout: PROBE_TIMEOUT_MS, env: { ...process.env, PATH: EXTENDED_PATH } })
-    .then(({ stdout }) => {
-      const sys = stdout.trim();
-      binCache.value = sys || fallbackBin();
-    })
+  // fs probes are fast but we keep the async shape so callers never block.
+  Promise.resolve()
+    .then(() => fallbackBin())
+    .then((found) => { binCache.value = found; })
     .catch(() => { binCache.value = fallbackBin(); })
     .finally(() => {
       binCache.fetchedAt = Date.now();
