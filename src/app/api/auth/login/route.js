@@ -105,6 +105,18 @@ export async function POST(request) {
       { status: 401 }
     );
   } catch (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    // SECURITY (Finding #324/#340): swallow the raw error.message into a
+    // uniform response. bcrypt.compare can throw on a corrupt stored hash
+    // ("Invalid salt", "Invalid salt rounds", etc.) — returning
+    // error.message leaks the password storage internals to an
+    // unauthenticated caller (an error oracle that confirms the hash
+    // format is bcrypt, that a stored hash exists, and what shape it
+    // takes). All unexpected errors collapse to the same response so
+    // the caller learns nothing beyond "something went wrong."
+    console.error("[login] unexpected error:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500, headers: NO_STORE_HEADERS }
+    );
   }
 }
