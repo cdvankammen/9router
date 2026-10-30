@@ -298,6 +298,7 @@ AddApiKeyModal.propTypes = {
 // ── ConnectionsCard ────────────────────────────────────────────
 // Self-contained card: fetches, displays and manages all connections for a provider.
 export default function ConnectionsCard({ providerId, isOAuth, loginProviderId = null }) {
+  const notify = useNotificationStore();
   const [connections, setConnections] = useState([]);
   const [proxyPools, setProxyPools] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -353,7 +354,7 @@ export default function ConnectionsCard({ providerId, isOAuth, loginProviderId =
         fetch(`/api/providers/${next[i1].id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ priority: i1 }) }),
         fetch(`/api/providers/${next[i2].id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ priority: i2 }) }),
       ]);
-    } catch { await fetch_(); }
+    } catch (e) { notify.error(`Reorder failed: ${e?.message || e}`); await fetch_(); }
   };
 
   const handleDelete = async (id) => {
