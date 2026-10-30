@@ -108,12 +108,11 @@ tests/unit/anthropic-gateway-passthrough.test.js :: DefaultExecutor.buildHeaders
 tests/unit/anthropic-gateway-passthrough.test.js :: DefaultExecutor.buildHeaders() forwards client anthropic-beta forwards client flags on the anthropic provider
 tests/unit/anthropic-gateway-passthrough.test.js :: DefaultExecutor.buildHeaders() forwards client anthropic-beta keeps unknown client flags alongside the pinned set on claude
 tests/unit/anthropic-gateway-passthrough.test.js :: mergeAnthropicBeta unions and dedupes comma lists, ignoring blanks
-tests/unit/iflow-cookie-timeout.test.js :: iFlow cookie route — timeout behavior (GAP-P2-21) attaches AbortSignal.timeout(15000) to GET fetch call
-tests/unit/iflow-cookie-timeout.test.js :: iFlow cookie route — timeout behavior (GAP-P2-21) attaches AbortSignal.timeout(15000) to POST fetch call
-tests/unit/iflow-cookie-timeout.test.js :: iFlow cookie route — timeout behavior (GAP-P2-21) returns 500 for non-timeout errors (no false positive)
-tests/unit/iflow-cookie-timeout.test.js :: iFlow cookie route — timeout behavior (GAP-P2-21) returns 504 on TimeoutError (Node 18+ AbortSignal.timeout name)
-tests/unit/iflow-cookie-timeout.test.js :: iFlow cookie route — timeout behavior (GAP-P2-21) returns 504 with user-friendly message when GET fetch times out
-tests/unit/iflow-cookie-timeout.test.js :: iFlow cookie route — timeout behavior (GAP-P2-21) returns 504 with user-friendly message when POST fetch times out
+# (Removed 2026-10-30 session 26): iflow-cookie-timeout.test.js now passes 7/7
+# after the requireAuth mock was added to the test. Source timeout fix
+# (AbortSignal.timeout(15000) on both fetch calls) was already present in the
+# route (commit c542b067 on gap-p2-rel branch, cherry-pick not needed since
+# it was already merged upstream).
 tests/unit/image-generation.test.js :: handleImageGenerationCore resolves Cloudflare img2img and inpainting URL inputs before sending
 tests/unit/kiro-external-idp.test.js :: Kiro external_idp (CLIProxyAPI) import and refresh imports CLIProxyAPI external_idp JSON as a Kiro OAuth connection
 tests/unit/nonstream-sse-error.test.js :: non-streaming SSE errors retains the existing error for an unparseable SSE body
