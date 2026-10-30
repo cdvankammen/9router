@@ -21,17 +21,18 @@ describe("Finding #293: login page default-password hint is gated", () => {
       new URL("../../src/app/login/page.js", import.meta.url),
       "utf8"
     );
-    // The unconditional rendering pattern must NOT exist.
-    // Old (broken): a bare <p> containing "123456" with no surrounding condition.
-    // We check that every occurrence of "123456" in the JSX is inside a block
-    // that references both hasPassword and initialPasswordSet.
-    const lines = src.split("\n");
-    const hintLineIdx = lines.findIndex((l) => l.includes("123456") && l.includes("<code"));
-    expect(hintLineIdx).toBeGreaterThan(-1);
-    // Walk backwards from the hint line to find the enclosing JSX condition.
-    const preceding = lines.slice(Math.max(0, hintLineIdx - 6), hintLineIdx).join("\n");
-    expect(preceding).toMatch(/hasPassword\s*===\s*false/);
-    expect(preceding).toMatch(/initialPasswordSet\s*===\s*false/);
+    // The compound guard must precede the 123456 code tag in the source,
+    // within a reasonable distance (same JSX block, not unrelated code
+    // elsewhere in the file). Using source-position comparison instead of
+    // a character-window regex so comment-block edits don't break the test.
+    const guardIdx = src.indexOf("hasPassword === false && initialPasswordSet === false");
+    const hintIdx = src.indexOf(">123456</code>");
+    expect(guardIdx).toBeGreaterThan(-1);
+    expect(hintIdx).toBeGreaterThan(-1);
+    expect(guardIdx).toBeLessThan(hintIdx);
+    // Tight enough to prove they're in the same JSX block (a bare hint
+    // elsewhere in the file would be thousands of chars away).
+    expect(hintIdx - guardIdx).toBeLessThan(1000);
   });
 
   it("/api/auth/status exposes initialPasswordSet mirroring INITIAL_PASSWORD env", () => {
@@ -44,17 +45,24 @@ describe("Finding #293: login page default-password hint is gated", () => {
     expect(occurrences).toBe(2);
   });
 
-  it("the unconditional hint rendering is gone (no bare 123456 paragraph)", () => {
+  it("every 123456 hint is inside a JSX conditional (not a bare paragraph)", () => {
     const src = fs.readFileSync(
       new URL("../../src/app/login/page.js", import.meta.url),
       "utf8"
     );
-    // The old unconditional pattern was:
-    //   <p ...>Default password is <code ...>123456</code></p>
-    // with no surrounding JSX expression. After the fix, every 123456 is
-    // inside a conditional, so a bare <p ...>Default password is on the line
-    // immediately before 123456 must NOT appear.
-    const barePattern = /<p[^>]*>\s*Default password is\s*<code[^>]*>123456<\/code>\s*<\/p>/;
-    expect(src).not.toMatch(barePattern);
+    // Old (broken) rendering was a bare paragraph with no enclosing guard:
+    //   <p className="...">Default password is <code>123456</code></p>
+    // After the fix, every `123456` in the source must be preceded (within
+    // 1000 chars — generous enough to span any comment block) by the
+    // compound guard. A bare rendering would have no guard in that window.
+    const re = /123456/g;
+    let m;
+    let count = 0;
+    while ((m = re.exec(src)) !== null) {
+      count++;
+      const before = src.slice(Math.max(0, m.index - 1000), m.index);
+      expect(before).toMatch(/hasPassword === false && initialPasswordSet === false/);
+    }
+    expect(count).toBeGreaterThan(0);
   });
 });
