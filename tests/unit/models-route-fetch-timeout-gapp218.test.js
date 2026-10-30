@@ -45,6 +45,8 @@ vi.mock("@/shared/constants/models", () => ({
 }));
 vi.mock("@/shared/constants/providers", () => ({
   AI_PROVIDERS: {},
+  ALIAS_TO_ID: {},
+  FREE_PROVIDERS: [],
   getProviderAlias: () => null,
   isAnthropicCompatibleProvider: () => false,
   isOpenAICompatibleProvider: (id) =>

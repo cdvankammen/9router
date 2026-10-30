@@ -78,4 +78,3 @@ describe("Finding #317: importDb strips PROTECTED_SETTING_KEYS", () => {
     expect(src).toMatch(/stringifyJson\(cleaned\)/);
   });
 });
-"}}]}

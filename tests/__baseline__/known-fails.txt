@@ -108,6 +108,10 @@ tests/unit/anthropic-gateway-passthrough.test.js :: DefaultExecutor.buildHeaders
 tests/unit/anthropic-gateway-passthrough.test.js :: DefaultExecutor.buildHeaders() forwards client anthropic-beta forwards client flags on the anthropic provider
 tests/unit/anthropic-gateway-passthrough.test.js :: DefaultExecutor.buildHeaders() forwards client anthropic-beta keeps unknown client flags alongside the pinned set on claude
 tests/unit/anthropic-gateway-passthrough.test.js :: mergeAnthropicBeta unions and dedupes comma lists, ignoring blanks
+# Uses node:test runner (not vitest) — vitest cannot discover test() calls.
+# Conversion to vitest is non-trivial (715 lines, 32 tests). Baseline until converted.
+tests/unit/memory-enhancements.test.js :: <suite uses node:test runner, not vitest>
+
 # (Removed 2026-10-30 session 26): iflow-cookie-timeout.test.js now passes 7/7
 # after the requireAuth mock was added to the test. Source timeout fix
 # (AbortSignal.timeout(15000) on both fetch calls) was already present in the

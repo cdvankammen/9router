@@ -11,11 +11,21 @@
 
 import { describe, it, expect, beforeAll } from "vitest";
 import { readFileSync } from "fs";
-import { join } from "path";
+import { dirname, join } from "path";
+import { fileURLToPath } from "url";
 
+const __dirname = dirname(fileURLToPath(import.meta.url));
 const FILE_PATH = join(
-  process.cwd(),
-  "src/app/(dashboard)/dashboard/providers/components/ConnectionsCard.js"
+  __dirname,
+  "..",
+  "..",
+  "src",
+  "app",
+  "(dashboard)",
+  "dashboard",
+  "providers",
+  "components",
+  "ConnectionsCard.js"
 );
 
 describe("GAP-P2-28: ConnectionsCard error toast coverage", () => {
@@ -80,9 +90,9 @@ describe("GAP-P2-28: ConnectionsCard error toast coverage", () => {
 
     for (let i = 0; i < lines.length; i++) {
       if (/catch\s*(\([^)]*\))?\s*\{/.test(lines[i])) {
-        // Check this line and next 2 lines for notify(
+        // Check this line and next 2 lines for notify( or notify.error/warning/success(
         const block = lines.slice(i, Math.min(i + 3, lines.length)).join(" ");
-        if (!block.includes("notify(")) {
+        if (!/notify(\.|\()/.test(block)) {
           missingNotify.push({ line: i + 1, content: lines[i].trim() });
         }
       }
@@ -101,7 +111,7 @@ describe("GAP-P2-28: ConnectionsCard error toast coverage", () => {
   it("anti-false-positive: test would fail if console.log was reintroduced", () => {
     // Simulate what the source would look like with a console.log regression
     const badSource = source.replace(
-      /notify\(e\.message \|\| "Failed to load connections"\)/,
+      /notify\.error\(`Failed to load connections: \$\{e\?\.message \|\| e\}`\)/,
       'console.log("fetch error:", e)'
     );
 
