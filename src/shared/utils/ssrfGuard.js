@@ -115,6 +115,45 @@ function isLinkLocalHost(host) {
   return false;
 }
 
+// SECURITY (Finding #316): exported for callers that must block link-local
+// and cloud-metadata IPs without enforcing the http(s)-only scheme gate
+// that `assertNotLinkLocal` applies. Outbound proxy URLs legitimately use
+// socks5:/socks4:/socks5h:/socks4a: schemes, so the scheme check is
+// enforced by the caller's own scheme allowlist — this helper isolates
+// the host-classification concern.
+export function isLinkLocalOrMetadataHost(host) {
+  return isLinkLocalHost(normalizeHost(host));
+}
+
+// Async variant: resolves the hostname via DNS and rejects if any resolved
+// address falls in the link-local / cloud-metadata range. Used by settings
+// PATCH before persisting `outboundProxyUrl` so a wildcard-DNS domain
+// (nip.io, sslip.io) or attacker-controlled A record pointed at
+// 169.254.169.254 is rejected, not just literal IPs.
+export async function assertHostNotLinkLocalResolved(host) {
+  const normalized = normalizeHost(host);
+  if (isLinkLocalHost(normalized)) {
+    throw new Error("Blocked host: link-local / cloud-metadata IP");
+  }
+  const bracketless = normalized.replace(/^\[|\]$/g, "");
+  // Already a literal address — isLinkLocalHost above covered it.
+  if (ipv4ToInt(bracketless) !== null || bracketless.includes(":")) return;
+  let addresses;
+  try {
+    addresses = await dns.promises.lookup(normalized, { all: true, verbatim: true });
+  } catch {
+    return; // resolution failure isn't itself an SSRF signal
+  }
+  for (const { address, family } of addresses) {
+    const blocked = family === 4
+      ? isLinkLocalIpv4(address)
+      : isLinkLocalIpv6Groups(parseIPv6ToGroups(address) || []);
+    if (blocked) {
+      throw new Error("Blocked host: hostname resolves to link-local / cloud-metadata IP");
+    }
+  }
+}
+
 function parseHextets(s) {
   if (s === "") return [];
   const segs = s.split(":");

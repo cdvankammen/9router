@@ -4,6 +4,7 @@ import { applyOutboundProxyEnv } from "@/lib/network/outboundProxy";
 import { validateOidcConfigForSave } from "@/lib/auth/oidc";
 import { validatePeerNodes } from "@/lib/network/peerNodesValidator";
 import { validateProviderOverrides } from "@/lib/auth/providerOverridesValidator";
+import { assertHostNotLinkLocalResolved } from "@/shared/utils/ssrfGuard.js";
 import { resetComboRotation } from "open-sse/services/combo.js";
 import bcrypt from "bcryptjs";
 import { DATA_DIR } from "@/lib/dataDir.js";
@@ -209,6 +210,46 @@ export async function PATCH(request) {
       const result = validateProviderOverrides(body.providerOverrides);
       if (!result.ok) {
         return NextResponse.json({ error: result.error }, { status: 400 });
+      }
+    }
+
+    // SECURITY (Finding #316 / exfil chain #3): outboundProxyUrl SSRF gate.
+    // Before persisting, validate that outboundProxyUrl does not resolve
+    // (via DNS) to a link-local or cloud-metadata IP. An authenticated user
+    // could otherwise set `outboundProxyUrl: "http://evil.com:8080/"` where
+    // `evil.com`'s A record points at `169.254.169.254` (AWS/GCP/Azure
+    // metadata) or `169.254.170.2` (ECS task metadata). Once written to
+    // `process.env.HTTP_PROXY`, every outbound provider call — OAuth token
+    // refresh, smart-router probe, webhook, quota auto-ping — traverses the
+    // metadata endpoint and leaks credentials to the attacker.
+    //
+    // Layer 1 (synchronous literal check) lives inside `validateProxyUrl` in
+    // src/lib/network/outboundProxy.js. This is Layer 2 (async DNS-resolved),
+    // catching wildcard-DNS rebinding (nip.io, sslip.io, attacker-controlled
+    // domains). RFC1918 private ranges (10.x, 172.16.x, 192.168.x),
+    // Tailscale CGNAT (100.64/10), and loopback are intentionally permitted —
+    // legitimate outbound proxies run on LAN or loopback.
+    if (
+      Object.prototype.hasOwnProperty.call(body, "outboundProxyUrl") &&
+      typeof body.outboundProxyUrl === "string" &&
+      body.outboundProxyUrl.trim()
+    ) {
+      try {
+        // Extract hostname for the scheme-agnostic host check — socks5:
+        // proxies are legitimate here, so we cannot use assertNotLinkLocalResolved
+        // (which enforces http/https only). URL parsing is safe because
+        // Layer 1 (validateProxyUrl) already rejected malformed URLs when
+        // applyOutboundProxyEnv runs below.
+        const parsedProxy = new URL(body.outboundProxyUrl);
+        await assertHostNotLinkLocalResolved(parsedProxy.hostname);
+      } catch (err) {
+        return NextResponse.json(
+          {
+            error: `outboundProxyUrl rejected: ${err.message}`,
+            hint: "Link-local (169.254.0.0/16), cloud-metadata (169.254.169.254, 169.254.170.2), and fe80::/10 targets are blocked. RFC1918 private ranges and loopback proxies are permitted.",
+          },
+          { status: 400 },
+        );
       }
     }
 
