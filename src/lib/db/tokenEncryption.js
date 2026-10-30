@@ -1,10 +1,13 @@
 // M5: Token encryption at rest for providerConnections.
-// Encrypts accessToken and refreshToken before writing to SQLite,
+// Encrypts accessToken, refreshToken, and apiKey before writing to SQLite,
 // decrypts on read. Uses AES-256-GCM with machine-specific key.
 //
 // This module is imported by connectionsRepo.js to wrap token fields.
 
-const crypto = require("crypto");
+import crypto from "node:crypto";
+import { createRequire } from "node:module";
+
+const require = createRequire(import.meta.url);
 
 const ALGO = "aes-256-gcm";
 const SALT = "9router-token-encryption-v1";
@@ -28,9 +31,11 @@ function deriveTokenKey() {
  * Encrypt a plaintext token string.
  * Returns "enc:v1:<iv>:<tag>:<ciphertext>" (all hex).
  * Returns null if input is null/undefined/empty.
+ * Returns already-encrypted values unchanged (no double-encrypt).
  */
-function encryptToken(plaintext) {
+export function encryptToken(plaintext) {
   if (!plaintext || typeof plaintext !== "string") return null;
+  if (plaintext.startsWith(PREFIX)) return plaintext; // already encrypted
   const key = deriveTokenKey();
   const iv = crypto.randomBytes(12);
   const cipher = crypto.createCipheriv(ALGO, key, iv);
@@ -44,7 +49,7 @@ function encryptToken(plaintext) {
  * Returns plaintext on success, null on failure or if not encrypted.
  * Passes through plaintext tokens unchanged (backward compat during migration).
  */
-function decryptToken(stored) {
+export function decryptToken(stored) {
   if (!stored || typeof stored !== "string") return null;
   if (!stored.startsWith(PREFIX)) return stored; // Plaintext — pass through
   try {
@@ -63,19 +68,43 @@ function decryptToken(stored) {
 /**
  * Check if a value is an encrypted token.
  */
-function isEncryptedToken(value) {
+export function isEncryptedToken(value) {
   return typeof value === "string" && value.startsWith(PREFIX);
 }
 
+// SECURITY (#296): sensitive field names inside providerSpecificData that
+// must be encrypted at rest. Case-insensitive match on the key.
+const SENSITIVE_PSD_KEYS = new Set([
+  "accesstoken", "refresh_token", "refreshtoken", "access_token",
+  "apikey", "api_key", "token", "pat", "personal_access_token",
+  "clientsecret", "client_secret", "oidcclientsecret",
+  "codeverifier", "code_verifier",
+  "sessiontoken", "session_token", "idtoken", "id_token",
+]);
+
 /**
  * Encrypt sensitive fields in a connection data object before DB write.
- * Returns a shallow copy with encrypted tokens.
+ * Returns a shallow copy with encrypted tokens. Handles accessToken,
+ * refreshToken, apiKey at the top level AND sensitive keys inside
+ * providerSpecificData (OAuth tokens, PATs, client secrets).
  */
-function encryptConnectionTokens(data) {
+export function encryptConnectionTokens(data) {
   if (!data || typeof data !== "object") return data;
   const out = { ...data };
   if (out.accessToken) out.accessToken = encryptToken(out.accessToken) || out.accessToken;
   if (out.refreshToken) out.refreshToken = encryptToken(out.refreshToken) || out.refreshToken;
+  if (out.apiKey) out.apiKey = encryptToken(out.apiKey) || out.apiKey;
+  if (out.providerSpecificData && typeof out.providerSpecificData === "object") {
+    const psd = { ...out.providerSpecificData };
+    let changed = false;
+    for (const [k, v] of Object.entries(psd)) {
+      if (typeof v === "string" && v && SENSITIVE_PSD_KEYS.has(k.toLowerCase())) {
+        const enc = encryptToken(v);
+        if (enc) { psd[k] = enc; changed = true; }
+      }
+    }
+    if (changed) out.providerSpecificData = psd;
+  }
   return out;
 }
 
@@ -83,18 +112,22 @@ function encryptConnectionTokens(data) {
  * Decrypt sensitive fields in a connection data object after DB read.
  * Returns a shallow copy with decrypted tokens.
  */
-function decryptConnectionTokens(data) {
+export function decryptConnectionTokens(data) {
   if (!data || typeof data !== "object") return data;
   const out = { ...data };
   if (out.accessToken) out.accessToken = decryptToken(out.accessToken) || out.accessToken;
   if (out.refreshToken) out.refreshToken = decryptToken(out.refreshToken) || out.refreshToken;
+  if (out.apiKey) out.apiKey = decryptToken(out.apiKey) || out.apiKey;
+  if (out.providerSpecificData && typeof out.providerSpecificData === "object") {
+    const psd = { ...out.providerSpecificData };
+    let changed = false;
+    for (const [k, v] of Object.entries(psd)) {
+      if (typeof v === "string" && v) {
+        const dec = decryptToken(v);
+        if (dec !== v) { psd[k] = dec; changed = true; }
+      }
+    }
+    if (changed) out.providerSpecificData = psd;
+  }
   return out;
 }
-
-module.exports = {
-  encryptToken,
-  decryptToken,
-  isEncryptedToken,
-  encryptConnectionTokens,
-  decryptConnectionTokens,
-};

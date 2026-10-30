@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from "uuid";
 import { getAdapter } from "../driver.js";
 import { parseJson, stringifyJson } from "../helpers/jsonCol.js";
+import { encryptConnectionTokens, decryptConnectionTokens } from "../tokenEncryption.js";
 
 const OPTIONAL_FIELDS = [
   "displayName", "email", "globalPriority", "defaultModel",
@@ -34,7 +35,10 @@ function resetHealthStateOnActivation(existing, patch) {
 
 function rowToConn(row) {
   if (!row) return null;
-  const extra = parseJson(row.data, {});
+  // SECURITY (#296): decrypt accessToken, refreshToken, apiKey, and
+  // sensitive providerSpecificData fields after reading from the DB.
+  // Plaintext values (legacy rows) pass through unchanged.
+  const extra = decryptConnectionTokens(parseJson(row.data, {}));
   return {
     ...extra,
     id: row.id,
@@ -51,6 +55,10 @@ function rowToConn(row) {
 
 function connToRow(c) {
   const { id, provider, authType, name, email, priority, isActive, createdAt, updatedAt, ...rest } = c;
+  // SECURITY (#296): encrypt accessToken, refreshToken, apiKey, and
+  // sensitive providerSpecificData fields before writing to the DB.
+  // The data column stores JSON — without encryption, a DB file leak
+  // exposes all stored OAuth tokens and API keys in plaintext.
   return {
     id,
     provider,
@@ -59,7 +67,7 @@ function connToRow(c) {
     email: email ?? null,
     priority: priority ?? null,
     isActive: isActive === false ? 0 : 1,
-    data: stringifyJson(rest),
+    data: stringifyJson(encryptConnectionTokens(rest)),
     createdAt,
     updatedAt,
   };
