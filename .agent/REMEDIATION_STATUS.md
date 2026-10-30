@@ -4,9 +4,9 @@ Cross-reference between `.agent/SECURITY_AUDIT_WAVE_674.md` (the audit doc) and 
 
 **Last updated:** 2026-10-30 (session 26, commit 94f38245 — GAP-P2-15 brew + GAP-P2-16 grok shell-injection + GAP-P2-03 embeddings + cursor CLI mock; all SHAs post-filter-repo)
 **Branch:** v5-vscode-works @ 94f38245, pushed to `fork` (cdvankammen/9router)
-**mini4 production:** BUILD_ID `ny4ReSehIv6m7yqRD4YdX`, PID 59941, port 20128, health=ok, apiKeys 4/4 encrypted
+**mini4 production:** BUILD_ID `ny4ReSehIv6m7yqRD4YdX` (last successful deploy); host was down at session end — round-5 deploy (9260bcf7 + ff33ec14 + bec11852) queued for when mini4 returns.
 
-**Session 26 round 4 (commit 9260bcf7):** 3 server-side silent-catch fixes shipped — `requestDetailsRepo.js` timer flush, `modelCatalog/sync.js` catalog reinstall, `antigravity.js` OAuth onboarding poll. All proven on mini4 source disk.
+**Session 26 rounds 4-5 (commits 9260bcf7, bfdb843b, ff33ec14, bec11852):** 3 server-side silent-catch fixes + anthropic-gateway-passthrough test fix + 4 test-file hardening fixes. All pushed to fork; mini4 redeploy pending host availability.
 **Test suite:** 35 failed / 5203 passed / 14 expected fail / 98 skipped (was 63/5151 at session start = 28 fewer failures, 52 more passing; all 35 remaining are catalogued in `tests/__baseline__/known-fails.txt`)
 
 ## Commits this session (cherry-picked from unmerged branches + original fixes)
