@@ -94,6 +94,11 @@ const ALWAYS_PROTECTED = [
   "/api/combos",
   "/api/keys",
   "/api/hooks",
+  // MERGE-21 (2026-10-29): upstream v0.5.112 added minimax-code lease auth
+  // mode — rides desktop app's sign-in through named-pipe broker. These routes
+  // use stored credentials and must be JWT-gated regardless of requireLogin.
+  "/api/oauth/minimax-code/lease",
+  "/api/oauth/minimax-code-global/lease",
 ];
 
 // Require auth, but allow through if requireLogin is disabled
@@ -133,6 +138,8 @@ const LOCAL_ONLY_PATHS = [
   "/api/oauth/cursor/auto-import",
   "/api/oauth/kiro/auto-import",
   "/api/oauth/zed/auto-import",
+  "/api/oauth/minimax-code/lease",
+  "/api/oauth/minimax-code-global/lease",
   "/api/auth/reset-password",
   "/api/headroom/start",
   "/api/headroom/stop",
