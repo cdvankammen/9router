@@ -72,6 +72,21 @@ http.createServer = (...args) => {
     delete req.headers["x-forwarded-for"];
     delete req.headers["x-9r-via-proxy"];
     delete req.headers["x-9r-peer-token"];
+    // SECURITY (Finding #303): strip client-spoofable x-9r-* identity headers
+    // at the TCP-socket boundary. open-sse/utils/clientDetector.js trusts
+    // x-9r-app, x-9router-app, x-9r-user, x-9router-user, x-9r-session,
+    // x-9router-session to override detected clientTool/sourceApp/session.
+    // Without stripping here, any LAN peer can set these headers to forge
+    // telemetry identity AND trigger native-passthrough mode (#304) which
+    // skips translator sanitization. Only the gateway itself should inject
+    // verified values of these headers (and it does so downstream after
+    // auth checks).
+    delete req.headers["x-9r-app"];
+    delete req.headers["x-9router-app"];
+    delete req.headers["x-9r-user"];
+    delete req.headers["x-9router-user"];
+    delete req.headers["x-9r-session"];
+    delete req.headers["x-9router-session"];
     // Bug GG (2026-10-27): strip host/proto forwarding headers so route
     // handlers (notably oidc.js/saml.js getPublicOrigin) cannot be tricked
     // into building attacker-controlled redirect_uri values when BASE_URL

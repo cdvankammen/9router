@@ -7,6 +7,7 @@ import { isUnrecoverableRefreshError } from "open-sse/services/tokenRefresh.js";
 import { getExecutor } from "open-sse/executors/index.js";
 import { resolveConnectionProxyConfig } from "@/lib/network/connectionProxy";
 import { USAGE_APIKEY_PROVIDERS } from "@/shared/constants/providers";
+import { requireAuth } from "@/lib/auth/requireAuth";
 
 // Detect auth-expired messages returned by usage providers instead of throwing
 const AUTH_EXPIRED_PATTERNS = ["expired", "authentication", "unauthorized", "401", "re-authorize"];
@@ -131,6 +132,15 @@ export async function refreshAndUpdateCredentials(connection, force = false, pro
  * GET /api/usage/[connectionId] - Get usage data for a specific connection
  */
 export async function GET(request, { params }) {
+  // SECURITY (Finding #321): route-level requireAuth as defense-in-depth.
+  // The middleware gate covers this via PROTECTED_API_PATHS prefix match on
+  // /api/usage, but defense-in-depth catches any future middleware regression.
+  // This endpoint returns credential-health signals (token expiry, refresh
+  // failures) and triggers live credential refresh — exactly the data an
+  // attacker needs to plan targeted phishing or identify stale accounts.
+  if (!(await requireAuth(request))) {
+    return Response.json({ error: "Unauthorized" }, { status: 401 });
+  }
   let connection;
   try {
     const { connectionId } = await params;
