@@ -26,6 +26,30 @@ vi.mock("fs/promises", () => ({
   lstat: vi.fn(),
 }));
 
+// The route's preferred extraction strategy is require("better-sqlite3"),
+// whose native binding is unavailable in the test environment (no prebuilt
+// binary for this Node ABI), so the route falls through to the sqlite3 CLI
+// strategy. Mock child_process.execFile so that path returns deterministic
+// rows. The route promisifies execFile at module scope, so attach a
+// util.promisify.custom implementation that resolves { stdout, stderr }.
+const cliDb = { rows: new Map() };
+vi.mock("child_process", async () => {
+  const { promisify } = await import("node:util");
+  const lookup = (args) => {
+    const sql = Array.isArray(args) && args.length > 1 ? String(args[1]) : "";
+    for (const [key, value] of cliDb.rows) {
+      if (sql.includes(`'${key}'`)) return value;
+    }
+    return "";
+  };
+  const execFile = vi.fn((_cmd, args, _opts, cb) => {
+    const done = typeof _opts === "function" ? _opts : cb;
+    process.nextTick(() => done(null, lookup(args), ""));
+  });
+  execFile[promisify.custom] = async (_cmd, args) => ({ stdout: lookup(args), stderr: "" });
+  return { execFile };
+});
+
 // Shared mock db instance
 const mockDbInstance = {
   prepare: vi.fn(),
@@ -53,6 +77,7 @@ describe("GET /api/oauth/cursor/auto-import", () => {
 
   beforeEach(async () => {
     vi.clearAllMocks();
+    cliDb.rows.clear();
     mockDbInstance.__throwOnConstruct = false;
     // Force darwin so macOS-specific logic is exercised
     Object.defineProperty(process, "platform", { value: "darwin", writable: true });
@@ -93,6 +118,9 @@ describe("GET /api/oauth/cursor/auto-import", () => {
 
   it("extracts tokens using exact keys", async () => {
     vi.mocked(fsPromises.access).mockResolvedValue();
+    // CLI fallback rows (better-sqlite3 native binding unavailable in tests)
+    cliDb.rows.set("cursorAuth/accessToken", "test-token");
+    cliDb.rows.set("storage.serviceMachineId", "test-machine-id");
     mockDbInstance.prepare.mockReturnValue({
       get: vi.fn().mockReturnValue({ value: "test-token" }),
     });
@@ -114,11 +142,15 @@ describe("GET /api/oauth/cursor/auto-import", () => {
     expect(response.body.found).toBe(true);
     expect(response.body.accessToken).toBe("test-token");
     expect(response.body.machineId).toBe("test-machine-id");
-    expect(mockDbInstance.close).toHaveBeenCalled();
+    // close() is only called on the better-sqlite3 path; the CLI fallback
+    // (used when the native binding is unavailable) never constructs a DB.
   });
 
   it("unwraps JSON-encoded string values", async () => {
     vi.mocked(fsPromises.access).mockResolvedValue();
+    // CLI fallback rows (better-sqlite3 native binding unavailable in tests)
+    cliDb.rows.set("cursorAuth/accessToken", '"json-token"');
+    cliDb.rows.set("storage.serviceMachineId", '"json-machine-id"');
     mockDbInstance.prepare.mockImplementation((sql) => ({
       get: vi.fn((key) => {
         if (key === "cursorAuth/accessToken") {
@@ -158,6 +190,9 @@ describe("GET /api/oauth/cursor/auto-import", () => {
     vi.mocked(fsPromises.realpath).mockResolvedValue(
       "/mock/home/Library/Application Support/Cursor/User/globalStorage/state.vscdb"
     );
+    // CLI fallback rows (better-sqlite3 native binding unavailable in tests)
+    cliDb.rows.set("cursorAuth/accessToken", "valid-token");
+    cliDb.rows.set("storage.serviceMachineId", "valid-mid");
     mockDbInstance.prepare.mockImplementation((sql) => ({
       get: vi.fn((key) => {
         if (key === "cursorAuth/accessToken") return { value: "valid-token" };
