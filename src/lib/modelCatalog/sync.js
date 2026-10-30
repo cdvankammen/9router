@@ -233,7 +233,7 @@ export async function syncModelCatalog() {
     return null;
   } finally {
     // collectEntries() detaches the reader; put it back whatever happened.
-    await installCatalogSource().catch(() => {});
+    await installCatalogSource().catch((e) => console.log(`[modelCatalog] reinstall failed: ${e?.message || e}`));
     state.running = false;
   }
 }

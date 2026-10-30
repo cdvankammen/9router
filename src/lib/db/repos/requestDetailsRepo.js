@@ -436,7 +436,7 @@ export async function saveRequestDetail(detail) {
   } else if (!flushTimer) {
     flushTimer = setTimeout(() => {
       flushTimer = null;
-      flushToDatabase().catch(() => {});
+      flushToDatabase().catch((e) => console.error("[requestDetailsRepo] timer flush err:", e));
     }, config.flushIntervalMs);
   }
 }

@@ -101,7 +101,7 @@ const antigravity = {
           await new Promise(resolve => setTimeout(resolve, 5000));
         }
       };
-      doOnboard().catch(() => {});
+      doOnboard().catch((e) => console.warn("[antigravity] onboarding poll failed:", e?.message || e));
     }
 
     return { userInfo, projectId };
