@@ -52,6 +52,16 @@ const HEALTH_PATH = "/api/health";
 // deployments), but can differ (e.g. local=20130, peer mini2=20128) via --peer-port.
 const PEER_PORT = Number(arg("peer-port", new URL(LOCAL).port)) || new URL(LOCAL).port;
 
+// SECURITY (Finding #328): optional bearer token for the /api/failover-status
+// control-plane endpoint. Without it, any LAN peer can enumerate the proxy's
+// topology (local URL, every discovered peer URL incl. Tailscale/mDNS/LAN,
+// health state, uptime) — exactly the data an attacker needs for targeted
+// phishing or peer-impersonation. When --status-token is set, GET requests
+// without `Authorization: Bearer <token>` receive 401. When unset, the
+// endpoint stays open (backward-compatible with existing deployments that
+// rely on network-level segmentation for access control).
+const STATUS_TOKEN = arg("status-token", "") || process.env.NINEROUTER_FAILOVER_STATUS_TOKEN || "";
+
 // IPv6 toggle (SECURITY): default OFF — IPv4 + hostname only (reduces attack
 // surface on untrusted networks: no link-local exposure, no RA/DNS-leak vectors,
 // and the app binds IPv4-only 0.0.0.0 anyway). With --ipv6, IPv6 addresses from
@@ -183,6 +193,33 @@ const server = http.createServer((req, res) => {
   // Local control-plane endpoint: the proxy answers failover status itself,
   // never forwards it to an upstream (dashboard integration surface).
   if (req.url === STATUS_PATH || req.url.startsWith(STATUS_PATH + "?")) {
+    // SECURITY (Finding #328): gate the topology disclosure behind a bearer
+    // token when the operator configured one. Without this, any LAN peer can
+    // enumerate the proxy's local + peer URLs and health state. Comparison
+    // uses a timing-safe byte-equal when both sides are equal length to avoid
+    // leaking the token prefix via short-circuit timing.
+    if (STATUS_TOKEN) {
+      const auth = req.headers["authorization"] || "";
+      const provided = auth.startsWith("Bearer ") ? auth.slice(7) : "";
+      let ok = false;
+      if (provided.length === STATUS_TOKEN.length) {
+        try {
+          const a = Buffer.from(provided, "utf8");
+          const b = Buffer.from(STATUS_TOKEN, "utf8");
+          ok = a.length === b.length && require("crypto").timingSafeEqual(a, b);
+        } catch {
+          ok = false;
+        }
+      }
+      if (!ok) {
+        res.writeHead(401, {
+          "Content-Type": "application/json",
+          "WWW-Authenticate": "Bearer realm=\"failover-status\"",
+        });
+        res.end(JSON.stringify({ error: "status token required" }));
+        return;
+      }
+    }
     res.writeHead(200, { "Content-Type": "application/json" });
     res.end(JSON.stringify({
       ok: true,
