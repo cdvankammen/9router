@@ -180,18 +180,21 @@ export async function handleChatCore({ body, modelInfo, credentials, log, onCred
   // Expose raw client headers to translators/executors for session-id resolution
   if (credentials) credentials.rawHeaders = clientRawRequest?.headers || {};
 
-  // Auto-strip media blocks the model can't read (vision/audio/pdf) before translation.
-  if (!passthrough) {
-    const caps = getCapabilitiesForModel(provider, model);
-    if (stripUnsupportedModalities(body, sourceFormat, caps)) {
-      log?.debug?.("MODALITY", `stripped unsupported media for ${provider}/${model}`);
-    }
-    // Convert remote image URLs to base64 for targets that can't fetch URLs.
-    try {
-      const n = await prefetchRemoteImages(body, sourceFormat, targetFormat, { signal: undefined });
-      if (n > 0) log?.debug?.("MODALITY", `prefetched ${n} remote image(s) for ${targetFormat}`);
-    } catch (e) { log?.warn?.("MODALITY", `image prefetch failed: ${e.message}`); }
+  // SECURITY (Finding #304): Apply modality/prefetch sanitization on ALL paths
+  // including native passthrough. Without this, an attacker spoofing a native
+  // client tool (e.g. x-9r-app: claude) can bypass:
+  // - stripUnsupportedModalities: vision/audio/pdf blocks reach models that reject them
+  // - prefetchRemoteImages: remote image URLs cause SSRF on hosts that can't fetch
+  // The passthrough path is "less normalization" not "no sanitization".
+  const caps = getCapabilitiesForModel(provider, model);
+  if (stripUnsupportedModalities(body, sourceFormat, caps)) {
+    log?.debug?.("MODALITY", `stripped unsupported media for ${provider}/${model}`);
   }
+  // Convert remote image URLs to base64 for targets that can't fetch URLs.
+  try {
+    const n = await prefetchRemoteImages(body, sourceFormat, targetFormat, { signal: undefined });
+    if (n > 0) log?.debug?.("MODALITY", `prefetched ${n} remote image(s) for ${targetFormat}`);
+  } catch (e) { log?.warn?.("MODALITY", `image prefetch failed: ${e.message}`); }
 
   let translatedBody;
   let toolNameMap;
@@ -226,6 +229,11 @@ export async function handleChatCore({ body, modelInfo, credentials, log, onCred
     translatedBody.model = stripThinkingSuffix(upstreamModel);
     stripContinuityFields(translatedBody);
   }
+  // SECURITY (Finding #304): stripContinuityFields must run on passthrough too.
+  // The Responses→Chat translator stashes encrypted_content on assistant messages;
+  // if a native passthrough client forwards these, upstream rejects with 400.
+  // This is idempotent — safe to call on already-clean bodies.
+  if (passthrough) stripContinuityFields(translatedBody);
 
   // Tool normalization: MCP-equivalent built-in dedup (Claude clients) + same-name
   // dedup for DeepSeek models (upstream rejects duplicate tool names on all endpoints).
