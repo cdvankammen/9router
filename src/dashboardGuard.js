@@ -108,11 +108,23 @@ const ALWAYS_PROTECTED = [
   //     (Finding #257 ceiling still caps values, but the override map itself is
   //     attacker-controlled; propagates to /v1/models output for every client)
   //   - POST/DELETE /api/saved-views → mutates stored filter presets
-  // Promoting all four prefixes to ALWAYS_PROTECTED closes the LAN-peer
+  //   - POST/DELETE /api/models/custom → adds/removes user-defined model
+  //     aliases that route /v1/* traffic to attacker-chosen providers
+  //   - POST/DELETE /api/models/disabled → enables/disables models in the
+  //     routing registry (denial-of-service against specific model ids)
+  //   - PUT/DELETE /api/models/alias → rewrites model-id alias table that
+  //     /v1/models serves to every client
+  //   - POST /api/models/new/acknowledge → clears the operator's "new
+  //     models available" badge (low severity, but still admin-only state)
+  // Promoting all of these prefixes to ALWAYS_PROTECTED closes the LAN-peer
   // mutation surface on open deployments.
   "/api/pxpipe",
   "/api/model-context",
   "/api/saved-views",
+  "/api/models/custom",
+  "/api/models/disabled",
+  "/api/models/alias",
+  "/api/models/new/acknowledge",
 ];
 
 // Require auth, but allow through if requireLogin is disabled
