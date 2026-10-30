@@ -7,7 +7,7 @@ Cross-reference between `.agent/SECURITY_AUDIT_WAVE_674.md` (the audit doc) and 
 **mini4 production:** BUILD_ID `ny4ReSehIv6m7yqRD4YdX`, PID 59941, port 20128, health=ok, apiKeys 4/4 encrypted
 
 **Session 26 round 4 (commit 9260bcf7):** 3 server-side silent-catch fixes shipped — `requestDetailsRepo.js` timer flush, `modelCatalog/sync.js` catalog reinstall, `antigravity.js` OAuth onboarding poll. All proven on mini4 source disk.
-**Test suite:** 52 failed / 5185 passed (was 63/5151 at session start = 11 fewer failures, 34 more passing)
+**Test suite:** 35 failed / 5203 passed / 14 expected fail / 98 skipped (was 63/5151 at session start = 28 fewer failures, 52 more passing; all 35 remaining are catalogued in `tests/__baseline__/known-fails.txt`)
 
 ## Commits this session (cherry-picked from unmerged branches + original fixes)
 
