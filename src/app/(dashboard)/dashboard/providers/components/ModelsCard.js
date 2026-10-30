@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
+import { useNotificationStore } from "@/store/notificationStore";
 import PropTypes from "prop-types";
 import { Card, Button, Modal } from "@/shared/components";
 import { getModelsByProviderId, getModelKind } from "@/shared/constants/models";
@@ -130,7 +131,10 @@ export default function ModelsCard({ providerId, kindFilter, providerAliasOverri
       const customData = await customRes.json();
       if (aliasRes.ok) setModelAliases(aliasData.aliases || {});
       if (customRes.ok) setCustomModels(customData.models || []);
-    } catch (e) { console.log("ModelsCard fetch error:", e); }
+    } catch (e) {
+      console.error("ModelsCard fetch error:", e);
+      notify.error("Failed to load models: " + (e?.message || "network error"));
+    }
   }, []);
 
   useEffect(() => { fetchData(); }, [fetchData]);
@@ -144,14 +148,20 @@ export default function ModelsCard({ providerId, kindFilter, providerAliasOverri
         body: JSON.stringify({ model: fullModel, alias }),
       });
       if (res.ok) await fetchData();
-    } catch (e) { console.log("set alias error:", e); }
+    } catch (e) {
+      console.error("set alias error:", e);
+      notify.error("Failed to set alias: " + (e?.message || "network error"));
+    }
   };
 
   const handleDeleteAlias = async (alias) => {
     try {
       const res = await fetch(`/api/models/alias?alias=${encodeURIComponent(alias)}`, { method: "DELETE" });
       if (res.ok) await fetchData();
-    } catch (e) { console.log("delete alias error:", e); }
+    } catch (e) {
+      console.error("delete alias error:", e);
+      notify.error("Failed to remove alias: " + (e?.message || "network error"));
+    }
   };
 
   const handleAddCustomModel = async (modelId) => {
@@ -165,7 +175,10 @@ export default function ModelsCard({ providerId, kindFilter, providerAliasOverri
         await fetchData();
         window.dispatchEvent(new CustomEvent("customModelChanged"));
       }
-    } catch (e) { console.log("add custom model error:", e); }
+    } catch (e) {
+      console.error("add custom model error:", e);
+      notify.error("Failed to add custom model: " + (e?.message || "network error"));
+    }
   };
 
   const handleDeleteCustomModel = async (modelId) => {
@@ -176,7 +189,10 @@ export default function ModelsCard({ providerId, kindFilter, providerAliasOverri
         await fetchData();
         window.dispatchEvent(new CustomEvent("customModelChanged"));
       }
-    } catch (e) { console.log("delete custom model error:", e); }
+    } catch (e) {
+      console.error("delete custom model error:", e);
+      notify.error("Failed to delete custom model: " + (e?.message || "network error"));
+    }
   };
 
   const handleTestModel = async (modelId) => {
