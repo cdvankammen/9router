@@ -90,8 +90,13 @@ function aggregateEntryToDay(day, entry) {
     addToCounter(day.byAccount, entry.connectionId, { ...vals, meta: { rawModel: entry.model, provider: entry.provider } });
   }
 
-  const apiKeyVal = entry.apiKey && typeof entry.apiKey === "string" ? entry.apiKey : "local-no-key";
-  const akModelKey = `${apiKeyVal}|${entry.model}|${entry.provider || "unknown"}`;
+  // AUDIT-002 (GHSA-vjc7): bucket by masked key, not raw. Raw keys as object
+  // property names leak via JSON.stringify(stats.byApiKey) to dashboard responses.
+  // The raw key is still stored in meta.apiKey for apiKeyMap lookups on read
+  // (server-side DB only, not exposed via stats output).
+  const apiKeyVal = entry.apiKey && typeof entry.apiKey === "string" ? entry.apiKey : null;
+  const apiKeyBucket = maskApiKey(apiKeyVal) || "local-no-key";
+  const akModelKey = `${apiKeyBucket}|${entry.model}|${entry.provider || "unknown"}`;
   addToCounter(day.byApiKey, akModelKey, { ...vals, meta: { rawModel: entry.model, provider: entry.provider, apiKey: entry.apiKey || null } });
 
   const endpoint = entry.endpoint || "Unknown";
@@ -566,8 +571,11 @@ export async function getUsageStats(period = "all") {
         if (stats.byAccount[accountKey] && new Date(ts) > new Date(stats.byAccount[accountKey].lastUsed)) stats.byAccount[accountKey].lastUsed = ts;
       }
 
+      // AUDIT-002: overlay key must match the masked bucket key used by the
+      // daily rollup and 24h live paths, or lastUsed timestamps silently
+      // fail to attach to the right entry.
       const apiKeyKey = (e.apiKey && typeof e.apiKey === "string")
-        ? `${e.apiKey}|${e.model}|${e.provider || "unknown"}`
+        ? `${maskApiKey(e.apiKey) || "unknown-key"}|${e.model}|${e.provider || "unknown"}`
         : "local-no-key";
       if (stats.byApiKey[apiKeyKey] && new Date(ts) > new Date(stats.byApiKey[apiKeyKey].lastUsed)) stats.byApiKey[apiKeyKey].lastUsed = ts;
 
@@ -640,9 +648,11 @@ export async function getUsageStats(period = "all") {
         const keyInfo = apiKeyMap[apiKeyVal];
         const apiKeyMasked = maskApiKey(apiKeyVal);
         const keyName = keyInfo?.name || apiKeyMasked || r.apiKey.slice(0, 8) + "...";
-        // Key by the FULL api key (same as the daily rollup + lastUsed overlay)
-        // — masking here collided all keys sharing a prefix into one bucket.
-        const akKey = `${r.apiKey}|${r.model}|${r.provider || "unknown"}`;
+        // AUDIT-002 (GHSA-vjc7): bucket by masked key, not raw. Raw keys as
+        // object property names leak via JSON.stringify(stats) to dashboard
+        // responses. maskApiKey collisions require matching first 8 AND last 4
+        // chars — astronomically unlikely for distinct API keys.
+        const akKey = `${apiKeyMasked}|${r.model}|${r.provider || "unknown"}`;
         if (!stats.byApiKey[akKey]) {
           stats.byApiKey[akKey] = { requests: 0, promptTokens: 0, completionTokens: 0, cachedTokens: 0, cost: 0, rawModel: r.model, provider: providerDisplayName, apiKeyMasked, keyName, apiKeyKey: apiKeyMasked, lastUsed: r.timestamp };
         }
