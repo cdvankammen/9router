@@ -395,8 +395,12 @@ export function openaiToKiroRequest(model, body, stream, credentials) {
   }
   const replayCurrent = canonical.currentMessage.userInputMessage;
 
+  // DO NOT include `systemPrompt` at the top level: kiro.dev rejects any body
+  // carrying that field with 400 REQUEST_BODY_INVALID (see executor note).
+  // The system prompt travels inside the first user turn's content
+  // (contentPrefix → replayCurrent.content) which canonicalizeKiroConversation
+  // already folded into the user message.
   const payload = {
-    systemPrompt,
     conversationState: {
       chatTriggerType: "MANUAL",
       conversationId,

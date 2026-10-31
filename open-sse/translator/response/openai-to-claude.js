@@ -215,7 +215,28 @@ export function openaiToClaudeResponse(chunk, state) {
         if (toolInfo) {
           // Buffer args instead of streaming — sanitize at finish to fix bad params
           if (!state.toolArgBuffers) state.toolArgBuffers = new Map();
-          state.toolArgBuffers.set(idx, (state.toolArgBuffers.get(idx) || "") + tc.function.arguments);
+          const newBuffer = (state.toolArgBuffers.get(idx) || "") + tc.function.arguments;
+          state.toolArgBuffers.set(idx, newBuffer);
+
+          // Opportunistic streaming sanitization: when the buffer so far is
+          // already valid JSON, emit a sanitized input_json_delta now so clients
+          // see corrected args before finish_reason arrives. Critical for the
+          // Read tool, where non-Anthropic models routinely emit `pages: ""`
+          // which Claude rejects — waiting for finish would ship the bad arg
+          // to the client in chunks that never get rewritten.
+          try {
+            const sanitized = sanitizeToolArgs(toolInfo.name, newBuffer);
+            if (sanitized !== newBuffer) {
+              // Sanitizer changed the args (e.g. stripped empty pages). Emit
+              // the corrected JSON now; the finish-time emit will be a no-op
+              // duplicate that clients already tolerate.
+              results.push({
+                type: "content_block_delta",
+                index: toolInfo.blockIndex,
+                delta: { type: "input_json_delta", partial_json: sanitized }
+              });
+            }
+          } catch { /* not yet complete JSON — wait for more chunks */ }
         }
       }
     }
