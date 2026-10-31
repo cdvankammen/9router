@@ -35,11 +35,13 @@ describe("detectRequiredCapabilities", () => {
     expect(r.has("vision")).toBe(true);
   });
 
-  it("web_search tool -> search", () => {
+  it("web_search tool -> search (disabled: #3665 removed auto-switch for search)", () => {
     const r = detectRequiredCapabilities({ messages: [{ role: "user", content: "q" }], tools: [
       { type: "web_search" },
     ] });
-    expect(r.has("search")).toBe(true);
+    // Search detection is deliberately disabled in auto-switch (decolua/9router#3665).
+    // The capability is not wired to model selection yet.
+    expect(r.has("search")).toBe(false);
   });
 
   it("responses input_image -> vision", () => {

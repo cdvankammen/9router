@@ -128,6 +128,15 @@ function collectToolOutputText(body, format) {
   };
 
   if (format === FORMATS.OPENAI_RESPONSES && hasUnsafeResponsesInputForCompression(body)) {
+    // #2132 — when reasoning items carry visible summary text (not opaque
+    // encrypted_content), the conversation history has interleaved tool/reasoning
+    // turns that must not be compressed piecemeal. Skip tool-output compression
+    // so the openai-responses branch below can emit the proper "not safe"
+    // diagnostic instead.
+    const hasVisibleReasoning = body.input.some(
+      (item) => item?.type === RESPONSES_ITEM.REASONING && Array.isArray(item?.summary)
+    );
+    if (hasVisibleReasoning) return null;
     for (const item of body.input) {
       if (item?.type === RESPONSES_ITEM.FUNCTION_CALL_OUTPUT) visit(item, "output");
     }

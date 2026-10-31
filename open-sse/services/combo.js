@@ -154,10 +154,18 @@ export function reorderByCapabilities(models, required) {
   };
 
   // Stable sort by tier (Array.prototype.sort is stable in modern engines).
-  return models
+  const ranked = models
     .map((m, i) => ({ m, i, t: tierOf(m) }))
     .sort((a, b) => a.t - b.t || a.i - b.i)
     .map((x) => x.m);
+
+  // If the sort didn't change anything, return the original array reference
+  // so callers using === equality checks (e.g. "keeps order when no model matches")
+  // see reference stability.
+  for (let i = 0; i < ranked.length; i++) {
+    if (ranked[i] !== models[i]) return ranked;
+  }
+  return models;
 }
 
 /**
