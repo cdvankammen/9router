@@ -933,3 +933,61 @@ Correct approach: derive routes from `app-path-routes-manifest.json` (24 static 
 | **Stage 3 live probes** | 10/10 security endpoints PASS |
 | **Stage 3 dashboard** | 24/24 manifest-derived routes → HTTP 200 |
 | **Skill deployed** | 7/8 fleet hosts |
+
+## Round 21 — Stage 1.5 build gate: REAL regression found and fixed (2026-11-01)
+
+### CRITICAL HONEST CORRECTION to prior claims
+
+The "0 regressions" claim from rounds 1–19 was **test-scoped only**. vitest does not render Next.js pages, so export drops in the shared component layer that break prerendering were invisible to the test suite. Round 21 discovered this by adding a mandatory `npm run build` gate (Stage 1.5).
+
+### What broke
+
+`npm run build` failed at prerendering `/dashboard/model-context`:
+```
+Error: Element type is invalid: expected a string (for built-in components) or a class/function
+(for composite components) but got: undefined.
+```
+
+### Root cause (two drops from upstream merge)
+
+| File | What was dropped | Impact |
+|------|-----------------|--------|
+| `src/shared/components/index.js` | `export { default as MultiSelect } from "./MultiSelect";` | `/dashboard/model-context` + `/dashboard/statistics` prerender crash (MultiSelect file exists, just not re-exported) |
+| `src/shared/hooks/useModelCaps.js` | `invalidateModelCaps()` function (cache-busting + event dispatch) | `/dashboard/model-context` imports it 3× — undefined at render |
+
+### Fix
+
+Restored both from pre-rebase `07c16dab`. Build passes: **162/162 static pages prerendered, BUILD_ID `vJKp96vZb0vcmxw1kIaZc`**, 84MB standalone, 32MB tgz staged to `mini4:/tmp/`.
+
+### New mandatory stage added to skill
+
+**Stage 1.5 — Build-time prerender gate** (inserted between Stage 1 code-level and Stage 2 test):
+```bash
+npm run build 2>&1 | tee /tmp/build.log
+grep -E 'Error occurred prerendering|Export encountered an error' /tmp/build.log
+```
+
+Plus proactive export-drop scan:
+```bash
+# Every name imported from @/shared/components must be exported
+for name in $(grep -rhE 'from "@/shared/components"' src/app | grep -oE '\{[^}]+\}' | tr ',' '\n' | sed 's/[{}]//g; s/^\s*//; s/\s*$//' | sort -u); do
+  grep -qE "as ${name}\b|\b${name}\b from" src/shared/components/index.js || echo "DROPPED: $name"
+done
+```
+
+### Deployment state
+
+Build artifact staged to `mini4:/tmp/9router-build-vJKp96vZb0vcmxw1kIaZc.tgz`. Deploy to production requires operator approval (production restart).
+
+### Updated campaign final state
+
+| Metric | Value |
+|--------|-------|
+| **Branch** | `v5-vscode-works` @ round-21 fix |
+| **Upstream state** | 1948+ ahead, 0 behind origin/master |
+| **Test suite** | 5195 passed / 23 failed (0 test regressions, all 23 pre-existing) |
+| **Build** | 162/162 pages prerendered, BUILD_ID `vJKp96vZb0vcmxw1kIaZc` |
+| **Stage 3 live probes** | 10/10 security endpoints PASS (on pre-rebase v0.5.112 build) |
+| **Stage 3 dashboard** | 24/24 manifest-derived routes → HTTP 200 |
+| **Real rebase regressions found in round 21** | 2 (MultiSelect export + invalidateModelCaps) — both fixed |
+| **Skill deployed** | 7/8 fleet hosts (mini5 DOWN) |
