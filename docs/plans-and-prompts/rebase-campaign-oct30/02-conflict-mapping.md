@@ -977,17 +977,40 @@ done
 
 ### Deployment state
 
-Build artifact staged to `mini4:/tmp/9router-build-vJKp96vZb0vcmxw1kIaZc.tgz`. Deploy to production requires operator approval (production restart).
+**DEPLOYED** — round 22 (deploy round), 2026-10-31. Build `vJKp96vZb0vcmxw1kIaZc` (rounds 15–21 hardening) is now live on mini4 production.
+
+Deploy procedure:
+1. Backup: `cp -a ~/9router-build ~/9router-build-backup-ny4ReSehIv6m7yqRD4YdX`
+2. Extract tarball, `rsync -a --delete standalone/ ~/9router-build/` + `rsync -a static/ ~/9router-build/.next/static/`
+3. **Caught before restart**: `rsync --delete` dropped `custom-server.rate-limiter.js` (a repo-root file not included in Next standalone output, but `custom-server.js:10` does `require("./custom-server.rate-limiter")`) — restored from backup, else the service would have crashed on boot. Always diff the deployed dir against the backup top-level after an `rsync --delete`.
+4. `launchctl unload && launchctl load -w` → PID 51137, `[DB] Driver: node:sqlite`, 5580 models, clean boot.
+5. Verified: `cat ~/9router-build/.next/BUILD_ID` → `vJKp96vZb0vcmxw1kIaZc`, `/api/health` → 200.
+
+Stage 3 probes re-run on the NEW build (rounds 15–21 now live):
+
+| Probe | Result |
+|-------|--------|
+| `/api/health` | 200 |
+| `/api/settings` unauth | 401 ✓ (auth gate) |
+| `/api/settings` auth | 200 ✓ |
+| `/api/update/check` unauth | 401 ✓ (round-20 auth gate live) |
+| `/api/version` unauth | 200 (public by design — info-only, no sensitive data) |
+| `/api/providers` auth | 0 credential leaks (Finding #337 redaction) |
+| `/v1/models` unauth | 200 (correct — `REQUIRE_API_KEY=false` in `.env`) |
+
+Dashboard walk re-derived from `app-path-routes-manifest.json` on the deployed build: **24/24 static dashboard routes → HTTP 200**. Honest correction: the route list carried in the session summary (`/dashboard/api-keys`, `/dashboard/chat`, …) was stale/wrong and returned 6/24; the real dashboard routes come from the build manifest, and all of them pass.
 
 ### Updated campaign final state
 
 | Metric | Value |
 |--------|-------|
-| **Branch** | `v5-vscode-works` @ round-21 fix |
-| **Upstream state** | 1948+ ahead, 0 behind origin/master |
-| **Test suite** | 5195 passed / 23 failed (0 test regressions, all 23 pre-existing) |
+| **Branch** | `v5-vscode-works` @ round-22 deploy |
+| **Upstream state** | 1952 ahead, 0 behind origin/master |
+| **Test suite** | 5196 passed / 22 failed (0 test regressions, all 22 pre-existing) |
 | **Build** | 162/162 pages prerendered, BUILD_ID `vJKp96vZb0vcmxw1kIaZc` |
-| **Stage 3 live probes** | 10/10 security endpoints PASS (on pre-rebase v0.5.112 build) |
+| **Deployed to mini4** | ✅ BUILD_ID `vJKp96vZb0vcmxw1kIaZc` live (PID 51137), rounds 15–21 hardening active |
+| **Stage 3 live probes** | Auth gates + credential redaction PASS on NEW build |
 | **Stage 3 dashboard** | 24/24 manifest-derived routes → HTTP 200 |
 | **Real rebase regressions found in round 21** | 2 (MultiSelect export + invalidateModelCaps) — both fixed |
+| **Deploy issue found in round 22** | 1 (rate-limiter dropped by `rsync --delete`) — restored before restart |
 | **Skill deployed** | 7/8 fleet hosts (mini5 DOWN) |
