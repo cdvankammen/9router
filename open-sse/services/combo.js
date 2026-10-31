@@ -720,7 +720,19 @@ export async function handleComboChat({
       // without a cooldown, and without waiting: there is nothing to recover.
       // checkFallbackError() reports no account fallback here on purpose (a
       // request-scoped fault must not evict a healthy account from rotation).
+      //
+      // Exception: a generic "Bad request" (the default 400 error message with
+      // no specific detail) means the request shape itself is fundamentally
+      // rejected — no other model in the combo can fix it. Return immediately
+      // instead of advancing, so the caller sees the real rejection.
       if (requestScoped) {
+        const isGenericBadRequest = result.status === 400 &&
+          typeof errorText === "string" &&
+          errorText.toLowerCase().trim() === "bad request";
+        if (isGenericBadRequest) {
+          log.warn("COMBO", `Model ${modelStr} returned generic Bad Request — not advancing combo`, { status: 400 });
+          return result;
+        }
         log.warn("COMBO", `Model ${modelStr} rejected the request (${result.status}), trying next`, { status: result.status });
         const failAttempt = { model: modelStr, ok: false, status: result.status, error: errorText, latencyMs: Date.now() - attemptStart, attempt: attemptNum + 1 };
         fallbackChain.push(failAttempt);
