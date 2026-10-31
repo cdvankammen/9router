@@ -1,18 +1,19 @@
-# Failures that remain on master (triaged 2026-10-21 against v0.5.104,
-# reconciled 2026-10-31 against v5-vscode-works @ 91ad2002 post-rebase campaign).
+# Failures that remain on v5-vscode-works (reconciled 2026-10-31, round 28).
 # Grouped by cause; remove an entry as soon as its test passes.
 #
-# 2026-10-31 reconciliation (rebase campaign round 24):
-# - REMOVED: security-audit.test.js AUDIT-002 (campaign fixed via usageRepo encryption wiring)
-# - ADDED 6 pre-existing failures verified on 07c16dab baseline that were missed
-#   in the original 2026-10-21 triage (memory-enhancements suite load,
-#   combo-credit-fallback, key-access-migration, headroom-responses-format,
-#   golden-request OpenAI→Kiro, openai-to-kiro thinking-budget).
-# Net: 24 entries → 29 entries.
+# 2026-10-31 round 28 reconciliation:
+# - FIXED 12 pre-existing failures (translator text-collapse 4, kiro systemPrompt 1,
+#   claude streaming sanitization 1, combo autoswitch 2, headroom reasoning-skip 1,
+#   combo bad-request hard-stop 1, key-access backup name 1, golden-request snapshot 1).
+# - REMAINING: 13 entries (10 individual tests + 3 suite-load failures).
 
-# Catalogued before the June translator refactor (9532ec80); expected behavior not
-# re-established from current code, needs the maintainer.
+# gotScraping TLS fingerprinting is deliberately disabled in proxyFetch.js
+# (entire block commented out, line 9: "Disabled: not in use"). This test
+# expects the disabled feature. Re-enable gotScraping to fix.
 tests/unit/claude-header-forwarding.test.js :: proxyAwareFetch — api.anthropic.com routing routes api.anthropic.com to gotScraping (non-streaming) and returns ok response
+
+# macOS Cursor DB paths: these tests require a Cursor installation with
+# specific SQLite DB paths that don't exist in CI/test environments.
 tests/unit/oauth-cursor-auto-import.test.js :: GET /api/oauth/cursor/auto-import extracts tokens using exact keys
 tests/unit/oauth-cursor-auto-import.test.js :: GET /api/oauth/cursor/auto-import falls back to fuzzy key matching on macOS when exact keys are missing
 tests/unit/oauth-cursor-auto-import.test.js :: GET /api/oauth/cursor/auto-import linux uses single hardcoded path and original error message
@@ -21,16 +22,6 @@ tests/unit/oauth-cursor-auto-import.test.js :: GET /api/oauth/cursor/auto-import
 tests/unit/oauth-cursor-auto-import.test.js :: GET /api/oauth/cursor/auto-import returns not-found when no macOS cursor db paths are accessible
 tests/unit/oauth-cursor-auto-import.test.js :: GET /api/oauth/cursor/auto-import unsupported platform returns 400
 tests/unit/oauth-cursor-auto-import.test.js :: GET /api/oauth/cursor/auto-import unwraps JSON-encoded string values
-tests/unit/openai-to-claude.test.js :: openaiToClaudeResponse omits empty Read pages tool argument before emitting Claude input deltas
-tests/unit/translator-request-normalization.test.js :: request normalization claudeToOpenAIRequest flattens text-only content arrays into string
-tests/unit/translator-request-normalization.test.js :: request normalization filterToOpenAIFormat flattens text-only arrays to string
-tests/unit/translator-request-normalization.test.js :: request normalization parseSSELine supports provider raw NDJSON stream lines
-tests/unit/translator-request-normalization.test.js :: request normalization translateRequest keeps /v1/messages Claude->OpenAI text payloads string-safe
-
-# Stale expectations fixed by decolua/9router#3665 (search auto-switch disabled on purpose;
-# reorder returns a copy).
-tests/unit/combo-autoswitch.test.js :: detectRequiredCapabilities web_search tool -> search
-tests/unit/combo-autoswitch.test.js :: reorderByCapabilities keeps order when no model matches
 
 # Live call: the upstream now answers "Unsupported model mimo-auto", the only model the
 # (hidden since 6d96e24b) mimo-free / mmf providers list.
@@ -41,11 +32,3 @@ tests/unit/mimo-free.live.test.js :: MiMo Free anti-abuse gate (live) chat WITH 
 tests/unit/db-benchmark.test.js :: <suite failed to load>
 tests/unit/embeddings.cloud.test.js :: <suite failed to load>
 tests/unit/memory-enhancements.test.js :: <suite failed to load>
-
-# Pre-existing failures missed in 2026-10-21 triage, verified on 07c16dab baseline
-# (2026-10-31 reconciliation). All present on both pre-rebase and current branch.
-tests/unit/combo-credit-fallback.test.js :: combo credit fallback routes a 400 response correctly: Bad request
-tests/unit/headroom-responses-format.test.js :: compressWithHeadroom openai-responses format (#1998) skips Responses tool/reasoning history instead of collapsing it into a message (#2132)
-tests/unit/key-access-migration.test.js :: apiKeys access columns: upgrade from the previous schema adds the columns, keeps every row, and reads every existing key as unrestricted
-tests/unit/openai-to-kiro.test.js :: openaiToKiroRequest thinking budget keeps the prompt stable across turns and never sends a top-level systemPrompt
-tests/translator/golden-request.test.js :: GOLDEN request: OpenAI → Kiro full body (image base64 + tool_result)
