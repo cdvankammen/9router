@@ -53,10 +53,22 @@ export function filterToOpenAIFormat(body, opts = {}) {
       if (filteredContent.length === 0) {
         filteredContent.push({ type: OPENAI_BLOCK.TEXT, text: "" });
       }
-      
+
+      // If only pure-text blocks remain (no cache_control or other per-block metadata),
+      // collapse to a single newline-joined string. OpenAI's convention: `content` should
+      // be a string when only text is present; arrays are reserved for multimodal payloads
+      // (text + image_url) OR for text blocks that carry per-block metadata like
+      // cache_control (DashScope/alicode #2069).
+      const allPureText = filteredContent.every(b =>
+        b?.type === OPENAI_BLOCK.TEXT && !b.cache_control
+      );
+      if (allPureText) {
+        return { ...msg, content: filteredContent.map(b => b.text || "").join("\n") };
+      }
+
       return { ...msg, content: filteredContent };
     }
-    
+
     return msg;
   });
   

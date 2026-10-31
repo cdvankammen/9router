@@ -22,6 +22,18 @@ export function parseSSELine(line, format = null) {
     return null;
   }
 
+  // Auto-detect raw NDJSON from any provider (no "data:" prefix, no format hint).
+  // Provider-native streaming sometimes emits bare JSON objects one per line;
+  // attempt a parse before falling through to the strict SSE "data:" check.
+  const trimmed = line.trim();
+  if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
+    try {
+      return JSON.parse(trimmed);
+    } catch {
+      // Not valid JSON — fall through to SSE handling.
+    }
+  }
+
   // Standard SSE format: "data: {...}"
   if (line.charCodeAt(0) !== 100) return null; // 'd' = 100
 
