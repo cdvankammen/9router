@@ -12,10 +12,21 @@ const resultsPath = process.argv[2];
 if (!resultsPath) { console.error("Missing results.json path"); process.exit(2); }
 
 const r = JSON.parse(readFileSync(resultsPath, "utf8"));
-const nowFails = r.testResults.flatMap(f =>
-  f.assertionResults.filter(a => a.status === "failed")
-    .map(a => f.name.split("/app/")[1] + " :: " + a.fullName)
-);
+// Strip absolute prefix to get "tests/..." relative path.
+// Handles both "/Users/.../tests/x.js" and legacy "/.../app/tests/x.js" layouts.
+const relPath = (abs) => {
+  const m = abs.match(/(?:^|\/)tests\/(.+)$/);
+  return m ? "tests/" + m[1] : abs;
+};
+const nowFails = r.testResults.flatMap(f => {
+  const rel = relPath(f.name);
+  const failedTests = (f.assertionResults || []).filter(a => a.status === "failed");
+  // Suite-load failure: status=failed but no assertion results recorded.
+  if (failedTests.length === 0 && f.status === "failed") {
+    return [rel + " :: <suite failed to load>"];
+  }
+  return failedTests.map(a => rel + " :: " + a.fullName);
+});
 
 // Regression = fail bây giờ NHƯNG không có trong baseline known-fails
 const regressions = nowFails.filter(f => !knownFails.has(f));

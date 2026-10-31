@@ -1,5 +1,14 @@
-# Failures that remain on master (triaged 2026-10-21 against v0.5.104). Grouped by cause;
-# remove an entry as soon as its test passes.
+# Failures that remain on master (triaged 2026-10-21 against v0.5.104,
+# reconciled 2026-10-31 against v5-vscode-works @ 91ad2002 post-rebase campaign).
+# Grouped by cause; remove an entry as soon as its test passes.
+#
+# 2026-10-31 reconciliation (rebase campaign round 24):
+# - REMOVED: security-audit.test.js AUDIT-002 (campaign fixed via usageRepo encryption wiring)
+# - ADDED 6 pre-existing failures verified on 07c16dab baseline that were missed
+#   in the original 2026-10-21 triage (memory-enhancements suite load,
+#   combo-credit-fallback, key-access-migration, headroom-responses-format,
+#   golden-request OpenAI→Kiro, openai-to-kiro thinking-budget).
+# Net: 24 entries → 29 entries.
 
 # Catalogued before the June translator refactor (9532ec80); expected behavior not
 # re-established from current code, needs the maintainer.
@@ -18,10 +27,6 @@ tests/unit/translator-request-normalization.test.js :: request normalization fil
 tests/unit/translator-request-normalization.test.js :: request normalization parseSSELine supports provider raw NDJSON stream lines
 tests/unit/translator-request-normalization.test.js :: request normalization translateRequest keeps /v1/messages Claude->OpenAI text payloads string-safe
 
-# Real bug: /api/usage/stats serializes raw API keys as byApiKey property names (GHSA-vjc7).
-# Fixed by decolua/9router#4286.
-tests/unit/security-audit.test.js :: AUDIT-002: API key masking byApiKey object keys should use masked key, not raw key
-
 # Stale expectations fixed by decolua/9router#3665 (search auto-switch disabled on purpose;
 # reorder returns a copy).
 tests/unit/combo-autoswitch.test.js :: detectRequiredCapabilities web_search tool -> search
@@ -32,6 +37,15 @@ tests/unit/combo-autoswitch.test.js :: reorderByCapabilities keeps order when no
 tests/unit/mimo-free.live.test.js :: MiMo Free anti-abuse gate (live) chat WITH Chrome User-Agent → 200
 
 # Cannot load in this repo: benchmarks lowdb (removed in bee8dad9) / imports the cloud/ worker,
-# which is not part of this repository.
+# which is not part of this repository / imports missing memory-enhancements module.
 tests/unit/db-benchmark.test.js :: <suite failed to load>
 tests/unit/embeddings.cloud.test.js :: <suite failed to load>
+tests/unit/memory-enhancements.test.js :: <suite failed to load>
+
+# Pre-existing failures missed in 2026-10-21 triage, verified on 07c16dab baseline
+# (2026-10-31 reconciliation). All present on both pre-rebase and current branch.
+tests/unit/combo-credit-fallback.test.js :: combo credit fallback routes a 400 response correctly: Bad request
+tests/unit/headroom-responses-format.test.js :: compressWithHeadroom openai-responses format (#1998) skips Responses tool/reasoning history instead of collapsing it into a message (#2132)
+tests/unit/key-access-migration.test.js :: apiKeys access columns: upgrade from the previous schema adds the columns, keeps every row, and reads every existing key as unrestricted
+tests/unit/openai-to-kiro.test.js :: openaiToKiroRequest thinking budget keeps the prompt stable across turns and never sends a top-level systemPrompt
+tests/translator/golden-request.test.js :: GOLDEN request: OpenAI → Kiro full body (image base64 + tool_result)
