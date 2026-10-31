@@ -1,27 +1,18 @@
-# Failures that remain on v5-vscode-works (reconciled 2026-10-31, round 29).
+# Failures that remain on v5-vscode-works (reconciled 2026-10-31, round 30).
 # Grouped by cause; remove an entry as soon as its test passes.
 #
-# 2026-10-31 round 29 reconciliation:
-# - FIXED 2 suite-load failures:
-#   memory-enhancements.test.js: converted node:test → vitest (32 tests now pass)
-#   db-benchmark.test.js: installed lowdb devDependency (5 tests now pass)
-# - REMAINING: 11 entries (10 individual tests + 1 suite-load failure).
+# 2026-10-31 round 30 reconciliation:
+# - FIXED 8 oauth-cursor-auto-import tests: rewrote the suite to use real temp
+#   SQLite databases (homedir() → tmpdir) instead of brittle better-sqlite3 CJS
+#   mocks, matching the route's rewritten implementation (multi-candidate path
+#   probing, per-key .get() queries, strategy cascade, no 400 on unsupported
+#   platforms). All 10 tests now pass.
+# - REMAINING: 3 entries (2 individual tests + 1 suite-load failure).
 
 # gotScraping TLS fingerprinting is deliberately disabled in proxyFetch.js
 # (entire block commented out, line 9: "Disabled: not in use"). This test
 # expects the disabled feature. Re-enable gotScraping to fix.
 tests/unit/claude-header-forwarding.test.js :: proxyAwareFetch — api.anthropic.com routing routes api.anthropic.com to gotScraping (non-streaming) and returns ok response
-
-# macOS Cursor DB paths: these tests require a Cursor installation with
-# specific SQLite DB paths that don't exist in CI/test environments.
-tests/unit/oauth-cursor-auto-import.test.js :: GET /api/oauth/cursor/auto-import extracts tokens using exact keys
-tests/unit/oauth-cursor-auto-import.test.js :: GET /api/oauth/cursor/auto-import falls back to fuzzy key matching on macOS when exact keys are missing
-tests/unit/oauth-cursor-auto-import.test.js :: GET /api/oauth/cursor/auto-import linux uses single hardcoded path and original error message
-tests/unit/oauth-cursor-auto-import.test.js :: GET /api/oauth/cursor/auto-import returns descriptive error if macOS db file exists but cannot be opened
-tests/unit/oauth-cursor-auto-import.test.js :: GET /api/oauth/cursor/auto-import returns login-prompt error when tokens are missing even after fallback
-tests/unit/oauth-cursor-auto-import.test.js :: GET /api/oauth/cursor/auto-import returns not-found when no macOS cursor db paths are accessible
-tests/unit/oauth-cursor-auto-import.test.js :: GET /api/oauth/cursor/auto-import unsupported platform returns 400
-tests/unit/oauth-cursor-auto-import.test.js :: GET /api/oauth/cursor/auto-import unwraps JSON-encoded string values
 
 # Live call: the upstream now answers "Unsupported model mimo-auto", the only model the
 # (hidden since 6d96e24b) mimo-free / mmf providers list.
