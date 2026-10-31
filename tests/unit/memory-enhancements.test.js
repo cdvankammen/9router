@@ -1,4 +1,4 @@
-import test from "node:test";
+import { describe, it, test, expect } from "vitest";
 import assert from "node:assert/strict";
 
 import { pruneHistoricalTools } from "../../open-sse/services/memory/toolPruner.js";

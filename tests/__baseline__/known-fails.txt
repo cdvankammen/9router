@@ -1,11 +1,11 @@
-# Failures that remain on v5-vscode-works (reconciled 2026-10-31, round 28).
+# Failures that remain on v5-vscode-works (reconciled 2026-10-31, round 29).
 # Grouped by cause; remove an entry as soon as its test passes.
 #
-# 2026-10-31 round 28 reconciliation:
-# - FIXED 12 pre-existing failures (translator text-collapse 4, kiro systemPrompt 1,
-#   claude streaming sanitization 1, combo autoswitch 2, headroom reasoning-skip 1,
-#   combo bad-request hard-stop 1, key-access backup name 1, golden-request snapshot 1).
-# - REMAINING: 13 entries (10 individual tests + 3 suite-load failures).
+# 2026-10-31 round 29 reconciliation:
+# - FIXED 2 suite-load failures:
+#   memory-enhancements.test.js: converted node:test → vitest (32 tests now pass)
+#   db-benchmark.test.js: installed lowdb devDependency (5 tests now pass)
+# - REMAINING: 11 entries (10 individual tests + 1 suite-load failure).
 
 # gotScraping TLS fingerprinting is deliberately disabled in proxyFetch.js
 # (entire block commented out, line 9: "Disabled: not in use"). This test
@@ -27,8 +27,5 @@ tests/unit/oauth-cursor-auto-import.test.js :: GET /api/oauth/cursor/auto-import
 # (hidden since 6d96e24b) mimo-free / mmf providers list.
 tests/unit/mimo-free.live.test.js :: MiMo Free anti-abuse gate (live) chat WITH Chrome User-Agent → 200
 
-# Cannot load in this repo: benchmarks lowdb (removed in bee8dad9) / imports the cloud/ worker,
-# which is not part of this repository / imports missing memory-enhancements module.
-tests/unit/db-benchmark.test.js :: <suite failed to load>
+# Cannot load in this repo: imports the cloud/ worker, which is not part of this repository.
 tests/unit/embeddings.cloud.test.js :: <suite failed to load>
-tests/unit/memory-enhancements.test.js :: <suite failed to load>
