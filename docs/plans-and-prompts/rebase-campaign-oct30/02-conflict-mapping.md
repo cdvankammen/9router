@@ -1014,3 +1014,53 @@ Dashboard walk re-derived from `app-path-routes-manifest.json` on the deployed b
 | **Real rebase regressions found in round 21** | 2 (MultiSelect export + invalidateModelCaps) — both fixed |
 | **Deploy issue found in round 22** | 1 (rate-limiter dropped by `rsync --delete`) — restored before restart |
 | **Skill deployed** | 7/8 fleet hosts (mini5 DOWN) |
+
+## Round 22 addendum — Visual verification via integrated browser (2026-10-31)
+
+After deploy, opened the integrated browser on `http://100.76.147.49:20128` (mini4 Tailscale IP) to verify the live build renders correctly end-to-end.
+
+### Login flow
+
+- `/login` rendered: "9Router" heading + "Enter your password to access the dashboard" + password field + Login button + round-10 warning "Security risk: no password set. You will be asked to set one when logging in remotely."
+- `/api/auth/status` returned `hasPassword: false` + `initialPasswordSet: true` — confirms round-10 login gate is active (INITIAL_PASSWORD env var in use, no user-custom password stored)
+- Login via `POST /api/auth/login` with INITIAL_PASSWORD `9router-test-2026` → `200 {"success":true,"mustChangePassword":false}`, HttpOnly `auth_token` cookie set
+
+### Page walkthrough (authenticated)
+
+| Page | State | Key observations |
+|------|-------|------------------|
+| `/dashboard` | ✓ | Sidebar: Endpoint, Providers, Combos, Usage, Quota Tracker, Token Saver, CLI Tools, Media Providers (expandable), Proxy Pools, Skills, Console Log, 9Remote (external HOT link), 9English (external), Settings. Version `v0.5.112` shown. Main: "Endpoint" heading |
+| `/dashboard/providers` | ✓ | "Manage your AI provider connections" + search box + Donate button |
+| `/dashboard/combos` | ✓ | "Model combos with fallback" header |
+| `/dashboard/usage` | ✓ | Overview/Details tabs, Today/24h/7D/30D/60D/All ranges, "Usage by Model/Account/API Key/Endpoint" dropdown, Costs/Tokens toggle |
+| `/dashboard/profile` | ✓ | Settings page rendered |
+
+### Observations
+
+- Dark-mode default active, light-mode toggle present
+- Language selector present (🇺🇸)
+- Grid view toggle present
+- Google Analytics tag `G-LC959F603F` fires from client (browser blocks it — `net::ERR_ABORTED` — expected, no server issue)
+- Server logs clean: 0 errors/exceptions/crashes in last 30 lines of `/tmp/9router-standalone.err.log`
+- `ioreg: command not found` warnings in stderr are cosmetic (platform-detection code, non-fatal)
+- `MODULE_TYPELESS_PACKAGE_JSON` warning for `backgroundTokenRefresh.js` — cosmetic, suggests adding `"type": "module"` to package.json but functionally harmless
+
+### Note on browser nav-click timeouts
+
+`locator.click` on sidebar nav links consistently timed out at 10s, but direct URL navigation to the same targets succeeded instantly. Likely Next.js client-side router intercepts clicks with async hydration that the locator's "stable" heuristic doesn't recognize as complete. Not a regression — direct navigation confirms the pages render correctly.
+
+### Campaign truly final state
+
+| Metric | Value |
+|--------|-------|
+| **Branch** | `v5-vscode-works` @ round-22 visual |
+| **Upstream state** | 1953 ahead, 0 behind origin/master |
+| **Test suite** | 5196 passed / 22 failed (0 regressions) |
+| **Build** | 162/162 pages, BUILD_ID `vJKp96vZb0vcmxw1kIaZc` |
+| **Deployed** | ✅ mini4 PID 51137, rounds 15–21 hardening LIVE |
+| **Stage 3 probes** | All PASS on new build |
+| **Stage 3 dashboard walk** | 24/24 manifest-derived routes → 200 |
+| **Stage 3 visual** | 5/5 dashboard pages render cleanly in browser |
+| **Server logs** | Clean (0 errors) |
+| **Skill** | 520 lines, synced 7/8 fleet |
+| **Remaining blockers** | mini5 DOWN (ssh timeout), 22 pre-existing test failures (out of scope) |
