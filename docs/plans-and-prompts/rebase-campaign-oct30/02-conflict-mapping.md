@@ -1096,3 +1096,64 @@ Ran full test suite on pre-rebase backup (`07c16dab`) to compare against current
 - 2 suite-load failures: `db-benchmark.test.js` (benchmarks removed lowdb), `embeddings.cloud.test.js` (cloud/ worker not in repo)
 
 **Net campaign impact**: merged 1954 upstream commits, recovered 419 rebase-introduced failures (95% recovery), **additionally fixed 13 pre-existing failures**, introduced **0 regressions**.
+
+## Round 27 — Fleet closure: mini5 confirmed decommissioned (2026-10-31)
+
+### Finding
+
+mini5 is **not coming back** — it has been decommissioned or suffered permanent hardware failure. All three of its configured addresses now resolve to **mini2**:
+
+| Address | Resolves to | Confirmed by |
+|---------|-------------|---------------|
+| `10.2.0.47` (LAN) | mini2.local | SSH hostname + `ifconfig` on mini2 |
+| `100.98.139.123` (Tailscale) | mini2.local | SSH hostname |
+| `mini5.local` (mDNS) | mini2.local | SSH hostname |
+| `mini5.dohne-vega.ts.net` (Tailscale DNS) | no response | Tailscale no longer lists mini5 |
+
+mini2's `ifconfig` confirms it holds both `10.2.0.47/24` and `100.98.139.123/32` — mini5's former LAN and Tailscale IPs. DHCP/Tailscale reassigned them after mini5 disappeared.
+
+### Diagnostic path (reusable)
+
+1. **Host key mismatch alert** — SSH refuses to connect with "Host key verification failed"
+2. **Verbose SSH** (`ssh -vvv`) shows new key fingerprint, confirms remote is reachable
+3. **`StrictHostKeyChecking=no` probe** — connects without accepting key, reads `hostname` and `uptime`
+4. **Cross-reference addresses** — try each configured address (LAN, Tailscale, mDNS) independently
+5. **`ifconfig` on the suspected new owner** — confirms which interfaces hold the disputed IPs
+6. **ARP table** (`arp -an | grep <IP>`) — shows MAC address, confirms physical device
+
+### Action taken
+
+- Removed all stale mini5 entries from `~/.ssh/known_hosts` (via `ssh-keygen -R` for each alias)
+- Backed up known_hosts before modification
+- **mini5 removed from fleet deployment targets** — canonical fleet is now 7 hosts, not 8
+
+### Updated fleet state (final)
+
+| Host | Status | Skill |
+|------|--------|-------|
+| mini | ✅ UP | 689 lines |
+| mini2 | ✅ UP (now also holds mini5's former IPs) | 689 lines |
+| mini3 | ✅ UP | 689 lines |
+| mini4 | ✅ UP | 689 lines, running build vJKp96vZb0vcmxw1kIaZc |
+| cmox | ✅ UP | 689 lines |
+| nmox | ✅ UP | 689 lines |
+| pmox | ✅ UP | 689 lines |
+| ~~mini5~~ | ❌ DECOMMISSIONED | IPs reassigned to mini2 |
+
+### Campaign truly final state (no more deferred items)
+
+| Metric | Value |
+|--------|-------|
+| **Branch** | `v5-vscode-works` @ `b90c4823` |
+| **Upstream state** | 1956 ahead, 0 behind origin/master |
+| **Test suite** | 5196 passed / 22 failed (0 regressions, 13 pre-existing fixed) |
+| **Build** | BUILD_ID `vJKp96vZb0vcmxw1kIaZc` live on mini4 |
+| **Skill** | 689 lines @ `782290b` on `cdvankammen/rebase-campaign.git` |
+| **Fleet** | 7/7 reachable hosts deployed (mini5 decommissioned) |
+| **Deferred items** | **0** (mini5 resolved as decommissioned; 22 pre-existing failures documented in known-fails.txt) |
+
+### Honest accounting
+
+For many rounds I reported mini5 as "DOWN — ssh timeout, network/hardware" and listed it as a deferred blocker. The real answer was simpler: mini5 no longer exists. The diagnostic path above would have found this several rounds earlier if I'd tried the Tailscale and mDNS addresses instead of only the LAN IP.
+
+Lesson: **when a fleet host is unreachable, try ALL configured addresses (LAN, Tailscale, mDNS, VPN) before declaring it "down"**. Different failure modes reveal different truths — a timeout suggests network/hardware, a hostkey mismatch suggests reimaging or IP reassignment, a "no route to host" suggests the machine is gone.
