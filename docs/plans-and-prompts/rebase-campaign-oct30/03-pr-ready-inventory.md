@@ -258,16 +258,16 @@ After the 29-round rebase was complete, 12 pre-existing test failures were surgi
 | `87786881` | **ProxyFetch:** route proxy-aware hosts before TLS default-deny check + combo bad-request + key-access backup name prefix match |
 | `ccd45f12` | **Baseline:** reconcile `known-fails.txt` for round 28 (remove 12 fixed entries) |
 
-### Current known-fails.txt (13 entries remaining)
+### Current known-fails.txt (11 entries remaining)
 
 | Test | Reason | Fix Required |
 |------|--------|--------------|
 | `claude-header-forwarding.test.js` (1 test) | `gotScraping` deliberately disabled in proxyFetch.js | Re-enable gotScraping to fix |
 | `oauth-cursor-auto-import.test.js` (8 tests) | macOS Cursor DB paths don't exist in CI | Requires Cursor installation |
 | `mimo-free.live.test.js` (1 test) | Live call — upstream now answers "Unsupported model mimo-auto" | Update test or provider catalog |
-| `db-benchmark.test.js` (suite) | Benchmarks lowdb (removed in bee8dad9) | Suite cannot load |
 | `embeddings.cloud.test.js` (suite) | Imports `cloud/` worker (not in this repo) | Suite cannot load |
-| `memory-enhancements.test.js` (suite) | Imports missing memory-enhancements module | Suite cannot load |
+
+**Round 29 fixes** (2026-10-31): recovered 37 tests from 2 suite-load failures — `memory-enhancements.test.js` (node:test → vitest, 32 tests) and `db-benchmark.test.js` (lowdb devDependency, 5 tests). Also removed 2 obsolete windsurf snapshots.
 
 ---
 
