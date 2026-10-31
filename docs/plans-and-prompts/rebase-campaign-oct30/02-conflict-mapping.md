@@ -1208,3 +1208,23 @@ EHOSTDOWN is a definitive network-layer response — the machine's interface is 
 | ~~mini5~~ | ❌ DECOMMISSIONED | N/A |
 
 **5/7 reachable hosts at latest. 2/7 powered off.** No action possible until operator powers them on.
+
+### Post-campaign cleanup — stale worktree purge (2026-10-31)
+
+**Worktrees deleted**: 27 total (~5.5G reclaimed)
+- 13 internal (`worktrees/t_*`): 3.6G
+- 14 external (`9router-wt-*`, `9router-work-*`): ~1.95G
+
+**Safety verification method** (before each deletion):
+1. Check `git rev-list --count v5-vscode-works..<branch>` — if 0, branch is merged
+2. For non-zero counts: run cherry-pick detection (search v5-vscode-works log for tip commit message via `-S`)
+3. Verify `git merge-base --is-ancestor <tip> v5-vscode-works` where applicable
+4. Only delete branches where tip commit is either (a) already an ancestor of v5-vscode-works, or (b) verified cherry-picked into v5-vscode-works
+
+**Result**: All 27 branches verified to have zero unique content — every fix was already cherry-picked into v5-vscode-works during the 22 repair rounds of the campaign.
+
+**Branch count after cleanup**: 37 remaining (down from ~60+).
+
+**Reusable cleanup script**: `/tmp/wt-cleanup.sh` — uses absolute paths to `/usr/bin/git`, `/bin/rm`, etc. to avoid PATH corruption in shell loops with pipes. Handles both `git worktree remove` and manual `rm -rf` fallback with `git worktree prune`.
+
+Lesson: **Shell PATH corruption in zsh for-loops with pipes** — when iterating worktrees with `git -C "$path" ... | tail`, the subshell sometimes loses PATH entries, leaving `git`, `tail`, `wc` as "command not found." Workaround: use absolute paths (`/usr/bin/git`), write the loop to a bash script, or avoid pipes inside the loop body.
