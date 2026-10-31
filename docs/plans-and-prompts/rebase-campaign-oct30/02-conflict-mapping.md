@@ -1158,28 +1158,26 @@ For many rounds I reported mini5 as "DOWN — ssh timeout, network/hardware" and
 
 Lesson: **when a fleet host is unreachable, try ALL configured addresses (LAN, Tailscale, mDNS, VPN) before declaring it "down"**. Different failure modes reveal different truths — a timeout suggests network/hardware, a hostkey mismatch suggests reimaging or IP reassignment, a "no route to host" suggests the machine is gone.
 
-### Round 28 final — proxyFetch routing fix + known-fails reconciliation (2026-10-31)
+### Round 28 — pre-existing failure fixes + known-fails reconciliation (2026-10-31)
 
-| File | What was fixed | Strategy |
+**Honest correction**: earlier drafts of this section claimed a proxyFetch routing fix for `claude-header-forwarding`. That was wrong — commit `87786881` actually contains combo bad-request + key-access backup-name fixes (the commit message was misleading). The `claude-header-forwarding` test still fails because the entire gotScraping block in `proxyFetch.js` (lines 9-95) is deliberately commented out as "Disabled: not in use". No routing change can fix a test that expects a disabled feature. It stays in known-fails.txt with that explanation.
+
+| Commit | What was fixed | Tests recovered |
 |---|---|---|
-| `open-sse/utils/proxyFetch.js` | Proxy-aware host routing (gotScraping) moved above TLS default-deny block | Surgical reorder |
-| `tests/__baseline__/known-fails.txt` | Reconciled: removed 10 fixed entries, 9 remain | Reconciliation |
+| `5c7caed9` | translator text-collapse + NDJSON auto-detect (3 source files + 1 snapshot) | 5 |
+| `f92cc6d4` | kiro top-level systemPrompt removal + claude streaming tool sanitization | 2 |
+| `d7a29d55` | combo-autoswitch reference stability + headroom reasoning-skip | 3 |
+| `87786881` | combo bad-request hard-stop + key-access backup name prefix match | 2 |
+| `89c0a0ab` | tracking doc update |
+| `ccd45f12` | known-fails.txt reconciliation + tracking doc correction | 0 (documentation) |
 
-**Final suite state**: 5224 passed / 9 failed (13 recovered in round 28)
+**Final suite state**: 5223 pass / 10 individual failures + 3 suite-load failures = 13 entries in known-fails.txt. Regression gate passes.
 
-**Remaining 9 failures** (all genuinely unfixable without external changes):
-- 8× oauth-cursor-auto-import: requires macOS Cursor DB at specific paths
+**Remaining 13 known failures** (all genuinely unfixable without external changes):
+- 1× claude-header-forwarding: gotScraping TLS fingerprinting deliberately disabled in proxyFetch.js (entire block commented out)
+- 8× oauth-cursor-auto-import: requires macOS Cursor DB at specific paths that don't exist in test environments
 - 1× mimo-free.live: requires live provider credentials
-- 3× suite-load failures (db-benchmark, embeddings.cloud, memory-enhancements): missing modules not in this repo
-
-**Round 28 commits** (5 total):
-| Commit | What | Tests recovered |
-|---|---|---|
-| `5c7caed9` | translator text-collapse + NDJSON auto-detect | 5 |
-| `f92cc6d4` | kiro systemPrompt + claude streaming sanitization | 2 |
-| `d7a29d55` | combo autoswitch + headroom reasoning-skip | 3 |
-| `e3e4e3f2` | combo bad-request hard-stop + key-access backup name | 2 |
-| TBD | proxyFetch routing + known-fails reconciliation | 1 |
+- 3× suite-load failures (db-benchmark, embeddings.cloud, memory-enhancements): missing modules not in this repo (cloud/ worker, lowdb, memory-enhancements module)
 
 **Campaign total**: 22 repair rounds + 6 verification/closure rounds + 1 pre-existing failure fix round = 29 rounds.
-**Total tests recovered across campaign**: 419 (rebase) + 13 (pre-existing) + 10 (round 28) = 442.
+**Total tests recovered across campaign**: 419 (rebase) + 13 (pre-existing, rounds 1-22) + 12 (round 28) = 444.
