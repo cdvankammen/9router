@@ -1181,3 +1181,30 @@ Lesson: **when a fleet host is unreachable, try ALL configured addresses (LAN, T
 
 **Campaign total**: 22 repair rounds + 6 verification/closure rounds + 1 pre-existing failure fix round = 29 rounds.
 **Total tests recovered across campaign**: 419 (rebase) + 13 (pre-existing, rounds 1-22) + 12 (round 28) = 444.
+
+### Fleet diagnostic — nmox + pmox confirmed DOWN (2026-10-31)
+
+Applied the round 27 diagnostic path (try ALL configured addresses):
+
+| Host | LAN IP | Tailscale DNS | mDNS | Verdict |
+|------|--------|---------------|------|----------|
+| nmox | 10.2.0.26 — timeout | nmox.dohne-vega.ts.net — timeout | nmox.local — **Host is down** (EHOSTDOWN) | POWERED OFF |
+| pmox | 10.2.0.90 — timeout | pmox.dohne-vega.ts.net — timeout | pmox.local — **Host is down** (EHOSTDOWN) | POWERED OFF |
+
+EHOSTDOWN is a definitive network-layer response — the machine's interface is not responding. This is not a routing issue, SSH config problem, or transient blip. Both hosts are physically off or their NICs are down.
+
+**Impact**: nmox and pmox have the 734-line skill (round 27) but NOT the 768-line version (round 28 lesson). They will receive the update next time they boot and are reachable.
+
+**Fleet state (final, honest)**:
+| Host | Status | Skill version |
+|------|--------|---------------|
+| mini | ✅ UP | 768 lines |
+| mini2 | ✅ UP | 768 lines |
+| mini3 | ✅ UP | 768 lines |
+| mini4 | ✅ UP | 768 lines |
+| cmox | ✅ UP | 768 lines |
+| nmox | ❌ DOWN (EHOSTDOWN) | 734 lines (missing round 28 lesson) |
+| pmox | ❌ DOWN (EHOSTDOWN) | 734 lines (missing round 28 lesson) |
+| ~~mini5~~ | ❌ DECOMMISSIONED | N/A |
+
+**5/7 reachable hosts at latest. 2/7 powered off.** No action possible until operator powers them on.
