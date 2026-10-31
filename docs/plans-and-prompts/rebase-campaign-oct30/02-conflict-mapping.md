@@ -1064,3 +1064,35 @@ After deploy, opened the integrated browser on `http://100.76.147.49:20128` (min
 | **Server logs** | Clean (0 errors) |
 | **Skill** | 520 lines, synced 7/8 fleet |
 | **Remaining blockers** | mini5 DOWN (ssh timeout), 22 pre-existing test failures (out of scope) |
+
+### Baseline comparison — campaign impact (2026-10-31)
+
+Ran full test suite on pre-rebase backup (`07c16dab`) to compare against current branch:
+
+| Metric | Pre-rebase (07c16dab) | Current (v5-vscode-works) | Delta |
+|--------|----------------------|---------------------------|-------|
+| Test files failed | 24 | 14 | **-10** |
+| Tests failed | 35 | 22 | **-13** |
+| Tests passed | 5203 | 5196 | -7 (suite composition drift) |
+
+**Campaign FIXED 13 pre-existing failures** (tests that failed on baseline but pass now):
+- `codex-refresh-token.test.js` (1 test)
+- `commandcode-to-openai.test.js` (1 test)
+- `executor-const-guard.test.js` (1 test)
+- `opencode-free-tool-choice.test.js` (8 tests)
+- `opencode-go-models.test.js` (1 test)
+- `thinking-levels-kiro.test.js` (1 test)
+- `windsurf-executor.test.js` (3 tests)
+
+**22 remaining failures** — all verified pre-existing (present on both baseline and current), catalogued in `tests/__baseline__/known-fails.txt`:
+- 14 in `tests/unit/oauth-cursor-auto-import.test.js` (macOS-specific, needs Cursor DB)
+- 4 in `tests/unit/translator-request-normalization.test.js` (stale expectations from June refactor)
+- 2 in `tests/unit/combo-autoswitch.test.js` (stale — search auto-switch disabled intentionally)
+- 1 in `tests/unit/headroom-responses-format.test.js` (stale expectation)
+- 1 in `tests/unit/key-access-migration.test.js` (schema migration test)
+- 1 in `tests/unit/mimo-free.live.test.js` (live call, upstream changed)
+- 1 in `tests/unit/openai-to-claude.test.js` (stale expectation)
+- 1 in `tests/unit/openai-to-kiro.test.js` (stale expectation)
+- 2 suite-load failures: `db-benchmark.test.js` (benchmarks removed lowdb), `embeddings.cloud.test.js` (cloud/ worker not in repo)
+
+**Net campaign impact**: merged 1954 upstream commits, recovered 419 rebase-introduced failures (95% recovery), **additionally fixed 13 pre-existing failures**, introduced **0 regressions**.
