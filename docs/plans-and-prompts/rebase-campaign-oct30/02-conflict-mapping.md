@@ -1228,3 +1228,38 @@ EHOSTDOWN is a definitive network-layer response — the machine's interface is 
 **Reusable cleanup script**: `/tmp/wt-cleanup.sh` — uses absolute paths to `/usr/bin/git`, `/bin/rm`, etc. to avoid PATH corruption in shell loops with pipes. Handles both `git worktree remove` and manual `rm -rf` fallback with `git worktree prune`.
 
 Lesson: **Shell PATH corruption in zsh for-loops with pipes** — when iterating worktrees with `git -C "$path" ... | tail`, the subshell sometimes loses PATH entries, leaving `git`, `tail`, `wc` as "command not found." Workaround: use absolute paths (`/usr/bin/git`), write the loop to a bash script, or avoid pipes inside the loop body.
+
+### Fleet closure — nmox + pmox back online, 7/7 synced at 806 lines (2026-10-31)
+
+The two hosts that were confirmed EHOSTDOWN (powered off) during the previous diagnostic came back online. Both were synced to the current 806-line skill across all 4 skill directories.
+
+| Host | Previous state | Current state | Skill lines |
+|------|----------------|---------------|-------------|
+| mini | ✅ UP | ✅ UP | 806 |
+| mini2 | ✅ UP | ✅ UP | 806 |
+| mini3 | ✅ UP | ✅ UP | 806 |
+| mini4 | ✅ UP | ✅ UP | 806 |
+| cmox | ✅ UP | ✅ UP | 806 |
+| nmox | ❌ EHOSTDOWN (734 lines) | ✅ UP | **806** |
+| pmox | ❌ EHOSTDOWN (734 lines) | ✅ UP | **806** |
+
+**Total deployments**: 7 hosts × 4 skill dirs = **28 deployments at 806 lines**.
+
+This is the true final closure of the campaign's fleet deployment goal — every reachable host (and mini5 was decommissioned, not a deferred item) now carries the complete skill including:
+- 8-stage rebase methodology
+- Multi-model per-user discovery (round 26)
+- Generalized CDP visual verification (round 26)
+- Fleet host unreachable diagnosis (round 27)
+- Commit message honesty + pre-existing failure triage (round 28)
+- Safe worktree purge methodology (post-campaign)
+
+**Campaign truly final state** (nothing left unresolved):
+- Branch: `v5-vscode-works` @ `4c7d9d36`, 1966 ahead / 0 behind upstream
+- Tests: 5223 pass / 13 catalogued known-failures (all genuinely unfixable without external changes)
+- Build: `vJKp96vZb0vcmxw1kIaZc` live on mini4
+- Tracking doc: 1210+ lines (29 rounds + 2 post-campaign items)
+- Skill: 806 lines @ `01aaae0` on `cdvankammen/rebase-campaign.git`
+- Fleet: **7/7** (5 mini-series + cmox + nmox + pmox), all at 806 lines
+- Worktrees: 1 (the main worktree) — 27 stale campaign-era worktrees purged, ~5.5G reclaimed
+- Branches: 37 (down from 60+)
+- Deferred items: **0**
