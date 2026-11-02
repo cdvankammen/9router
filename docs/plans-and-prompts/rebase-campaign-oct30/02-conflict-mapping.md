@@ -1596,3 +1596,26 @@ Browser walk of BUILD_ID `89_CgCqeJhsl-uqDer7Ya` on `100.76.147.49:20128` (logge
 | /dashboard/usage | 9Router Proxy | 0 | Header + controls render | PASS |
 
 **5/5 PASS, 0 failed resources across all pages.** Combos page confirms upstream's System One smart router (from dropped da52d462 replacement, PR #4975) renders correctly — the KEEP+MERGE of our branch with upstream's router works in production.
+
+### Round 32 — Local DB fingerprint repair (2026-11-02)
+
+**Issue**: Local DB had a stale 4-entry `migrationRegistryFingerprint` (stamped during rebase when registry was temporarily smaller) while schema was fully at v8. Every boot triggered refusal logic, persisted warnings to `_meta.migrationWarnings`, and returned early without re-stamping. Mini4 production was unaffected (full 7-entry fingerprint).
+
+**Root cause**: The refusal logic at `src/lib/db/migrate.js:306` treats any fingerprint mismatch as divergence, including normal append-only registry growth. When `currentSchemaVer >= targetVer` (no pending migrations), the stored fingerprint is irrelevant — there's nothing to apply, so the mismatch is cosmetic.
+
+**Verification before fix**:
+- `schemaVersion`: 8 (correct)
+- `backupSchemaVersion`: 8 (correct)
+- `migrationRegistryFingerprint`: `1:initial|3:message-facets|4:message-annotations|5:add-seen-models` (stale, 4 entries)
+- Expected: `...|6:add-access-columns|7:apikey-encryption-at-rest|8:usage-history-apikey-encryption` (7 entries)
+- All migration effects verified present: apiKeys.accessRestricted/accessAllow/keyHash columns, idx_ak_hash index, apiKey encryption (1/1 rows), usageHistory.apiKeyHash column, apiKey encryption (2/2 rows), seenModels/message_facets/message_annotations/saved_views tables
+
+**Repair**:
+1. Backed up DB to `~/.9router/db/backups/pre-fingerprint-fix-20261102-025536/data.sqlite`
+2. `UPDATE _meta SET value = '<expected>' WHERE key = 'migrationRegistryFingerprint'`
+3. `DELETE FROM _meta WHERE key = 'migrationWarnings'`
+4. Restarted dev server — migrations API now reports `diverged: false`, `warnings: null`
+
+**Code fix consideration**: The refusal logic could be relaxed to allow prefix matches (stored is prefix of expected = normal append), but the conservative approach (any mismatch = refuse) is safer for production. The local DB was a one-off from the rebase campaign; future normal development won't hit this because the fingerprint is stamped after every successful migration run.
+
+**Verdict**: Local-only metadata repair, no schema changes, no code changes needed. Production unaffected.
