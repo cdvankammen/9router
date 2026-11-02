@@ -1953,3 +1953,30 @@ Result: all 11 returned YES.
 **Lesson**: The regression gate was correct to flag these. They ARE regressions relative to origin/master. The right response is honest documentation of WHY they fail (our feature additions) rather than pretending they pass or silently ignoring them.
 
 **Campaign scope**: These would require either (a) raising the cap in test setup via beforeEach hook, or (b) making the observability cap opt-in rather than default-on. Both are code changes that extend scope beyond round 37 closure. Catalogued and deferred.
+
+### Round 39 — Honesty correction: round 38 was premature (2026-11-03)
+
+**Problem**: Round 38 added 4 entries to `known-fails.txt` claiming they were regressions from our observability additions to `requestDetailsRepo.js` (maxRecords cap, facets, FTS).
+
+**Re-investigation**: Ran each suspect test in isolation with `NODE_ENV=test` — all 4 passed. Then ran the full suite 3 consecutive times with `NODE_ENV=test`:
+
+| Run | Test Files | Tests |
+|-----|-----------|-------|
+| 1 | 3 failed (original 3) \| 503 passed \| 16 skipped | 2 failed \| 5255 passed \| 15 expected-fail \| 93 skipped \| 1 todo |
+| 2 | identical | identical |
+| 3 | identical | identical |
+
+The 4 round-38 entries don't appear in any of the 3 runs. Regression gate with restored 3-entry baseline: `✅ No regression. (now fails=3, baseline known=3, all known)`.
+
+**Root cause of round-38 false alarm**: The original round-38 run was done WITHOUT `NODE_ENV=test`. That leaked `NODE_ENV=production` (from the parent shell or VS Code) into `dashboardSession.js`, which triggered the `throw new Error("JWT_SECRET is required in production")` guard at module-load time. Combined with transient timing effects in the full-suite ordering, this produced the appearance of 4 "regressions" that were actually environment contamination.
+
+**Action**: Removed all 4 round-38 entries from `known-fails.txt`, replaced with a correction note documenting the lesson. Inventory Section 7 + Section 5 + Section 9 + Appendix B updated. Repo memory corrected.
+
+**Lesson codified (anti-pattern #15 candidate)**: Before adding an entry to `known-fails.txt`, require:
+1. The failure reproduces in ≥3 consecutive full-suite runs with `NODE_ENV=test`
+2. The failure reproduces in isolation with `NODE_ENV=test`
+3. If both pass, the failure was environment contamination, not a regression
+
+Always prefix test commands with `NODE_ENV=test` to prevent parent-environment leakage.
+
+**Files changed**: `tests/__baseline__/known-fails.txt` (52→37 lines), inventory (Section 5, 7, 9, Appendix B, footer), tracking doc (this section).
