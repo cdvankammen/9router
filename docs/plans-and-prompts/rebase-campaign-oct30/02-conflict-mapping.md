@@ -1665,3 +1665,14 @@ Browser walk of BUILD_ID `89_CgCqeJhsl-uqDer7Ya` on `100.76.147.49:20128` (logge
 - 2 stale `@typescript-eslint/no-require-imports` disable comments in `cursor/auto-import/route.js` and `zedCredentials.js` reference a rule not configured in `eslint.config.mjs`
 - 2 `react/no-unescaped-entities` in proxy-pools page (cosmetic)
 - No CI workflow runs ESLint — these are non-blocking
+
+### Upstream issue pending submission — combos page Link bug (2026-11-02)
+
+Prepared issue on `decolua/9router` for the round 34 Link import bug. The upstream `origin/master` has the identical code (line 760 `<Link>` without import from `next/link`), introduced by PR #4975.
+
+**Upstream issue:** (pending user submission via GitHub issue form)
+**Title:** [Bug] Combos page crashes with ReferenceError when Smart Router provider is unconfigured — missing Link import
+**Labels:** bug
+**Evidence:** ESLint `react/jsx-no-undef` at `combos/page.js:760:24`, confirmed upstream at `1fe586bb`
+
+This is the first concrete item from the deferred upstream PR queue — prepared as a standalone issue rather than bundled into the security PR, since it's a clear-cut bug with a one-line fix.
