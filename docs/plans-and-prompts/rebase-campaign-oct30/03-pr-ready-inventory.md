@@ -1,7 +1,7 @@
 # PR-Ready Inventory — v5-vscode-works Rebase Campaign
 
 **Date:** 2026-11-02
-**Branch:** `v5-vscode-works` @ `4f4bc37b`
+**Branch:** `v5-vscode-works` @ `0f58a741`
 **Fork:** `fork/v5-vscode-works` (pushed)
 **Pre-rebase baseline:** `07c16dab` (v5-vscode-works-pre-rebase-20261030)
 **Campaign rounds:** 29 rebase + 7 post-rebase recovery (production deploys, fingerprint repair, verify-script fix, Link import bug, skill update + fleet redeploy) (36 total, 100% complete — 0 behind origin/master)
@@ -304,16 +304,16 @@ After the 29-round rebase was complete, 12 pre-existing test failures were surgi
 
 | Host | Status | Skill Lines | Build |
 |------|--------|-------------|-------|
-| mini | ✅ UP | 944 | — |
-| mini2 | ✅ UP | 944 | absorbed mini5 IPs |
-| mini3 | ✅ UP | 944 | — |
-| mini4 | ✅ UP | 944 | `ng_ES22tSeJkjARlIQ4jS` (production, round 36 Link fix) |
-| cmox | ✅ UP | 944 | — |
-| nmox | ✅ UP | 944 | was EHOSTDOWN, recovered |
-| pmox | ✅ UP | 944 | was EHOSTDOWN, recovered |
+| mini | ✅ UP | 945 | — |
+| mini2 | ✅ UP | 945 | absorbed mini5 IPs |
+| mini3 | ✅ UP | 945 | — |
+| mini4 | ✅ UP | 945 | `ng_ES22tSeJkjARlIQ4jS` (production, round 36 Link fix) |
+| cmox | ✅ UP | 945 | — |
+| nmox | ✅ UP | 945 | was EHOSTDOWN, recovered |
+| pmox | ✅ UP | 945 | was EHOSTDOWN, recovered |
 | ~~mini5~~ | DECOMMISSIONED | N/A | IPs reassigned to mini2 |
 
-**Skill:** `cdvankammen/rebase-campaign.git` @ `920d19d` (944 lines, includes anti-patterns #10-13)
+**Skill:** `cdvankammen/rebase-campaign.git` @ `fa6f9b7` (945 lines, includes anti-patterns #10-13 + browser gotcha #9)
 **Deployed:** 7/7 hosts × 4 directories = **28 deployments**
 **Directories:** `~/.agents/skills`, `~/.hermes/skills`, `~/.copilot/skills`, `~/.claude/skills`
 **Global install:** `install.sh` (one-command deploy to all 4 dirs)
@@ -406,4 +406,4 @@ f92cc6d4 fix(translator): kiro systemPrompt + claude streaming tool sanitization
 
 ---
 
-*Updated 2026-11-02. Campaign complete through round 36. Branch `v5-vscode-works` is PR-ready. Production deployed on mini4 (BUILD_ID `ng_ES22tSeJkjARlIQ4jS`). Local DB fingerprint repaired (round 32). Regression baseline script fixed (round 33). Combos page Link import bug fixed (round 34 — also present upstream). Skill at 944 lines deployed to 28/28 fleet (round 35). Link fix deployed to production (round 36).*
+*Updated 2026-11-02. Campaign complete through round 36. Branch `v5-vscode-works` is PR-ready. Production deployed on mini4 (BUILD_ID `ng_ES22tSeJkjARlIQ4jS`). Local DB fingerprint repaired (round 32). Regression baseline script fixed (round 33). Combos page Link import bug fixed (round 34 — also present upstream, issue prepared but not yet submitted). Skill at 945 lines deployed to 28/28 fleet (round 35 + gotcha #9 added round 36). Link fix deployed to production (round 36). Stage 7 visual verification completed honestly (round 36 — all 5 pages PASS with measured resource counts).*
