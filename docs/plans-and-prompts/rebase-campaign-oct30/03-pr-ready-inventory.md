@@ -1,7 +1,7 @@
 # PR-Ready Inventory — v5-vscode-works Rebase Campaign
 
 **Date:** 2026-11-02
-**Branch:** `v5-vscode-works` @ `0f58a741`
+**Branch:** `v5-vscode-works` @ `9a58547b`
 **Fork:** `fork/v5-vscode-works` (pushed)
 **Pre-rebase baseline:** `07c16dab` (v5-vscode-works-pre-rebase-20261030)
 **Campaign rounds:** 29 rebase + 7 post-rebase recovery (production deploys, fingerprint repair, verify-script fix, Link import bug, skill update + fleet redeploy) (36 total, 100% complete — 0 behind origin/master)
@@ -10,10 +10,10 @@
 
 | Metric | Count |
 |--------|-------|
-| Commits ahead of `origin/master` | **1997** |
-| Commits ahead of pre-rebase baseline `07c16dab` | **1516** |
+| Commits ahead of `origin/master` | **2002** |
+| Commits ahead of pre-rebase baseline `07c16dab` | **1521** |
 | Upstream commits carried from `origin/master` | **1436** |
-| Rebase-repair specific commits (our merge work) | **47** |
+| Rebase-repair specific commits (our merge work) | **40** |
 | Upstream PRs absorbed (unique) | **34** |
 | Locked multi-model verdicts | **8** |
 | Stage-3 scrutiny-queue items (KEEP+MERGE) | **15** |
@@ -283,7 +283,7 @@ After the 29-round rebase was complete, 12 pre-existing test failures were surgi
 
 | Item | Status | Notes |
 |------|--------|-------|
-| Upstream security PR to `decolua/9router` | **Deferred** | Requires explicit operator direction. 88 `fix(security)` + 61 `docs(security)` commits contain findings |
+| Upstream security PR to `decolua/9router` | **Deferred** | Requires explicit operator direction. 11 `fix(security)` commits contain findings (SSRF, auth gates, TLS) |
 | `gotScraping` TLS fingerprinting re-enable | **Deferred** | Deliberately disabled; test expects the disabled feature |
 | Port items from dropped smart-router | **Deferred** | `activeRequests` concurrency tracking, 30-min TTL, `costQualityTradeoff`/`maxCandidates` — to be ported into upstream's #4975 System One |
 | `sourceApps.js` standalone extraction | **Deferred** | Was part of dropped B18; potentially useful as independent observability utility |
@@ -342,6 +342,8 @@ After the 29-round rebase was complete, 12 pre-existing test failures were surgi
 | `531ceb7b` | Round 34 — combos page missing Link import (latent ReferenceError, also present in upstream origin/master) |
 | `87883f8f` | Round 35 — skill updated to 944 lines with rounds 32-34 lessons + anti-patterns #11-13, fleet redeployed 28/28 |
 | `4f4bc37b` | Round 36 — production deploy of `ng_ES22tSeJkjARlIQ4jS` to mini4 (Link fix live) |
+| `1afe8ff2` | Round 36 — production incident: mini4 service crash + recovery via launchctl |
+| `9a58547b` | Honesty correction — `fix(security)` count was 88 claimed, actually 11; `docs(security)` was 61 claimed, actually 0. Full prefix table replaced with verified git log counts |
 
 ---
 
@@ -373,6 +375,11 @@ After the 29-round rebase was complete, 12 pre-existing test failures were surgi
 ## Appendix B: Key Commit Chain (most recent first)
 
 ```
+9a58547b docs: honesty correction — fix(security) count was 88 claimed, actually 11
+c3635a3d docs: honesty correction — fix(security) count was 88 claimed, actually 11
+1afe8ff2 docs: production incident — mini4 service crash + recovery (round 36)
+1f394f83 docs: update PR-ready inventory — skill at 945 lines, honest upstream issue status
+0f58a741 docs: round 36 Stage 7 visual verification on ng_ES22tSeJkjARlIQ4jS (honest re-run)
 4f4bc37b docs: round 36 — production deploy of ng_ES22tSeJkjARlIQ4jS (Link fix live)
 87883f8f docs: round 35 — skill update with rounds 32-34 lessons + fleet redeploy
 23045121 docs: prepared upstream issue for combos page Link bug (pending submission)

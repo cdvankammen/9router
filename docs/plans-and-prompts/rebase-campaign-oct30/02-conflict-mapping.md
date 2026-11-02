@@ -1794,3 +1794,33 @@ Browser walk of the new build deployed in round 36:
 **Fix**: Replaced the entire prefix table in the inventory with verified counts. Added honesty correction note.
 
 **Lesson reinforced**: Always verify tracking doc claims against actual tool output. Numbers carried forward without re-verification become lies. Run `git log --format='%s' | grep -oE '^[a-z]+\([^)]+\)' | sort | uniq -c | sort -rn` before publishing commit statistics.
+
+### Documentation accuracy audit — full inventory verification (2026-11-02)
+
+After the security commit count honesty correction, audited ALL numeric claims in the PR-ready inventory against actual git log output.
+
+**Stale claims found and fixed:**
+| Claim | Was | Now | Source |
+|-------|-----|-----|--------|
+| Branch hash | `0f58a741` | `9a58547b` | `git log -1` |
+| Ahead of origin/master | 1997 | 2002 | `git rev-list --count origin/master..HEAD` |
+| Ahead of baseline | 1516 | 1521 | `git rev-list --count 07c16dab..HEAD` |
+| Rebase-repair commits | 47 | 40 | 17 fix + 18 docs + 4 security + 1 correction |
+| Section 6 security reference | "88 + 61" | "11 fix(security)" | matches corrected prefix table |
+| Appendix B commit chain | missing 5 commits | added through `9a58547b` | `git log --oneline` |
+
+**Verified correct (no change needed):**
+- Upstream carried: 1436 ✅
+- Section 1 PRs: 34 ✅ (counted `**#NNNN**` patterns)
+- Locked verdicts: 8 ✅
+- Stage-3 scrutiny items: 15 ✅
+- Known-fails: 3 ✅
+- Skill lines: 945 ✅
+- Fleet: 7/7 × 4 dirs = 28 ✅
+
+**Campaign stats at audit time:**
+- 1521 commits above baseline (07c16dab..HEAD)
+- 2002 ahead of origin/master, 0 behind
+- 184 unique files touched, +4072/-3143 lines
+- 395 unique PR references in commit subjects
+- 618 commits (40%) without conventional prefix
