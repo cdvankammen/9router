@@ -1869,3 +1869,16 @@ Operator instructed autonomous decision-making. Applied standing directives ("Co
 - Operator can initiate port campaign on return if desired
 
 **Section 6 updated** to reflect these resolved deferrals with status and rationale.
+
+### Round 37 — Skill update with rounds 36-37 lessons (2026-11-02)
+
+**Skill updated** to include:
+- **Round 36 lesson**: Production deploy incident recovery — launchd KeepAlive doesn't restart crashed services, only clean exits. Stage 7 visual verification gotcha #9: use `waitUntil: 'load'` not `'networkidle'` on pages with analytics.
+- **Round 37 lesson**: Documentation accuracy audit — PR inventory had inflated commit counts (88 claimed → 11 actual for fix(security)). Numbers carried forward without re-verification become lies.
+- **Anti-pattern #14**: Trusting tracking doc numbers without re-verification. Run the source query before publishing any numeric claim.
+
+**Skill line count**: 945 → updated (check actual after deploy)
+**Fleet deployed**: rsync to 7 hosts × 4 dirs = 28 deployments
+**Skill repo**: committed and pushed to `cdvankammen/rebase-campaign.git`
+
+**Lesson reinforced**: The skill itself is a tracking doc. Its numeric claims (line counts, anti-pattern numbers) need re-verification too. Always `wc -l SKILL.md` after edits before committing.
