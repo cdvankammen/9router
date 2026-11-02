@@ -1676,3 +1676,19 @@ Prepared issue on `decolua/9router` for the round 34 Link import bug. The upstre
 **Evidence:** ESLint `react/jsx-no-undef` at `combos/page.js:760:24`, confirmed upstream at `1fe586bb`
 
 This is the first concrete item from the deferred upstream PR queue — prepared as a standalone issue rather than bundled into the security PR, since it's a clear-cut bug with a one-line fix.
+
+### Round 35 — Skill update + fleet redeploy (2026-11-02)
+
+**What**: Added rounds 32-34 lessons to the canonical rebase-campaign skill:
+- Round 32 lesson: SQLite metadata vs schema divergence (fingerprint repair)
+- Round 33 lesson: Baseline script comment filter
+- Round 34 lesson: ESLint as latent-bug detector (jsx-no-undef)
+- Anti-patterns #11-13 added
+
+**Skill state**: 883 → pending line count after commit
+
+**Fleet deploy**: rsync --delete from /tmp (anti-pattern #10 safe), all 7 hosts × 4 dirs = 28 deployments
+
+**Verification**: Independent SSH probe to each host confirms line count match
+
+**mini5 status**: Confirmed still a ghost Tailscale entry — SSH to mini5 returns hostname `mini2.local`, UUID `D73138F8-9101-5598-B784-FECAF70A586C` (identical to mini2). Not a separate host. Fleet is 7 real hosts.
