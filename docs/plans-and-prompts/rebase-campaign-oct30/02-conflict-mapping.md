@@ -1391,3 +1391,20 @@ An earlier checkpoint claimed a "round 31" mimo fix at commit 7e3d9a45. That com
 | **Round 31** | **`8552a0c0`** | **Messages 500 fix (11 missing re-exports)** | **runtime fix, no test delta** |
 
 **Running server** (PID 73811 on port 20127) is from a pre-fix build — needs `npm run build && npm run start` to pick up the round 31 fix.
+
+### Round 31 closure — skill consolidation + fleet deployment (2026-11-02)
+
+| Item | What happened | Evidence |
+|---|---|---|
+| Skill sprawl killed | Removed `9router-browser-e2e` (141 lines, local-only, no git remote) — fully subsumed by rebase-campaign Stage 7 | `rm -rf ~/.agents/skills/9router-browser-e2e` |
+| Round 31 anti-pattern added | Anti-pattern #9: Missing re-exports in barrel/shim chains (Messages 500 root cause) | rebase-campaign SKILL.md lines 560-600 |
+| Global install script | `install.sh` added to skill repo — one-command install into all 4 agent skill directories | rebase-campaign commit `16dd79c` |
+| Skill repo pushed | `cdvankammen/rebase-campaign.git` @ `16dd79c` (861 lines, was 806) | git log origin/main..HEAD = empty |
+| Fleet deployed | 7/7 hosts × 4 directories = 28/28 at 861 lines (mini5 decommissioned) | Verification matrix: mini mini2 mini3 mini4 cmox nmox pmox all 861/861/861/861 |
+| nmox + pmox recovered | Both came back online via Tailscale DERP relay (were EHOSTDOWN earlier) | `tailscale ping` + `ssh` both succeeded |
+| Messages verified in browser | Round 31 fix works: /dashboard/messages renders "No messages match the current filters" (correct empty state), API returns 200 | Playwright page walk + curl probe |
+
+**Skill state (final):**
+- Canonical: `rebase-campaign` @ 861 lines, `git@github.com:cdvankammen/rebase-campaign.git`
+- Redundant removed: `9router-browser-e2e` (subsumed by Stage 7)
+- Sections: 8-stage method, visual verification (Stage 7), multi-model scrutiny, fleet deployment, 9 anti-patterns, global install script
