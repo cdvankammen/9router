@@ -1619,3 +1619,26 @@ Browser walk of BUILD_ID `89_CgCqeJhsl-uqDer7Ya` on `100.76.147.49:20128` (logge
 **Code fix consideration**: The refusal logic could be relaxed to allow prefix matches (stored is prefix of expected = normal append), but the conservative approach (any mismatch = refuse) is safer for production. The local DB was a one-off from the rebase campaign; future normal development won't hit this because the fingerprint is stamped after every successful migration run.
 
 **Verdict**: Local-only metadata repair, no schema changes, no code changes needed. Production unaffected.
+
+### Round 33 — verify-no-regression baseline comment filter (2026-11-02)
+
+**Issue**: `tests/__baseline__/verify-no-regression.mjs` was including `#` comment lines in the `knownFails` Set, inflating the reported "baseline known=N" count. The file has 27 lines but only 3 actual test patterns — the script was reporting `baseline known=24` (all non-blank lines including comments).
+
+**Impact**: Cosmetic only. Regression detection was correct (no test name ever matches a comment line starting with `#`), so no false positives or negatives. The count just looked wrong in the output.
+
+**Fix**: Added `.filter(s => !s.startsWith("#"))` to the known-fails parser.
+
+**Before**: `✅ No regression. (now fails=3, baseline known=24, all known)`
+**After**: `✅ No regression. (now fails=3, baseline known=3, all known)`
+
+**Verification**: Re-ran against `/tmp/vitest-round32.json` — same 3 known fails, 0 regressions, count now accurate.
+
+**Full test suite state (round 33)**:
+- Total tests: 5366
+- Passed: 5270
+- Failed: 2 individual + 1 suite-load (all 3 in known-fails.txt)
+- Pending: 93
+- Todo: 1
+- Suites: 1635 total / 1630 pass / 5 fail
+
+**Commit**: `9e9869ef` fix(tests): filter comment lines in verify-no-regression baseline check
