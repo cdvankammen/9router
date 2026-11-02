@@ -1,10 +1,10 @@
 # PR-Ready Inventory — v5-vscode-works Rebase Campaign
 
 **Date:** 2026-11-02
-**Branch:** `v5-vscode-works` @ `944a4c72`
+**Branch:** `v5-vscode-works` @ `531ceb7b`
 **Fork:** `fork/v5-vscode-works` (pushed)
 **Pre-rebase baseline:** `07c16dab` (v5-vscode-works-pre-rebase-20261030)
-**Campaign rounds:** 29 rebase + 4 post-rebase recovery (production deploy, fingerprint repair, verify-script fix) (33 total, 100% complete — 0 behind origin/master)
+**Campaign rounds:** 29 rebase + 5 post-rebase recovery (production deploy, fingerprint repair, verify-script fix, Link import bug) (34 total, 100% complete — 0 behind origin/master)
 
 ## Commit Totals
 
@@ -13,7 +13,7 @@
 | Commits ahead of `origin/master` | **1987** |
 | Commits ahead of pre-rebase baseline `07c16dab` | **1506** |
 | Upstream commits carried from `origin/master` | **1436** |
-| Rebase-repair specific commits (our merge work) | **44** |
+| Rebase-repair specific commits (our merge work) | **45** |
 | Upstream PRs absorbed (unique) | **34** |
 | Locked multi-model verdicts | **8** |
 | Stage-3 scrutiny-queue items (KEEP+MERGE) | **15** |
@@ -334,6 +334,7 @@ After the 29-round rebase was complete, 12 pre-existing test failures were surgi
 | `b4137e20` | mini5 correction — ghost Tailscale entry, same hardware as mini2 |
 | `a8539269` | Round 32 — local DB fingerprint repair documented honestly as metadata-only |
 | `9e9869ef` | Round 33 — verify-no-regression baseline comment filter fix (cosmetic count accuracy) |
+| `531ceb7b` | Round 34 — combos page missing Link import (latent ReferenceError, also present in upstream origin/master) |
 
 ---
 
@@ -365,6 +366,7 @@ After the 29-round rebase was complete, 12 pre-existing test failures were surgi
 ## Appendix B: Key Commit Chain (most recent first)
 
 ```
+531ceb7b fix(ui): add missing Link import in combos page (latent ReferenceError on Smart Router unconfigured)
 944a4c72 docs: round 33 — verify-no-regression baseline comment filter fix
 9e9869ef fix(tests): filter comment lines in verify-no-regression baseline check
 2061c40d chore: commit nextjs auto-generated agent-rules block (written by next dev)
@@ -397,4 +399,4 @@ f92cc6d4 fix(translator): kiro systemPrompt + claude streaming tool sanitization
 
 ---
 
-*Updated 2026-11-02. Campaign complete through round 33. Branch `v5-vscode-works` is PR-ready. Production deployed on mini4 (BUILD_ID `89_CgCqeJhsl-uqDer7Ya`). Local DB fingerprint repaired (round 32). Regression baseline script fixed (round 33).*
+*Updated 2026-11-02. Campaign complete through round 34. Branch `v5-vscode-works` is PR-ready. Production deployed on mini4 (BUILD_ID `89_CgCqeJhsl-uqDer7Ya`). Local DB fingerprint repaired (round 32). Regression baseline script fixed (round 33). Combos page Link import bug fixed (round 34 — also present upstream).*
