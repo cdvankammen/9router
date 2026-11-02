@@ -1768,3 +1768,29 @@ Browser walk of the new build deployed in round 36:
 - BUILD_ID: ng_ES22tSeJkjARlIQ4jS (round 36 build confirmed)
 - Messages: HTTP 200
 - Combos: HTTP 200
+
+### Honesty correction — commit prefix counts (2026-11-02)
+
+**Problem**: The PR-ready inventory (03-pr-ready-inventory.md) has been claiming **88 `fix(security)`** and **61 `docs(security)`** commits since early in the campaign. Actual `git log` counts are **11** and **0** respectively.
+
+**Root cause**: The 88/61 numbers were from an early campaign estimate that was never verified against actual git history. They were carried forward through multiple inventory updates without re-verification — exactly the "never trust tracking doc claims" anti-pattern from the skill.
+
+**Real top-10 prefix counts** (07c16dab..HEAD):
+| Prefix | Actual |
+|--------|--------|
+| `feat(providers)` | 30 |
+| `fix(translator)` | 29 |
+| `refactor(open-sse)` | 25 |
+| `fix(kiro)` | 25 |
+| `fix(antigravity)` | 23 |
+| `fix(usage)` | 21 |
+| `fix(codex)` | 20 |
+| `fix(claude)` | 20 |
+| `fix(opencode)` | 18 |
+| `docs(rebase-repair)` | 18 |
+
+**618 commits** (40% of 1520 total) have no conventional commit prefix at all.
+
+**Fix**: Replaced the entire prefix table in the inventory with verified counts. Added honesty correction note.
+
+**Lesson reinforced**: Always verify tracking doc claims against actual tool output. Numbers carried forward without re-verification become lies. Run `git log --format='%s' | grep -oE '^[a-z]+\([^)]+\)' | sort | uniq -c | sort -rn` before publishing commit statistics.

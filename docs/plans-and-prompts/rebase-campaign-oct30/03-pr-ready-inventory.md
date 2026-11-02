@@ -22,28 +22,33 @@
 
 | Prefix | Count | Description |
 |--------|-------|-------------|
-| `fix(security)` | 88 | Security hardening across routes |
-| `docs(security)` | 61 | Security audit documentation |
-| `feat(providers)` | 32 | Provider registry + feature additions |
-| `fix(translator)` | 31 | Translator engine fixes |
-| `fix(kiro)` | 27 | Kiro provider-specific fixes |
+| `feat(providers)` | 30 | Provider registry + feature additions |
+| `fix(translator)` | 29 | Translator engine fixes |
 | `refactor(open-sse)` | 25 | Routing engine refactors |
-| `fix(usage)` | 24 | Usage tracking corrections |
+| `fix(kiro)` | 25 | Kiro provider-specific fixes |
 | `fix(antigravity)` | 23 | Antigravity provider fixes |
+| `fix(usage)` | 21 | Usage tracking corrections |
 | `fix(codex)` | 20 | Codex provider fixes |
 | `fix(claude)` | 20 | Claude provider fixes |
 | `fix(opencode)` | 18 | OpenCode provider fixes |
 | `docs(rebase-repair)` | 18 | Rebase tracking docs |
 | `fix(rebase-repair)` | 17 | Rebase merge corrections |
-| `feat(usage)` | 17 | Usage tracking features |
-| `docs(changelog)` | 17 | CHANGELOG updates |
-| `fix(tests)` | 16 | Test harness fixes |
+| `feat(usage)` | 15 | Usage tracking features |
 | `feat(cli-tools)` | 15 | CLI tools features |
-| `fix(ui)` | 13 | Dashboard UI fixes |
-| `fix(providers)` | 13 | Provider fixes |
 | `fix(gemini)` | 13 | Gemini provider fixes |
-| `fix(dashboard)` | 13 | Dashboard fixes |
 | `feat(antigravity)` | 13 | Antigravity features |
+| `fix(dashboard)` | 12 | Dashboard fixes |
+| `fix(security)` | 11 | Security hardening (SSRF, auth gates, TLS) |
+| `fix(providers)` | 11 | Provider fixes |
+| `fix(ui)` | 11 | Dashboard UI fixes |
+| `fix(headroom)` | 11 | Headroom/reasoning fixes |
+| `fix(qoder)` | 10 | Qoder provider fixes |
+| `fix(models)` | 10 | Model catalog fixes |
+| `fix(github)` | 10 | GitHub Copilot fixes |
+| `fix(capabilities)` | 10 | Capability detection fixes |
+| `feat(codex)` | 10 | Codex features |
+
+**Honesty correction (2026-11-02)**: Previous versions of this inventory claimed 88 `fix(security)` and 61 `docs(security)` commits. Actual counts are **11** and **0** respectively. The inflated numbers were carried forward from an early campaign estimate that was never verified against `git log --grep`. The table above now reflects actual `git log --format='%s' 07c16dab..HEAD` counts.
 
 ---
 
@@ -406,4 +411,4 @@ f92cc6d4 fix(translator): kiro systemPrompt + claude streaming tool sanitization
 
 ---
 
-*Updated 2026-11-02. Campaign complete through round 36. Branch `v5-vscode-works` is PR-ready. Production deployed on mini4 (BUILD_ID `ng_ES22tSeJkjARlIQ4jS`). Local DB fingerprint repaired (round 32). Regression baseline script fixed (round 33). Combos page Link import bug fixed (round 34 — also present upstream, issue prepared but not yet submitted). Skill at 945 lines deployed to 28/28 fleet (round 35 + gotcha #9 added round 36). Link fix deployed to production (round 36). Stage 7 visual verification completed honestly (round 36 — all 5 pages PASS with measured resource counts).*
+*Updated 2026-11-02. Campaign complete through round 36. Branch `v5-vscode-works` is PR-ready. Production deployed on mini4 (BUILD_ID `ng_ES22tSeJkjARlIQ4jS`). Local DB fingerprint repaired (round 32). Regression baseline script fixed (round 33). Combos page Link import bug fixed (round 34 — also present upstream, issue prepared but not yet submitted). Skill at 945 lines deployed to 28/28 fleet (round 35 + gotcha #9 added round 36). Link fix deployed to production (round 36). Stage 7 visual verification completed honestly (round 36 — all 5 pages PASS with measured resource counts). Commit prefix counts corrected to match actual git log (round 36 honesty correction).*
