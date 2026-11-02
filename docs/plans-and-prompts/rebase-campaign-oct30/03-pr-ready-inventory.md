@@ -344,6 +344,7 @@ After the 29-round rebase was complete, 12 pre-existing test failures were surgi
 | `4f4bc37b` | Round 36 — production deploy of `ng_ES22tSeJkjARlIQ4jS` to mini4 (Link fix live) |
 | `1afe8ff2` | Round 36 — production incident: mini4 service crash + recovery via launchctl |
 | `9a58547b` | Honesty correction — `fix(security)` count was 88 claimed, actually 11; `docs(security)` was 61 claimed, actually 0. Full prefix table replaced with verified git log counts |
+| `7854707e` | Full inventory accuracy audit — branch hash, ahead/behind, rebase-repair commits, security PR reference all stale and corrected. Catalog (Appendix A, 509 files) verified correct |
 
 ---
 
@@ -375,8 +376,8 @@ After the 29-round rebase was complete, 12 pre-existing test failures were surgi
 ## Appendix B: Key Commit Chain (most recent first)
 
 ```
+7854707e docs: fix remaining stale numeric claims in PR inventory
 9a58547b docs: honesty correction — fix(security) count was 88 claimed, actually 11
-c3635a3d docs: honesty correction — fix(security) count was 88 claimed, actually 11
 1afe8ff2 docs: production incident — mini4 service crash + recovery (round 36)
 1f394f83 docs: update PR-ready inventory — skill at 945 lines, honest upstream issue status
 0f58a741 docs: round 36 Stage 7 visual verification on ng_ES22tSeJkjARlIQ4jS (honest re-run)

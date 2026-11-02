@@ -1824,3 +1824,25 @@ After the security commit count honesty correction, audited ALL numeric claims i
 - 184 unique files touched, +4072/-3143 lines
 - 395 unique PR references in commit subjects
 - 618 commits (40%) without conventional prefix
+
+### Documentation accuracy audit — round 2: catalog + Appendix B (2026-11-02)
+
+After the prefix table and header corrections, continued the audit through Appendix A (catalog structure) and Appendix B (commit chain).
+
+**Appendix A catalog verification (all correct):**
+| Claimed | Actual | Status |
+|---------|--------|--------|
+| upstream-106.csv (106 entries) | 106 lines | ✅ |
+| branch-243.csv (243 entries) | 243 lines | ✅ |
+| unique-prs.txt (34 PRs) | 34 lines, all match Section 1 | ✅ |
+| verdicts/ (8 files) | 8 files, names match Section 4 table | ✅ |
+| stage3/scrutiny-queue.csv (15 items) | 15 lines | ✅ |
+| prs/ (34 files) | 34 files | ✅ |
+| stage1/diffs/ (106 diffs) | 106 files | ✅ |
+| stage2/diffs/ (243 diffs) | 243 files | ✅ |
+| commit-bodies/ (106 files) | 106 files | ✅ |
+| Total: 509 files, 2.9M | verified | ✅ |
+
+**Appendix B fix:** Commit `c3635a3d` was force-amended away during the tracking-doc amend in the previous round. Replaced with actual `7854707e`. Added `7854707e` to Section 9 honesty corrections table.
+
+**Lesson**: When using `git commit --amend` on a docs-only commit, any references to the pre-amend hash in other docs become stale. Always re-verify commit hashes after amend+push cycles.
