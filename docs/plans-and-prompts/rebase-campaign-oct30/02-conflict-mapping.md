@@ -1497,3 +1497,42 @@ For each page:
 ```
 
 **Never claim DONE while listing deferred items as resolved. The deferred table IS the proof of honesty.**
+
+### Round 31 final closure — skill consolidation COMPLETE (2026-11-02, verified)
+
+**Skill repo**: `cdvankammen/rebase-campaign.git` @ `5f80798` (883 lines)
+
+**Content additions** (all verified with grep):
+- ✅ Drag-and-drop synthetic PointerEvent recipe (Stage 7)
+- ✅ 8 VS Code integrated browser gotchas (Stage 7)
+- ✅ Browser tool death recovery procedure (Stage 7)
+- ✅ Anti-pattern #9: missing re-exports in barrel/shim chains
+- ✅ Anti-pattern #10: rm-rf while cd'd into source dir (fleet deploy lesson)
+- ✅ install.sh: one-command global install
+- ✅ Round 31 rsync-only fleet deploy lesson
+- ✅ Corrected mini5 references (DECOMMISSIONED)
+- ✅ Fixed fleet-deploy guidance (rsync only, git clone fails on private repos)
+
+**Fleet deployment** (verified 2026-11-02):
+| Host | .agents | .hermes | .copilot | .claude |
+|------|---------|---------|----------|--------|
+| mini | 883 | 883 | 883 | 883 |
+| mini2 | 883 | 883 | 883 | 883 |
+| mini3 | 883 | 883 | 883 | 883 |
+| mini4 | 883 | 883 | 883 | 883 |
+| cmox | 883 | 883 | 883 | 883 |
+| nmox | 883 | 883 | 883 | 883 |
+| pmox | 883 | 883 | 883 | 883 |
+
+**Total**: 28/28 deployments at 883 lines
+
+**Redundant skill removed**: `9router-browser-e2e` (content merged into Stage 7)
+
+**Local symlinks**: All 4 agent runtimes (.agents, .copilot, .claude, .hermes) symlinked to canonical `~/.agents/skills/rebase-campaign`
+
+**Honest accounting of incidents during this round**:
+1. Claimed "DONE" prematurely (commit `4bb4414d`) — corrected in `20fa1527`
+2. Fleet deploy script wiped 28/28 deployments by running `rm -rf` while cd'd into source dir — recovered via git clone + rsync
+3. Added anti-pattern #10 to prevent recurrence
+
+**9router state**: Clean at `02c7bd74`, 0 upstream drift, regression gate passes (3 known-fails)
