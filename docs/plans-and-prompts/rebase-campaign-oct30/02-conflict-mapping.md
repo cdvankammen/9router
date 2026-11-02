@@ -1882,3 +1882,23 @@ Operator instructed autonomous decision-making. Applied standing directives ("Co
 **Skill repo**: committed and pushed to `cdvankammen/rebase-campaign.git`
 
 **Lesson reinforced**: The skill itself is a tracking doc. Its numeric claims (line counts, anti-pattern numbers) need re-verification too. Always `wc -l SKILL.md` after edits before committing.
+
+### Post-closure maintenance — anti-pattern #14 self-application (2026-11-03)
+
+Next-day review applied the new anti-pattern #14 ("trusting tracking doc numbers without re-verification") to the inventory itself. Found 6 categories of stale claims that had accumulated during the Nov 2 closure flurry:
+
+| Claim | Was | Now |
+|-------|-----|-----|
+| Date | 2026-11-02 | 2026-11-03 |
+| Branch hash | `9a58547b` | `28a3334f` |
+| Round count | 36 | 37 |
+| Ahead of origin/master | 2002 | 2007 |
+| Ahead of baseline | 1521 | 1526 |
+| Fleet skill lines (Section 8) | 945 | 979 |
+| Skill repo hash | `fa6f9b7` | `087b7a9` |
+
+Plus added 3 new Section 9 entries, 4 new Appendix B commits, and rewrote the footer narrative.
+
+**Upstream drift check**: `git fetch origin master` → 0 behind. Last upstream commit still `1fe586bb` (v0.5.112, 2026-10-28). No trigger for round 38.
+
+**State**: Campaign remains closed at round 37. All three deferred items still awaiting operator direction. Production healthy. Fleet 28/28 at 979 lines.
