@@ -1,17 +1,17 @@
 # PR-Ready Inventory — v5-vscode-works Rebase Campaign
 
-**Date:** 2026-11-02
-**Branch:** `v5-vscode-works` @ `9a58547b`
+**Date:** 2026-11-03
+**Branch:** `v5-vscode-works` @ `12c2144e`
 **Fork:** `fork/v5-vscode-works` (pushed)
 **Pre-rebase baseline:** `07c16dab` (v5-vscode-works-pre-rebase-20261030)
-**Campaign rounds:** 29 rebase + 7 post-rebase recovery (production deploys, fingerprint repair, verify-script fix, Link import bug, skill update + fleet redeploy) (36 total, 100% complete — 0 behind origin/master)
+**Campaign rounds:** 29 rebase + 8 post-rebase recovery (production deploys, fingerprint repair, verify-script fix, Link import bug, skill update + fleet redeploy, honesty correction, autonomous decisions) (37 total, 100% complete — 0 behind origin/master)
 
 ## Commit Totals
 
 | Metric | Count |
 |--------|-------|
-| Commits ahead of `origin/master` | **2002** |
-| Commits ahead of pre-rebase baseline `07c16dab` | **1521** |
+| Commits ahead of `origin/master` | **2006** |
+| Commits ahead of pre-rebase baseline `07c16dab` | **1525** |
 | Upstream commits carried from `origin/master` | **1436** |
 | Rebase-repair specific commits (our merge work) | **40** |
 | Upstream PRs absorbed (unique) | **34** |
@@ -310,16 +310,16 @@ After the 29-round rebase was complete, 12 pre-existing test failures were surgi
 
 | Host | Status | Skill Lines | Build |
 |------|--------|-------------|-------|
-| mini | ✅ UP | 945 | — |
-| mini2 | ✅ UP | 945 | absorbed mini5 IPs |
-| mini3 | ✅ UP | 945 | — |
-| mini4 | ✅ UP | 945 | `ng_ES22tSeJkjARlIQ4jS` (production, round 36 Link fix) |
-| cmox | ✅ UP | 945 | — |
-| nmox | ✅ UP | 945 | was EHOSTDOWN, recovered |
-| pmox | ✅ UP | 945 | was EHOSTDOWN, recovered |
+| mini | ✅ UP | 979 | — |
+| mini2 | ✅ UP | 979 | absorbed mini5 IPs |
+| mini3 | ✅ UP | 979 | — |
+| mini4 | ✅ UP | 979 | `ng_ES22tSeJkjARlIQ4jS` (production, round 36 Link fix) |
+| cmox | ✅ UP | 979 | — |
+| nmox | ✅ UP | 979 | was EHOSTDOWN, recovered |
+| pmox | ✅ UP | 979 | was EHOSTDOWN, recovered |
 | ~~mini5~~ | DECOMMISSIONED | N/A | IPs reassigned to mini2 |
 
-**Skill:** `cdvankammen/rebase-campaign.git` @ `fa6f9b7` (945 lines, includes anti-patterns #10-13 + browser gotcha #9)
+**Skill:** `cdvankammen/rebase-campaign.git` @ `087b7a9` (979 lines, includes anti-patterns #10-14 + browser gotcha #9)
 **Deployed:** 7/7 hosts × 4 directories = **28 deployments**
 **Directories:** `~/.agents/skills`, `~/.hermes/skills`, `~/.copilot/skills`, `~/.claude/skills`
 **Global install:** `install.sh` (one-command deploy to all 4 dirs)
@@ -346,6 +346,9 @@ After the 29-round rebase was complete, 12 pre-existing test failures were surgi
 | `1afe8ff2` | Round 36 — production incident: mini4 service crash + recovery via launchctl |
 | `9a58547b` | Honesty correction — `fix(security)` count was 88 claimed, actually 11; `docs(security)` was 61 claimed, actually 0. Full prefix table replaced with verified git log counts |
 | `7854707e` | Full inventory accuracy audit — branch hash, ahead/behind, rebase-repair commits, security PR reference all stale and corrected. Catalog (Appendix A, 509 files) verified correct |
+| `b336fe28` | Appendix B stale commit reference — c3635a3d was force-amended away, replaced with 7854707e |
+| `7321260b` | Autonomous decisions on 3 pending items — Link draft ready, security+smart-router deferred (operator unavailable) |
+| `12c2144e` | Round 37 — skill updated to 979 lines with rounds 36-37 lessons + anti-pattern #14, fleet redeployed 28/28 |
 
 ---
 
@@ -377,6 +380,9 @@ After the 29-round rebase was complete, 12 pre-existing test failures were surgi
 ## Appendix B: Key Commit Chain (most recent first)
 
 ```
+12c2144e docs: round 37 — skill update with rounds 36-37 lessons + anti-pattern #14
+7321260b docs: autonomous decisions on 3 pending items — Link draft ready, security+smart-router deferred
+b336fe28 docs: fix Appendix B stale commit reference (c3635a3d amended away)
 7854707e docs: fix remaining stale numeric claims in PR inventory
 9a58547b docs: honesty correction — fix(security) count was 88 claimed, actually 11
 1afe8ff2 docs: production incident — mini4 service crash + recovery (round 36)
@@ -420,4 +426,4 @@ f92cc6d4 fix(translator): kiro systemPrompt + claude streaming tool sanitization
 
 ---
 
-*Updated 2026-11-02. Campaign complete through round 36. Branch `v5-vscode-works` is PR-ready. Production deployed on mini4 (BUILD_ID `ng_ES22tSeJkjARlIQ4jS`). Local DB fingerprint repaired (round 32). Regression baseline script fixed (round 33). Combos page Link import bug fixed (round 34 — also present upstream, issue prepared but not yet submitted). Skill updated with rounds 36-37 lessons + anti-pattern #14 deployed to 28/28 fleet (round 35 + gotcha #9 added round 36). Link fix deployed to production (round 36). Stage 7 visual verification completed honestly (round 36 — all 5 pages PASS with measured resource counts). Commit prefix counts corrected to match actual git log (round 36 honesty correction).*
+*Updated 2026-11-03. Campaign complete through round 37. Branch `v5-vscode-works` is PR-ready. Production deployed on mini4 (BUILD_ID `ng_ES22tSeJkjARlIQ4jS`). Local DB fingerprint repaired (round 32). Regression baseline script fixed (round 33). Combos page Link import bug fixed (round 34 — also present upstream, issue draft ready). Skill at 979 lines deployed to 28/28 fleet (round 37 — anti-pattern #14 added). Link fix deployed to production (round 36). Stage 7 visual verification completed honestly (round 36). Commit prefix counts corrected to match actual git log (round 36 honesty correction). Documentation accuracy audit applied anti-pattern #14 to own inventory (round 37). Three deferred items resolved with documented rationale (round 37 autonomous decisions).*
