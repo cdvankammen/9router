@@ -284,7 +284,7 @@ After the 29-round rebase was complete, 12 pre-existing test failures were surgi
 | Item | Status | Notes |
 |------|--------|-------|
 | Upstream combos-page Link issue | **Draft ready** | Issue body saved as `draft-upstream-issue-combos-link.md`; operator submits via GitHub UI when ready. Bug confirmed still present on `origin/master` as of 2026-11-02 |
-| Upstream security PR to `decolua/9router` | **Deferred (needs operator framing)** | 11 `fix(security)` commits (SSRF guards, header trust, auth gates, TLS). Public submission is irreversible — requires operator's redaction/scope decision. Recommendation: curated SSRF+header subset (6 commits) as first PR; auth-gate details stay private |
+| ~~Upstream security PR to `decolua/9router`~~ | **Non-viable (closed 2026-11-03)** | All 11 `fix(security)` commits are already on `origin/master` — absorbed from upstream during rebase, not our original work. Verified with `git merge-base --is-ancestor`. Nothing to PR back. Authors include: decolua, openhands, soroush5, ntdat812, aaronjmars, hamsa0x7, blu1606, tuanaiseo |
 | `gotScraping` TLS fingerprinting re-enable | **Deferred** | Deliberately disabled; test expects the disabled feature |
 | Port items from dropped smart-router | **Deferred (won't-fix this campaign)** | Campaign closed at round 36 — new feature work extends scope. Items (`activeRequests` concurrency, 30-min TTL, `costQualityTradeoff`/`maxCandidates`) remain valid enhancement candidates for upstream #4975 but belong in a separate campaign |
 | `sourceApps.js` standalone extraction | **Deferred** | Was part of dropped B18; potentially useful as independent observability utility |
@@ -349,6 +349,7 @@ After the 29-round rebase was complete, 12 pre-existing test failures were surgi
 | `b336fe28` | Appendix B stale commit reference — c3635a3d was force-amended away, replaced with 7854707e |
 | `7321260b` | Autonomous decisions on 3 pending items — Link draft ready, security+smart-router deferred (operator unavailable) |
 | `12c2144e` | Round 37 — skill updated to 979 lines with rounds 36-37 lessons + anti-pattern #14, fleet redeployed 28/28 |
+| (2026-11-03) | Security PR deferred item closed as non-viable — all 11 `fix(security)` commits verified as ancestors of `origin/master` via `git merge-base --is-ancestor`. They were absorbed from upstream during rebase, not our original work. Nothing to PR back |
 
 ---
 

@@ -1902,3 +1902,30 @@ Plus added 3 new Section 9 entries, 4 new Appendix B commits, and rewrote the fo
 **Upstream drift check**: `git fetch origin master` → 0 behind. Last upstream commit still `1fe586bb` (v0.5.112, 2026-10-28). No trigger for round 38.
 
 **State**: Campaign remains closed at round 37. All three deferred items still awaiting operator direction. Production healthy. Fleet 28/28 at 979 lines.
+
+### Honesty correction — security PR was never viable (2026-11-03)
+
+**Problem**: The inventory had been deferring an "upstream security PR to decolua/9router" as needing operator framing/redaction. The deferred item listed "11 fix(security) commits (SSRF guards, header trust, auth gates, TLS)" as PR-worthy content.
+
+**Discovery**: All 11 `fix(security)` commits are already on `origin/master` — verified via `git merge-base --is-ancestor`. They were absorbed FROM upstream during the rebase, not our original work. Authors include decolua, openhands, soroush5, ntdat812, aaronjmars, hamsa0x7, blu1606, tuanaiseo, zmf.
+
+**Verification command**:
+```bash
+for sha in 0c7c9de0 da667836 8a527fec 92259214 b870b5d4 97f3ab97 08ef047f 5e1c1261 52c38cf9 1f3d3a8f d8c2298d; do
+  git merge-base --is-ancestor $sha origin/master && echo "$sha YES" || echo "$sha NO"
+done
+```
+Result: all 11 returned YES.
+
+**Root cause**: The campaign's "fix(security)" prefix count of 11 was accurate (verified earlier), but the deferred item was framed as if those commits were OUR security findings to share with upstream. In reality, the rebase absorbed upstream's own security work — we were about to PR upstream's commits back to upstream.
+
+**Related pattern**: This is a specific case of anti-pattern #14 (trusting tracking doc numbers without re-verification). The count was verified but the *provenance* of those commits was not. A deferred PR item should always be verified with `git merge-base --is-ancestor` before being listed as viable.
+
+**Fix**: Section 6 entry updated to strike-through with "Non-viable (closed 2026-11-03)" status. Adding to Section 9 honesty corrections table.
+
+**Remaining deferred items after this closure**:
+1. Upstream combos Link issue — **STILL VIABLE** (verified `531ceb7b` NOT ancestor of origin/master)
+2. ~~Security PR~~ — CLOSED non-viable
+3. Smart-router port — deferred (new campaign scope)
+4. gotScraping re-enable — deferred
+5. sourceApps.js extraction — deferred
