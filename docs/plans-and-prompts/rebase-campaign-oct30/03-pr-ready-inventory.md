@@ -317,16 +317,16 @@ After the 29-round rebase was complete, 12 pre-existing test failures were surgi
 
 | Host | Status | Skill Lines | Build |
 |------|--------|-------------|-------|
-| mini | ✅ UP | 979 | — |
-| mini2 | ✅ UP | 979 | absorbed mini5 IPs |
-| mini3 | ✅ UP | 979 | — |
-| mini4 | ✅ UP | 979 | `ng_ES22tSeJkjARlIQ4jS` (production, round 36 Link fix) |
-| cmox | ✅ UP | 979 | — |
-| nmox | ✅ UP | 979 | was EHOSTDOWN, recovered |
-| pmox | ✅ UP | 979 | was EHOSTDOWN, recovered |
+| mini | ✅ UP | 990 | — |
+| mini2 | ✅ UP | 990 | absorbed mini5 IPs |
+| mini3 | ✅ UP | 990 | — |
+| mini4 | ✅ UP | 990 | `ng_ES22tSeJkjARlIQ4jS` (production, round 36 Link fix) |
+| cmox | ✅ UP | 990 | — |
+| nmox | ✅ UP | 990 | was EHOSTDOWN, recovered |
+| pmox | ✅ UP | 990 | was EHOSTDOWN, recovered |
 | ~~mini5~~ | GHOST DNS ALIAS | N/A | Tailscale hostname resolves to mini2.local (same hardware serial FL3032RG7W, UUID D73138F8-9101-5598-B784-FECAF70A586C). Reaching "mini5" IS reaching mini2. Verified 2026-11-03 |
 
-**Skill:** `cdvankammen/rebase-campaign.git` @ `087b7a9` (979 lines, includes anti-patterns #10-14 + browser gotcha #9)
+**Skill:** `cdvankammen/rebase-campaign.git` @ `b1d1bcd` (990 lines, includes anti-patterns #10-15 + browser gotcha #9)
 **Deployed:** 7/7 hosts × 4 directories = **28 deployments**
 **Directories:** `~/.agents/skills`, `~/.hermes/skills`, `~/.copilot/skills`, `~/.claude/skills`
 **Global install:** `install.sh` (one-command deploy to all 4 dirs)
@@ -436,4 +436,4 @@ f92cc6d4 fix(translator): kiro systemPrompt + claude streaming tool sanitization
 
 ---
 
-*Updated 2026-11-03. Campaign complete through round 37. Branch `v5-vscode-works` is PR-ready. Production deployed on mini4 (BUILD_ID `ng_ES22tSeJkjARlIQ4jS`). Local DB fingerprint repaired (round 32). Regression baseline script fixed (round 33). Combos page Link import bug fixed (round 34 — also present upstream, issue draft ready). Skill at 979 lines deployed to 28/28 fleet (round 37 — anti-pattern #14 added). Link fix deployed to production (round 36). Stage 7 visual verification completed honestly (round 36). Commit prefix counts corrected to match actual git log (round 36 honesty correction). Documentation accuracy audit applied anti-pattern #14 to own inventory (round 37). Three deferred items resolved with documented rationale (round 37 autonomous decisions).*
+*Updated 2026-11-03. Campaign complete through round 37. Branch `v5-vscode-works` is PR-ready. Production deployed on mini4 (BUILD_ID `ng_ES22tSeJkjARlIQ4jS`). Local DB fingerprint repaired (round 32). Regression baseline script fixed (round 33). Combos page Link import bug fixed (round 34 — also present upstream, issue draft ready). Skill at 990 lines deployed to 28/28 fleet (round 39 — anti-patterns #14 + #15 added). Link fix deployed to production (round 36). Stage 7 visual verification completed honestly (round 36). Commit prefix counts corrected to match actual git log (round 36 honesty correction). Documentation accuracy audit applied anti-pattern #14 to own inventory (round 37). Three deferred items resolved with documented rationale (round 37 autonomous decisions).*
