@@ -1692,3 +1692,31 @@ This is the first concrete item from the deferred upstream PR queue — prepared
 **Verification**: Independent SSH probe to each host confirms line count match
 
 **mini5 status**: Confirmed still a ghost Tailscale entry — SSH to mini5 returns hostname `mini2.local`, UUID `D73138F8-9101-5598-B784-FECAF70A586C` (identical to mini2). Not a separate host. Fleet is 7 real hosts.
+
+### Round 36 — Production deploy of ng_ES22tSeJkjARlIQ4jS (2026-11-02)
+
+**What**: Deployed rounds 32-34 code fixes to mini4 production. The old build (89_CgCqeJhsl-uqDer7Ya from round 31) was missing the combos page Link import fix.
+
+**Deploy procedure** (round-31 playbook, single SSH commands):
+1. Backup: ~/9router-build-backup-89_CgCqeJhsl-uqDer7Ya (85M)
+2. Stop: launchctl unload (legacy method, more reliable than bootout)
+3. rsync: --delete from /tmp/9router-build-ng_ES22tSeJkjARlIQ4jS/ (84M staged)
+4. Static: separate rsync for .next/static/
+5. Verify: custom-server.rate-limiter.js present in deployed dir
+6. Start: launchctl load -w
+7. Health check: HTTP 200 on /api/health, /api/messages, /dashboard/combos
+
+**What's new in production**:
+- Round 32: AGENTS.md agent-rules block (not in build)
+- Round 33: verify-no-regression comment filter (test infra, not in build)
+- Round 34: combos page Link import fix (531ceb7b) — **prevents latent ReferenceError**
+- Round 34: 2 stale eslint-disable comments removed (862e57cb)
+
+**Verification**:
+- BUILD_ID: ng_ES22tSeJkjARlIQ4jS
+- Health: HTTP 200
+- Messages: HTTP 200 (round 31 fix still working)
+- Combos: HTTP 200 (round 34 fix now live)
+- Rate-limiter: preserved (round 22 lesson applied)
+
+**Lesson reinforced**: Never chain multiple SSH commands in one invocation. Each step must be a separate SSH call so failures are visible and recovery is possible. The bootout attempt in step 2 was unclear because I chained it with lsof — should have been two separate calls.
