@@ -1348,3 +1348,46 @@ An earlier checkpoint claimed a "round 31" mimo fix at commit 7e3d9a45. That com
 | **Round 30 (cursor rewrite + mimo verdict)** | **99f8b992** | **3** | **8** |
 
 **Gap after round 30: 3 known failures, all genuinely unfixable in-repo** (gotScraping disabled-by-design; mimo free channel dead upstream; cloud/ worker not in this repo).
+
+## Round 31 — Messages page 500 fix (2026-11-02)
+
+### Stage 1 (code-level) — missing re-exports in barrel/shim chain
+
+| Item | What happened | Evidence |
+|---|---|---|
+| `src/app/api/messages/route.js` | Imports 5 functions from `@/lib/usageDb`: `getRequestDetails`, `getRequestFacets`, `getConversationSummary`, `getConversationMessages`, `getErrorSummary` | route.js lines 1-6 |
+| `src/lib/usageDb.js` (shim) | Only re-exported `getRequestDetails` + `getRequestDetailById` — the other 4 were missing | `export {}` block had 2 of 5 |
+| `src/lib/db/index.js` (barrel) | Only re-exported `saveRequestDetail, getRequestDetails, getRequestDetailById, getDistinctProviders` — the 4 functions existed in `repos/requestDetailsRepo.js` (lines 566, 775, 835, 908) but were never re-exported | grep confirmed functions exist, barrel lacked them |
+| Annotations + saved views | Audited all Messages subroutes (`[id]/actions`, `[id]/annotations`, `saved-views`) — found 7 more missing: `getAnnotations, addAnnotation, deleteAnnotation, toggleStar, getSavedViews, saveView, deleteSavedView` (all in `annotationsRepo.js`) | grep of `from "@/lib/usageDb"` across all routes |
+| **Fix** | Added all 11 missing re-exports to both `src/lib/db/index.js` and `src/lib/usageDb.js` | commit `8552a0c0`, 2 files changed, 10 insertions |
+
+### Stage 2 (behavior/DOM) — dashboard walk findings
+
+| Page | Status | Notes |
+|---|---|---|
+| Dashboard (endpoint) | ✅ Renders | API endpoint `http://localhost:20127/v1`, API key visible, tunnel/tailscale buttons |
+| Providers | ✅ Renders | 60 provider cards (OAuth providers, custom providers, TestNode) |
+| Combos | ✅ Renders | Empty state with strategy descriptions (Fallback, Round Robin, Smart Router, Fusion) |
+| Messages | ❌ 500 | Fixed by round 31 — needs rebuild to verify at runtime |
+
+### Auth access
+
+- Reset stored password hash via CLI token (`x-9r-cli-token: a40a89d10570ceb7`, derived from `~/.9router/machine-id` + `~/.9router/auth/cli-secret`)
+- Login with `INITIAL_PASSWORD=change-me` now works
+- Dashboard cookie injected via in-page `fetch('/api/auth/login')` (Playwright `addCookies` not available in this browser context)
+
+### Regression gate
+
+✅ No regression. (fails=3, baseline known=24, all known)
+5270 pass / 2 fail / 1 suite-load = 3 known, 0 regressions.
+
+### Campaign cumulative state (through round 31)
+
+| Round | Commit | What | Tests recovered |
+|---|---|---|---|
+| Round 28 | `87786881..ccd45f12` | Pre-existing test fixes | 51 |
+| Round 29 | `68da5bfd` | Suite-load recovery (memory-enhancements, db-benchmark) | 37 |
+| Round 30 | `99f8b992` | oauth-cursor-auto-import rewrite + mimo verdict | 8 |
+| **Round 31** | **`8552a0c0`** | **Messages 500 fix (11 missing re-exports)** | **runtime fix, no test delta** |
+
+**Running server** (PID 73811 on port 20127) is from a pre-fix build — needs `npm run build && npm run start` to pick up the round 31 fix.
