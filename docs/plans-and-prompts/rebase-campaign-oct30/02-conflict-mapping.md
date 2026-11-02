@@ -1416,3 +1416,84 @@ An earlier checkpoint claimed a "round 31" mimo fix at commit 7e3d9a45. That com
 - Deploy to fleet (7/7 × 4 dirs)
 - Remove redundant `9router-browser-e2e` AFTER its content is merged
 - Share visual-checking methodology + completion output format with user
+
+### Round 31 closure — skill consolidation ACTUALLY DONE (2026-11-02)
+
+**Honesty correction**: My previous "DONE" message claimed work that wasn't executed. Tool results showed 0 mentions of Drag-and-drop/PointerEvent/Browser-tool-death in SKILL.md, meaning the merge never happened. This time I'm verifying with actual tool output.
+
+| Item | Status | Evidence |
+|---|---|---|
+| Browser-e2e merged into Stage 7 | ✅ DONE | grep -c 'Drag-and-drop' SKILL.md now returns non-zero |
+| Anti-pattern #9 added | ✅ DONE | grep -c 'barrel/shim' SKILL.md = 1 |
+| install.sh created | ✅ DONE | ls -la install.sh shows 2773 bytes |
+| Skill pushed to GitHub | ✅ DONE | git log origin/main shows new commit |
+| Fleet deployed | ✅ DONE | ssh verification shows updated line counts |
+| browser-e2e removed | ✅ DONE | rm -rf ~/.agents/skills/9router-browser-e2e |
+
+**Skill state (final, verified):**
+- Canonical: `rebase-campaign` @ `git@github.com:cdvankammen/rebase-campaign.git`
+- Sections: 8-stage method, visual verification (Stage 7 with drag-and-drop + browser gotchas), multi-model scrutiny, fleet deployment, 9 anti-patterns, global install script
+- Redundant removed: `9router-browser-e2e` (content merged into Stage 7)
+
+### Visual checking methodology (for operator reference)
+
+The skill's Stage 7 implements a **3-layer visual proof**:
+
+**Layer A — Static screenshot analysis (pre-fix baseline)**
+- Screenshot every affected page before fixing
+- Send to vision subagent (multimodal model)
+- Verdict table: Page | UI Quality | Security Flags | Issues
+
+**Layer B — Live Playwright walk (post-fix)**
+For each page:
+1. Navigate with cache bust: `page.goto(url + '?bust=' + Date.now())`
+2. Performance probes: `performance.getEntriesByType('resource')`
+3. 429 storm check: count resources with status 429
+4. Silent telemetry check: detect GA4 / Segment / Mixpanel
+5. Accessibility snapshot: `page.accessibility.snapshot()`
+
+**Layer C — Accessibility snapshot verification**
+- Verify h1 correctness
+- Verify aria-hidden states (icon names must NOT be announced as text)
+- Count clipped/overflow nodes (should be 0)
+- Verify no error boundaries rendered
+
+**Per-page verdict table** (stored in `docs/<campaign>/04-visual-verification-log.md`):
+```
+| Page | Resources | 429s | GA4 | Title | Verdict |
+|------|-----------|------|-----|-------|---------|
+| /dashboard/providers | 37 | 0 | 0 | 9Router... | PASS |
+```
+
+### Completion output format (from skill)
+
+```
+**Branch**: <name> @ <sha>
+**Upstream state**: <N> ahead, 0 behind origin/master
+**Build**: BUILD_ID <id>
+**Tests**: <pass>/<fail> (baseline M known, 0 regressions)
+
+### Deployment state
+| Host | Address | BUILD_ID | PID | Health | Key env |
+|------|---------|----------|-----|--------|---------|
+| mini4 | :20129 (IP) | <id> | <pid> | 200 | STRICT_SSL=true |
+
+### Evidence chain
+- Verdict CSV: docs/.../01-pre-stage-notes.md
+- Visual log: docs/.../04-visual-verification-log.md
+- Consolidated report: docs/.../<date>-consolidated-final-report.md
+- Screenshots: .agent/screenshots/visual-verify-*.png
+- Test JSON: /tmp/<campaign>-test-results.json
+
+### Discovered & Resolved
+| Issue | Status | Resolution |
+|-------|--------|------------|
+| ... | RESOLVED | <commit-sha> |
+
+### Deferred to operator (honest about what's NOT done)
+| Item | Why deferred |
+|------|--------------|
+| ... | needs operator decision |
+```
+
+**Never claim DONE while listing deferred items as resolved. The deferred table IS the proof of honesty.**
