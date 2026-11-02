@@ -1,10 +1,10 @@
 # PR-Ready Inventory — v5-vscode-works Rebase Campaign
 
-**Date:** 2026-10-31
-**Branch:** `v5-vscode-works` @ `b7b5b6b2`
+**Date:** 2026-11-02
+**Branch:** `v5-vscode-works` @ `12720286`
 **Fork:** `fork/v5-vscode-works` (pushed)
 **Pre-rebase baseline:** `07c16dab` (v5-vscode-works-pre-rebase-20261030)
-**Campaign rounds:** 29 (100% complete — 0 behind origin/master)
+**Campaign rounds:** 29 rebase + 2 post-rebase recovery (30 total, 100% complete — 0 behind origin/master)
 
 ## Commit Totals
 
@@ -258,16 +258,17 @@ After the 29-round rebase was complete, 12 pre-existing test failures were surgi
 | `87786881` | **ProxyFetch:** route proxy-aware hosts before TLS default-deny check + combo bad-request + key-access backup name prefix match |
 | `ccd45f12` | **Baseline:** reconcile `known-fails.txt` for round 28 (remove 12 fixed entries) |
 
-### Current known-fails.txt (11 entries remaining)
+### Current known-fails.txt (3 entries remaining)
 
 | Test | Reason | Fix Required |
 |------|--------|--------------|
 | `claude-header-forwarding.test.js` (1 test) | `gotScraping` deliberately disabled in proxyFetch.js | Re-enable gotScraping to fix |
-| `oauth-cursor-auto-import.test.js` (8 tests) | macOS Cursor DB paths don't exist in CI | Requires Cursor installation |
-| `mimo-free.live.test.js` (1 test) | Live call — upstream now answers "Unsupported model mimo-auto" | Update test or provider catalog |
+| `mimo-free.live.test.js` (1 test) | Live call — Xiaomi free channel dead (verified 2026-10-31: bootstrap alive on api.xiaomimimo.com, chat rejects ALL model names with 400) | Unfixable until Xiaomi restores free channel |
 | `embeddings.cloud.test.js` (suite) | Imports `cloud/` worker (not in this repo) | Suite cannot load |
 
 **Round 29 fixes** (2026-10-31): recovered 37 tests from 2 suite-load failures — `memory-enhancements.test.js` (node:test → vitest, 32 tests) and `db-benchmark.test.js` (lowdb devDependency, 5 tests). Also removed 2 obsolete windsurf snapshots.
+
+**Round 30 fixes** (2026-10-31): rewrote all 8 `oauth-cursor-auto-import.test.js` tests using real temp SQLite databases (homedir() → tmpdir) instead of brittle better-sqlite3 CJS mocks, matching the route's rewritten implementation (multi-candidate path probing, per-key .get() queries, strategy cascade). All 10 tests now pass (8 previously-failing + 2 pre-existing). Verified mimo-free is genuinely unfixable: live probe against api.xiaomimimo.com shows bootstrap alive but chat endpoint rejects every model name.
 
 ---
 
@@ -285,8 +286,9 @@ After the 29-round rebase was complete, 12 pre-existing test failures were surgi
 ## Section 7: Regression Baseline
 
 **Pre-rebase:** ~938 pass, ~64 fail
-**Post-rebase (current):** 13 known failures catalogued in `tests/__baseline__/known-fails.txt`
+**Post-rebase (current):** 3 known failures catalogued in `tests/__baseline__/known-fails.txt` (down from 13 after rounds 28-30)
 **Regressions introduced by rebase:** **0** (verified by `verify-no-regression.mjs`)
+**Total tests recovered across rounds 28-30:** 96 (51 + 37 + 8)
 
 ### Test Harness
 
@@ -323,6 +325,7 @@ After the 29-round rebase was complete, 12 pre-existing test failures were surgi
 | `f02c4c3a` | Documented nmox+pmox EHOSTDOWN diagnosis (not silently ignored) |
 | `4c7d9d36` | Documented worktree cleanup — 27 worktrees, ~5.5G reclaimed |
 | `b7b5b6b2` | Fleet closure — 7/7 at 806 lines confirmed |
+| `12720286` | Corrected earlier "round 31 / 7e3d9a45" claim — commit never existed, mimo files never edited |
 
 ---
 
@@ -354,6 +357,12 @@ After the 29-round rebase was complete, 12 pre-existing test failures were surgi
 ## Appendix B: Key Commit Chain (most recent first)
 
 ```
+12720286 docs: round 30 tracking + mimo-free live verdict (known-fails evidence)
+99f8b992 fix(tests): round 30 — rewrite oauth-cursor-auto-import with real temp SQLite (10/10 pass)
+7dd6a115 docs: update PR-ready inventory for round 29
+673d07d1 docs: round 29 — suite-load recovery (tracking doc)
+8d995eee chore(tests): remove 2 obsolete windsurf snapshots
+68da5bfd fix(tests): round 29 — recover 2 suite-load failures (37 tests)
 b7b5b6b2 docs: fleet closure — nmox + pmox back online, 7/7 at 806 lines
 4c7d9d36 docs: post-campaign worktree cleanup — 27 worktrees, ~5.5G reclaimed
 f02c4c3a docs: nmox + pmox confirmed DOWN (EHOSTDOWN)
@@ -368,4 +377,4 @@ f92cc6d4 fix(translator): kiro systemPrompt + claude streaming tool sanitization
 
 ---
 
-*Generated 2026-10-31. Campaign complete. Branch `v5-vscode-works` is PR-ready.*
+*Updated 2026-11-02. Campaign complete through round 30. Branch `v5-vscode-works` is PR-ready.*
