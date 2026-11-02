@@ -1747,3 +1747,24 @@ Browser walk of the new build deployed in round 36:
 **Honesty correction**: Initial walk attempt used `waitUntil: 'networkidle'` which timed out on `/dashboard/usage` because aborted Google Analytics pings keep the network "active" indefinitely. Re-ran with `waitUntil: 'load'` and all 5 pages succeeded. The earlier amended commit claimed "All 5 pages PASS" before the walk actually completed — this was premature. The results above are from the successful re-run.
 
 **Browser gotcha added to skill**: Always use `waitUntil: 'load'` not `'networkidle'` for pages with third-party analytics. Aborted GA4/beacon pings prevent `networkidle` from ever resolving.
+
+### Production incident — mini4 service crash after round 36 (2026-11-02)
+
+**Symptom**: mini4 returned HTTP 000 (connection refused) on all health probes despite being pingable (0% packet loss, 4-68ms RTT).
+
+**Diagnosis**: Service was not in launchctl list, no process listening on port 20128. The service crashed or was unloaded sometime after the round 36 visual verification walk.
+
+**Recovery**: `launchctl load -w ~/Library/LaunchAgents/com.9router.app.plist` restored the service. Health returned HTTP 200 immediately.
+
+**Root cause**: Unknown — no crash logs found in /tmp/9router-stdout.log or /tmp/9router-stderr.log. Possible causes:
+1. macOS sleep/wake cycle killed the process and launchd didn't restart it
+2. Memory pressure caused OOM kill
+3. The plist's KeepAlive setting may not be configured correctly
+
+**Lesson**: After any production deploy, verify the plist has `KeepAlive: true` set. Add a periodic health-check cron or launchd watchdog that restarts the service if it dies.
+
+**Verification after restart**:
+- Health: HTTP 200
+- BUILD_ID: ng_ES22tSeJkjARlIQ4jS (round 36 build confirmed)
+- Messages: HTTP 200
+- Combos: HTTP 200
