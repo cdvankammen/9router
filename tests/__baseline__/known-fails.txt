@@ -26,27 +26,12 @@ tests/unit/mimo-free.live.test.js :: MiMo Free anti-abuse gate (live) chat WITH 
 # Cannot load in this repo: imports the cloud/ worker, which is not part of this repository.
 tests/unit/embeddings.cloud.test.js :: <suite failed to load>
 
-# ── Round 38 discoveries (2026-11-03) — campaign-introduced feature side-effects ──
-# These tests PASS on clean origin/master but fail on v5-vscode-works because of
-# features our branch added to src/lib/db/repos/requestDetailsRepo.js:
-#   - DEFAULT_MAX_RECORDS=200 observability cap (drops oldest rows when exceeded)
-#   - message_facets table writes in the same transaction
-#   - FTS index sync
-# Fixing these requires either raising the cap in test setup or making the cap
-# opt-in rather than default-on. Deferred — campaign closed at round 37, and
-# these are feature side-effects not accidental breakage.
-
-# db-concurrent: 200-parallel-save test hits the DEFAULT_MAX_RECORDS=200 cap
-# because earlier tests in the same describe block (100 usage + 50 mixed) seed
-# rows; the cap drops oldest, so totalItems < 200. Origin has no cap → passes.
-tests/unit/db-concurrent.test.js :: DB Concurrency — atomic safety 200 parallel saveRequestDetail → all flushed
-
-# db-sqlite-vs-lowdb: parity test expects lowdb-equivalent API shape, but our
-# SQLite additions (facets, observability config, truncation) changed it.
-tests/unit/db-sqlite-vs-lowdb.test.js :: DB SQLite layer — public API parity requestDetails: save → query with paging
-
-# request-details-tab: these 2 tests PASS when run in isolation but fail in the
-# full suite due to cross-file test pollution via the 5-second cachedConfig TTL
-# in requestDetailsRepo.js. Another test file's config pollutes these.
-tests/unit/request-details-tab.test.js :: request details — tab crash-risk cases oversized field → stored truncated + reparseable (no circular)
-tests/unit/request-details-tab.test.js :: getDistinctProviders — providers route (no full-row parse) returns unique provider list without parsing data blobs
+# ── Round 39 correction (2026-11-03) — round 38 entries removed ──
+# Round 38 added 4 entries (db-concurrent, db-sqlite-vs-lowdb, request-details-tab ×2)
+# claiming they were regressions from our observability additions. 3 consecutive
+# full-suite runs with NODE_ENV=test show these tests pass consistently:
+# 2 failed tests + 1 suite-load = the original 3 known-fails only.
+# Round 38 diagnosis was premature — the earlier failures were caused by running
+# the suite WITHOUT NODE_ENV=test (which leaked NODE_ENV=production into the
+# dashboardSession.js JWT check) plus transient timing, not by our code changes.
+# Always run: NODE_ENV=test npx vitest run
