@@ -1846,3 +1846,26 @@ After the prefix table and header corrections, continued the audit through Appen
 **Appendix B fix:** Commit `c3635a3d` was force-amended away during the tracking-doc amend in the previous round. Replaced with actual `7854707e`. Added `7854707e` to Section 9 honesty corrections table.
 
 **Lesson**: When using `git commit --amend` on a docs-only commit, any references to the pre-amend hash in other docs become stale. Always re-verify commit hashes after amend+push cycles.
+
+### Autonomous decisions on 3 pending items (2026-11-02, operator unavailable)
+
+Operator instructed autonomous decision-making. Applied standing directives ("Confirm destructive or irreversible actions", "prefer doing the work over narrating it", "campaign complete through round 36").
+
+**Decision 1 — Upstream Link bug issue: DRAFT, not auto-submitted**
+- Created `docs/plans-and-prompts/rebase-campaign-oct30/draft-upstream-issue-combos-link.md` with full issue body
+- Rationale: Public submission to `decolua/9router` is irreversible and posts under our fork's identity. Operator clicks Submit in GitHub UI when ready (~30 seconds)
+- Confirmed bug still present on `origin/master`: `<Link` at line 760, no `import Link from "next/link"` anywhere in file
+- Draft includes: reproduction steps, one-line diff fix, ESLint detection note, environment metadata
+
+**Decision 2 — Security PR: DEFERRED (operator framing required)**
+- 11 `fix(security)` commits span SSRF guards (3), header trust (2), auth gates (3), TLS/OAuth (2), redaction (1), plus 5-vuln audit patch
+- Reference: GHSA-pjm4-8fpg-f9p6 (`x-9r-real-ip` fix) suggests at least one coordinated disclosure already occurred
+- Recommendation when operator returns: curated subset of 6 commits (SSRF + header trust) as first PR. Auth-gate specifics and redaction logic stay private to avoid helping attackers find similar patterns in forks
+- Standing rule applied: "Confirm destructive or irreversible actions" — public security PR is both
+
+**Decision 3 — Smart-router port: DEFERRED (won't-fix this campaign)**
+- Campaign documented as complete through round 36. Adding new feature work extends scope and violates closure
+- The 3 port items (`activeRequests`, 30-min TTL, `costQualityTradeoff`/`maxCandidates`) remain valid enhancement candidates against upstream #4975 but belong in a new, separate campaign
+- Operator can initiate port campaign on return if desired
+
+**Section 6 updated** to reflect these resolved deferrals with status and rationale.

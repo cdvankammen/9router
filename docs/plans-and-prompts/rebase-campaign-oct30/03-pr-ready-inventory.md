@@ -283,9 +283,10 @@ After the 29-round rebase was complete, 12 pre-existing test failures were surgi
 
 | Item | Status | Notes |
 |------|--------|-------|
-| Upstream security PR to `decolua/9router` | **Deferred** | Requires explicit operator direction. 11 `fix(security)` commits contain findings (SSRF, auth gates, TLS) |
+| Upstream combos-page Link issue | **Draft ready** | Issue body saved as `draft-upstream-issue-combos-link.md`; operator submits via GitHub UI when ready. Bug confirmed still present on `origin/master` as of 2026-11-02 |
+| Upstream security PR to `decolua/9router` | **Deferred (needs operator framing)** | 11 `fix(security)` commits (SSRF guards, header trust, auth gates, TLS). Public submission is irreversible — requires operator's redaction/scope decision. Recommendation: curated SSRF+header subset (6 commits) as first PR; auth-gate details stay private |
 | `gotScraping` TLS fingerprinting re-enable | **Deferred** | Deliberately disabled; test expects the disabled feature |
-| Port items from dropped smart-router | **Deferred** | `activeRequests` concurrency tracking, 30-min TTL, `costQualityTradeoff`/`maxCandidates` — to be ported into upstream's #4975 System One |
+| Port items from dropped smart-router | **Deferred (won't-fix this campaign)** | Campaign closed at round 36 — new feature work extends scope. Items (`activeRequests` concurrency, 30-min TTL, `costQualityTradeoff`/`maxCandidates`) remain valid enhancement candidates for upstream #4975 but belong in a separate campaign |
 | `sourceApps.js` standalone extraction | **Deferred** | Was part of dropped B18; potentially useful as independent observability utility |
 
 ---
