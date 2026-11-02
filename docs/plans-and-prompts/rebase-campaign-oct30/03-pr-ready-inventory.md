@@ -1,19 +1,19 @@
 # PR-Ready Inventory — v5-vscode-works Rebase Campaign
 
 **Date:** 2026-11-02
-**Branch:** `v5-vscode-works` @ `6b14d076`
+**Branch:** `v5-vscode-works` @ `2061c40d`
 **Fork:** `fork/v5-vscode-works` (pushed)
 **Pre-rebase baseline:** `07c16dab` (v5-vscode-works-pre-rebase-20261030)
-**Campaign rounds:** 29 rebase + 3 post-rebase recovery (31 total, 100% complete — 0 behind origin/master)
+**Campaign rounds:** 29 rebase + 3 post-rebase recovery + production deploy + fingerprint repair (32 total, 100% complete — 0 behind origin/master)
 
 ## Commit Totals
 
 | Metric | Count |
 |--------|-------|
-| Commits ahead of `origin/master` | **1967** |
-| Commits ahead of pre-rebase baseline `07c16dab` | **1486** |
+| Commits ahead of `origin/master` | **1987** |
+| Commits ahead of pre-rebase baseline `07c16dab` | **1506** |
 | Upstream commits carried from `origin/master` | **1436** |
-| Rebase-repair specific commits (our merge work) | **40** |
+| Rebase-repair specific commits (our merge work) | **42** |
 | Upstream PRs absorbed (unique) | **34** |
 | Locked multi-model verdicts | **8** |
 | Stage-3 scrutiny-queue items (KEEP+MERGE) | **15** |
@@ -304,18 +304,19 @@ After the 29-round rebase was complete, 12 pre-existing test failures were surgi
 
 | Host | Status | Skill Lines | Build |
 |------|--------|-------------|-------|
-| mini | ✅ UP | 806 | — |
-| mini2 | ✅ UP | 806 | absorbed mini5 IPs |
-| mini3 | ✅ UP | 806 | — |
-| mini4 | ✅ UP | 806 | `vJKp96vZb0vcmxw1kIaZc` (production) |
-| cmox | ✅ UP | 806 | — |
-| nmox | ✅ UP | 806 | was EHOSTDOWN, recovered |
-| pmox | ✅ UP | 806 | was EHOSTDOWN, recovered |
+| mini | ✅ UP | 883 | — |
+| mini2 | ✅ UP | 883 | absorbed mini5 IPs |
+| mini3 | ✅ UP | 883 | — |
+| mini4 | ✅ UP | 883 | `89_CgCqeJhsl-uqDer7Ya` (production, round 31 Messages fix) |
+| cmox | ✅ UP | 883 | — |
+| nmox | ✅ UP | 883 | was EHOSTDOWN, recovered |
+| pmox | ✅ UP | 883 | was EHOSTDOWN, recovered |
 | ~~mini5~~ | DECOMMISSIONED | N/A | IPs reassigned to mini2 |
 
-**Skill:** `cdvankammen/rebase-campaign.git` @ `01aaae0` (806 lines)
+**Skill:** `cdvankammen/rebase-campaign.git` @ `5f80798` (883 lines, includes anti-pattern #10)
 **Deployed:** 7/7 hosts × 4 directories = **28 deployments**
 **Directories:** `~/.agents/skills`, `~/.hermes/skills`, `~/.copilot/skills`, `~/.claude/skills`
+**Global install:** `install.sh` (one-command deploy to all 4 dirs)
 
 ---
 
@@ -328,6 +329,10 @@ After the 29-round rebase was complete, 12 pre-existing test failures were surgi
 | `4c7d9d36` | Documented worktree cleanup — 27 worktrees, ~5.5G reclaimed |
 | `b7b5b6b2` | Fleet closure — 7/7 at 806 lines confirmed |
 | `12720286` | Corrected earlier "round 31 / 7e3d9a45" claim — commit never existed, mimo files never edited |
+| `20fa1527` | Honesty correction — round 31 closure claims were premature |
+| `02c7bd74` | Round 31 closure ACTUALLY DONE — skill consolidation verified |
+| `b4137e20` | mini5 correction — ghost Tailscale entry, same hardware as mini2 |
+| `a8539269` | Round 32 — local DB fingerprint repair documented honestly as metadata-only |
 
 ---
 
@@ -359,6 +364,14 @@ After the 29-round rebase was complete, 12 pre-existing test failures were surgi
 ## Appendix B: Key Commit Chain (most recent first)
 
 ```
+2061c40d chore: commit nextjs auto-generated agent-rules block (written by next dev)
+a8539269 docs: round 32 — local DB fingerprint repair (stale 4-entry metadata from rebase)
+ace939f5 docs: round 31 Stage 7 visual verification — 5/5 pages pass on mini4
+da9d3fd2 docs: round 31 production deploy to mini4 (Messages fix live)
+b4137e20 docs: mini5 correction — ghost Tailscale entry, same hardware as mini2
+1a34bdfd docs: round 31 FINAL — skill at 883 lines, fleet 28/28 verified
+02c7bd74 docs: round 31 closure ACTUALLY DONE — skill consolidation verified
+20fa1527 docs: honesty correction — round 31 closure claims were premature
 6b14d076 docs: round 31 tracking — Messages 500 fix (11 missing re-exports)
 8552a0c0 fix(messages): re-export missing DB functions that caused /api/messages 500
 12720286 docs: round 30 tracking + mimo-free live verdict (known-fails evidence)
@@ -381,4 +394,4 @@ f92cc6d4 fix(translator): kiro systemPrompt + claude streaming tool sanitization
 
 ---
 
-*Updated 2026-11-02. Campaign complete through round 30. Branch `v5-vscode-works` is PR-ready.*
+*Updated 2026-11-02. Campaign complete through round 32. Branch `v5-vscode-works` is PR-ready. Production deployed on mini4 (BUILD_ID `89_CgCqeJhsl-uqDer7Ya`). Local DB fingerprint repaired (round 32).*
