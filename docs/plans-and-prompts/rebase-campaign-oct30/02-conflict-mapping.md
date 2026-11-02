@@ -1536,3 +1536,28 @@ For each page:
 3. Added anti-pattern #10 to prevent recurrence
 
 **9router state**: Clean at `02c7bd74`, 0 upstream drift, regression gate passes (3 known-fails)
+
+### Mini5 correction — DEFINITIVELY decommissioned (2026-11-02)
+
+**Earlier claim (wrong)**: "mini5 came back online at 100.98.139.123" based on Tailscale status showing it as a separate entry from mini2.
+
+**Deep probe proof mini5 IS mini2** (same physical machine):
+```
+$ ssh 100.98.139.123 'hostname; system_profiler SPHardwareDataType | grep -E "Hardware UUID|Serial Number"'
+hostname: mini2.local
+Hardware UUID: D73138F8-9101-5598-B784-FECAF70A586C
+Serial Number: FL3032RG7W
+
+$ ssh mini2 'hostname; system_profiler SPHardwareDataType | grep -E "Hardware UUID|Serial Number"'
+hostname: mini2.local
+Hardware UUID: D73138F8-9101-5598-B784-FECAF70A586C
+Serial Number: FL3032RG7W
+```
+
+**Same hardware UUID + same serial = same machine**. Tailscale shows mini5 as a separate entry with its own IP (100.98.139.123) because the Tailscale node was never removed from the tailnet admin console, but the underlying machine is mini2 answering via its mDNS alias `mini2.local`.
+
+**Fleet reality**: 7 distinct machines (mini, mini2, mini3, mini4, cmox, nmox, pmox). mini5 is a ghost Tailscale entry, not a deployment target.
+
+**Skill on mini5 IP**: the 883 lines reported were actually served by mini2 (since they're the same machine). Not a separate deployment.
+
+**Lesson to carry**: before declaring a host "back online" from Tailscale status alone, verify with `hostname` + `system_profiler SPHardwareDataType` to confirm it's a distinct physical machine. Tailscale entries can outlive the hardware they originally represented.
