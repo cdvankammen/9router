@@ -1,19 +1,19 @@
 # PR-Ready Inventory — v5-vscode-works Rebase Campaign
 
 **Date:** 2026-11-02
-**Branch:** `v5-vscode-works` @ `531ceb7b`
+**Branch:** `v5-vscode-works` @ `4f4bc37b`
 **Fork:** `fork/v5-vscode-works` (pushed)
 **Pre-rebase baseline:** `07c16dab` (v5-vscode-works-pre-rebase-20261030)
-**Campaign rounds:** 29 rebase + 5 post-rebase recovery (production deploy, fingerprint repair, verify-script fix, Link import bug) (34 total, 100% complete — 0 behind origin/master)
+**Campaign rounds:** 29 rebase + 7 post-rebase recovery (production deploys, fingerprint repair, verify-script fix, Link import bug, skill update + fleet redeploy) (36 total, 100% complete — 0 behind origin/master)
 
 ## Commit Totals
 
 | Metric | Count |
 |--------|-------|
-| Commits ahead of `origin/master` | **1987** |
-| Commits ahead of pre-rebase baseline `07c16dab` | **1506** |
+| Commits ahead of `origin/master` | **1997** |
+| Commits ahead of pre-rebase baseline `07c16dab` | **1516** |
 | Upstream commits carried from `origin/master` | **1436** |
-| Rebase-repair specific commits (our merge work) | **45** |
+| Rebase-repair specific commits (our merge work) | **47** |
 | Upstream PRs absorbed (unique) | **34** |
 | Locked multi-model verdicts | **8** |
 | Stage-3 scrutiny-queue items (KEEP+MERGE) | **15** |
@@ -304,16 +304,16 @@ After the 29-round rebase was complete, 12 pre-existing test failures were surgi
 
 | Host | Status | Skill Lines | Build |
 |------|--------|-------------|-------|
-| mini | ✅ UP | 883 | — |
-| mini2 | ✅ UP | 883 | absorbed mini5 IPs |
-| mini3 | ✅ UP | 883 | — |
-| mini4 | ✅ UP | 883 | `89_CgCqeJhsl-uqDer7Ya` (production, round 31 Messages fix) |
-| cmox | ✅ UP | 883 | — |
-| nmox | ✅ UP | 883 | was EHOSTDOWN, recovered |
-| pmox | ✅ UP | 883 | was EHOSTDOWN, recovered |
+| mini | ✅ UP | 944 | — |
+| mini2 | ✅ UP | 944 | absorbed mini5 IPs |
+| mini3 | ✅ UP | 944 | — |
+| mini4 | ✅ UP | 944 | `ng_ES22tSeJkjARlIQ4jS` (production, round 36 Link fix) |
+| cmox | ✅ UP | 944 | — |
+| nmox | ✅ UP | 944 | was EHOSTDOWN, recovered |
+| pmox | ✅ UP | 944 | was EHOSTDOWN, recovered |
 | ~~mini5~~ | DECOMMISSIONED | N/A | IPs reassigned to mini2 |
 
-**Skill:** `cdvankammen/rebase-campaign.git` @ `5f80798` (883 lines, includes anti-pattern #10)
+**Skill:** `cdvankammen/rebase-campaign.git` @ `920d19d` (944 lines, includes anti-patterns #10-13)
 **Deployed:** 7/7 hosts × 4 directories = **28 deployments**
 **Directories:** `~/.agents/skills`, `~/.hermes/skills`, `~/.copilot/skills`, `~/.claude/skills`
 **Global install:** `install.sh` (one-command deploy to all 4 dirs)
@@ -335,6 +335,8 @@ After the 29-round rebase was complete, 12 pre-existing test failures were surgi
 | `a8539269` | Round 32 — local DB fingerprint repair documented honestly as metadata-only |
 | `9e9869ef` | Round 33 — verify-no-regression baseline comment filter fix (cosmetic count accuracy) |
 | `531ceb7b` | Round 34 — combos page missing Link import (latent ReferenceError, also present in upstream origin/master) |
+| `87883f8f` | Round 35 — skill updated to 944 lines with rounds 32-34 lessons + anti-patterns #11-13, fleet redeployed 28/28 |
+| `4f4bc37b` | Round 36 — production deploy of `ng_ES22tSeJkjARlIQ4jS` to mini4 (Link fix live) |
 
 ---
 
@@ -366,6 +368,11 @@ After the 29-round rebase was complete, 12 pre-existing test failures were surgi
 ## Appendix B: Key Commit Chain (most recent first)
 
 ```
+4f4bc37b docs: round 36 — production deploy of ng_ES22tSeJkjARlIQ4jS (Link fix live)
+87883f8f docs: round 35 — skill update with rounds 32-34 lessons + fleet redeploy
+23045121 docs: prepared upstream issue for combos page Link bug (pending submission)
+862e57cb chore: remove 2 stale eslint-disable comments (rule not configured)
+1b934cbf docs: round 34 — combos page Link import fix + inventory update
 531ceb7b fix(ui): add missing Link import in combos page (latent ReferenceError on Smart Router unconfigured)
 944a4c72 docs: round 33 — verify-no-regression baseline comment filter fix
 9e9869ef fix(tests): filter comment lines in verify-no-regression baseline check
@@ -399,4 +406,4 @@ f92cc6d4 fix(translator): kiro systemPrompt + claude streaming tool sanitization
 
 ---
 
-*Updated 2026-11-02. Campaign complete through round 34. Branch `v5-vscode-works` is PR-ready. Production deployed on mini4 (BUILD_ID `89_CgCqeJhsl-uqDer7Ya`). Local DB fingerprint repaired (round 32). Regression baseline script fixed (round 33). Combos page Link import bug fixed (round 34 — also present upstream).*
+*Updated 2026-11-02. Campaign complete through round 36. Branch `v5-vscode-works` is PR-ready. Production deployed on mini4 (BUILD_ID `ng_ES22tSeJkjARlIQ4jS`). Local DB fingerprint repaired (round 32). Regression baseline script fixed (round 33). Combos page Link import bug fixed (round 34 — also present upstream). Skill at 944 lines deployed to 28/28 fleet (round 35). Link fix deployed to production (round 36).*
