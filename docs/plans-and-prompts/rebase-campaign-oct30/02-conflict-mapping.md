@@ -1561,3 +1561,24 @@ Serial Number: FL3032RG7W
 **Skill on mini5 IP**: the 883 lines reported were actually served by mini2 (since they're the same machine). Not a separate deployment.
 
 **Lesson to carry**: before declaring a host "back online" from Tailscale status alone, verify with `hostname` + `system_profiler SPHardwareDataType` to confirm it's a distinct physical machine. Tailscale entries can outlive the hardware they originally represented.
+
+### Round 31 production deploy to mini4 (2026-11-02)
+
+**Problem**: mini4 production (`100.76.147.49:20128`) was running BUILD_ID `vJKp96vZb0vcmxw1kIaZc` (built Oct 30), which predates the round 31 Messages fix (`8552a0c0`, Nov 2). `/dashboard/messages` returned HTTP 500 "Failed to load messages".
+
+**Fix**: Built new production bundle `89_CgCqeJhsl-uqDer7Ya` from current HEAD (`b4137e20`), tested locally on port 20131 (Messages returned HTTP 200), then deployed to mini4.
+
+**Deploy procedure** (with round-22 lesson applied):
+1. Verified `custom-server.rate-limiter.js` would be lost via `rsync --delete` (round-22 lesson)
+2. Staged new build to `9router-build.new/`
+3. Stopped service (`launchctl bootout`)
+4. `rsync --delete` staged → live
+5. Restored `custom-server.rate-limiter.js` from backup
+6. Restarted (`launchctl load`)
+7. Verified: PID bound to 20128, health HTTP 200, Messages HTTP 200
+
+**Incident during deploy**: First deploy attempt used a single chained SSH command that stalled after `bootout`, leaving mini4 down for ~5 minutes. Recovery: rolled back to old build via `launchctl load`, then redeployed in smaller steps.
+
+**Lesson**: Never chain multiple SSH commands in a single `ssh` invocation for production deploys. Each step should be a separate SSH call so failures are visible and recovery is possible.
+
+**Final state**: mini4 @ `89_CgCqeJhsl-uqDer7Ya`, Messages fixed, health 200.
