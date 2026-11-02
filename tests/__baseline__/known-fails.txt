@@ -14,8 +14,13 @@
 # expects the disabled feature. Re-enable gotScraping to fix.
 tests/unit/claude-header-forwarding.test.js :: proxyAwareFetch — api.anthropic.com routing routes api.anthropic.com to gotScraping (non-streaming) and returns ok response
 
-# Live call: the upstream now answers "Unsupported model mimo-auto", the only model the
-# (hidden since 6d96e24b) mimo-free / mmf providers list.
+# Live call — Xiaomi's free MiMo channel is dead (verified live 2026-10-31):
+# bootstrap on api.xiaomimimo.com still returns 200 + valid JWT, but the chat
+# endpoint rejects EVERY model name with 400 "Unsupported model" (probed:
+# mimo-auto, mimo-7b, mimo-7b-rl, mimo-free, mimo, mimo-code, mimocode,
+# mimo-latest, auto). models.dev lists no free mimo provider (only paid xiaomi
+# mimo-v2.5/v2.6). Provider is already hidden:true. Unfixable until Xiaomi
+# restores the free channel.
 tests/unit/mimo-free.live.test.js :: MiMo Free anti-abuse gate (live) chat WITH Chrome User-Agent → 200
 
 # Cannot load in this repo: imports the cloud/ worker, which is not part of this repository.

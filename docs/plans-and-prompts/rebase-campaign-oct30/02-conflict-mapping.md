@@ -1320,3 +1320,31 @@ Regression gate: ✅ No regression. (now fails=11, baseline known=27, all known)
 | Pre-rebase baseline (07c16dab) | — | 35 | — |
 
 **Gap to baseline after round 29: 11 - 0 = 11 (all genuinely unfixable without external changes).**
+
+## Round 30 — oauth-cursor-auto-import rewrite + mimo-free honest verdict (2026-10-31)
+
+### Stage 1 (code-level) — test rewrite + live provider probe
+
+| Item | What happened | Evidence |
+|---|---|---|
+| `tests/unit/oauth-cursor-auto-import.test.js` | Rewrote all 8 failing tests (now 10/10 pass) using REAL temp SQLite databases (homedir() → tmpdir) instead of better-sqlite3 CJS mocks (vitest cannot reliably intercept require()). Tests now match the route's rewritten implementation: multi-candidate path probing, per-key .get() queries, strategy cascade (better-sqlite3 → sqlite3 CLI → windowsManual), no 400 on unsupported platforms, linux cursor-installed check. | commit 99f8b992 |
+| `tests/__baseline__/known-fails.txt` | Reconciled 11 → 3 entries (removed 8 stale cursor entries) | commit 99f8b992 |
+| mimo-free.live | **Unfixable — verified live.** Probe against the real host api.xiaomimimo.com: bootstrap returns 200 + valid JWT (591 chars), but chat returns 400 "Unsupported model" for EVERY name probed (mimo-auto, mimo-7b, mimo-7b-rl, mimo-free, mimo, mimo-code, mimocode, mimo-latest, auto). models.dev lists no free mimo provider (only paid xiaomi mimo-v2.5/v2.6). Provider already hidden:true. | curl probes 2026-10-31 |
+
+### Stage 2 (behavior/DOM)
+
+Test Files: 3 failed → Tests: **2 failed / 5255 passed** (+ 1 suite-load = 3 known). Regression gate: ✅ 3 fails, all known, 0 regressions.
+
+### Honest correction
+
+An earlier checkpoint claimed a "round 31" mimo fix at commit 7e3d9a45. That commit **does not exist** (`git cat-file -t 7e3d9a45` → not a valid object) — the mimo files were never edited and the commit failed with "nothing to commit". Also, the round-30 push was silently skipped because a no-op docs commit short-circuited the && chain; 99f8b992 sat unpushed until verified with `git log fork..HEAD`. Lesson: after any commit/push, verify with `git log fork/v5-vscode-works..HEAD` (must be empty) and never cite a sha without `git cat-file -t` proof.
+
+### Campaign cumulative state (through round 30)
+
+| Round | Commit | Tests failed (known) | Recovered |
+|---|---|---|---|
+| Round 28 (post-rebase pre-existing fixes) | 87786881..ccd45f12 | 13 | 51 (from 64) |
+| Round 29 (suite-load recovery) | 68da5bfd | 11 | 37 |
+| **Round 30 (cursor rewrite + mimo verdict)** | **99f8b992** | **3** | **8** |
+
+**Gap after round 30: 3 known failures, all genuinely unfixable in-repo** (gotScraping disabled-by-design; mimo free channel dead upstream; cloud/ worker not in this repo).
