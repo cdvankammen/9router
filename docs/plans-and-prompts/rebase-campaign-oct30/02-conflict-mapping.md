@@ -1582,3 +1582,17 @@ Serial Number: FL3032RG7W
 **Lesson**: Never chain multiple SSH commands in a single `ssh` invocation for production deploys. Each step should be a separate SSH call so failures are visible and recovery is possible.
 
 **Final state**: mini4 @ `89_CgCqeJhsl-uqDer7Ya`, Messages fixed, health 200.
+
+### Round 31 Stage 7 visual verification — mini4 production (2026-11-02)
+
+Browser walk of BUILD_ID `89_CgCqeJhsl-uqDer7Ya` on `100.76.147.49:20128` (logged in via plist password `9router-test-2026`):
+
+| Page | h1 | Failed resources | Content check | Verdict |
+|---|---|---|---|---|
+| /dashboard | 9Router Proxy | 0 | Endpoint card shows :20128/v1 | PASS |
+| /dashboard/providers | 9Router Proxy | 0 | Search + filters render | PASS |
+| /dashboard/combos | 9Router Proxy | 0 | All 4 strategies (incl. System One from upstream #4975) | PASS |
+| /dashboard/messages | 9Router Proxy | 0 | Table renders — round 31 fix live | PASS |
+| /dashboard/usage | 9Router Proxy | 0 | Header + controls render | PASS |
+
+**5/5 PASS, 0 failed resources across all pages.** Combos page confirms upstream's System One smart router (from dropped da52d462 replacement, PR #4975) renders correctly — the KEEP+MERGE of our branch with upstream's router works in production.
