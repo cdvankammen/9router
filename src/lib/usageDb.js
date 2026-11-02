@@ -4,4 +4,7 @@ export {
   saveRequestUsage, getUsageHistory, getUsageStats, getChartData,
   appendRequestLog, getRecentLogs,
   saveRequestDetail, getRequestDetails, getRequestDetailById,
+  getRequestFacets, getConversationSummary, getConversationMessages, getErrorSummary,
+  getAnnotations, addAnnotation, deleteAnnotation, toggleStar,
+  getSavedViews, saveView, deleteSavedView,
 } from "@/lib/db/index.js";

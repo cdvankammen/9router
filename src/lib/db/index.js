@@ -67,7 +67,14 @@ export {
 // Request details
 export {
   saveRequestDetail, getRequestDetails, getRequestDetailById, getDistinctProviders,
+  getRequestFacets, getConversationSummary, getConversationMessages, getErrorSummary,
 } from "./repos/requestDetailsRepo.js";
+
+// Annotations + saved views (Messages page: tags, stars, notes, filter presets)
+export {
+  getAnnotations, addAnnotation, deleteAnnotation, toggleStar,
+  getSavedViews, saveView, deleteSavedView,
+} from "./repos/annotationsRepo.js";
 
 // Export/import full DB
 export async function exportDb() {
