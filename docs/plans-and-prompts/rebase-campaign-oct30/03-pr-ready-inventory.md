@@ -1,10 +1,10 @@
 # PR-Ready Inventory — v5-vscode-works Rebase Campaign
 
 **Date:** 2026-11-02
-**Branch:** `v5-vscode-works` @ `12720286`
+**Branch:** `v5-vscode-works` @ `6b14d076`
 **Fork:** `fork/v5-vscode-works` (pushed)
 **Pre-rebase baseline:** `07c16dab` (v5-vscode-works-pre-rebase-20261030)
-**Campaign rounds:** 29 rebase + 2 post-rebase recovery (30 total, 100% complete — 0 behind origin/master)
+**Campaign rounds:** 29 rebase + 3 post-rebase recovery (31 total, 100% complete — 0 behind origin/master)
 
 ## Commit Totals
 
@@ -270,6 +270,8 @@ After the 29-round rebase was complete, 12 pre-existing test failures were surgi
 
 **Round 30 fixes** (2026-10-31): rewrote all 8 `oauth-cursor-auto-import.test.js` tests using real temp SQLite databases (homedir() → tmpdir) instead of brittle better-sqlite3 CJS mocks, matching the route's rewritten implementation (multi-candidate path probing, per-key .get() queries, strategy cascade). All 10 tests now pass (8 previously-failing + 2 pre-existing). Verified mimo-free is genuinely unfixable: live probe against api.xiaomimimo.com shows bootstrap alive but chat endpoint rejects every model name.
 
+**Round 31 fixes** (2026-11-02): dashboard walk discovered `/api/messages` returning 500. Root cause: `src/lib/usageDb.js` (shim) and `src/lib/db/index.js` (barrel) both failed to re-export 11 functions that the Messages routes import — `getRequestFacets`, `getConversationSummary`, `getConversationMessages`, `getErrorSummary` (in `requestDetailsRepo.js`), plus `getAnnotations`, `addAnnotation`, `deleteAnnotation`, `toggleStar`, `getSavedViews`, `saveView`, `deleteSavedView` (in `annotationsRepo.js`). Added all 11 re-exports to both files. Source-level verified; test suite green (5270/2/3). Commit `8552a0c0`.
+
 ---
 
 ## Section 6: What Wasn't Done (Deferred)
@@ -357,6 +359,8 @@ After the 29-round rebase was complete, 12 pre-existing test failures were surgi
 ## Appendix B: Key Commit Chain (most recent first)
 
 ```
+6b14d076 docs: round 31 tracking — Messages 500 fix (11 missing re-exports)
+8552a0c0 fix(messages): re-export missing DB functions that caused /api/messages 500
 12720286 docs: round 30 tracking + mimo-free live verdict (known-fails evidence)
 99f8b992 fix(tests): round 30 — rewrite oauth-cursor-auto-import with real temp SQLite (10/10 pass)
 7dd6a115 docs: update PR-ready inventory for round 29
