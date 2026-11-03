@@ -301,6 +301,23 @@ export async function reorderProviderConnections(providerId) {
   db.transaction(() => reorderInTx(db, providerId));
 }
 
+// Orphan detection: connections whose `provider` references a custom
+// providerNodes row (anthropic-compatible-<uuid>, openai-compatible-<uuid>,
+// etc.) that no longer exists. Standard registry providers (openai,
+// anthropic, gemini, ...) are never orphans — only node-keyed connections.
+// Used by /api/health/providers to surface stale connection rows that will
+// never route successfully.
+export async function getOrphanConnections() {
+  const db = await getAdapter();
+  const rows = db.all(`
+    SELECT pc.* FROM providerConnections pc
+    LEFT JOIN providerNodes pn ON pn.id = pc.provider
+    WHERE pn.id IS NULL
+      AND pc.provider LIKE '%-compatible-%'
+  `);
+  return rows.map(rowToConn);
+}
+
 export async function cleanupProviderConnections() {
   const db = await getAdapter();
   const fieldsToCheck = [

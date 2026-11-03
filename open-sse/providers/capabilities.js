@@ -774,6 +774,17 @@ function refine(base, provider, model) {
 
   if (!result.vision && looksLikeVisionModel(model)) result.vision = true;
 
+  // User context-window overrides (from /api/model-context dashboard).
+  // Applied LAST so operator intent wins over catalog/pattern/heuristic.
+  // Match both "provider/model" and bare "model" keys so either form works.
+  if (contextWindowOverrides && Object.keys(contextWindowOverrides).length > 0) {
+    const fullKey = provider ? `${provider}/${model}` : model;
+    const override = contextWindowOverrides[fullKey] ?? contextWindowOverrides[model];
+    if (typeof override === "number" && override > 0) {
+      result.contextWindow = override;
+    }
+  }
+
   return result;
 }
 
@@ -863,4 +874,58 @@ export function getCapabilitiesForModel(provider, model) {
 // Gemini 4 (Argon) drops sampling params and requires functionResponse-last merged user turns.
 export function isGemini4Model(model) {
   return /(?:^|\/)gemini-4(?:$|[-.])/i.test(String(model || ""));
+}
+
+// ── Context-window overrides (dashboard → /v1/models) ─────────────────────
+// The /api/model-context dashboard persists per-model contextWindow overrides
+// into settings.contextWindowOverrides. The server startup hook and the PUT/POST
+// handlers call setContextWindowOverrides() to install them into this module so
+// getCapabilitiesForModel() returns the effective (overridden) window for every
+// downstream consumer (including /v1/models). The slot is module-scoped rather
+// than globalThis because overrides are installed once at boot and reloaded on
+// every PUT — there is no cross-chunk visibility problem like the catalog slot.
+let contextWindowOverrides = {};
+
+export function setContextWindowOverrides(overrides) {
+  contextWindowOverrides = overrides && typeof overrides === "object" ? overrides : {};
+}
+
+// Pure table/pattern lookup — no catalog sync, no user overrides. Used by
+// /api/model-context to show the "static default" column next to the effective
+// (override-applied) value so the dashboard can render the delta.
+export function getStaticCapabilitiesForModel(provider, model) {
+  if (!model) return { ...DEFAULT_CAPABILITIES };
+  const baseModel = model.includes("/") ? model.split("/").pop() : model;
+
+  if (provider === "commandcode" || provider === "cmc") {
+    const providerCaps = PROVIDER_CAPABILITIES.commandcode;
+    if (providerCaps?.[model]) return { ...DEFAULT_CAPABILITIES, ...providerCaps[model] };
+    if (providerCaps?.[baseModel]) return { ...DEFAULT_CAPABILITIES, ...providerCaps[baseModel] };
+    return {
+      ...DEFAULT_CAPABILITIES,
+      reasoning: true,
+      thinkingFormat: "commandcode",
+      thinkingEffortSupported: true,
+      vision: !isCommandCodeTextOnly(model),
+      contextWindow: 1000000,
+      maxOutput: 384000,
+    };
+  }
+
+  if (provider) {
+    const providerCaps = PROVIDER_CAPABILITIES[provider];
+    if (providerCaps?.[model]) return { ...DEFAULT_CAPABILITIES, ...providerCaps[model] };
+    if (providerCaps?.[baseModel]) return { ...DEFAULT_CAPABILITIES, ...providerCaps[baseModel] };
+  }
+
+  if (MODEL_CAPABILITIES[baseModel]) return { ...DEFAULT_CAPABILITIES, ...MODEL_CAPABILITIES[baseModel] };
+  if (MODEL_CAPABILITIES[model]) return { ...DEFAULT_CAPABILITIES, ...MODEL_CAPABILITIES[model] };
+
+  for (const { pattern, caps } of PATTERN_CAPABILITIES) {
+    if (matchPattern(pattern, baseModel) || matchPattern(pattern, model)) {
+      return { ...DEFAULT_CAPABILITIES, ...caps };
+    }
+  }
+
+  return { ...DEFAULT_CAPABILITIES };
 }
