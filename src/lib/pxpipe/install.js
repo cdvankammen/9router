@@ -41,7 +41,7 @@ export function libraryEntry() {
 export function findNpm() {
   for (const dir of EXTRA_BINS) {
     if (!dir) continue;
-    const candidate = path.join(dir, NPM_COMMAND);
+    const candidate = path.join(dir, NPM_CMD);
     try {
       if (fs.existsSync(candidate)) return candidate;
     } catch { /* keep probing */ }
